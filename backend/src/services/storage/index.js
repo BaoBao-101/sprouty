@@ -21,6 +21,13 @@ export function maxVideoBytes() {
   return Number(process.env.MAX_VIDEO_UPLOAD_MB || 500) * 1024 * 1024;
 }
 
+// User-uploaded Cây Kỷ Niệm "leaf" videos are phone clips, not produced
+// instructional content — cap them much smaller than admin instruction
+// videos so the per-kit leaf cap actually bounds storage growth.
+export function maxLeafVideoBytes() {
+  return Number(process.env.MAX_LEAF_VIDEO_UPLOAD_MB || 50) * 1024 * 1024;
+}
+
 function extFor(filename, mimeType) {
   const ext = path.extname(filename || '').toLowerCase();
   if (['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.webm', '.mov'].includes(ext)) return ext;
@@ -35,10 +42,10 @@ function extFor(filename, mimeType) {
   return map[mimeType] || '';
 }
 
-export function validateUpload({ mimeType, filename, bytes, category }) {
+export function validateUpload({ mimeType, filename, bytes, category, maxBytesOverride }) {
   const isImage = category === 'image';
   const allowed = isImage ? IMAGE_MIME : VIDEO_MIME;
-  const limit = isImage ? maxImageBytes() : maxVideoBytes();
+  const limit = maxBytesOverride ?? (isImage ? maxImageBytes() : maxVideoBytes());
   if (!allowed.has(mimeType)) {
     throw new AppError(isImage ? 'Chỉ hỗ trợ ảnh JPG, PNG hoặc WEBP.' : 'Chỉ hỗ trợ video MP4, WEBM hoặc MOV.', 400);
   }
@@ -50,11 +57,11 @@ export function validateUpload({ mimeType, filename, bytes, category }) {
   return ext;
 }
 
-export async function multipartFileToBuffer(file, { category }) {
+export async function multipartFileToBuffer(file, { category, maxBytesOverride }) {
   if (!file) throw new AppError('Thiếu tệp upload.', 400);
   const chunks = [];
   let total = 0;
-  const limit = category === 'image' ? maxImageBytes() : maxVideoBytes();
+  const limit = maxBytesOverride ?? (category === 'image' ? maxImageBytes() : maxVideoBytes());
   for await (const chunk of file.file) {
     total += chunk.length;
     if (total > limit) throw new AppError(`Tệp vượt quá giới hạn ${Math.round(limit / 1024 / 1024)}MB.`, 413);
@@ -66,6 +73,7 @@ export async function multipartFileToBuffer(file, { category }) {
     filename: file.filename,
     bytes: buffer.length,
     category,
+    maxBytesOverride,
   });
   return { buffer, ext, mimeType: file.mimetype, originalName: file.filename, sizeBytes: buffer.length };
 }
@@ -84,8 +92,9 @@ export async function createAsset(prisma, {
   file,
   category,
   metadata = null,
+  maxBytesOverride,
 }) {
-  const parsed = await multipartFileToBuffer(file, { category });
+  const parsed = await multipartFileToBuffer(file, { category, maxBytesOverride });
   const checksum = createHash('sha256').update(parsed.buffer).digest('hex');
   const key = safeObjectKey({ kind, ownerUserId, productId, ext: parsed.ext });
   const storage = storageProvider();

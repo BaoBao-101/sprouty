@@ -16,6 +16,26 @@ export async function hasPurchasedProduct(prisma, userId, productId) {
   return Boolean(item);
 }
 
+// VIP = has a paid order for any product in the 'membership' category
+// (VIP Garden Monthly/Annual). No subscription-expiry tracking exists yet —
+// like redeem-code entitlements, this is a one-time-purchase check, not a
+// recurring one.
+export async function isVipUser(prisma, userId) {
+  if (!userId) return false;
+  const item = await prisma.orderItem.findFirst({
+    where: {
+      product: { category: 'membership' },
+      order: {
+        userId,
+        paidAt: { not: null },
+        status: { not: 'cancelled' },
+      },
+    },
+    select: { id: true },
+  });
+  return Boolean(item);
+}
+
 export async function hasEntitlement(prisma, userId, feature, productId = null) {
   if (!userId || !feature) return false;
   const now = new Date();

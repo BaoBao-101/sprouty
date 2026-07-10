@@ -88,15 +88,15 @@
 
 <div id="ftr"></div>
 <script src="../assets/js/env.js"></script>
-<script src="../assets/js/api.js?v=20260710i"></script>
-<script src="../assets/js/app.js?v=20260710i"></script>
+<script src="../assets/js/api.js?v=20260710j"></script>
+<script src="../assets/js/app.js?v=20260710j"></script>
 <script>
 document.getElementById('hdr').innerHTML = renderHeader('myproducts','../');
 document.getElementById('ftr').innerHTML = renderFooter('../');
 
-// Keep in sync with MAX_LEAVES_PER_PRODUCT in backend/src/routes/user-images.js
-// and MAX_LEAVES in pages/tree.html.
-const MAX_LEAVES = 20;
+// Real cap (10 standard / 25 VIP) comes from the API — see
+// backend/src/routes/user-images.js. This is just the initial render guess.
+let MAX_LEAVES = 10;
 
 let _catalog = [];
 
@@ -147,17 +147,23 @@ async function loadPurchasedKits() {
   });
 
   const kits = _catalog.filter(p => purchasedIds.has(p.id) && p.cat === 'kit');
-  // Real progress = leaves grown (photos uploaded) out of the cap, per kit —
-  // not a manual "mark as done" toggle disconnected from actual activity.
-  const leafCounts = await Promise.all(kits.map(async (k) => {
+  // Real progress = leaves grown (photos/videos uploaded) out of the cap,
+  // per kit — not a manual "mark as done" toggle disconnected from actual
+  // activity. maxLeaves is per-user (10 standard / 25 VIP), not per-kit, but
+  // the API returns it alongside each kit's images so just take whichever
+  // response comes back — they're all the same value.
+  const leafResults = await Promise.all(kits.map(async (k) => {
     try {
-      const { images } = await API.myImages.list(k.id);
-      return [k.id, images.length];
+      const { images, maxLeaves } = await API.myImages.list(k.id);
+      return [k.id, images.length, maxLeaves];
     } catch {
-      return [k.id, 0];
+      return [k.id, 0, null];
     }
   }));
-  renderKits(kits, Object.fromEntries(leafCounts));
+  const leafCounts = Object.fromEntries(leafResults.map(([id, count]) => [id, count]));
+  const anyMax = leafResults.find(([, , max]) => max)?.[2];
+  if (anyMax) MAX_LEAVES = anyMax;
+  renderKits(kits, leafCounts);
 }
 
 function renderKits(kits, leafCounts) {

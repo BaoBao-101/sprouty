@@ -38,9 +38,14 @@
       transition:transform .2s var(--ease,ease), box-shadow .2s;
       cursor:default;
     }
-    .leaf-slot.filled { cursor:pointer; box-shadow:var(--sh-sm); overflow:hidden; background:var(--parchment) }
-    .leaf-slot.filled img { width:100%; height:100%; object-fit:cover }
+    .leaf-slot.filled { cursor:pointer; box-shadow:var(--sh-sm); overflow:hidden; background:var(--parchment); position:absolute }
+    .leaf-slot.filled img, .leaf-slot.filled video { width:100%; height:100%; object-fit:cover }
     .leaf-slot.filled:hover { transform:translate(-50%,-50%) scale(1.12); box-shadow:var(--sh-lg); z-index:5 }
+    .leaf-play-badge {
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+      color:#fff; font-size:1.1rem; text-shadow:0 1px 4px rgba(0,0,0,.5);
+      background:rgba(0,0,0,.15); pointer-events:none;
+    }
     .leaf-slot.next {
       cursor:pointer;
       background:var(--parchment);
@@ -87,14 +92,14 @@
         <a href="../index.html">Trang chủ</a> › <a href="my-products.html">Cây của tôi</a> › <span id="treeCrumb">Cây Kỷ Niệm</span>
       </div>
       <h1 id="treeTitle">Cây Kỷ Niệm</h1>
-      <p>Mỗi tấm ảnh bé chăm cây sẽ nở thành một chiếc lá trên cây. Bấm vào lá xanh nhạt để thêm khoảnh khắc mới.</p>
+      <p>Mỗi tấm ảnh hoặc video bé chăm cây sẽ nở thành một chiếc lá trên cây. Bấm vào lá xanh nhạt để thêm khoảnh khắc mới.</p>
     </div>
   </div>
 
   <section style="padding:32px 0 72px">
     <div class="container">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
-        <span class="leaf-count-badge">🍃 <span id="leafCount">0</span>/20 lá</span>
+        <span class="leaf-count-badge">🍃 <span id="leafCount">0</span>/<span id="leafMax">10</span> lá</span>
         <div style="display:flex;gap:8px">
           <a class="btn btn-outline btn-sm" id="videoLink" href="#">🎬 Video hướng dẫn</a>
           <a class="btn btn-ghost btn-sm" href="my-products.html">← Quay lại</a>
@@ -103,35 +108,38 @@
 
       <div class="tree-stage" id="treeStage"></div>
 
-      <input type="file" id="leafFileInput" accept="image/*" style="display:none">
+      <input type="file" id="leafFileInput" accept="image/*,video/*" style="display:none">
     </div>
   </section>
 </div>
 
 <!-- Lightbox for a filled leaf -->
 <div class="modal-overlay" id="leafModal" style="position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:300;display:none;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--surface);border-radius:16px;padding:18px;width:min(560px,100%);position:relative">
-    <button onclick="closeLeafModal()" style="position:absolute;right:12px;top:8px;background:none;border:0;font-size:1.5rem;cursor:pointer">✕</button>
+  <div style="background:var(--surface);border-radius:16px;padding:18px;width:min(560px,100%);max-height:90vh;overflow-y:auto;position:relative">
+    <button onclick="closeLeafModal()" style="position:absolute;right:12px;top:8px;background:none;border:0;font-size:1.5rem;cursor:pointer;z-index:1">✕</button>
     <div id="leafModalBody"></div>
   </div>
 </div>
 
 <div id="ftr"></div>
 <script src="../assets/js/env.js"></script>
-<script src="../assets/js/api.js?v=20260710i"></script>
-<script src="../assets/js/app.js?v=20260710i"></script>
+<script src="../assets/js/api.js?v=20260710j"></script>
+<script src="../assets/js/app.js?v=20260710j"></script>
 <script>
 document.getElementById('hdr').innerHTML = renderHeader('myproducts','../');
 document.getElementById('ftr').innerHTML = renderFooter('../');
 
-const MAX_LEAVES = 20;
+// Real cap comes from the API (10 standard / 25 VIP — see
+// backend/src/routes/user-images.js), this is just the initial render guess.
+let MAX_LEAVES = 10;
 const pid = +new URLSearchParams(location.search).get('id');
 let product = null;
 let images = [];
 
 // Hand-placed positions (percent of stage) matching Tree.png's 4 canopy
 // lobes (top-left, top-right, bottom-left, bottom-right) — 5 leaves per
-// lobe, kept clear of the trunk and pot below.
+// lobe, kept clear of the trunk and pot below. The last 5 (21-25, VIP-only)
+// fill the gaps between lobes.
 const LEAF_POSITIONS = [
   // top-left lobe
   [15,15],[28,10],[38,22],[18,30],[30,32],
@@ -141,6 +149,8 @@ const LEAF_POSITIONS = [
   [12,42],[25,48],[38,52],[18,55],[32,40],
   // bottom-right lobe
   [68,42],[80,48],[90,52],[72,55],[85,40],
+  // gap-fillers (21-25, VIP only)
+  [45,15],[55,32],[45,42],[10,20],[90,42],
 ];
 
 function onAuthChange() {
@@ -168,10 +178,16 @@ async function init() {
   await loadLeaves();
 }
 
+function isVideoLeaf(img) {
+  return (img.asset?.mimeType || '').startsWith('video/');
+}
+
 async function loadLeaves() {
   try {
-    const { images: imgs } = await API.myImages.list(pid);
+    const { images: imgs, maxLeaves } = await API.myImages.list(pid);
     images = imgs;
+    if (maxLeaves) MAX_LEAVES = Math.min(maxLeaves, LEAF_POSITIONS.length);
+    document.getElementById('leafMax').textContent = MAX_LEAVES;
   } catch (e) {
     Toast.show(e.message || 'Không tải được cây kỷ niệm', 'error');
     images = [];
@@ -198,8 +214,11 @@ function renderTree() {
     const [x, y] = LEAF_POSITIONS[i];
     if (i < images.length) {
       const img = images[i];
+      const isVideo = isVideoLeaf(img);
       html += `<div class="leaf-slot filled" style="left:${x}%;top:${y}%" onclick="openLeaf('${img.id}')" title="${esc(img.title || 'Kỷ niệm')}">
-        <img src="${esc(img.url)}" alt="">
+        ${isVideo
+          ? `<video src="${esc(img.url)}" muted></video><span class="leaf-play-badge">▶</span>`
+          : `<img src="${esc(img.url)}" alt="">`}
       </div>`;
     } else if (i === images.length && !full) {
       html += `<div class="leaf-slot next" style="left:${x}%;top:${y}%" onclick="addLeaf()" title="Thêm khoảnh khắc mới">+</div>`;
@@ -233,9 +252,12 @@ document.getElementById('leafFileInput').addEventListener('change', async (e) =>
 
 function showNewLeafFeedback(file) {
   const url = URL.createObjectURL(file);
+  const isVideo = file.type.startsWith('video/');
   const body = document.getElementById('leafModalBody');
   body.innerHTML = `
-    <img src="${url}" style="width:100%;max-height:50vh;object-fit:contain;border-radius:12px;margin-bottom:14px">
+    ${isVideo
+      ? `<video src="${url}" controls style="width:100%;max-height:50vh;border-radius:12px;margin-bottom:14px"></video>`
+      : `<img src="${url}" style="width:100%;max-height:50vh;object-fit:contain;border-radius:12px;margin-bottom:14px">`}
     <div style="display:flex;gap:8px;align-items:flex-start;padding:12px;background:var(--cream-2);border-radius:10px">
       <div class="spinner"></div><span style="color:var(--ink-4)">Plant Buddy đang đọc kỷ niệm...</span>
     </div>`;
@@ -247,7 +269,7 @@ async function callAIFeedback() {
   const box = document.querySelector('#leafModalBody > div:last-child');
   try {
     const { reply } = await API.chat.send(
-      [{ role: 'user', content: `Bé đã chăm sóc Sprouty Kit "${product?.name || 'kit'}" và vừa tải ảnh kỷ niệm lên. Hãy khen ngợi sự kiên nhẫn chăm cây của bé, gợi ý 1-2 bước chăm sóc tiếp theo, rồi khuyến khích gia đình tiếp tục lưu nhật ký.` }],
+      [{ role: 'user', content: `Bé đã chăm sóc Sprouty Kit "${product?.name || 'kit'}" và vừa tải ảnh/video kỷ niệm lên. Hãy khen ngợi sự kiên nhẫn chăm cây của bé, gợi ý 1-2 bước chăm sóc tiếp theo, rồi khuyến khích gia đình tiếp tục lưu nhật ký.` }],
       'Bạn là Plant Buddy thân thiện của Sprouty Vietnam. Trả lời bằng tiếng Việt, giọng văn ấm áp, khích lệ như đang nói chuyện với phụ huynh và bé, khoảng 4-6 câu.'
     );
     if (box) box.innerHTML = `<span style="font-size:1.2rem;flex-shrink:0">🤖</span><div>${esc(reply).replace(/\n/g, '<br>')}</div>`;
@@ -260,8 +282,11 @@ function openLeaf(imageId) {
   const img = images.find(i => i.id === imageId);
   if (!img) return;
   const body = document.getElementById('leafModalBody');
+  const isVideo = isVideoLeaf(img);
   body.innerHTML = `
-    <img src="${esc(img.url)}" style="width:100%;max-height:60vh;object-fit:contain;border-radius:12px;margin-bottom:14px">
+    ${isVideo
+      ? `<video src="${esc(img.url)}" controls style="width:100%;max-height:60vh;border-radius:12px;margin-bottom:14px"></video>`
+      : `<img src="${esc(img.url)}" style="width:100%;max-height:60vh;object-fit:contain;border-radius:12px;margin-bottom:14px">`}
     <input class="form-input" id="leafTitleInput" value="${esc(img.title || '')}" placeholder="Đặt tên cho khoảnh khắc này" style="margin-bottom:10px">
     <div style="display:flex;gap:8px">
       <button class="btn btn-primary btn-sm" onclick="saveLeafTitle('${img.id}')">Lưu tên</button>
