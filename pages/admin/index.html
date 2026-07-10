@@ -248,11 +248,12 @@
         <button class="btn btn-primary" onclick="createRedeemCode()">+ Tạo mã</button>
       </div>
       <div class="admin-card" style="padding:16px">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:4px">
           <input class="form-input" id="rc-label" placeholder="Nhãn mã">
           <input class="form-input" id="rc-product" type="number" min="1" placeholder="Product ID (tuỳ chọn)">
           <input class="form-input" id="rc-qty" type="number" min="1" max="100" value="1" placeholder="Số lượng">
         </div>
+        <p style="font-size:.76rem;color:var(--ink-4);margin:0 0 12px">⚠️ Để trống Product ID = mã áp dụng toàn hệ thống, sẽ <b>không hiện</b> trong "Cây của tôi" của người dùng (trang đó hiển thị theo từng kit cụ thể). Nếu mã dùng để active 1 kit, luôn điền đúng Product ID.</p>
         <label style="margin-right:12px"><input type="checkbox" class="rc-feature" value="ai_assistant" checked> AI</label>
         <label style="margin-right:12px"><input type="checkbox" class="rc-feature" value="instruction_videos" checked> Video</label>
         <label><input type="checkbox" class="rc-feature" value="image_uploads" checked> Upload ảnh</label>
