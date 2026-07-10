@@ -162,6 +162,8 @@ const API = {
       list()          { return _fetch('/admin/users'); },
       create(d)       { return _fetch('/admin/users', { method: 'POST', body: JSON.stringify(d) }); },
       update(id, d)   { return _fetch(`/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(d) }); },
+      grantVip(id)    { return _fetch(`/admin/users/${id}/grant-vip`, { method: 'POST' }); },
+      revokeVip(id)   { return _fetch(`/admin/users/${id}/grant-vip`, { method: 'DELETE' }); },
     },
     products: {
       list(params = {})   { return _fetch('/admin/products?' + new URLSearchParams(params)); },

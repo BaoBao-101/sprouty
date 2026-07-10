@@ -115,8 +115,8 @@
       <div class="admin-card">
         <div style="overflow-x:auto">
           <table class="admin-table">
-            <thead><tr><th>Tên</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
-            <tbody id="users-tbody"><tr><td colspan="6" style="text-align:center;padding:32px;color:var(--ink-4)">Đang tải...</td></tr></tbody>
+            <thead><tr><th>Tên</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th>VIP</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
+            <tbody id="users-tbody"><tr><td colspan="7" style="text-align:center;padding:32px;color:var(--ink-4)">Đang tải...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -321,8 +321,8 @@
 </main>
 
 <script src="../../assets/js/env.js"></script>
-<script src="../../assets/js/api.js?v=20260710j"></script>
-<script src="../../assets/js/app.js?v=20260710j"></script>
+<script src="../../assets/js/api.js?v=20260710k"></script>
+<script src="../../assets/js/app.js?v=20260710k"></script>
 <script>
 const STATUS_VN  = { pending:'Chờ xác nhận', processing:'Đang xử lý', shipped:'Đang giao', delivered:'Đã giao', cancelled:'Đã hủy' };
 const STATUS_OPT = ['pending','processing','shipped','delivered','cancelled'];
@@ -405,6 +405,7 @@ async function loadUsers() {
         <td style="font-size:.82rem">${esc(u.email)}</td>
         <td><span class="role-badge role-${esc(u.role)}">${esc(u.role)}</span></td>
         <td style="font-size:.82rem;font-weight:600;color:${u.status==='active'?'var(--green)':'var(--rose)'}">${u.status==='active'?'Hoạt động':'Vô hiệu'}</td>
+        <td>${u.isVip ? '<span class="role-badge" style="background:#FEF3C7;color:#92400E">👑 VIP</span>' : '<span style="font-size:.76rem;color:var(--ink-5)">—</span>'}</td>
         <td style="font-size:.76rem;color:var(--ink-4)">${new Date(u.createdAt).toLocaleDateString('vi-VN')}</td>
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -416,12 +417,32 @@ async function loadUsers() {
             <button class="act-btn" style="border-color:${u.status==='active'?'var(--rose)':'var(--green)'};color:${u.status==='active'?'var(--rose)':'var(--green)'}" onclick="toggleUser('${u.id}','${u.status}')">
               ${u.status==='active'?'Vô hiệu':'Kích hoạt'}
             </button>
+            ${u.isVip
+              ? `<button class="act-btn act-del" onclick="revokeVip('${u.id}')">Thu hồi VIP</button>`
+              : `<button class="act-btn" style="border-color:#D97706;color:#D97706" onclick="grantVip('${u.id}')">👑 Cấp VIP</button>`}
           </div>
         </td>
-      </tr>`).join('') || `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink-4)">Không có người dùng</td></tr>`;
+      </tr>`).join('') || `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink-4)">Không có người dùng</td></tr>`;
   } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="6" style="color:var(--rose);text-align:center;padding:24px">${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="color:var(--rose);text-align:center;padding:24px">${e.message}</td></tr>`;
   }
+}
+
+async function grantVip(id) {
+  try {
+    const { message } = await API.admin.users.grantVip(id);
+    Toast.show(message, 'success');
+    await loadUsers();
+  } catch(e) { Toast.show(e.message || 'Không cấp được VIP', 'error'); }
+}
+
+async function revokeVip(id) {
+  if (!confirm('Thu hồi VIP của người dùng này? Giới hạn lá kỷ niệm sẽ về lại mức thường (10).')) return;
+  try {
+    const { message } = await API.admin.users.revokeVip(id);
+    Toast.show(message, 'success');
+    await loadUsers();
+  } catch(e) { Toast.show(e.message || 'Không thu hồi được VIP', 'error'); }
 }
 
 async function updateUserRole(id, role) {

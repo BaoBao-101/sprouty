@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { AppError } from '../../utils/errors.js';
 import { requireAdmin, requireCsrf } from '../../middleware/rbac.js';
+import { isVipUser } from '../../services/access.js';
 
 const createUserSchema = z.object({
   name: z.string().min(2, 'Tên phải có ít nhất 2 ký tự.').max(100)
@@ -33,7 +34,78 @@ export default async function adminUserRoutes(fastify) {
       select: { id: true, email: true, name: true, role: true, status: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
     });
-    return { users };
+    // One query for all VIP userIds instead of N+1 isVipUser() calls.
+    const vipRows = await fastify.prisma.orderItem.findMany({
+      where: {
+        product: { category: 'membership' },
+        order: { paidAt: { not: null }, status: { not: 'cancelled' } },
+      },
+      select: { order: { select: { userId: true } } },
+    });
+    const vipUserIds = new Set(vipRows.map(r => r.order.userId));
+    return { users: users.map(u => ({ ...u, isVip: vipUserIds.has(u.id) })) };
+  });
+
+  // POST /api/v1/admin/users/:id/grant-vip — manual-test helper: books a paid
+  // order for a membership product on the user's behalf, since VIP status is
+  // derived purely from "has a paid membership order" (see isVipUser in
+  // services/access.js) rather than a separate flag on User.
+  fastify.post('/users/:id/grant-vip', { preHandler: auth }, async (req, reply) => {
+    const target = await fastify.prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!target) return reply.code(404).send({ message: 'Không tìm thấy người dùng.' });
+
+    if (await isVipUser(fastify.prisma, target.id)) {
+      return { message: `${target.name} đã là VIP rồi.`, alreadyVip: true };
+    }
+
+    const membership = await fastify.prisma.product.findFirst({
+      where: { category: 'membership', status: 'published' },
+      orderBy: { price: 'asc' },
+    });
+    if (!membership) throw new AppError('Không có sản phẩm membership nào trong catalog.', 400);
+
+    const order = await fastify.prisma.order.create({
+      data: {
+        userId: target.id,
+        total: membership.price,
+        status: 'processing',
+        paidAt: new Date(),
+        shippingName: target.name,
+        shippingPhone: '0000000000',
+        shippingAddress: 'Cấp bởi admin để test — không giao hàng thật.',
+        note: 'admin.grant_vip',
+        items: { create: [{ productId: membership.id, qty: 1, unitPrice: membership.price }] },
+      },
+    });
+
+    await logAudit(fastify.prisma, req.user.id, 'user.grant_vip', 'User', target.id, {
+      orderId: order.id,
+      productId: membership.id,
+      productName: membership.name,
+    });
+
+    return { message: `Đã cấp VIP cho ${target.name} (${membership.name}).`, orderId: order.id };
+  });
+
+  // DELETE /api/v1/admin/users/:id/grant-vip — revoke: cancel every paid
+  // membership order for this user so isVipUser() goes back to false.
+  fastify.delete('/users/:id/grant-vip', { preHandler: auth }, async (req, reply) => {
+    const target = await fastify.prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!target) return reply.code(404).send({ message: 'Không tìm thấy người dùng.' });
+
+    const { count } = await fastify.prisma.order.updateMany({
+      where: {
+        userId: target.id,
+        status: { not: 'cancelled' },
+        paidAt: { not: null },
+        items: { some: { product: { category: 'membership' } } },
+      },
+      data: { status: 'cancelled' },
+    });
+
+    await logAudit(fastify.prisma, req.user.id, 'user.revoke_vip', 'User', target.id, { ordersCancelled: count });
+
+    return { message: count > 0 ? `Đã thu hồi VIP của ${target.name}.` : `${target.name} không có VIP để thu hồi.`, ordersCancelled: count };
   });
 
   // POST /api/v1/admin/users — create a user with any role and an initial password.
