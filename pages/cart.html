@@ -62,8 +62,8 @@
 
 <div id="ftr"></div>
 <script src="../assets/js/env.js"></script>
-<script src="../assets/js/api.js?v=20260710g"></script>
-<script src="../assets/js/app.js?v=20260710g"></script>
+<script src="../assets/js/api.js?v=20260710h"></script>
+<script src="../assets/js/app.js?v=20260710h"></script>
 <script>
 const ENV_EXTRA = { FREE_SHIP_MIN: 200000 };
 document.getElementById('hdr').innerHTML = renderHeader('','../');
@@ -110,17 +110,17 @@ function renderCart() {
               <span style="display:none;font-size:2.4rem">${esc(item.em||'📦')}</span>
             </div>
             <div class="cart-item-info">
-              <div class="cart-item-name">${esc(item.name||'Sản phẩm')}</div>
+              <div class="cart-item-name">${esc(item.name||'Sản phẩm')}${item.variant==='smart' ? ' <span class="tag tag-blue" style="font-size:.68rem;vertical-align:middle">Smart</span>' : ''}</div>
               <div class="cart-item-meta">${esc(item.col||'')} · ${esc(item.age||'')}</div>
               <div class="cart-qty-ctrl">
-                <button class="cq-btn" onclick="Cart.setQty(${item.id},${item.qty-1});renderCart()">−</button>
+                <button class="cq-btn" onclick="Cart.setQty(${item.id},'${item.variant||'standard'}',${item.qty-1});renderCart()">−</button>
                 <span class="cq-val">${item.qty}</span>
-                <button class="cq-btn" onclick="Cart.setQty(${item.id},${item.qty+1});renderCart()">+</button>
+                <button class="cq-btn" onclick="Cart.setQty(${item.id},'${item.variant||'standard'}',${item.qty+1});renderCart()">+</button>
               </div>
             </div>
             <div class="cart-item-price-col">
               <div class="cart-item-price">${(price*item.qty).toLocaleString('vi-VN')}đ</div>
-              <button class="cart-rm" onclick="Cart.remove(${item.id});renderCart()" title="Xoá khỏi giỏ">✕</button>
+              <button class="cart-rm" onclick="Cart.remove(${item.id},'${item.variant||'standard'}');renderCart()" title="Xoá khỏi giỏ">✕</button>
             </div>
           </div>`;
         }).join('')}
@@ -220,7 +220,7 @@ async function submitOrder() {
 
   btn.disabled = true; btn.textContent = 'Đang đặt hàng...';
   try {
-    const items = Cart.items.map(i => ({ productId: i.id, qty: i.qty }));
+    const items = Cart.items.map(i => ({ productId: i.id, qty: i.qty, variant: i.variant === 'smart' ? 'smart' : 'standard' }));
     const { order } = await API.orders.create({ items, shippingName: name, shippingPhone: phone, shippingAddress: addr, note: note || undefined });
     document.getElementById('shipping-modal')?.remove();
     Cart.clear();

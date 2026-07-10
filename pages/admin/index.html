@@ -250,10 +250,12 @@
       <div class="admin-card" style="padding:16px">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:4px">
           <input class="form-input" id="rc-label" placeholder="Nhãn mã">
-          <input class="form-input" id="rc-product" type="number" min="1" placeholder="Product ID (tuỳ chọn)">
+          <select class="form-input" id="rc-product">
+            <option value="">Toàn hệ thống (không gắn kit)</option>
+          </select>
           <input class="form-input" id="rc-qty" type="number" min="1" max="100" value="1" placeholder="Số lượng">
         </div>
-        <p style="font-size:.76rem;color:var(--ink-4);margin:0 0 12px">⚠️ Để trống Product ID = mã áp dụng toàn hệ thống, sẽ <b>không hiện</b> trong "Cây của tôi" của người dùng (trang đó hiển thị theo từng kit cụ thể). Nếu mã dùng để active 1 kit, luôn điền đúng Product ID.</p>
+        <p style="font-size:.76rem;color:var(--ink-4);margin:0 0 12px">⚠️ Chọn "Toàn hệ thống" = mã sẽ <b>không hiện</b> trong "Cây của tôi" của người dùng (trang đó hiển thị theo từng kit cụ thể). Nếu mã dùng để active 1 kit cây, luôn chọn đúng loại cây.</p>
         <label style="margin-right:12px"><input type="checkbox" class="rc-feature" value="ai_assistant" checked> AI</label>
         <label style="margin-right:12px"><input type="checkbox" class="rc-feature" value="instruction_videos" checked> Video</label>
         <label><input type="checkbox" class="rc-feature" value="image_uploads" checked> Upload ảnh</label>
@@ -319,8 +321,8 @@
 </main>
 
 <script src="../../assets/js/env.js"></script>
-<script src="../../assets/js/api.js?v=20260710g"></script>
-<script src="../../assets/js/app.js?v=20260710g"></script>
+<script src="../../assets/js/api.js?v=20260710h"></script>
+<script src="../../assets/js/app.js?v=20260710h"></script>
 <script>
 const STATUS_VN  = { pending:'Chờ xác nhận', processing:'Đang xử lý', shipped:'Đang giao', delivered:'Đã giao', cancelled:'Đã hủy' };
 const STATUS_OPT = ['pending','processing','shipped','delivered','cancelled'];
@@ -340,7 +342,7 @@ function showSection(sec) {
   if (sec==='orders') { _ordPage=1; loadAdminOrders(); }
   if (sec==='sales') loadSales();
   if (sec==='workshops') loadWorkshopStats();
-  if (sec==='redeem') loadRedeemCodes();
+  if (sec==='redeem') { loadRedeemCodes(); loadRedeemProductOptions(); }
   if (sec==='blog') loadBlogAdmin();
   if (sec==='userimages') loadUserImagesAdmin();
 }
@@ -597,6 +599,23 @@ async function loadWorkshopStats() {
 }
 
 let _redeemCodesCache = [];
+let _redeemProductOptionsLoaded = false;
+
+async function loadRedeemProductOptions() {
+  if (_redeemProductOptionsLoaded) return;
+  const sel = document.getElementById('rc-product');
+  try {
+    const { products } = await API.admin.products.list({ status: 'published' });
+    const kits = products.filter(p => p.category === 'kit');
+    kits.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = `${p.emoji || '🌱'} ${p.name}`;
+      sel.appendChild(opt);
+    });
+    _redeemProductOptionsLoaded = true;
+  } catch (e) { Toast.show(e.message || 'Không tải được danh sách cây', 'error'); }
+}
 
 async function loadRedeemCodes() {
   const tbody = document.getElementById('redeem-tbody');

@@ -91,6 +91,14 @@
     .pdp-stock { font-size:.84rem; color:var(--green); font-family:var(--font-h); font-weight:600; margin-top:10px; display:flex; align-items:center; gap:5px }
     .pdp-stock::before { content:''; width:8px; height:8px; border-radius:50%; background:var(--green); flex-shrink:0 }
 
+    .pdp-variant-opt {
+      display:flex; align-items:center; gap:8px; cursor:pointer;
+      border:1.5px solid var(--parchment-2); border-radius:12px; padding:10px 14px;
+      transition:all .18s;
+    }
+    .pdp-variant-opt:has(input:checked) { border-color:var(--orange); background:var(--orange-pale) }
+    .pdp-variant-opt input { accent-color:var(--orange) }
+
     /* CTA buttons */
     .pdp-cta { display:flex; gap:12px; margin-bottom:18px; flex-wrap:wrap }
     .pdp-cta .btn-add { flex:2; font-size:1rem; font-weight:700; padding:14px; border-radius:14px; background:var(--orange); color:#fff; border:none; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:8px }
@@ -169,8 +177,8 @@
 
 <div id="ftr"></div>
 <script src="../assets/js/env.js"></script>
-<script src="../assets/js/api.js?v=20260710g"></script>
-<script src="../assets/js/app.js?v=20260710g"></script>
+<script src="../assets/js/api.js?v=20260710h"></script>
+<script src="../assets/js/app.js?v=20260710h"></script>
 <script>
 document.getElementById('hdr').innerHTML = renderHeader('shop','../');
 document.getElementById('ftr').innerHTML = renderFooter('../');
@@ -270,10 +278,31 @@ function _renderPage(p, allProds) {
       </div>
 
       <div class="pdp-price-wrap">
-        <span class="pdp-price">${p.price.toLocaleString('vi-VN')}đ</span>
-        ${p.old ? `<span class="pdp-price-old">${p.old.toLocaleString('vi-VN')}đ</span>
-        <span class="pdp-discount-badge">Giảm ${discount}%</span>` : ''}
+        <span class="pdp-price" id="pdpPrice">${p.price.toLocaleString('vi-VN')}đ</span>
+        ${p.old ? `<span class="pdp-price-old" id="pdpPriceOld">${p.old.toLocaleString('vi-VN')}đ</span>
+        <span class="pdp-discount-badge" id="pdpDiscountBadge">Giảm ${discount}%</span>` : ''}
       </div>
+
+      ${p.smartDelta != null ? `
+      <div class="pdp-qty-section">
+        <div class="pdp-qty-label">Phiên bản</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <label class="pdp-variant-opt">
+            <input type="radio" name="pdpVariant" value="standard" checked onchange="onVariantChange()">
+            <div>
+              <strong>Standard</strong>
+              <div style="font-size:.78rem;color:var(--ink-4)">${p.price.toLocaleString('vi-VN')}đ</div>
+            </div>
+          </label>
+          <label class="pdp-variant-opt">
+            <input type="radio" name="pdpVariant" value="smart" onchange="onVariantChange()">
+            <div>
+              <strong>Smart · IoT 🤖</strong>
+              <div style="font-size:.78rem;color:var(--ink-4)">${(p.price + p.smartDelta).toLocaleString('vi-VN')}đ</div>
+            </div>
+          </label>
+        </div>
+      </div>` : ''}
 
       <p class="pdp-desc">${esc(p.desc)}</p>
       <div class="pdp-divider"></div>
@@ -528,9 +557,27 @@ function chgQ(d) {
   document.getElementById('qtyVal').textContent = QTY;
 }
 
+function selectedVariant() {
+  const el = document.querySelector('input[name="pdpVariant"]:checked');
+  return el ? el.value : 'standard';
+}
+
+function onVariantChange() {
+  if (!p || p.smartDelta == null) return;
+  const variant = selectedVariant();
+  const price = variant === 'smart' ? p.price + p.smartDelta : p.price;
+  document.getElementById('pdpPrice').textContent = price.toLocaleString('vi-VN') + 'đ';
+  // Old-price / discount badge only makes sense against the Standard price.
+  const oldEl = document.getElementById('pdpPriceOld');
+  const badgeEl = document.getElementById('pdpDiscountBadge');
+  if (oldEl) oldEl.style.display = variant === 'smart' ? 'none' : '';
+  if (badgeEl) badgeEl.style.display = variant === 'smart' ? 'none' : '';
+}
+
 function addCart() {
   if (!p) return;
-  for (let i = 0; i < QTY; i++) Cart.add(p.id);
+  const variant = p.smartDelta != null ? selectedVariant() : 'standard';
+  for (let i = 0; i < QTY; i++) Cart.add(p.id, 1, p, variant);
 }
 
 function buyNow() { addCart(); location.href = 'cart.html'; }

@@ -25,6 +25,10 @@ function buildPaymentInfo(order) {
 const orderItemSchema = z.object({
   productId: z.number().int().positive(),
   qty: z.number().int().min(1).max(99),
+  // 'smart' only valid when the product actually offers a Smart variant
+  // (product.smartPriceDelta is set) — validated server-side below, never
+  // trust the client for pricing.
+  variant: z.enum(['standard', 'smart']).optional(),
 });
 
 const noHtml = (label) => z.string().refine(
@@ -106,14 +110,17 @@ export default async function orderRoutes(fastify) {
 
     const { items, shippingName, shippingPhone, shippingAddress, note } = parsed.data;
 
-    // Verify all products exist and are published
-    const productIds = items.map(i => i.productId);
+    // Verify all products exist and are published. Same product can appear
+    // twice with different variants (e.g. Bean Standard + Bean Smart), so
+    // dedupe before comparing counts — findMany naturally returns one row
+    // per unique id regardless of how many cart lines reference it.
+    const uniqueProductIds = [...new Set(items.map(i => i.productId))];
     const products = await fastify.prisma.product.findMany({
-      where: { id: { in: productIds }, status: 'published' },
-      select: { id: true, price: true, name: true },
+      where: { id: { in: uniqueProductIds }, status: 'published' },
+      select: { id: true, price: true, name: true, smartPriceDelta: true },
     });
 
-    if (products.length !== productIds.length) {
+    if (products.length !== uniqueProductIds.length) {
       throw new AppError('Một số sản phẩm không tồn tại hoặc đã ngừng bán.', 400);
     }
 
@@ -121,9 +128,12 @@ export default async function orderRoutes(fastify) {
     let total = 0;
     const orderItems = items.map(item => {
       const product = productMap.get(item.productId);
-      const unitPrice = product.price;
+      if (item.variant === 'smart' && product.smartPriceDelta == null) {
+        throw new AppError(`${product.name} không có bản Smart.`, 400);
+      }
+      const unitPrice = product.price + (item.variant === 'smart' ? product.smartPriceDelta : 0);
       total += unitPrice * item.qty;
-      return { productId: item.productId, qty: item.qty, unitPrice };
+      return { productId: item.productId, qty: item.qty, unitPrice, variant: item.variant || null };
     });
 
     const order = await fastify.prisma.order.create({

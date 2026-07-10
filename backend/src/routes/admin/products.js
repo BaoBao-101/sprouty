@@ -13,6 +13,7 @@ const productSchema = z.object({
   description: noHtml('Mô tả').and(z.string().min(10).max(5000)),
   price: z.number().int().positive(),
   oldPrice: z.number().int().positive().nullable().optional(),
+  smartPriceDelta: z.number().int().positive().nullable().optional(),
   category: z.enum(['kit', 'book']),
   ageRange: noHtml('Độ tuổi').and(z.string().min(2).max(50)),
   collection: noHtml('Bộ sưu tập').and(z.string().min(2).max(100)),

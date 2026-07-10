@@ -113,6 +113,9 @@ model Product {
   description String        @db.Text
   price       Int
   oldPrice    Int?
+  // Extra cost for the "Smart" (IoT) variant at checkout. Null means this
+  // product has no Smart variant — only Standard is offered.
+  smartPriceDelta Int?
   category    String
   ageRange    String
   collection  String
@@ -153,11 +156,13 @@ model Order {
 }
 
 model OrderItem {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   orderId   String
   productId Int
   qty       Int
   unitPrice Int
+  // 'standard' | 'smart' — which variant was bought, when the product offers one.
+  variant   String?
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])

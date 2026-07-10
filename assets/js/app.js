@@ -21,6 +21,8 @@ function normalizeProduct(p) {
     age: p.age || p.ageRange || '',
     price: Number(p.price) || 0,
     old: p.old ?? p.oldPrice ?? null,
+    // Extra cost for the Smart (IoT) variant; null/undefined = Standard only.
+    smartDelta: p.smartDelta ?? p.smartPriceDelta ?? null,
     bg: p.bg || p.bgColor || '#FEF5EA',
     desc: p.desc || p.description || '',
     inc: p.inc || p.includes || [],
@@ -40,8 +42,13 @@ const Cart = (() => {
     const c = _items.reduce((s,i)=>s+(i.qty||1),0);
     document.querySelectorAll('.cart-count').forEach(el=>{el.textContent=c;el.classList.toggle('show',c>0);});
   }
+  // A cart line is identified by (productId, variant) — the same product can
+  // appear twice at different price points (e.g. Bean Standard + Bean Smart).
+  function _lineKey(pid, variant) { return `${pid}:${variant || 'standard'}`; }
   // Normalize an API product (snake-ish) to the keys cart UI expects.
-  function _normalize(p) {
+  function _normalize(p, variant) {
+    const smartDelta = p.smartDelta ?? p.smartPriceDelta ?? null;
+    const basePrice = Number(p.price) || 0;
     return {
       id: p.id,
       name: p.name,
@@ -49,9 +56,10 @@ const Cart = (() => {
       col: p.col || p.collection || '',
       cat: p.cat || p.category || '',
       age: p.age || p.ageRange || '',
-      price: Number(p.price) || 0,
+      price: variant === 'smart' ? basePrice + (Number(smartDelta) || 0) : basePrice,
       old: p.old ?? p.oldPrice ?? null,
       bg: p.bg || p.bgColor || 'var(--cream)',
+      variant: variant === 'smart' ? 'smart' : 'standard',
     };
   }
   _load();
@@ -61,20 +69,22 @@ const Cart = (() => {
     register(products) {
       products.forEach(p => { _catalog[p.id] = p; });
     },
-    add(pid, qty=1, product) {
+    add(pid, qty=1, product, variant) {
       _load();
       // Caller may pass the product explicitly (preferred when sourced from API).
       // Otherwise resolve via the API-loaded catalog registered by the page.
       const src = product || _catalog[pid];
       if (!src) { Toast.show('Không tìm thấy sản phẩm', 'error'); return; }
-      const p = _normalize(src);
-      const ex = _items.find(x=>x.id===pid);
+      if (variant === 'smart' && (src.smartDelta ?? src.smartPriceDelta) == null) variant = 'standard';
+      const p = _normalize(src, variant);
+      const key = _lineKey(pid, p.variant);
+      const ex = _items.find(x=>_lineKey(x.id,x.variant)===key);
       if (ex) ex.qty = (ex.qty||1) + qty;
       else _items.push({ ...p, qty });
-      _save(); Toast.show(`Đã thêm "${p.name}" vào giỏ`, 'success');
+      _save(); Toast.show(`Đã thêm "${p.name}"${p.variant==='smart'?' (Smart)':''} vào giỏ`, 'success');
     },
-    remove(pid) { _load(); _items=_items.filter(x=>x.id!==pid); _save(); },
-    setQty(pid,qty) { _load(); const i=_items.find(x=>x.id===pid); if(i) i.qty=Math.max(1,qty); _save(); },
+    remove(pid, variant) { _load(); const key=_lineKey(pid,variant); _items=_items.filter(x=>_lineKey(x.id,x.variant)!==key); _save(); },
+    setQty(pid, variant, qty) { _load(); const key=_lineKey(pid,variant); const i=_items.find(x=>_lineKey(x.id,x.variant)===key); if(i) i.qty=Math.max(1,qty); _save(); },
     total() { return _items.reduce((s,i)=>s+(Number(i.price)||0)*(i.qty||1),0); },
     count() { return _items.reduce((s,i)=>s+(i.qty||1),0); },
     clear() { _items=[]; _save(); },

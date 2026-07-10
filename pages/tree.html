@@ -31,7 +31,7 @@
     }
     .leaf-slot {
       position:absolute;
-      width:10%; aspect-ratio:1;
+      width:14%; aspect-ratio:1;
       transform:translate(-50%,-50%);
       border-radius:0% 100% 0% 100%;
       display:flex; align-items:center; justify-content:center;
@@ -118,8 +118,8 @@
 
 <div id="ftr"></div>
 <script src="../assets/js/env.js"></script>
-<script src="../assets/js/api.js?v=20260710g"></script>
-<script src="../assets/js/app.js?v=20260710g"></script>
+<script src="../assets/js/api.js?v=20260710h"></script>
+<script src="../assets/js/app.js?v=20260710h"></script>
 <script>
 document.getElementById('hdr').innerHTML = renderHeader('myproducts','../');
 document.getElementById('ftr').innerHTML = renderFooter('../');
@@ -184,7 +184,12 @@ function renderTree() {
   const stage = document.getElementById('treeStage');
   const full = images.length >= MAX_LEAVES;
 
-  let html = `<img class="tree-bg-img" src="../assets/images/sprouty-icons/Tree.png" alt="Cây Kỷ Niệm">`;
+  // Each kit product's own image already matches the plant the user
+  // activated (seeded 1:1 with sprouty-icons/<PlantName>.png) — use it
+  // directly so the tree shown here reflects the exact kit that was
+  // activated, instead of a single generic tree graphic for everyone.
+  const bgSrc = product?.images?.[0] ? '..' + product.images[0] : '../assets/images/sprouty-icons/Tree.png';
+  let html = `<img class="tree-bg-img" src="${esc(bgSrc)}" alt="${esc(product?.name || 'Cây Kỷ Niệm')}">`;
   if (full) {
     html += `<div class="tree-full-msg">🌳 Cây đã đủ ${MAX_LEAVES} lá kỷ niệm rồi!</div>`;
   }
