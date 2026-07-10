@@ -74,6 +74,29 @@ Thêm dòng:
 0 3 * * * certbot renew --quiet --deploy-hook "cd /opt/sprouty && docker compose restart frontend"
 ```
 
+## 7b. Backup định kỳ cho ảnh/video người dùng upload
+
+Ảnh/video user upload (chụp cây, kỷ niệm...) lưu ở Docker volume `backend_uploads` — **không nằm trong git, không có backup nào khác**. Nếu volume bị xoá nhầm (`docker compose down -v`, `docker volume rm`...) thì mất vĩnh viễn. Setup backup hàng ngày:
+
+```bash
+mkdir -p /root/backups/sprouty-uploads
+chmod +x /opt/sprouty/docker/backup-uploads.sh
+
+crontab -e
+```
+Thêm dòng (backup mỗi ngày lúc 2h sáng, giữ lại 14 ngày gần nhất):
+```
+0 2 * * * /opt/sprouty/docker/backup-uploads.sh >> /var/log/sprouty-backup.log 2>&1
+```
+
+Chạy thử ngay để xác nhận hoạt động:
+```bash
+/opt/sprouty/docker/backup-uploads.sh
+ls -lh /root/backups/sprouty-uploads/
+```
+
+Khuyến nghị thêm: định kỳ đồng bộ thư mục `/root/backups/sprouty-uploads/` ra ngoài VPS (S3, Google Drive, `rsync` sang máy khác...) — backup nằm cùng ổ đĩa với dữ liệu gốc không chống được trường hợp mất cả VPS. Việc backup Postgres (`postgres_data` volume) vẫn còn thiếu tương tự — cân nhắc làm chung cơ chế `pg_dump` định kỳ.
+
 ## 8. Cập nhật code sau này
 
 **Cách A — dùng git (khuyến nghị nếu repo đã push lên remote):**
