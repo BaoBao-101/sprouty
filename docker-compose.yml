@@ -53,9 +53,6 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    networks:
-      - default
-      - sprouty
     depends_on:
       backend:
         condition: service_healthy
@@ -63,8 +60,3 @@ services:
 volumes:
   postgres_data:
   backend_uploads:
-
-networks:
-  sprouty:
-    external: false
-    name: sprouty_default
