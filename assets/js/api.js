@@ -25,7 +25,11 @@ function _hideApiDownBanner() {
 async function _fetch(path, options = {}) {
   const method = (options.method || 'GET').toUpperCase();
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
-  const headers = isFormData ? {} : { 'Content-Type': 'application/json' };
+  // Only send Content-Type: application/json when there's actually a JSON
+  // body — Fastify rejects bodiless requests (GET, and DELETE calls like
+  // "remove"/"revoke" that pass no body) that still carry this header with
+  // "Body cannot be empty when content-type is set to 'application/json'".
+  const headers = (options.body && !isFormData) ? { 'Content-Type': 'application/json' } : {};
 
   // Include CSRF token for mutating requests
   if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && _csrfToken) {
