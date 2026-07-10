@@ -59,6 +59,7 @@ const Cart = (() => {
       price: variant === 'smart' ? basePrice + (Number(smartDelta) || 0) : basePrice,
       old: p.old ?? p.oldPrice ?? null,
       bg: p.bg || p.bgColor || 'var(--cream)',
+      images: p.images || [],
       variant: variant === 'smart' ? 'smart' : 'standard',
     };
   }
