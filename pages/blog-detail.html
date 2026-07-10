@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"><meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Blog — Sprouty</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<div id="login-modal-mount"></div>
+<div id="hdr"></div>
+<main class="section-sm">
+  <article class="container" id="post" style="max-width:820px"></article>
+</main>
+<div id="ftr"></div>
+<script src="../assets/js/env.js"></script>
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.getElementById('hdr').innerHTML = renderHeader('blog','../');
+document.getElementById('ftr').innerHTML = renderFooter('../');
+const slug = new URLSearchParams(location.search).get('slug');
+
+function renderRecommendedProduct(p) {
+  const image = (p.images && p.images[0]) || `/assets/images/products/kit-${p.id}.svg`;
+  const price = Number(p.price || 0).toLocaleString('vi-VN') + 'đ';
+  const oldPrice = p.oldPrice ? `<span style="text-decoration:line-through;color:var(--ink-5);font-size:.78rem">${Number(p.oldPrice).toLocaleString('vi-VN')}đ</span>` : '';
+  return `
+    <a class="blog-reco-card" href="product-detail.html?id=${p.id}">
+      <div class="blog-reco-thumb" style="background:${p.bgColor || '#FEF5EA'}">
+        <img src="${esc(image)}" alt="${esc(p.name)}" loading="lazy">
+      </div>
+      <div class="blog-reco-body">
+        <div>
+          <div class="blog-reco-title">${esc(p.name)}</div>
+          <div class="blog-reco-meta">${esc(p.collection || '')} · ${esc(p.ageRange || '')}</div>
+          <div class="blog-reco-meta">${esc(p.description || '')}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          ${oldPrice}
+          <div class="blog-reco-price">${price}</div>
+        </div>
+        <span class="btn btn-primary btn-sm blog-reco-cta">Xem sản phẩm</span>
+      </div>
+    </a>`;
+}
+
+async function loadPost(){
+  const el = document.getElementById('post');
+  if (!slug) { el.innerHTML = '<p>Thiếu slug bài viết.</p>'; return; }
+  try {
+    const { post } = await API.blog.get(slug);
+    document.title = post.title + ' — Sprouty';
+    const recommendations = (post.recommendedProducts || []).filter(Boolean);
+    el.innerHTML = `
+      <a href="blog.html" style="color:var(--orange);font-weight:700;text-decoration:none">← Blog</a>
+      <h1 style="margin-top:16px">${esc(post.title)}</h1>
+      ${post.excerpt ? `<p class="lead">${esc(post.excerpt)}</p>` : ''}
+      ${post.coverUrl ? `<img src="${esc(post.coverUrl)}" alt="" style="width:100%;border-radius:12px;margin:20px 0;aspect-ratio:16/9;object-fit:cover">` : ''}
+      <div class="blog-content" style="line-height:1.8;color:var(--ink-2)">${post.contentHtml}</div>
+      ${recommendations.length ? `
+        <section class="blog-recommendations">
+          <div class="section-title" style="margin-bottom:0">
+            <div class="eyebrow">Sản phẩm đề xuất</div>
+            <h2>Gợi ý phù hợp với bài viết này</h2>
+            <p class="lead">Các sản phẩm dưới đây liên quan trực tiếp đến chủ đề bài viết. Bấm vào để chuyển sang trang bán hàng.</p>
+          </div>
+          <div class="blog-reco-grid">
+            ${recommendations.map(renderRecommendedProduct).join('')}
+          </div>
+        </section>` : ''}`;
+  } catch (e) {
+    el.innerHTML = `<p style="color:var(--rose)">${esc(e.message || 'Không tải được bài viết.')}</p>`;
+  }
+}
+
+loadPost();
+
+const blogEvents = new EventSource(`${window.ENV.API_BASE}/blog-events/stream`);
+blogEvents.addEventListener('blog-updated', event => {
+  try {
+    const update = JSON.parse(event.data);
+    if (update.slug === slug) loadPost();
+  } catch {
+    loadPost();
+  }
+});
+</script>
+</body>
+</html>

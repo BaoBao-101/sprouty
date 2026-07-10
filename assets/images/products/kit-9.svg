@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480">
+  <defs>
+    <linearGradient id="bg9" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFFBEB"/><stop offset="100%" stop-color="#FEF3C7"/></linearGradient>
+    <filter id="sf9"><feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="rgba(180,100,0,.2)"/></filter>
+  </defs>
+  <rect width="480" height="480" fill="url(#bg9)" rx="24"/>
+  <!-- Book body -->
+  <rect x="120" y="110" width="240" height="290" rx="8" fill="#F59E0B" filter="url(#sf9)"/>
+  <!-- Book spine -->
+  <rect x="120" y="110" width="28" height="290" rx="8" fill="#D97706"/>
+  <!-- Book pages right edge -->
+  <rect x="352" y="118" width="8" height="274" rx="3" fill="#FEF9C3" opacity=".8"/>
+  <!-- Cover design -->
+  <rect x="156" y="140" width="178" height="4" rx="2" fill="#FBBF24" opacity=".6"/>
+  <rect x="156" y="154" width="140" height="3" rx="2" fill="#FBBF24" opacity=".4"/>
+  <!-- Spring flowers illustration on cover -->
+  <!-- Flower 1 -->
+  <circle cx="205" cy="230" r="28" fill="#FCD34D" filter="url(#sf9)"/>
+  <circle cx="205" cy="230" r="16" fill="#F59E0B"/>
+  <circle cx="177" cy="230" r="14" fill="#FDE68A" opacity=".8"/>
+  <circle cx="233" cy="230" r="14" fill="#FDE68A" opacity=".8"/>
+  <circle cx="191" cy="208" r="14" fill="#FDE68A" opacity=".8"/>
+  <circle cx="219" cy="208" r="14" fill="#FDE68A" opacity=".8"/>
+  <!-- Flower 2 -->
+  <circle cx="305" cy="265" r="22" fill="#F9A8D4" filter="url(#sf9)"/>
+  <circle cx="305" cy="265" r="12" fill="#EC4899"/>
+  <circle cx="283" cy="265" r="11" fill="#FBCFE8" opacity=".8"/>
+  <circle cx="327" cy="265" r="11" fill="#FBCFE8" opacity=".8"/>
+  <circle cx="295" cy="247" r="11" fill="#FBCFE8" opacity=".8"/>
+  <!-- Stems -->
+  <line x1="205" y1="258" x2="205" y2="310" stroke="#4ADE80" stroke-width="4" stroke-linecap="round"/>
+  <line x1="305" y1="287" x2="305" y2="330" stroke="#22C55E" stroke-width="4" stroke-linecap="round"/>
+  <!-- Leaves -->
+  <ellipse cx="192" cy="285" rx="20" ry="9" fill="#86EFAC" transform="rotate(-30,192,285)"/>
+  <ellipse cx="318" cy="310" rx="18" ry="8" fill="#4ADE80" transform="rotate(25,318,310)"/>
+  <!-- Book title area -->
+  <rect x="156" y="345" width="178" height="34" rx="6" fill="#FBBF24" opacity=".5"/>
+  <rect x="168" y="353" width="100" height="6" rx="3" fill="#D97706" opacity=".7"/>
+  <rect x="168" y="363" width="70" height="4" rx="2" fill="#D97706" opacity=".5"/>
+  <!-- Butterfly on cover -->
+  <ellipse cx="165" cy="195" rx="14" ry="11" fill="#C084FC" opacity=".8" transform="rotate(-20,165,195)"/>
+  <ellipse cx="155" cy="200" rx="10" ry="8" fill="#A855F7" opacity=".7" transform="rotate(15,155,200)"/>
+  <ellipse cx="178" cy="195" rx="14" ry="11" fill="#C084FC" opacity=".8" transform="rotate(20,178,195)"/>
+  <ellipse cx="185" cy="200" rx="10" ry="8" fill="#A855F7" opacity=".7" transform="rotate(-15,185,200)"/>
+  <circle cx="170" cy="197" r="5" fill="#7C3AED" opacity=".8"/>
+</svg>

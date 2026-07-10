@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tài khoản của tôi · Sprouty</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    .account-layout{display:grid;grid-template-columns:220px 1fr;gap:32px;margin-top:32px}
+    .account-nav{background:var(--surface);border:1px solid var(--parchment);border-radius:var(--r-lg);padding:16px;height:fit-content}
+    .account-nav a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-md);font-family:var(--font-h);font-size:.87rem;font-weight:600;color:var(--ink-3);text-decoration:none;transition:all .15s;margin-bottom:4px}
+    .account-nav a:hover,.account-nav a.active{background:var(--orange-pale);color:var(--orange)}
+    .account-panel{background:var(--surface);border:1px solid var(--parchment);border-radius:var(--r-lg);padding:28px}
+    .order-card{border:1px solid var(--parchment);border-radius:var(--r-md);padding:16px 20px;margin-bottom:16px;transition:box-shadow .2s}
+    .order-card:hover{box-shadow:var(--sh-md)}
+    .order-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+    .order-id{font-family:var(--font-h);font-size:.8rem;font-weight:700;color:var(--ink-3)}
+    .status-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:var(--r-full);font-size:.72rem;font-weight:700;font-family:var(--font-h);text-transform:uppercase;letter-spacing:.05em}
+    .status-pending{background:#FEF9C3;color:#854D0E}.status-processing{background:#DBEAFE;color:#1D4ED8}
+    .status-shipped{background:#D1FAE5;color:#065F46}.status-delivered{background:#D1FAE5;color:#065F46}
+    .status-cancelled{background:#FEE2E2;color:#991B1B}
+    .order-items{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+    .order-item-chip{background:var(--parchment);border-radius:var(--r-sm);padding:4px 10px;font-size:.78rem;font-family:var(--font-h);font-weight:600}
+    .order-footer{display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid var(--parchment)}
+    .order-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+    /* Order tracking timeline */
+    .order-track{margin-top:14px;padding:18px 8px 8px;border-top:1px dashed var(--parchment-2)}
+    .track-steps{display:flex;align-items:flex-start;justify-content:space-between;position:relative}
+    .track-step{display:flex;flex-direction:column;align-items:center;gap:7px;flex:1;text-align:center;position:relative;z-index:1}
+    .track-dot{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.05rem;background:var(--parchment);border:2px solid var(--parchment-2);color:var(--ink-4);transition:all .2s}
+    .track-step.done .track-dot{background:var(--orange-pale);border-color:var(--orange);color:var(--orange)}
+    .track-step.current .track-dot{background:var(--orange);border-color:var(--orange);color:#fff;box-shadow:0 0 0 4px var(--orange-pale)}
+    .track-label{font-size:.72rem;font-family:var(--font-h);font-weight:600;color:var(--ink-4);max-width:80px;line-height:1.3}
+    .track-step.done .track-label,.track-step.current .track-label{color:var(--ink-2)}
+    .track-line{flex:1;height:2px;background:var(--parchment-2);margin-top:18px}
+    .track-line.done{background:var(--orange)}
+    .track-cancelled{display:flex;align-items:center;gap:10px;padding:14px 16px;background:#FEE2E2;color:#991B1B;border-radius:var(--r-md);font-size:.85rem;font-family:var(--font-h);font-weight:600}
+    .track-note{margin-top:14px;padding:12px 14px;background:var(--cream-2);border-radius:var(--r-md);font-size:.82rem;color:var(--ink-3);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    @media(max-width:720px){.account-layout{grid-template-columns:1fr}.account-nav{display:flex;flex-wrap:wrap;gap:8px;padding:12px}}
+  </style>
+</head>
+<body>
+<div id="site-header"></div>
+<div id="login-modal-mount"></div>
+<main>
+  <div class="container section-sm">
+    <div id="auth-check" style="text-align:center;padding:60px 0">
+      <div style="font-size:2rem;margin-bottom:16px">⏳</div>
+      <p>Đang kiểm tra đăng nhập...</p>
+    </div>
+    <div id="account-content" style="display:none">
+      <h1>Tài khoản của tôi</h1>
+      <div class="account-layout">
+        <nav class="account-nav">
+          <a href="#orders" class="active" onclick="showTab('orders',this)">📦 Đơn hàng</a>
+          <a href="#profile" onclick="showTab('profile',this)">👤 Hồ sơ</a>
+          <a href="#" onclick="Auth.logout();return false" style="color:var(--rose)">🚪 Đăng xuất</a>
+        </nav>
+        <div>
+          <!-- Orders panel -->
+          <div id="tab-orders" class="account-panel">
+            <h2 style="margin-bottom:20px;font-size:1.3rem">Đơn hàng của tôi</h2>
+            <div id="orders-list"><div style="text-align:center;padding:40px 0;color:var(--ink-4)">Đang tải...</div></div>
+          </div>
+          <!-- Profile panel -->
+          <div id="tab-profile" class="account-panel" style="display:none">
+            <h2 style="margin-bottom:20px;font-size:1.3rem">Hồ sơ</h2>
+            <div id="profile-info"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="not-logged-in" style="display:none;text-align:center;padding:80px 0">
+      <div style="font-size:3rem;margin-bottom:16px">🔒</div>
+      <h2>Vui lòng đăng nhập</h2>
+      <p style="margin-bottom:24px">Đăng nhập để xem đơn hàng và thông tin tài khoản</p>
+      <button class="btn btn-primary" onclick="LoginModal.open()">Đăng nhập ngay</button>
+    </div>
+  </div>
+</main>
+<div id="site-footer"></div>
+<script src="../assets/js/env.js"></script>
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+const STATUS_VN = { pending:'Chờ xác nhận', processing:'Đang xử lý', shipped:'Đang giao', delivered:'Đã giao', cancelled:'Đã hủy' };
+const STATUS_CLS = { pending:'status-pending', processing:'status-processing', shipped:'status-shipped', delivered:'status-delivered', cancelled:'status-cancelled' };
+
+document.getElementById('site-header').innerHTML = renderHeader('account', '../');
+document.getElementById('site-footer').innerHTML = renderFooter('../');
+
+function showTab(tab, el) {
+  document.querySelectorAll('#tab-orders,#tab-profile').forEach(t=>t.style.display='none');
+  document.getElementById('tab-'+tab).style.display='';
+  document.querySelectorAll('.account-nav a').forEach(a=>a.classList.remove('active'));
+  el.classList.add('active');
+  return false;
+}
+
+async function loadOrders() {
+  try {
+    const { orders } = await API.orders.list();
+    const list = document.getElementById('orders-list');
+    if (!orders.length) {
+      list.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--ink-4)">
+        <div style="font-size:2.5rem;margin-bottom:12px">📭</div>
+        <p>Bạn chưa có đơn hàng nào.</p>
+        <a href="shop.html" class="btn btn-primary" style="margin-top:12px;display:inline-block">Mua sắm ngay</a>
+      </div>`;
+      return;
+    }
+    list.innerHTML = orders.map(renderOrderCard).join('');
+  } catch(e) {
+    document.getElementById('orders-list').innerHTML = `<div style="color:var(--rose);padding:20px 0">${e.message||'Lỗi tải đơn hàng'}</div>`;
+  }
+}
+
+const TRACK_STEPS = [
+  { key:'pending',    label:'Chờ thanh toán', icon:'💳' },
+  { key:'processing', label:'Đang xử lý',     icon:'📋' },
+  { key:'shipped',    label:'Đang giao',      icon:'🚚' },
+  { key:'delivered',  label:'Đã giao',        icon:'✅' },
+];
+
+function renderTrack(status) {
+  if (status === 'cancelled') {
+    return `<div class="order-track"><div class="track-cancelled">🚫 Đơn hàng đã bị hủy</div></div>`;
+  }
+  const idx = TRACK_STEPS.findIndex(s => s.key === status);
+  const cur = idx === -1 ? 0 : idx;
+  const parts = [];
+  TRACK_STEPS.forEach((s, i) => {
+    const cls = i < cur ? 'done' : i === cur ? 'current' : '';
+    parts.push(`<div class="track-step ${cls}"><div class="track-dot">${s.icon}</div><div class="track-label">${s.label}</div></div>`);
+    if (i < TRACK_STEPS.length - 1) parts.push(`<div class="track-line ${i < cur ? 'done' : ''}"></div>`);
+  });
+  return `<div class="order-track"><div class="track-steps">${parts.join('')}</div></div>`;
+}
+
+function renderOrderCard(o) {
+  const canCancel = o.status === 'pending';
+  const canPay    = o.status === 'pending';
+  const placed    = new Date(o.createdAt).toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const paidLine  = o.paidAt ? `<div style="font-size:.78rem;color:var(--ink-4);margin-top:2px">Thanh toán: ${new Date(o.paidAt).toLocaleString('vi-VN')}</div>` : '';
+  const noteLine  = o.note ? `<div class="track-note"><span>📝 Ghi chú: ${esc(o.note)}</span></div>` : '';
+  const redeemLine = renderRedeemCodes(o.redeemCodes || [], o.id);
+  return `
+    <div class="order-card" data-order-id="${esc(o.id)}">
+      <div class="order-header">
+        <div>
+          <div class="order-id">Đơn #${o.id.slice(-8).toUpperCase()}</div>
+          <div style="font-size:.78rem;color:var(--ink-4);margin-top:2px">Đặt lúc: ${placed}</div>
+          ${paidLine}
+        </div>
+        <span class="status-badge ${STATUS_CLS[o.status]||''}">${STATUS_VN[o.status]||o.status}</span>
+      </div>
+      <div class="order-items">
+        ${o.items.map(i=>`<span class="order-item-chip">${esc(i.product?.emoji||'📦')} ${esc(i.product?.name||'Sản phẩm')} ×${i.qty}</span>`).join('')}
+      </div>
+      <div class="order-footer">
+        <div>
+          <div style="font-size:.78rem;color:var(--ink-4)">Giao đến: ${esc(o.shippingName)} · ${esc(o.shippingPhone)}</div>
+          <div style="font-size:.75rem;color:var(--ink-5);margin-top:2px">${esc(o.shippingAddress)}</div>
+        </div>
+        <div style="font-weight:700;color:var(--orange);font-family:var(--font-h)">${o.total.toLocaleString('vi-VN')}đ</div>
+      </div>
+      ${noteLine}
+      ${redeemLine}
+      ${renderTrack(o.status)}
+      <div class="order-actions">
+        ${canPay    ? `<a class="btn btn-primary btn-sm" href="payment.html?orderId=${encodeURIComponent(o.id)}">💳 Thanh toán</a>` : ''}
+        ${canCancel ? `<button class="btn btn-ghost btn-sm" onclick="cancelOrder('${esc(o.id)}', this)">🚫 Hủy đơn</button>` : ''}
+      </div>
+    </div>`;
+}
+
+function renderRedeemCodes(codes, orderId) {
+  if (!codes.length) return '';
+  return `<div class="track-note" style="align-items:flex-start">
+    <div style="width:100%">
+      <div style="font-weight:800;margin-bottom:6px;color:var(--ink)">🎟 Mã kích hoạt sau mua hàng</div>
+      ${codes.map((c, i) => {
+        const id = `redeem_${orderId}_${i}`.replace(/[^a-zA-Z0-9_]/g, '_');
+        return `<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:${i ? '8px' : '0'}">
+          <div>
+            <div style="font-size:.76rem;color:var(--ink-4)">${esc(c.productName || ('Sản phẩm #' + c.productId))}</div>
+            <div id="${id}" style="font-family:var(--font-h);font-weight:800;color:var(--orange);letter-spacing:.04em">${esc(c.code)}</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="copyOrderCode('${id}')">Copy</button>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+function copyOrderCode(id) {
+  const text = document.getElementById(id)?.textContent || '';
+  if (!text) return;
+  navigator.clipboard?.writeText(text).then(
+    () => Toast.show('Đã sao chép mã', 'success'),
+    () => Toast.show('Không sao chép được mã', 'error')
+  );
+}
+
+async function cancelOrder(orderId, btn) {
+  if (!confirm('Bạn chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác.')) return;
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Đang hủy...';
+  try {
+    await API.orders.cancel(orderId);
+    await loadOrders();
+  } catch (e) {
+    alert(e.message || 'Không thể hủy đơn hàng. Vui lòng thử lại.');
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+
+function showProfile(user) {
+  document.getElementById('profile-info').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px">
+      <div style="background:var(--cream-2);border-radius:var(--r-md);padding:16px">
+        <div style="font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--orange);margin-bottom:6px">Họ tên</div>
+        <div style="font-size:1rem;font-weight:600">${esc(user.name)}</div>
+      </div>
+      <div style="background:var(--cream-2);border-radius:var(--r-md);padding:16px">
+        <div style="font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--orange);margin-bottom:6px">Email</div>
+        <div style="font-size:1rem;font-weight:600">${esc(user.email)}</div>
+      </div>
+      <div style="background:var(--cream-2);border-radius:var(--r-md);padding:16px">
+        <div style="font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--orange);margin-bottom:6px">Vai trò</div>
+        <div style="font-size:1rem;font-weight:600;text-transform:capitalize">${esc(user.role)}</div>
+      </div>
+    </div>`;
+}
+
+Auth.onReady(async (user) => {
+  document.getElementById('auth-check').style.display = 'none';
+  if (!user) {
+    document.getElementById('not-logged-in').style.display = 'block';
+    return;
+  }
+  document.getElementById('account-content').style.display = 'block';
+  showProfile(user);
+  await loadOrders();
+});
+</script>
+</body>
+</html>

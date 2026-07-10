@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480">
+  <defs>
+    <linearGradient id="bg10" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#F0FDF4"/><stop offset="100%" stop-color="#DCFCE7"/></linearGradient>
+    <filter id="sf10"><feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="rgba(22,163,74,.2)"/></filter>
+  </defs>
+  <rect width="480" height="480" fill="url(#bg10)" rx="24"/>
+  <!-- Book body -->
+  <rect x="115" y="105" width="250" height="300" rx="10" fill="#22C55E" filter="url(#sf10)"/>
+  <rect x="115" y="105" width="30" height="300" rx="10" fill="#16A34A"/>
+  <!-- Recycling symbol on cover -->
+  <circle cx="240" cy="230" r="70" fill="rgba(255,255,255,.15)"/>
+  <!-- Recycling arrows -->
+  <path d="M240,175 L255,195 L245,195 L245,240 L255,240 L240,260 L225,240 L235,240 L235,195 L225,195 Z" fill="white" opacity=".9" transform="rotate(0,240,230)"/>
+  <path d="M240,175 L255,195 L245,195 L245,240 L255,240 L240,260 L225,240 L235,240 L235,195 L225,195 Z" fill="white" opacity=".9" transform="rotate(120,240,230)"/>
+  <path d="M240,175 L255,195 L245,195 L245,240 L255,240 L240,260 L225,240 L235,240 L235,195 L225,195 Z" fill="white" opacity=".9" transform="rotate(240,240,230)"/>
+  <!-- Book title -->
+  <rect x="150" y="335" width="180" height="40" rx="8" fill="rgba(255,255,255,.25)"/>
+  <rect x="162" y="345" width="120" height="7" rx="3" fill="white" opacity=".8"/>
+  <rect x="162" y="358" width="80" height="5" rx="2" fill="white" opacity=".6"/>
+  <!-- Decorative items around book -->
+  <!-- Plastic bottle -->
+  <rect x="90" y="310" width="22" height="40" rx="8" fill="#BFDBFE" filter="url(#sf10)"/>
+  <rect x="97" y="306" width="8" height="8" rx="3" fill="#93C5FD"/>
+  <!-- Paper roll -->
+  <ellipse cx="380" cy="320" rx="20" ry="28" fill="#FDE68A" filter="url(#sf10)"/>
+  <ellipse cx="380" cy="292" rx="20" ry="8" fill="#FCD34D"/>
+  <!-- Scissors -->
+  <circle cx="388" cy="170" r="12" fill="#E5E7EB"/>
+  <circle cx="366" cy="170" r="12" fill="#E5E7EB"/>
+  <line x1="377" y1="170" x2="350" y2="200" stroke="#9CA3AF" stroke-width="5" stroke-linecap="round"/>
+  <line x1="377" y1="170" x2="350" y2="140" stroke="#9CA3AF" stroke-width="5" stroke-linecap="round"/>
+  <!-- Leaf -->
+  <path d="M100,190 Q130,145 160,190 Q130,200 100,190Z" fill="#4ADE80"/>
+  <line x1="130" y1="190" x2="130" y2="180" stroke="#22C55E" stroke-width="2"/>
+</svg>

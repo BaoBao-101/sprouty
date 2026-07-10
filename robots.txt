@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /pages/admin/
+Disallow: /assets/js/env.js
+Disallow: /backend/
+
+Sitemap: https://sprouty.id.vn/sitemap.xml

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480">
+  <defs>
+    <radialGradient id="bg12" cx="50%" cy="50%" r="55%"><stop offset="0%" stop-color="#FDF4FF"/><stop offset="100%" stop-color="#F3E8FF"/></radialGradient>
+    <filter id="sf12"><feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="rgba(124,58,237,.2)"/></filter>
+  </defs>
+  <rect width="480" height="480" fill="url(#bg12)" rx="24"/>
+  <!-- Stage curtains -->
+  <path d="M0,0 Q0,120 30,160 Q60,200 80,480 L0,480Z" fill="#DC2626" opacity=".7"/>
+  <path d="M480,0 Q480,120 450,160 Q420,200 400,480 L480,480Z" fill="#DC2626" opacity=".7"/>
+  <!-- Stage floor -->
+  <rect x="50" y="380" width="380" height="100" rx="0" fill="#92400E" opacity=".4"/>
+  <!-- Marionette strings -->
+  <line x1="240" y1="50" x2="190" y2="148" stroke="#A78BFA" stroke-width="2" opacity=".8"/>
+  <line x1="240" y1="50" x2="290" y2="148" stroke="#A78BFA" stroke-width="2" opacity=".8"/>
+  <line x1="240" y1="50" x2="172" y2="228" stroke="#C084FC" stroke-width="1.5" opacity=".6"/>
+  <line x1="240" y1="50" x2="308" y2="228" stroke="#C084FC" stroke-width="1.5" opacity=".6"/>
+  <!-- Control bar -->
+  <rect x="192" y="42" width="96" height="14" rx="6" fill="#7C3AED" filter="url(#sf12)"/>
+  <!-- Puppet body -->
+  <ellipse cx="240" cy="250" rx="48" ry="58" fill="#FCD34D" filter="url(#sf12)"/>
+  <!-- Bow tie -->
+  <polygon points="216,218 240,230 216,242" fill="#EF4444"/>
+  <polygon points="264,218 240,230 264,242" fill="#EF4444"/>
+  <circle cx="240" cy="230" r="8" fill="#DC2626"/>
+  <!-- Head -->
+  <circle cx="240" cy="162" r="46" fill="#FCD34D" filter="url(#sf12)"/>
+  <!-- Face features -->
+  <circle cx="225" cy="153" r="8" fill="#1A1209"/>
+  <circle cx="255" cy="153" r="8" fill="#1A1209"/>
+  <circle cx="223" cy="151" r="3" fill="white"/>
+  <circle cx="253" cy="151" r="3" fill="white"/>
+  <!-- Smile -->
+  <path d="M220,174 Q240,192 260,174" stroke="#92400E" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <!-- Cheeks -->
+  <circle cx="208" cy="170" r="11" fill="#F97316" opacity=".38"/>
+  <circle cx="272" cy="170" r="11" fill="#F97316" opacity=".38"/>
+  <!-- Hat -->
+  <ellipse cx="240" cy="120" rx="52" ry="13" fill="#7C3AED"/>
+  <rect x="214" y="68" width="52" height="54" rx="6" fill="#8B5CF6" filter="url(#sf12)"/>
+  <circle cx="240" cy="68" r="8" fill="#A78BFA"/>
+  <!-- Star on hat -->
+  <polygon points="240,76 244,88 256,88 246,96 250,108 240,100 230,108 234,96 224,88 236,88" fill="#FCD34D"/>
+  <!-- Arms -->
+  <rect x="192" y="205" width="20" height="60" rx="10" fill="#FCD34D" transform="rotate(-25,192,205)" filter="url(#sf12)"/>
+  <rect x="268" y="205" width="20" height="60" rx="10" fill="#FCD34D" transform="rotate(25,288,205)" filter="url(#sf12)"/>
+  <!-- Legs dangling -->
+  <rect x="218" y="306" width="20" height="72" rx="10" fill="#FCD34D" transform="rotate(-8,218,306)"/>
+  <rect x="246" y="306" width="20" height="72" rx="10" fill="#FCD34D" transform="rotate(8,260,306)"/>
+</svg>

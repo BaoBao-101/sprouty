@@ -1,0 +1,2 @@
+ALTER TABLE "BlogPost"
+ADD COLUMN "recommendedProductIds" INTEGER[] NOT NULL DEFAULT ARRAY[]::INTEGER[];

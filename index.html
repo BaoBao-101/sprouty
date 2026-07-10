@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sprouty — Gieo hạt thật, lưu kỷ niệm số cho gia đình</title>
+  <meta name="description" content="Sprouty kết hợp bộ kit trồng cây, vẽ chậu, IoT/STEM, Cây Kỷ Niệm số và AI để gia đình lưu lại hành trình lớn lên của bé.">
+  <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    /* Homepage-only extras */
+    .section-title { text-align:center; margin-bottom:48px }
+    .section-title .overline { justify-content:center }
+
+    /* ── User Flow ── */
+    .user-flow-track { display:grid; grid-template-columns:repeat(4,1fr); gap:0; margin-top:52px; align-items:end; position:relative }
+    .uflow-col { display:flex; flex-direction:column; align-items:center; position:relative; padding:0 8px }
+    .uflow-above { flex-direction:column-reverse; align-items:center }
+    .uflow-circle { width:100px; height:100px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; box-shadow:0 8px 28px rgba(0,0,0,.15); flex-shrink:0; position:relative; z-index:2 }
+    .uflow-num { font-family:var(--font-h); font-size:.7rem; font-weight:800; color:rgba(255,255,255,.7); letter-spacing:.05em }
+    .uflow-em { font-size:2rem; line-height:1 }
+    .c1 { background:linear-gradient(135deg,#60A5FA,#3B82F6) }
+    .c2 { background:linear-gradient(135deg,#F87171,#EF4444) }
+    .c3 { background:linear-gradient(135deg,#FBBF24,#F59E0B) }
+    .c4 { background:linear-gradient(135deg,#4ADE80,#22C55E) }
+    .uflow-connector { width:80px; height:24px; flex-shrink:0; position:relative; margin:8px 0; z-index:1 }
+    .uflow-connector.right { color:var(--orange) }
+    .uflow-connector.left { color:var(--green) }
+    .uflow-connector svg { width:80px; height:24px }
+    .uflow-text { text-align:center; padding:16px 6px 0 }
+    .uflow-text-top { padding:0 6px 16px; text-align:center }
+    .uflow-title { font-family:var(--font-h); font-size:.9rem; font-weight:800; color:var(--ink); margin-bottom:6px }
+    .uflow-desc { font-size:.78rem; color:var(--ink-4); line-height:1.6; margin:0 }
+    .user-flow-mobile { display:none; padding:4px 0 }
+    .uflow-m-item { display:flex; gap:16px; align-items:flex-start; margin-bottom:8px }
+    .uflow-m-dot { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#fff; font-family:var(--font-h); font-size:.78rem; font-weight:800; box-shadow:0 4px 14px rgba(0,0,0,.15) }
+    .uflow-m-line { width:2px; background:var(--parchment-2); flex-shrink:0; margin:48px 0 0; height:calc(100% - 48px); align-self:stretch }
+
+    .feat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; margin-top:44px }
+    .feat-card { background:var(--surface); border:1.5px solid var(--parchment-2); border-radius:var(--r-xl); padding:28px 24px; transition:all .25s var(--ease); box-shadow:var(--sh-sm) }
+    .feat-card:hover { transform:translateY(-4px); box-shadow:var(--sh-lg); border-color:var(--terra-3) }
+    .feat-em { font-size:2.2rem; margin-bottom:14px; display:block }
+    .feat-title { font-family:var(--font-display); font-size:1.08rem; font-weight:600; color:var(--ink); margin-bottom:8px }
+    .feat-desc { font-size:.86rem; color:var(--ink-3); line-height:1.7 }
+    .review-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; margin-top:44px }
+    .cta-banner { background:linear-gradient(135deg,var(--terracotta) 0%,var(--orange-lt) 100%); border-radius:var(--r-2xl); padding:56px 48px; text-align:center; position:relative; overflow:hidden }
+    .cta-banner::before { content:''; position:absolute; top:-60px; right:-60px; width:300px; height:300px; border-radius:50%; background:rgba(255,255,255,.07) }
+    .cta-banner::after { content:''; position:absolute; bottom:-40px; left:-40px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.05) }
+    .cta-banner h2 { color:#fff; font-size:clamp(1.6rem,3vw,2.4rem) }
+    .cta-banner p { color:rgba(255,255,255,.85); font-size:1rem; margin:12px 0 28px }
+    @media(max-width:1024px) {
+      .user-flow-track { display:none }
+      .user-flow-mobile { display:flex; flex-direction:column }
+      .feat-grid { grid-template-columns:1fr }
+      .review-grid { grid-template-columns:1fr }
+    }
+    @media(max-width:640px) { .feat-grid { grid-template-columns:1fr } .cta-banner { padding:36px 24px } }
+  </style>
+</head>
+<body>
+<div id="login-modal-mount"></div>
+<div id="hdr"></div>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-grid">
+      <div class="hero-left fade-up">
+        <div class="hero-eyebrow">🌍 Kỷ niệm từ thiên nhiên cho gia đình</div>
+        <h1 class="hero-title">Gieo kỷ niệm,<br><em>lớn lên cùng nhau</em></h1>
+        <p class="hero-subtitle">Plant real seeds, paint your pot, and watch memories bloom — Sprouty biến mỗi chậu cây của bé thành một Cây Kỷ Niệm số đầy phép màu.</p>
+        <div class="hero-actions">
+          <a href="pages/shop.html" class="btn btn-primary btn-lg">Khám phá Sprouty Kit →</a>
+          <a href="pages/workshop.html" class="btn btn-outline btn-lg">Xem Workshop trồng cây</a>
+        </div>
+        <div class="hero-chips">
+          <span class="hero-chip">🌱 Hạt giống thật</span>
+          <span class="hero-chip">🎨 Vẽ chậu của bé</span>
+          <span class="hero-chip">🌳 Cây Kỷ Niệm số</span>
+          <span class="hero-chip">🤖 AI Plant Buddy</span>
+        </div>
+      </div>
+      <div class="hero-right fade-up delay-2">
+        <!-- ── Auto-sliding image carousel ── -->
+        <div class="hero-carousel-wrap">
+          <div class="hero-carousel-track" id="heroTrack">
+            <!-- Slides: Book01-1, Book01-2, then KIT01-1 ... KIT08-1 -->
+            <!-- Duplicated at end for seamless loop -->
+          </div>
+          <!-- Dot indicators -->
+          <div class="hero-carousel-dots" id="heroDots"></div>
+          <!-- Floating product cards -->
+          <div class="float-card float-card-1" id="floatCard1">
+            <div class="float-icon" style="background:#FEF5EA"></div>
+            <div><div class="float-name" id="floatName1">Standard Kit</div><div class="float-sub" id="floatSub1">150.000đ · 🌱 Khởi đầu</div></div>
+          </div>
+          <div class="float-card float-card-2" id="floatCard2">
+            <div class="float-icon" style="background:#EDE9FE"></div>
+            <div><div class="float-name" id="floatName2">Smart Kit</div><div class="float-sub" id="floatSub2">380.000đ · 🤖 IoT</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── STATS ── -->
+<div class="stats-strip">
+  <div class="container">
+    <div class="stats-row">
+      <div class="stat-item"><span class="stat-n">12k+</span><span class="stat-l">Gia đình gieo mầm</span></div>
+      <div class="stat-item"><span class="stat-n">48k</span><span class="stat-l">Kỷ niệm đã lưu</span></div>
+      <div class="stat-item"><span class="stat-n">4.9</span><span class="stat-l">Đánh giá gia đình</span></div>
+      <div class="stat-item"><span class="stat-n">2</span><span class="stat-l">Dòng kit Sprouty</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── USER FLOW ── -->
+<section class="section" id="user-flow" style="background:var(--cream-2);overflow:hidden;position:relative">
+  <div style="position:absolute;left:-120px;top:-80px;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(232,93,4,.07) 0%,transparent 70%);pointer-events:none"></div>
+  <div style="position:absolute;right:-80px;bottom:-60px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(88,129,87,.07) 0%,transparent 70%);pointer-events:none"></div>
+  <div class="container" style="position:relative;z-index:1">
+    <div class="section-title">
+      <div class="overline">Quy trình sử dụng</div>
+      <h2>Hành trình của bé với Sprouty</h2>
+      <p class="lead" style="max-width:520px;margin:12px auto 0">Từ một bộ kit ngoài đời đến khu vườn kỷ niệm số — chỉ 4 bước gia đình có thể làm cùng nhau.</p>
+    </div>
+    <div class="user-flow-track">
+      <!-- Step 1 -->
+      <div class="uflow-col uflow-below">
+        <div class="uflow-circle c1">
+          <span class="uflow-num">01</span>
+          <span class="uflow-em">🎁</span>
+        </div>
+        <div class="uflow-connector right">
+          <svg viewBox="0 0 80 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 12 L68 12" stroke="currentColor" stroke-width="2.5" stroke-dasharray="6 3"/>
+            <path d="M60 4 L76 12 L60 20" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="uflow-text">
+          <h4 class="uflow-title">Nhận Sprouty Kit</h4>
+          <p class="uflow-desc">Hộp gồm chậu, màu acrylic, hạt giống, đất trồng, hướng dẫn và quyền truy cập app Sprouty.</p>
+        </div>
+      </div>
+      <!-- Step 2 -->
+      <div class="uflow-col uflow-above">
+        <div class="uflow-text uflow-text-top">
+          <h4 class="uflow-title">Kích hoạt Plant Buddy</h4>
+          <p class="uflow-desc">Quét QR hoặc nhập mã PIN để đánh thức Bạn Cây và mở Cây Kỷ Niệm của bé.</p>
+        </div>
+        <div class="uflow-connector left">
+          <svg viewBox="0 0 80 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M76 12 L12 12" stroke="currentColor" stroke-width="2.5" stroke-dasharray="6 3"/>
+            <path d="M20 4 L4 12 L20 20" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="uflow-circle c2">
+          <span class="uflow-num">02</span>
+          <span class="uflow-em">📲</span>
+        </div>
+      </div>
+      <!-- Step 3 -->
+      <div class="uflow-col uflow-below">
+        <div class="uflow-circle c3">
+          <span class="uflow-num">03</span>
+          <span class="uflow-em">🪴</span>
+        </div>
+        <div class="uflow-connector right">
+          <svg viewBox="0 0 80 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 12 L68 12" stroke="currentColor" stroke-width="2.5" stroke-dasharray="6 3"/>
+            <path d="M60 4 L76 12 L60 20" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="uflow-text">
+          <h4 class="uflow-title">Vẽ chậu & gieo hạt</h4>
+          <p class="uflow-desc">Bé trang trí chậu, gieo hạt thật và bắt đầu chăm sóc cây mỗi ngày.</p>
+        </div>
+      </div>
+      <!-- Step 4 -->
+      <div class="uflow-col uflow-above">
+        <div class="uflow-text uflow-text-top">
+          <h4 class="uflow-title">Lưu kỷ niệm nở hoa</h4>
+          <p class="uflow-desc">Upload ảnh, video hoặc nhật ký; mỗi kỷ niệm trở thành một chiếc lá trên cây số.</p>
+        </div>
+        <div class="uflow-circle c4">
+          <span class="uflow-num">04</span>
+          <span class="uflow-em">🌟</span>
+        </div>
+      </div>
+    </div>
+    <!-- Mobile linear flow -->
+    <div class="user-flow-mobile">
+      <div class="uflow-m-item"><div class="uflow-m-dot c1"><span>01</span></div><div class="uflow-m-line"></div><div><h4 class="uflow-title">Nhận Sprouty Kit</h4><p class="uflow-desc">Chậu, màu, hạt giống, đất trồng và hướng dẫn trong một hộp.</p></div></div>
+      <div class="uflow-m-item"><div class="uflow-m-dot c2"><span>02</span></div><div class="uflow-m-line"></div><div><h4 class="uflow-title">Kích hoạt Plant Buddy</h4><p class="uflow-desc">Quét QR hoặc nhập mã PIN để mở khu vườn số.</p></div></div>
+      <div class="uflow-m-item"><div class="uflow-m-dot c3"><span>03</span></div><div class="uflow-m-line"></div><div><h4 class="uflow-title">Vẽ chậu & gieo hạt</h4><p class="uflow-desc">Bé tự trang trí, gieo hạt và chăm cây mỗi ngày.</p></div></div>
+      <div class="uflow-m-item"><div class="uflow-m-dot c4"><span>04</span></div><div style="width:2px"></div><div><h4 class="uflow-title">Lưu kỷ niệm</h4><p class="uflow-desc">Ảnh, video, nhật ký trở thành lá trên Cây Kỷ Niệm.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURED PRODUCTS ── -->
+<section class="section" style="background:var(--cream-2)">
+  <div class="container">
+    <div class="section-title">
+      <div class="overline">Sản phẩm nổi bật</div>
+      <h2>Được bé yêu thích nhất</h2>
+      <p class="lead" style="max-width:480px;margin:12px auto 0">Những bộ kit trồng cây, vẽ chậu và IoT giúp bé học bằng tay, gia đình lưu lại bằng trái tim.</p>
+    </div>
+    <div class="grid-4" id="featuredGrid"></div>
+    <div style="text-align:center;margin-top:36px">
+      <a href="pages/shop.html" class="btn btn-outline btn-lg">Xem tất cả sản phẩm →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES ── -->
+<section class="section">
+  <div class="container">
+    <div class="section-title">
+      <div class="overline">Tại sao chọn Sprouty</div>
+      <h2>Nhiều hơn một chậu cây nhỏ</h2>
+    </div>
+    <div class="feat-grid">
+      <div class="feat-card">
+        <span class="feat-em">🌳</span>
+        <div class="feat-title">Digital Memory Tree</div>
+        <p class="feat-desc">Mỗi chiếc lá lưu một ảnh, video hoặc nhật ký. Cây số lớn dần theo từng khoảnh khắc bé chăm cây ngoài đời.</p>
+      </div>
+      <div class="feat-card">
+        <span class="feat-em">🤖</span>
+        <div class="feat-title">AI Story Magic</div>
+        <p class="feat-desc">AI tạo caption dễ thương, lời nhắn từ Bạn Cây và bản tóm tắt câu chuyện hàng tháng cho gia đình.</p>
+      </div>
+      <div class="feat-card">
+        <span class="feat-em">🪴</span>
+        <div class="feat-title">Paint Your Pot</div>
+        <p class="feat-desc">Bé tự trang trí chậu đất nung bằng màu acrylic. Mỗi chậu là một dấu ấn riêng và là nhà đầu tiên của Bạn Cây.</p>
+      </div>
+      <div class="feat-card">
+        <span class="feat-em">✅</span>
+        <div class="feat-title">An toàn cho gia đình</div>
+        <p class="feat-desc">Sprouty ưu tiên quyền riêng tư của trẻ em, không bán dữ liệu, không dùng ảnh gia đình để huấn luyện AI.</p>
+      </div>
+      <div class="feat-card">
+        <span class="feat-em">🏫</span>
+        <div class="feat-title">Workshop trồng cây & STEM</div>
+        <p class="feat-desc">Workshop nhóm nhỏ giúp bé vẽ chậu, gieo hạt, setup tài khoản Sprouty hoặc lắp cảm biến IoT cùng phụ huynh.</p>
+      </div>
+      <div class="feat-card">
+        <span class="feat-em">💝</span>
+        <div class="feat-title">Family Memories</div>
+        <p class="feat-desc">Chia sẻ cột mốc với ông bà, lưu lại hành trình cây lớn lên và biến ký ức gia đình thành một khu vườn sống động.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── AGE GUIDE ── -->
+<section class="section" style="background:var(--cream-2)">
+  <div class="container">
+    <div class="section-title">
+      <div class="overline">Chọn theo gia đình</div>
+      <h2>Sprouty phù hợp với ai?</h2>
+      <p class="lead" style="max-width:480px;margin:12px auto 0">Từ bé nhỏ thích vẽ chậu đến học sinh mê STEM, Sprouty có một hành trình trồng cây phù hợp.</p>
+    </div>
+    <div class="age-grid">
+      <div class="age-card" onclick="location.href='pages/shop.html?age=4-6'">
+        <span class="age-em">🌱</span>
+        <span class="age-range">4–10 tuổi</span>
+        <p class="age-sub">Vẽ chậu, gieo hạt, tưới nước và lưu ảnh mỗi tuần. Ba mẹ đồng hành nhưng bé là người chăm cây chính.</p>
+      </div>
+      <div class="age-card" onclick="location.href='pages/shop.html?age=6-8'">
+        <span class="age-em">🌿</span>
+        <span class="age-range">10–18 tuổi</span>
+        <p class="age-sub">Smart Kit với Arduino, cảm biến độ ẩm, OLED và LED giúp học sinh học STEM qua cây thật.</p>
+      </div>
+      <div class="age-card" onclick="location.href='pages/shop.html?age=8-10'">
+        <span class="age-em">🌳</span>
+        <span class="age-range">Phụ huynh</span>
+        <p class="age-sub">Lưu ảnh, video, nhật ký và những câu nói nhỏ của con thành một Cây Kỷ Niệm riêng tư cho gia đình.</p>
+      </div>
+      <div class="age-card" onclick="location.href='pages/shop.html?age=10-12'">
+        <span class="age-em">✨</span>
+        <span class="age-range">VIP Garden</span>
+        <p class="age-sub">Mở khóa hiệu ứng ban đêm, cây vàng, Plant Buddies hiếm và nhật ký AI hàng tháng.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── REVIEWS ── -->
+<section class="section">
+  <div class="container">
+    <div class="section-title">
+      <div class="overline">Phụ huynh nói gì</div>
+      <h2>Kỷ niệm thật, từ những gia đình thật</h2>
+    </div>
+    <div class="review-grid">
+      <div class="review-card">
+        <div class="review-stars">★★★★★</div>
+        <p class="review-text">"Bé nhà mình tự tay vẽ chậu, gieo hạt rồi mỗi sáng đều chạy ra xem cây. Lần đầu tiên con chủ động chăm một thứ lâu như vậy."</p>
+        <div class="reviewer">
+          <div class="reviewer-av" style="background:linear-gradient(135deg,#E85D04,#C4622D)">M</div>
+          <div><div class="reviewer-name">Nguyễn Thị Mai</div><div class="reviewer-sub">Phụ huynh, Quận 7 · Standard Kit</div></div>
+        </div>
+      </div>
+      <div class="review-card">
+        <div class="review-stars">★★★★★</div>
+        <p class="review-text">"Cây Kỷ Niệm làm cả nhà thích. Mỗi tuần thêm một chiếc lá, ông bà ở xa cũng xem được khoảnh khắc cây và con cùng lớn."</p>
+        <div class="reviewer">
+          <div class="reviewer-av" style="background:linear-gradient(135deg,#3B82F6,#1D4ED8)">T</div>
+          <div><div class="reviewer-name">Trần Minh Tuấn</div><div class="reviewer-sub">Phụ huynh, Bình Thạnh · Memory Tree</div></div>
+        </div>
+      </div>
+      <div class="review-card">
+        <div class="review-stars">★★★★★</div>
+        <p class="review-text">"Smart Kit làm con tôi mê cảm biến và lập trình hơn hẳn. Cây thật khiến bài học IoT không còn khô khan."</p>
+        <div class="reviewer">
+          <div class="reviewer-av" style="background:linear-gradient(135deg,#588157,#3A5A40)">H</div>
+          <div><div class="reviewer-name">Lê Thị Hoa</div><div class="reviewer-sub">Phụ huynh, Gò Vấp · Smart Kit</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── AI PROMO ── -->
+<section class="section" style="background:var(--cream-2)">
+  <div class="container">
+    <div class="ai-promo">
+      <div style="position:relative;z-index:1;max-width:600px">
+        <div class="overline" style="color:var(--terra-3)">Tính năng đặc biệt</div>
+        <h2 style="color:#fff;margin:10px 0 14px">AI Plant Buddy biết kể chuyện cùng bé</h2>
+        <p style="color:rgba(255,255,255,.75);font-size:.97rem;line-height:1.75;margin-bottom:28px">Tạo lời nhắn từ Bạn Cây, caption cho ảnh mới, hoặc gợi ý cách ghi lại một ngày chăm cây thành kỷ niệm đáng nhớ.</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <a href="pages/ai.html" class="btn btn-white btn-lg">Thử ngay miễn phí →</a>
+          <a href="pages/my-products.html" class="btn btn-white-ol btn-lg">Vườn của tôi</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section class="section">
+  <div class="container" style="max-width:800px">
+    <div class="cta-banner">
+      <div style="position:relative;z-index:1">
+        <h2>Sẵn sàng gieo kỷ niệm đầu tiên?</h2>
+        <p>Chọn Sprouty Kit cho bé hôm nay và bắt đầu một khu vườn gia đình đầy câu chuyện.</p>
+        <div style="display:flex;justify-content:center;gap:14px;flex-wrap:wrap">
+          <a href="pages/shop.html" class="btn btn-white btn-lg">🌱 Mua kit từ 150.000đ</a>
+          <a href="pages/workshop.html" class="btn btn-white-ol btn-lg">🏫 Tham gia Workshop</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="ftr"></div>
+<script src="assets/js/env.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/app.js?v=20260619-blog-menu"></script>
+<script>
+document.getElementById('hdr').innerHTML = renderHeader('home','');
+document.getElementById('ftr').innerHTML = renderFooter('');
+
+const BASE_IMG = 'assets/images/products/';
+
+(async function bootstrapStorefront() {
+  let catalog = [];
+  try {
+    const { products } = await API.products.list();
+    catalog = products.map(normalizeProduct);
+  } catch {
+    document.getElementById('featuredGrid').innerHTML =
+      `<div style="grid-column:1/-1;text-align:center;color:var(--ink-4);padding:32px">Không tải được sản phẩm. Vui lòng thử lại sau.</div>`;
+  }
+
+  // Make the catalog available to Cart so add-to-cart resolves correctly.
+  Cart.register(catalog);
+
+  // Featured grid: prioritize hot, then new, then any other kit, capped at 4.
+  const featured = [
+    ...catalog.filter(p => p.badge === 'hot').slice(0, 2),
+    ...catalog.filter(p => p.badge === 'new').slice(0, 1),
+    ...catalog.filter(p => !p.badge && p.cat === 'kit').slice(0, 1),
+  ].slice(0, 4);
+  document.getElementById('featuredGrid').innerHTML =
+    featured.map(p => productCardHTML(p, '')).join('') ||
+    `<div style="grid-column:1/-1;text-align:center;color:var(--ink-4);padding:32px">Chưa có sản phẩm nổi bật.</div>`;
+
+  initHeroCarousel(catalog);
+})();
+
+/* ══════════════════════════════════════════
+   Hero Carousel — auto-slide every 4s
+   ══════════════════════════════════════════ */
+function initHeroCarousel(catalog) {
+  const BASE = BASE_IMG;
+  const kits = catalog.filter(p => p.cat === 'kit');
+
+  const slides = [
+    { src: 'assets/images/sprouty-icons/Tree.png', label: 'Cây Kỷ Niệm', badge: '🌳 Memory Tree', bg: '#F0FDF4', em: '🌳', kitId: kits[0]?.id },
+    { src: 'assets/images/sprouty-icons/Tomato.png', label: 'Plant Buddy', badge: '🍅 Bạn Cây', bg: '#FEF2F2', em: '🍅', kitId: kits[0]?.id },
+    ...kits.map(p => ({
+      src: (Array.isArray(p.images) && p.images[0] && !p.images[0].includes('product-images') ? p.images[0].replace(/^\//, '') : `assets/images/products/kit-${p.id}.svg`),
+      label: p.name,
+      badge: p.badge === 'hot' ? '🔥 Bán chạy' : p.badge === 'new' ? '✨ Mới' : p.badge === 'sale' ? '🏷 Giảm giá' : `${p.age}`,
+      bg: p.bg,
+      em: p.em,
+      kitId: p.id,
+      price: p.price,
+    })),
+  ];
+
+  const track   = document.getElementById('heroTrack');
+  const dotsEl  = document.getElementById('heroDots');
+  if (!track || !dotsEl) return;
+
+  // Wrap track in .hero-carousel-inner if not already
+  const inner = track.closest('.hero-carousel-inner') || (() => {
+    const d = document.createElement('div');
+    d.className = 'hero-carousel-inner';
+    track.parentNode.insertBefore(d, track);
+    d.appendChild(track);
+    return d;
+  })();
+
+  // Add nav buttons
+  const wrap = document.getElementById('heroTrack').closest('.hero-carousel-wrap');
+  ['prev','next'].forEach(dir => {
+    const btn = document.createElement('button');
+    btn.className = `hero-carousel-btn ${dir}`;
+    btn.innerHTML = dir === 'prev' ? '‹' : '›';
+    btn.onclick = () => { clearInterval(timer); go(dir === 'prev' ? cur - 1 : cur + 1); resetTimer(); };
+    wrap.appendChild(btn);
+  });
+
+  // Render slides
+  slides.forEach((s, i) => {
+    const slide = document.createElement('div');
+    slide.className = 'hero-carousel-slide';
+    slide.style.background = s.bg;
+    slide.innerHTML = `
+      <img src="${s.src}" alt="${s.label}" style="object-fit:contain;padding:24px"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="slide-fallback" style="display:none">
+        <span class="slide-em">${s.em}</span>
+        <span class="slide-name">${s.label}</span>
+      </div>
+      <div class="slide-label">
+        <span>${s.label}</span>
+        <span class="slide-badge">${s.badge}</span>
+      </div>`;
+    // Navigate to product on click
+    slide.style.cursor = 'pointer';
+    slide.addEventListener('click', () => { window.location.href = `pages/product-detail.html?id=${s.kitId}`; });
+    track.appendChild(slide);
+
+    // Dot
+    const dot = document.createElement('button');
+    dot.className = 'hero-dot' + (i === 0 ? ' active' : '');
+    dot.onclick = () => { clearInterval(timer); go(i); resetTimer(); };
+    dotsEl.appendChild(dot);
+  });
+
+  let cur = 0;
+  const total = slides.length;
+
+  function go(idx) {
+    cur = ((idx % total) + total) % total;
+    track.style.transform = `translateX(-${cur * 100}%)`;
+    document.querySelectorAll('.hero-dot').forEach((d, i) => d.classList.toggle('active', i === cur));
+    updateFloatCards();
+  }
+
+  function updateFloatCards() {
+    const s = slides[cur];
+    const prev = slides[(cur - 1 + total) % total];
+    // Float card 1 — current product
+    const n1 = document.getElementById('floatName1');
+    const s1 = document.getElementById('floatSub1');
+    const c1 = document.getElementById('floatCard1');
+    if (n1) n1.textContent = s.label;
+    if (s1) s1.textContent = s.price ? s.price.toLocaleString('vi-VN') + 'đ · ' + s.badge : s.badge;
+    if (c1) {
+      const icon = c1.querySelector('.float-icon');
+      if (icon) { icon.style.background = s.bg; icon.textContent = s.em; }
+    }
+    // Float card 2 — prev product
+    const n2 = document.getElementById('floatName2');
+    const s2 = document.getElementById('floatSub2');
+    const c2 = document.getElementById('floatCard2');
+    if (n2) n2.textContent = prev.label;
+    if (s2) s2.textContent = prev.price ? prev.price.toLocaleString('vi-VN') + 'đ · ' + prev.badge : prev.badge;
+    if (c2) {
+      const icon = c2.querySelector('.float-icon');
+      if (icon) { icon.style.background = prev.bg; icon.textContent = prev.em; }
+    }
+  }
+
+  let timer = setInterval(() => go(cur + 1), 4000);
+  function resetTimer() { clearInterval(timer); timer = setInterval(() => go(cur + 1), 4000); }
+
+  // Pause on hover
+  wrap.addEventListener('mouseenter', () => clearInterval(timer));
+  wrap.addEventListener('mouseleave', () => { timer = setInterval(() => go(cur + 1), 4000); });
+
+  // Touch swipe
+  let touchX = 0;
+  inner.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; }, { passive:true });
+  inner.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 40) { clearInterval(timer); go(dx < 0 ? cur + 1 : cur - 1); resetTimer(); }
+  }, { passive:true });
+
+  updateFloatCards();
+}
+</script>
+</body>
+</html>

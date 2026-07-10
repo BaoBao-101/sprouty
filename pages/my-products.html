@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"><meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sản phẩm của tôi — Sprouty</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    .my-hero { background:linear-gradient(135deg,#1A1209 0%,#3D2B1F 55%,var(--terracotta) 100%); padding:52px 0 44px; color:#fff }
+    .my-hero h1 { color:#fff }
+    .journey-card { background:var(--surface); border:1.5px solid var(--parchment-2); border-radius:var(--r-2xl); padding:24px 28px; margin-bottom:28px; box-shadow:var(--sh-md) }
+    .journey-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px }
+    .journey-title { font-family:var(--font-h); font-size:.88rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-3); display:flex; align-items:center; gap:8px }
+    .journey-meta { font-size:.82rem; color:var(--ink-4); font-family:var(--font-h) }
+    .order-history-btn { font-family:var(--font-h); font-size:.82rem; font-weight:600; color:var(--orange); background:var(--orange-pale); border:1.5px solid rgba(232,93,4,.2); border-radius:var(--r-full); padding:6px 14px; cursor:pointer; transition:all .18s; text-decoration:none; display:inline-flex; align-items:center; gap:6px }
+    .order-history-btn:hover { background:var(--orange); color:#fff }
+  </style>
+</head>
+<body>
+<div id="login-modal-mount"></div>
+<div id="hdr"></div>
+
+<!-- Locked view -->
+<div id="lockedView" style="display:none">
+  <div class="locked-screen-wrap">
+    <div class="locked-card">
+      <div style="font-size:4rem;margin-bottom:20px">🔐</div>
+      <h2 style="margin-bottom:10px">Đăng nhập để xem kit của bạn</h2>
+      <p style="color:var(--ink-3);margin-bottom:28px;font-size:.94rem;line-height:1.7">Sau khi đăng nhập, bạn có thể kích hoạt kit, theo dõi hành trình cây và upload ảnh/video kỷ niệm để Plant Buddy gợi ý nội dung.</p>
+      <button class="btn btn-primary btn-lg btn-block" onclick="LoginModal.open()">Đăng nhập ngay →</button>
+      <div style="margin-top:16px">
+        <a href="shop.html" style="font-size:.86rem;color:var(--ink-4);text-decoration:none">Chưa có kit? <span style="color:var(--orange);font-weight:600">Khám phá sản phẩm →</span></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Logged in view -->
+<div id="mainView" style="display:none">
+  <!-- Hero -->
+  <div class="my-hero">
+    <div class="container">
+      <div class="breadcrumb" style="color:rgba(255,255,255,.45);margin-bottom:14px">
+        <a href="../index.html" style="color:rgba(255,255,255,.45)">Trang chủ</a> › Sản phẩm của tôi
+      </div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px">
+        <div>
+          <h1 id="welcomeMsg">Xin chào!</h1>
+          <p style="color:rgba(255,255,255,.7);margin-top:6px;font-size:.96rem">Theo dõi cây, lưu kỷ niệm và nhận gợi ý chăm sóc từ Plant Buddy AI.</p>
+        </div>
+        <a href="shop.html" class="btn btn-white-ol btn-sm" style="align-self:flex-end">+ Mua thêm kit</a>
+      </div>
+    </div>
+  </div>
+
+  <section style="padding:36px 0 72px">
+    <div class="container">
+
+      <!-- Journey tracker -->
+      <div class="journey-card">
+        <div class="journey-header">
+          <div class="journey-title">🗺 Hành trình cây của bé</div>
+          <span class="journey-meta" id="journeyMeta"></span>
+        </div>
+        <div class="step-tracker" id="stepTracker"></div>
+      </div>
+
+      <!-- No kits state -->
+      <div id="noKitsMsg" style="display:none;text-align:center;padding:60px 20px;background:var(--surface);border:1.5px solid var(--parchment-2);border-radius:var(--r-2xl);box-shadow:var(--sh-sm)">
+        <div style="font-size:4rem;margin-bottom:16px">📦</div>
+        <h3 style="margin-bottom:8px">Bạn chưa có kit nào</h3>
+        <p style="color:var(--ink-4);margin-bottom:24px;font-size:.92rem">Kích hoạt Sprouty Kit để mở Cây Kỷ Niệm, theo dõi cây và nhận gợi ý từ Plant Buddy AI.</p>
+        <a href="shop.html" class="btn btn-primary btn-lg">Khám phá sản phẩm →</a>
+      </div>
+
+      <!-- Kit cards -->
+      <div id="kitsWrap"></div>
+
+    </div>
+  </section>
+</div>
+
+<div id="ftr"></div>
+<script src="../assets/js/env.js"></script>
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.getElementById('hdr').innerHTML = renderHeader('myproducts','../');
+document.getElementById('ftr').innerHTML = renderFooter('../');
+
+const KP_KEY = 'crf_kit_progress';
+function getProgress() { try { return JSON.parse(localStorage.getItem(KP_KEY) || '{}'); } catch { return {}; } }
+function saveProgress(pid, data) { const p = getProgress(); p[pid] = data; localStorage.setItem(KP_KEY, JSON.stringify(p)); }
+
+let _catalog = [];
+
+async function ensureCatalog() {
+  if (_catalog.length) return _catalog;
+  try {
+    const { products } = await API.products.list();
+    _catalog = products.map(normalizeProduct);
+  } catch {
+    _catalog = [];
+  }
+  return _catalog;
+}
+
+function onAuthChange() {
+  if (!Auth.isLoggedIn()) {
+    document.getElementById('lockedView').style.display = 'block';
+    document.getElementById('mainView').style.display = 'none';
+    return;
+  }
+  document.getElementById('lockedView').style.display = 'none';
+  document.getElementById('mainView').style.display = 'block';
+  const u = Auth.user;
+  const firstName = u.name.split(' ').pop();
+  document.getElementById('welcomeMsg').textContent = `Xin chào, ${firstName}! 👋`;
+  loadPurchasedKits();
+}
+
+async function loadPurchasedKits() {
+  // Catalog and orders are independent — fetch in parallel.
+  const [_, ordersResult] = await Promise.all([
+    ensureCatalog(),
+    API.orders.list().catch(() => ({ orders: [] })),
+  ]);
+  const orders = ordersResult.orders || [];
+  const purchasedIds = new Set();
+  orders.forEach(o => {
+    if (o.paidAt && !['cancelled'].includes(o.status)) {
+      o.items.forEach(i => purchasedIds.add(i.productId));
+    }
+  });
+  renderKits({ purchases: [...purchasedIds] });
+}
+
+function renderKits(user) {
+  const purchases = user.purchases || [];
+  const kits = _catalog.filter(p => purchases.includes(p.id) && p.cat === 'kit');
+  const prog = getProgress();
+  const totalDone = kits.filter(k => (prog[k.id]?.pct || 0) >= 100).length;
+  const anyProgress = kits.some(k => prog[k.id]);
+  const journeyStep = kits.length === 0 ? 0 : anyProgress ? Math.min(4, 2 + totalDone) : 1;
+
+  document.getElementById('journeyMeta').textContent = `${kits.length} kit · ${totalDone} hoàn thành`;
+
+  const steps = [
+    { l: 'Nhận kit', em: '📦' },
+    { l: 'Xem video', em: '🎬' },
+    { l: 'Gieo hạt', em: '✂️' },
+    { l: 'Chụp ảnh', em: '📸' },
+    { l: 'Nhận AI phản hồi', em: '🤖' }
+  ];
+  document.getElementById('stepTracker').innerHTML = steps.map((s, i) => `
+    ${i > 0 ? `<div class="st-line ${i <= journeyStep ? 'done' : ''}"></div>` : ''}
+    <div class="st-dot-wrap">
+      <div class="st-dot ${i < journeyStep ? 'done' : i === journeyStep ? 'active' : 'locked'}">${i < journeyStep ? '✓' : s.em}</div>
+      <div class="st-lbl">${s.l}</div>
+    </div>`).join('');
+
+  if (!kits.length) {
+    document.getElementById('noKitsMsg').style.display = 'block';
+    document.getElementById('kitsWrap').innerHTML = '';
+    return;
+  }
+  document.getElementById('noKitsMsg').style.display = 'none';
+  document.getElementById('kitsWrap').innerHTML = kits.map(kit => buildKitCard(kit, prog[kit.id] || { pct: 0 })).join('');
+}
+
+function buildKitCard(p, prog) {
+  const vids = []; // Video management coming soon
+  const pct = prog.pct || 0;
+  const done = pct >= 100;
+  const curIdx = Math.floor(vids.length * (pct / 100));
+  return `
+  <div class="kit-card" style="background:var(--surface);border:1.5px solid var(--parchment-2);border-radius:var(--r-xl);margin-bottom:16px;box-shadow:var(--sh-sm);overflow:hidden">
+    <div class="kit-header" onclick="toggleKit(${p.id})">
+      <div class="kit-em" style="background:${p.bg}">
+        <img src="../assets/images/products/kit-${p.id}.svg" alt="${esc(p.name)}" style="width:90%;height:90%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+        <span style="display:none;font-size:2rem">${esc(p.em)}</span>
+      </div>
+      <div class="kit-info">
+        <div class="kit-name">${esc(p.name)}</div>
+        <div class="kit-sub">${esc(p.col)} · ${esc(p.age)}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+          <div class="prog-track" style="flex:1;max-width:200px">
+            <div class="prog-fill${done ? ' done' : ''}" style="width:${pct}%"></div>
+          </div>
+          <span style="font-size:.74rem;color:var(--ink-3);font-family:var(--font-h);font-weight:700">${pct}%</span>
+        </div>
+      </div>
+      <span class="status-pill ${done ? 'status-done' : 'status-progress'}">${done ? '✓ Hoàn thành' : '▶ Đang học'}</span>
+      <span class="kit-chevron" id="chev_${p.id}">▾</span>
+    </div>
+    <div class="kit-body" id="kitBody_${p.id}">
+      ${vids.length ? `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <h4 style="font-family:var(--font-h);font-size:.8rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3)">🎬 Video hướng dẫn</h4>
+        <span style="font-size:.74rem;color:var(--ink-4);font-family:var(--font-h)">${Math.min(curIdx,vids.length)}/${vids.length} đã xem</span>
+      </div>
+      <div class="vid-grid" style="margin-bottom:24px">
+        ${vids.map((v, i) => {
+          const isDone = i < curIdx, isCur = i === curIdx, isLocked = i > curIdx;
+          return `
+          <div class="vid-item${isLocked ? ' locked' : ''}"
+            onclick="${!isLocked ? `VideoModal.open('${v.title.replace(/'/g,"\\'")}','${v.duration||v.dur||''}','${p.name.replace(/'/g,"\\'")}')` : ''}"
+            title="${isLocked ? 'Hoàn thành video trước để mở khoá' : v.title}">
+            <div class="vid-item-inner">
+              <div class="vid-play-btn${isDone ? ' done' : ''}">${isDone ? '✓' : isLocked ? '🔒' : '▶'}</div>
+              <div class="vid-item-title">${v.title}</div>
+              <div class="vid-item-dur">${v.duration || v.dur || ''}</div>
+            </div>
+            <span class="vid-status ${isDone ? 'vs-done' : isCur ? 'vs-new' : 'vs-lock'}">${isDone ? 'Đã xem' : isCur ? 'Xem ngay' : 'Khoá'}</span>
+          </div>`;
+        }).join('')}
+      </div>` : `
+      <div style="display:flex;align-items:center;gap:10px;padding:16px;background:var(--cream-2);border-radius:var(--r-lg);margin-bottom:20px;font-size:.86rem;color:var(--ink-3)">
+        <span style="font-size:1.4rem">📽</span>
+        <span>Video hướng dẫn đang được cập nhật, vui lòng quay lại sau.</span>
+      </div>`}
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <h4 style="font-family:var(--font-h);font-size:.8rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3)">📸 Upload kỷ niệm & Nhận gợi ý AI</h4>
+        ${!done ? `<button class="btn btn-ghost btn-sm" onclick="markDone(${p.id})">✓ Đánh dấu hoàn thành</button>` : ''}
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <a class="btn btn-outline btn-sm" href="product-detail.html?id=${p.id}">Xem video hướng dẫn</a>
+        <button class="btn btn-ghost btn-sm" onclick="loadImageGallery(${p.id})">Ảnh của tôi</button>
+      </div>
+
+      <div id="uploadZone_${p.id}">
+        <div class="upload-zone" id="dz_${p.id}"
+          ondragover="event.preventDefault();this.classList.add('dragover')"
+          ondragleave="this.classList.remove('dragover')"
+          ondrop="handleDrop(event,${p.id})"
+          onclick="document.getElementById('fi_${p.id}').click()">
+          <div style="font-size:2.5rem;margin-bottom:10px">📷</div>
+          <strong style="font-size:.92rem;color:var(--ink-2)">Kéo thả ảnh vào đây</strong>
+          <p style="font-size:.8rem;color:var(--ink-4);margin-top:6px">hoặc nhấn để chọn ảnh từ máy</p>
+          <span style="font-size:.72rem;color:var(--ink-5);margin-top:8px;display:block">JPG, PNG · Tối đa 10MB</span>
+        </div>
+        <input type="file" id="fi_${p.id}" accept="image/*" style="display:none" onchange="handleUpload(event,${p.id})">
+      </div>
+
+      <div id="resultZone_${p.id}" style="display:none">
+        <div class="upload-result-grid">
+          <div class="result-img-box" id="rImg_${p.id}"></div>
+          <div class="ai-feedback-box" id="rFb_${p.id}">
+            <div style="color:var(--ink-4);display:flex;align-items:center;gap:8px">
+              <div class="spinner"></div>Đang đọc kỷ niệm...
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="resetUpload(${p.id})">↩ Upload ảnh khác</button>
+          ${!done ? `<button class="btn btn-primary btn-sm" onclick="markDone(${p.id})">✓ Đánh dấu hoàn thành</button>` : '<span style="font-size:.84rem;color:var(--green);font-family:var(--font-h);font-weight:700;padding:6px 0">✓ Đã hoàn thành kit này!</span>'}
+        </div>
+      </div>
+
+      <div id="gallery_${p.id}" style="margin-top:16px"></div>
+    </div>
+  </div>`;
+}
+
+function toggleKit(id) {
+  const body = document.getElementById('kitBody_' + id);
+  const chev = document.getElementById('chev_' + id);
+  const open = body.classList.toggle('open');
+  chev.classList.toggle('open', open);
+  const header = chev.closest('.kit-header');
+  if (header) {
+    const card = header.parentElement;
+    if (open) card.classList.add('open');
+    else card.classList.remove('open');
+  }
+}
+
+function handleDrop(e, pid) {
+  e.preventDefault();
+  document.getElementById('dz_' + pid).classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) processUpload(file, pid);
+}
+function handleUpload(e, pid) {
+  const file = e.target.files[0];
+  if (file) processUpload(file, pid);
+}
+function processUpload(file, pid) {
+  uploadUserImage(file, pid);
+  const rz = document.getElementById('resultZone_' + pid);
+  const dz = document.getElementById('uploadZone_' + pid);
+  dz.style.display = 'none'; rz.style.display = 'block';
+  const url = URL.createObjectURL(file);
+  document.getElementById('rImg_' + pid).innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover">`;
+  callAI(file, pid);
+}
+
+async function uploadUserImage(file, pid) {
+  const form = new FormData();
+  form.append('image', file);
+  try {
+    await API.myImages.upload(pid, form);
+    Toast.show('Đã lưu ảnh vào thư viện của bạn', 'success');
+    loadImageGallery(pid);
+  } catch (e) {
+    Toast.show(e.message || 'Không thể upload ảnh', 'error');
+  }
+}
+
+async function loadImageGallery(pid) {
+  const el = document.getElementById('gallery_' + pid);
+  if (!el) return;
+  el.innerHTML = `<div style="color:var(--ink-4);font-size:.84rem">Đang tải ảnh...</div>`;
+  try {
+    const { images } = await API.myImages.list(pid);
+    if (!images.length) {
+      el.innerHTML = `<div style="color:var(--ink-4);font-size:.84rem">Chưa có ảnh nào cho kit này.</div>`;
+      return;
+    }
+    el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">${images.map(img => `
+      <div style="border:1px solid var(--parchment-2);border-radius:10px;overflow:hidden;background:var(--surface)">
+        <img src="${esc(img.url)}" alt="" style="width:100%;aspect-ratio:1;object-fit:cover">
+        <div style="padding:8px">
+          <input class="form-input" style="font-size:.78rem;padding:6px" value="${esc(img.title || '')}" placeholder="Tên ảnh" onchange="renameImage('${img.id}',this.value)">
+          <button class="btn btn-ghost btn-sm" style="margin-top:6px;width:100%" onclick="deleteImage('${img.id}',${pid})">Xóa ảnh</button>
+        </div>
+      </div>`).join('')}</div>`;
+  } catch (e) {
+    el.innerHTML = `<div style="color:var(--rose);font-size:.84rem">${esc(e.message || 'Không tải được ảnh.')}</div>`;
+  }
+}
+
+async function renameImage(id, title) {
+  try { await API.myImages.update(id, { title }); Toast.show('Đã cập nhật ảnh', 'success'); }
+  catch (e) { Toast.show(e.message || 'Không thể cập nhật ảnh', 'error'); }
+}
+
+async function deleteImage(id, pid) {
+  if (!confirm('Xóa ảnh này?')) return;
+  try { await API.myImages.remove(id); Toast.show('Đã xóa ảnh', 'success'); loadImageGallery(pid); }
+  catch (e) { Toast.show(e.message || 'Không thể xóa ảnh', 'error'); }
+}
+
+async function callAI(file, pid) {
+  const fb = document.getElementById('rFb_' + pid);
+  const p = _catalog.find(x => x.id === pid) || { name: 'kit' };
+  try {
+    const { reply } = await API.chat.send(
+      [{ role: 'user', content: `Bé đã chăm sóc Sprouty Kit "${p.name}" và vừa tải ảnh kỷ niệm lên. Hãy khen ngợi sự kiên nhẫn chăm cây của bé, gợi ý 1-2 bước chăm sóc tiếp theo, rồi khuyến khích gia đình tiếp tục lưu nhật ký.` }],
+      'Bạn là Plant Buddy thân thiện của Sprouty Vietnam. Trả lời bằng tiếng Việt, giọng văn ấm áp, khích lệ như đang nói chuyện với phụ huynh và bé, khoảng 4-6 câu.'
+    );
+    // Escape AI reply before re-introducing only the safe newline → <br> conversion.
+    fb.innerHTML = `<div style="display:flex;gap:8px;align-items:flex-start"><span style="font-size:1.2rem;flex-shrink:0">🤖</span><div>${esc(reply).replace(/\n/g, '<br>')}</div></div>`;
+  } catch {
+    fb.innerHTML = `<div style="display:flex;gap:8px;align-items:flex-start"><span style="font-size:1.2rem;flex-shrink:0">🎨</span><div>Tuyệt vời! Bé đã chăm cây rất kiên nhẫn. Hãy ghi lại hôm nay cây thay đổi điều gì, bé đã tưới nước ra sao và cảm xúc của cả nhà khi nhìn thấy mầm cây lớn lên nhé!</div></div>`;
+  }
+}
+
+function resetUpload(pid) {
+  document.getElementById('resultZone_' + pid).style.display = 'none';
+  document.getElementById('uploadZone_' + pid).style.display = 'block';
+  document.getElementById('fi_' + pid).value = '';
+}
+
+function markDone(pid) {
+  saveProgress(pid, { pct: 100 });
+  Toast.show('🎉 Tuyệt vời! Bé đã hoàn thành kit này!', 'success');
+  renderKits(Auth.user);
+}
+
+onAuthChange();
+</script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480">
+  <defs>
+    <linearGradient id="sky5" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#EFF6FF"/><stop offset="60%" stop-color="#BFDBFE"/><stop offset="100%" stop-color="#60A5FA"/></linearGradient>
+    <linearGradient id="sea5" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3B82F6"/><stop offset="100%" stop-color="#1D4ED8"/></linearGradient>
+    <filter id="sf5"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="rgba(30,64,175,.25)"/></filter>
+  </defs>
+  <rect width="480" height="480" fill="url(#sky5)" rx="24"/>
+  <!-- Ocean -->
+  <rect x="0" y="240" width="480" height="240" fill="url(#sea5)" rx="0"/>
+  <!-- Waves -->
+  <path d="M0,240 Q60,224 120,240 Q180,256 240,240 Q300,224 360,240 Q420,256 480,240 L480,265 L0,265Z" fill="#60A5FA" opacity=".7"/>
+  <path d="M0,265 Q70,250 140,265 Q210,280 280,265 Q350,250 420,265 Q452,272 480,265 L480,290 L0,290Z" fill="#3B82F6" opacity=".8"/>
+  <!-- Sun reflection -->
+  <ellipse cx="240" cy="280" rx="40" ry="6" fill="rgba(253,224,71,.3)"/>
+  <!-- Sun -->
+  <circle cx="80" cy="80" r="42" fill="#FCD34D" filter="url(#sf5)"/>
+  <circle cx="80" cy="80" r="32" fill="#FBBF24"/>
+  <!-- Clouds -->
+  <ellipse cx="340" cy="70" rx="52" ry="26" fill="white" opacity=".9"/>
+  <ellipse cx="382" cy="62" rx="36" ry="22" fill="white" opacity=".9"/>
+  <ellipse cx="305" cy="68" rx="32" ry="20" fill="white" opacity=".8"/>
+  <!-- Big fish -->
+  <ellipse cx="240" cy="330" rx="56" ry="34" fill="#FCD34D" filter="url(#sf5)"/>
+  <polygon points="296,330 326,310 326,350" fill="#F59E0B" filter="url(#sf5)"/>
+  <circle cx="226" cy="320" r="9" fill="#1A1209"/>
+  <circle cx="223" cy="317" r="3.5" fill="white"/>
+  <path d="M232,344 Q252,354 274,344" stroke="#F59E0B" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- Fish scales -->
+  <path d="M240,300 Q260,310 270,325" stroke="#F59E0B" stroke-width="2" fill="none" opacity=".5"/>
+  <path d="M240,300 Q220,310 218,328" stroke="#F59E0B" stroke-width="2" fill="none" opacity=".5"/>
+  <!-- Small colorful fish -->
+  <ellipse cx="140" cy="370" rx="28" ry="17" fill="#6EE7B7"/>
+  <polygon points="168,370 182,360 182,380" fill="#34D399"/>
+  <circle cx="130" cy="365" r="5" fill="#1A1209"/>
+  <ellipse cx="370" cy="350" rx="24" ry="15" fill="#F9A8D4"/>
+  <polygon points="394,350 408,342 408,358" fill="#EC4899"/>
+  <circle cx="361" cy="346" r="4.5" fill="#1A1209"/>
+  <ellipse cx="310" cy="400" rx="20" ry="12" fill="#A78BFA"/>
+  <polygon points="330,400 342,394 342,406" fill="#8B5CF6"/>
+  <!-- Coral -->
+  <path d="M100,400 Q105,370 100,348 Q112,342 118,352 Q113,372 118,398" stroke="#F97316" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <circle cx="100" cy="348" r="14" fill="#FB923C" filter="url(#sf5)"/>
+  <circle cx="118" cy="352" r="11" fill="#F97316" filter="url(#sf5)"/>
+  <path d="M380,415 Q375,385 380,360 Q368,355 362,365 Q367,385 362,412" stroke="#EC4899" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <circle cx="380" cy="360" r="12" fill="#F472B6" filter="url(#sf5)"/>
+  <!-- Bubbles -->
+  <circle cx="200" cy="295" r="7" fill="white" opacity=".5"/>
+  <circle cx="214" cy="278" r="5" fill="white" opacity=".4"/>
+  <circle cx="285" cy="305" r="6" fill="white" opacity=".45"/>
+  <circle cx="296" cy="285" r="4" fill="white" opacity=".35"/>
+</svg>

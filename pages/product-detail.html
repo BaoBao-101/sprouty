@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"><meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Chi tiết sản phẩm — Sprouty</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    /* ═══ Product Detail Page ═══ */
+    .pdp-wrap { display:grid; grid-template-columns:1fr 480px; gap:56px; padding:44px 0 72px; align-items:start }
+
+    /* Gallery */
+    .pdp-gallery { position:sticky; top:108px }
+    .pdp-img-main {
+      border-radius:18px; overflow:hidden;
+      background:var(--parchment);
+      aspect-ratio:16/9;
+      display:flex; align-items:center; justify-content:center;
+      border:1.5px solid var(--parchment-2); margin-bottom:12px;
+      box-shadow:var(--sh-lg); position:relative; cursor:zoom-in;
+    }
+    /* Real PNG landscape photo */
+    .pdp-img-main .pdp-real-img {
+      width:100%; height:100%;
+      object-fit:cover; object-position:center center;
+      transition:transform .4s ease;
+    }
+    /* SVG illustration — center with padding */
+    .pdp-img-main .pdp-svg-img {
+      width:100%; height:100%;
+      object-fit:contain; padding:20px;
+      transition:transform .4s ease;
+    }
+    .pdp-img-main:hover .pdp-real-img,
+    .pdp-img-main:hover .pdp-svg-img { transform:scale(1.03) }
+    .pdp-img-main .pdp-badge-main {
+      position:absolute; top:14px; left:14px;
+      font-family:var(--font-h); font-size:.72rem; font-weight:800;
+      padding:5px 12px; border-radius:var(--r-full);
+      text-transform:uppercase; letter-spacing:.04em; z-index:2;
+    }
+    .pdp-badge-main.hot { background:#FEE2E2; color:#B91C1C }
+    .pdp-badge-main.new { background:#DBEAFE; color:#1E40AF }
+    .pdp-badge-main.sale { background:#DCFCE7; color:#166534 }
+    /* Thumbnails — 4 equal squares */
+    .pdp-thumbs { display:grid; grid-template-columns:repeat(4,1fr); gap:8px }
+    .pdp-thumb {
+      aspect-ratio:16/9; border-radius:10px; overflow:hidden;
+      background:var(--parchment); border:2px solid transparent;
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.8rem; cursor:pointer; transition:all .2s;
+    }
+    .pdp-thumb img { width:100%; height:100%; object-fit:contain; padding:6px }
+    .pdp-thumb:hover { border-color:var(--terra-3); box-shadow:var(--sh-sm) }
+    .pdp-thumb.active { border-color:var(--orange); box-shadow:0 0 0 3px rgba(232,93,4,.12) }
+
+    /* Info side */
+    .pdp-info { }
+    .pdp-tags { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:16px }
+    .pdp-tag {
+      font-family:var(--font-h); font-size:.76rem; font-weight:700;
+      padding:5px 12px; border-radius:var(--r-full);
+      border:1.5px solid; display:inline-flex; align-items:center; gap:5px;
+    }
+    .pdp-tag.blue { background:#EFF6FF; color:#2563EB; border-color:#BFDBFE }
+    .pdp-tag.gray { background:var(--parchment); color:var(--ink-3); border-color:var(--parchment-2) }
+    .pdp-tag.orange { background:var(--orange-pale); color:var(--orange); border-color:rgba(232,93,4,.2) }
+    .pdp-tag.red { background:#FEF2F2; color:#DC2626; border-color:#FECACA }
+    .pdp-tag.green { background:#F0FDF4; color:#16A34A; border-color:#BBF7D0 }
+    .pdp-tag.indigo { background:#EEF2FF; color:#4338CA; border-color:#C7D2FE }
+    .pdp-name { font-family:var(--font-display); font-size:clamp(1.6rem,3.5vw,2.2rem); font-weight:700; color:var(--ink); line-height:1.18; margin-bottom:10px }
+    .pdp-rating { display:flex; align-items:center; gap:10px; margin-bottom:18px }
+    .pdp-stars { color:#F59E0B; font-size:1.05rem; letter-spacing:2px }
+    .pdp-rating-count { font-size:.86rem; color:var(--ink-4); font-family:var(--font-h) }
+    .pdp-rating-link { color:var(--orange); font-weight:700; text-decoration:none; font-size:.86rem }
+    .pdp-rating-link:hover { text-decoration:underline }
+    .pdp-price-wrap { margin-bottom:14px }
+    .pdp-price { font-family:var(--font-h); font-size:1.9rem; font-weight:800; color:var(--orange) }
+    .pdp-price-old { font-family:var(--font-h); font-size:1.1rem; font-weight:600; color:var(--ink-5); text-decoration:line-through; margin-left:10px }
+    .pdp-discount-badge { display:inline-flex; align-items:center; margin-left:10px; background:#DCFCE7; color:#15803D; font-family:var(--font-h); font-size:.74rem; font-weight:700; padding:3px 9px; border-radius:var(--r-full) }
+    .pdp-desc { font-size:.96rem; color:var(--ink-3); line-height:1.78; margin-bottom:24px }
+    .pdp-divider { height:1px; background:var(--parchment-2); margin:20px 0 }
+    
+    /* Qty control */
+    .pdp-qty-section { margin-bottom:22px }
+    .pdp-qty-label { font-family:var(--font-h); font-size:.78rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-4); margin-bottom:10px }
+    .pdp-qty-row { display:flex; align-items:center; gap:0; background:var(--parchment); border:1.5px solid var(--parchment-2); border-radius:12px; width:fit-content; overflow:hidden }
+    .pdp-qty-btn { width:44px; height:44px; background:transparent; border:none; cursor:pointer; font-size:1.3rem; font-weight:700; color:var(--ink-2); transition:all .18s; display:flex; align-items:center; justify-content:center; user-select:none }
+    .pdp-qty-btn:hover { background:var(--orange-pale); color:var(--orange) }
+    .pdp-qty-num { min-width:52px; text-align:center; font-family:var(--font-h); font-size:1.05rem; font-weight:800; color:var(--ink); border-left:1px solid var(--parchment-2); border-right:1px solid var(--parchment-2); height:44px; display:flex; align-items:center; justify-content:center }
+    .pdp-stock { font-size:.84rem; color:var(--green); font-family:var(--font-h); font-weight:600; margin-top:10px; display:flex; align-items:center; gap:5px }
+    .pdp-stock::before { content:''; width:8px; height:8px; border-radius:50%; background:var(--green); flex-shrink:0 }
+
+    /* CTA buttons */
+    .pdp-cta { display:flex; gap:12px; margin-bottom:18px; flex-wrap:wrap }
+    .pdp-cta .btn-add { flex:2; font-size:1rem; font-weight:700; padding:14px; border-radius:14px; background:var(--orange); color:#fff; border:none; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:8px }
+    .pdp-cta .btn-add:hover { background:var(--terracotta); transform:translateY(-2px); box-shadow:0 8px 20px rgba(232,93,4,.3) }
+    .pdp-cta .btn-buy { flex:1; font-size:1rem; font-weight:700; padding:14px; border-radius:14px; background:var(--ink); color:#fff; border:none; cursor:pointer; transition:all .2s; white-space:nowrap }
+    .pdp-cta .btn-buy:hover { background:var(--ink-2); transform:translateY(-2px) }
+
+    /* Trust badges */
+    .trust-badges { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:0 }
+    .trust-badge { display:flex; align-items:center; gap:8px; padding:10px 13px; background:var(--cream-2); border:1px solid var(--parchment-2); border-radius:10px; font-family:var(--font-h); font-size:.8rem; font-weight:600; color:var(--ink-3) }
+    .trust-badge span:first-child { font-size:1.1rem; flex-shrink:0 }
+
+    /* Tabs */
+    .pdp-tabs { display:flex; gap:0; border-bottom:2px solid var(--parchment-2); margin:32px 0 0; overflow-x:auto }
+    .pdp-tab-btn { font-family:var(--font-h); font-size:.9rem; font-weight:700; color:var(--ink-4); padding:12px 22px; border-bottom:2.5px solid transparent; margin-bottom:-2px; cursor:pointer; background:none; border-top:none; border-left:none; border-right:none; white-space:nowrap; transition:all .18s }
+    .pdp-tab-btn:hover { color:var(--orange) }
+    .pdp-tab-btn.active { color:var(--orange); border-bottom-color:var(--orange) }
+    .tab-pane { display:none; padding:24px 0 }
+    .tab-pane.active { display:block }
+
+    /* Include list */
+    .include-item { display:flex; gap:12px; align-items:flex-start; padding:10px 0; border-bottom:1px solid var(--parchment-2) }
+    .include-item:last-child { border-bottom:none }
+    .include-check { width:22px; height:22px; border-radius:50%; background:var(--green); color:#fff; display:flex; align-items:center; justify-content:center; font-size:.72rem; font-weight:700; flex-shrink:0; margin-top:1px }
+    .include-text { font-size:.9rem; color:var(--ink-2); line-height:1.5 }
+
+    /* Spec table */
+    .spec-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--parchment-2); font-size:.9rem }
+    .spec-row:last-child { border-bottom:none }
+    .spec-label { color:var(--ink-4); font-family:var(--font-h) }
+    .spec-val { font-weight:700; color:var(--ink-2); font-family:var(--font-h); text-align:right }
+
+    /* Review section */
+    .review-summary-wrap { display:flex; gap:28px; align-items:center; padding:22px 0; border-bottom:1.5px solid var(--parchment-2); margin-bottom:20px; flex-wrap:wrap }
+    .review-score-big { font-family:var(--font-display); font-size:3.5rem; font-weight:700; color:var(--ink); line-height:1 }
+    .review-score-sub { font-family:var(--font-h); font-size:.8rem; color:var(--ink-4); margin-top:4px }
+    .review-bars { flex:1; min-width:160px }
+    .review-bar-row { display:flex; align-items:center; gap:10px; margin-bottom:6px }
+    .review-bar-label { font-family:var(--font-h); font-size:.76rem; color:var(--ink-4); width:36px; flex-shrink:0 }
+    .review-bar-track { flex:1; height:6px; background:var(--parchment-2); border-radius:3px; overflow:hidden }
+    .review-bar-fill { height:100%; background:linear-gradient(90deg,#FBBF24,#F59E0B); border-radius:3px; transition:width .6s }
+    .review-bar-count { font-size:.74rem; color:var(--ink-5); width:18px; text-align:right; flex-shrink:0 }
+    .review-item { padding:18px 0; border-bottom:1px solid var(--parchment-2) }
+    .review-item:last-child { border-bottom:none }
+    .reviewer-row { display:flex; align-items:center; gap:10px; margin-bottom:10px }
+    .reviewer-av { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:.84rem; flex-shrink:0 }
+    .reviewer-name { font-family:var(--font-h); font-weight:700; font-size:.9rem; color:var(--ink) }
+    .reviewer-loc { font-size:.76rem; color:var(--ink-4); margin-top:1px }
+    .reviewer-stars { margin-left:auto; color:#F59E0B; font-size:.9rem }
+    .review-text { font-size:.88rem; color:var(--ink-3); line-height:1.7; font-style:italic }
+
+    /* Related */
+    .related-section { margin-top:64px; padding-top:44px; border-top:1.5px solid var(--parchment-2) }
+
+    @media(max-width:1024px) { .pdp-wrap { grid-template-columns:1fr } .pdp-gallery { position:static } }
+    @media(max-width:640px) { .pdp-cta { flex-direction:column } .trust-badges { grid-template-columns:1fr } }
+  </style>
+</head>
+<body>
+<div id="login-modal-mount"></div>
+<div id="hdr"></div>
+
+<div style="background:linear-gradient(135deg,#1A1209 0%,#3D2B1F 55%,var(--terracotta) 100%);padding:16px 0 14px">
+  <div class="container">
+    <div class="breadcrumb" style="color:rgba(255,255,255,.5)">
+      <a href="../index.html" style="color:rgba(255,255,255,.5)">Trang chủ</a> ›
+      <a href="shop.html" style="color:rgba(255,255,255,.5)">Sản phẩm</a> ›
+      <span id="bcName" style="color:rgba(255,255,255,.85)">...</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div id="pdpWrap"></div>
+</div>
+
+<div id="ftr"></div>
+<script src="../assets/js/env.js"></script>
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.getElementById('hdr').innerHTML = renderHeader('shop','../');
+document.getElementById('ftr').innerHTML = renderFooter('../');
+
+const pid = +new URLSearchParams(location.search).get('id');
+let p = null;
+let QTY = 1;
+// thumbData is populated in _renderPage() after async load; declared here so setThumb() can access it.
+let thumbData = [];
+
+(async function initPage() {
+  if (!pid) { _showNotFound(); return; }
+  try {
+    const [productData, listData] = await Promise.all([
+      API.products.get(pid),
+      API.products.list().catch(() => ({ products: [] })),
+    ]);
+    p = normalizeProduct(productData.product);
+    const allProds = (listData.products || []).map(normalizeProduct);
+    Cart.register(allProds.length ? allProds : [p]);
+    _renderPage(p, allProds);
+  } catch(e) {
+    console.error('Không thể tải sản phẩm:', e);
+    const isNotFound = e.status === 404;
+    _showNotFound(isNotFound);
+  }
+})();
+
+function _showNotFound(isProductMissing = true) {
+  document.getElementById('pdpWrap').innerHTML = isProductMissing ? `
+  <div style="text-align:center;padding:100px 20px">
+    <div style="font-size:4rem;margin-bottom:20px">😕</div>
+    <h2 style="margin-bottom:10px">Không tìm thấy sản phẩm</h2>
+    <p style="color:var(--ink-4);margin-bottom:28px">Sản phẩm này không tồn tại hoặc đã bị xoá.</p>
+    <a href="shop.html" class="btn btn-primary btn-lg">← Về cửa hàng</a>
+  </div>` : `
+  <div style="text-align:center;padding:100px 20px">
+    <div style="font-size:4rem;margin-bottom:20px">⚠️</div>
+    <h2 style="margin-bottom:10px">Không thể tải sản phẩm</h2>
+    <p style="color:var(--ink-4);margin-bottom:28px">Đã xảy ra lỗi kết nối. Vui lòng thử lại sau.</p>
+    <a href="shop.html" class="btn btn-primary btn-lg">← Về cửa hàng</a>
+  </div>`;
+}
+
+function _renderPage(p, allProds) {
+  document.title = p.name + ' — Sprouty';
+  document.getElementById('bcName').textContent = p.name;
+
+  const catMap = { kit:'Bộ kit trồng cây', book:'Hướng dẫn chăm cây', membership:'Gói thành viên' };
+  const badgeMap = { hot:'🔥 Bán chạy', new:'✨ Hàng mới', sale:'🏷 Đang giảm' };
+  const vids = []; // Video library coming soon
+  const discount = p.old ? Math.round((1 - p.price/p.old)*100) : 0;
+
+  const kitNum = String(p.id).padStart(2,'0');
+  const svgSrc    = `../assets/images/products/kit-${p.id}.svg`;
+  const firstImage = Array.isArray(p.images) && p.images[0] && !p.images[0].includes('product-images') ? '..' + p.images[0] : '';
+  const primaryImg = firstImage || svgSrc;
+  const thumbBgs  = [p.bg, '#F8F8F8', '#FFF0E8', '#F0FDF4'];
+
+  document.getElementById('pdpWrap').innerHTML = `
+  <div class="pdp-wrap">
+    <!-- Gallery -->
+    <div class="pdp-gallery">
+      <div class="pdp-img-main has-real-photo" id="mainImg" style="background:${p.bg}">
+        <img src="${primaryImg}" alt="${esc(p.name)}" id="mainImgEl" class="pdp-svg-img"
+          onerror="this.src='${svgSrc}';this.className='pdp-svg-img';document.getElementById('mainImg').classList.remove('has-real-photo');this.onerror=function(){this.style.display='none';document.getElementById('mainImgFb').style.display='flex'}">
+        <div id="mainImgFb" style="display:none;font-size:9rem;width:100%;height:100%;align-items:center;justify-content:center">${esc(p.em)}</div>
+        ${p.badge ? `<span class="pdp-badge-main ${p.badge}">${badgeMap[p.badge]}</span>` : ''}
+      </div>
+      <div class="pdp-thumbs">
+        ${[1,2,3,4].map((n, i) => `
+        <div class="pdp-thumb ${i === 0 ? 'active' : ''}" onclick="setThumb(this,${i})" style="background:${thumbBgs[i]}">
+          <img src="${primaryImg}"
+            alt="${esc(p.name)} ${n}" style="width:100%;height:100%;object-fit:contain;padding:8px"
+            onerror="this.src='${svgSrc}';this.style.objectFit='contain';this.style.padding='8px';this.onerror=function(){this.style.display='none';this.parentElement.textContent='${esc(p.em)}'}">
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Info -->
+    <div class="pdp-info">
+      <div class="pdp-tags">
+        <span class="pdp-tag blue">${catMap[p.cat]}</span>
+        <span class="pdp-tag gray">${esc(p.age)}</span>
+        <span class="pdp-tag gray">${esc(p.col)}</span>
+        ${p.badge === 'hot' ? `<span class="pdp-tag red">🔥 Bán chạy</span>` : ''}
+        ${p.badge === 'new' ? `<span class="pdp-tag indigo">✨ Hàng mới</span>` : ''}
+        ${p.badge === 'sale' ? `<span class="pdp-tag green">🏷 Đang giảm</span>` : ''}
+      </div>
+
+      <h1 class="pdp-name">${esc(p.name)}</h1>
+
+      <div class="pdp-rating">
+        <span class="pdp-stars">★★★★★</span>
+        <span class="pdp-rating-count">4.9 ·</span>
+        <a class="pdp-rating-link" href="#" onclick="switchTab('tab-reviews');return false">18 đánh giá</a>
+      </div>
+
+      <div class="pdp-price-wrap">
+        <span class="pdp-price">${p.price.toLocaleString('vi-VN')}đ</span>
+        ${p.old ? `<span class="pdp-price-old">${p.old.toLocaleString('vi-VN')}đ</span>
+        <span class="pdp-discount-badge">Giảm ${discount}%</span>` : ''}
+      </div>
+
+      <p class="pdp-desc">${esc(p.desc)}</p>
+      <div class="pdp-divider"></div>
+
+      <!-- Qty -->
+      <div class="pdp-qty-section">
+        <div class="pdp-qty-label">Số lượng</div>
+        <div class="pdp-qty-row">
+          <button class="pdp-qty-btn" onclick="chgQ(-1)" aria-label="Giảm">−</button>
+          <div class="pdp-qty-num" id="qtyVal">1</div>
+          <button class="pdp-qty-btn" onclick="chgQ(1)" aria-label="Tăng">+</button>
+        </div>
+        <div class="pdp-stock">Còn hàng · Giao 2–3 ngày làm việc</div>
+      </div>
+
+      <!-- CTA buttons -->
+      <div class="pdp-cta">
+        <button class="btn-add" onclick="addCart()">🛒 Thêm vào giỏ</button>
+        <button class="btn-buy" onclick="buyNow()">Mua ngay →</button>
+      </div>
+
+      <!-- Trust badges -->
+      <div class="trust-badges">
+        <div class="trust-badge"><span>🚚</span><span>Miễn phí ship từ 200.000đ</span></div>
+        <div class="trust-badge"><span>🔄</span><span>Hoàn tiền trong 7 ngày</span></div>
+        <div class="trust-badge"><span>✅</span><span>An toàn cho trẻ em</span></div>
+        <div class="trust-badge"><span>🎬</span><span>Video hướng dẫn kèm theo</span></div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="pdp-tabs">
+        <button class="pdp-tab-btn active" onclick="switchTab('tab-info',this)">Thông tin</button>
+        <button class="pdp-tab-btn" onclick="switchTab('tab-videos',this)">Video (${vids.length})</button>
+        <button class="pdp-tab-btn" onclick="switchTab('tab-reviews',this)">Đánh giá (18)</button>
+      </div>
+
+      <!-- Tab: Info -->
+      <div class="tab-pane active" id="tab-info">
+        ${(p.inc || []).length ? `
+        <h4 style="font-family:var(--font-h);font-size:.8rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin-bottom:14px">📦 Bộ kit bao gồm</h4>
+        <div style="margin-bottom:22px">
+          ${(p.inc || []).map(item => `
+          <div class="include-item">
+            <div class="include-check">✓</div>
+            <div class="include-text">${esc(item)}</div>
+          </div>`).join('')}
+        </div>` : ''}
+        <h4 style="font-family:var(--font-h);font-size:.8rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin-bottom:14px">📋 Thông số</h4>
+        <div>
+          <div class="spec-row"><span class="spec-label">Độ tuổi khuyến nghị</span><span class="spec-val">${esc(p.age)}</span></div>
+          <div class="spec-row"><span class="spec-label">Bộ sưu tập</span><span class="spec-val">${esc(p.col)}</span></div>
+          <div class="spec-row"><span class="spec-label">Loại sản phẩm</span><span class="spec-val">${catMap[p.cat]}</span></div>
+          <div class="spec-row"><span class="spec-label">Video hướng dẫn</span><span class="spec-val">${vids.length} bài</span></div>
+          <div class="spec-row"><span class="spec-label">Chứng nhận an toàn</span><span class="spec-val" style="color:var(--green)">✓ Đạt chuẩn EN71</span></div>
+          <div class="spec-row"><span class="spec-label">Xuất xứ</span><span class="spec-val">Việt Nam 🇻🇳</span></div>
+        </div>
+      </div>
+
+      <!-- Tab: Videos -->
+      <div class="tab-pane" id="tab-videos">
+        ${vids.length ? `
+        <div style="background:var(--parchment);border-radius:12px;padding:14px 16px;margin-bottom:18px;font-size:.86rem;color:var(--ink-3);display:flex;align-items:flex-start;gap:10px">
+          <span style="font-size:1.1rem;flex-shrink:0">💡</span>
+          <span>Video đầu tiên miễn phí để xem thử. Mua sản phẩm và đăng nhập để xem đầy đủ trong <strong>"Sản phẩm của tôi"</strong>.</span>
+        </div>
+        <div class="vid-grid">
+          ${vids.map((v, i) => `
+          <div class="vid-item${i > 0 ? ' locked' : ''}"
+            onclick="${i === 0 ? `VideoModal.open('${v.title.replace(/'/g,"\\'")}','${v.duration||v.dur||''}','${p.name.replace(/'/g,"\\'")}')` : ''}"
+            title="${i > 0 ? 'Mua sản phẩm để xem đầy đủ' : v.title}">
+            <div class="vid-item-inner">
+              <div class="vid-play-btn${i === 0 ? '' : ''}">${i === 0 ? '▶' : '🔒'}</div>
+              <div class="vid-item-title">${v.title}</div>
+              <div class="vid-item-dur">${v.duration || v.dur || ''}</div>
+            </div>
+            <span class="vid-status ${i === 0 ? 'vs-new' : 'vs-lock'}">${i === 0 ? 'Xem thử miễn phí' : 'Cần mua'}</span>
+          </div>`).join('')}
+        </div>` : `
+        <div style="text-align:center;padding:40px 20px">
+          <div style="font-size:3rem;margin-bottom:12px;opacity:.5">🎬</div>
+          <h4 style="margin-bottom:8px;color:var(--ink-3)">Video đang được chuẩn bị</h4>
+          <p style="font-size:.86rem;color:var(--ink-4)">Sẽ có sẵn trước khi sản phẩm được giao đến bạn.</p>
+        </div>`}
+      </div>
+
+      <!-- Tab: Reviews -->
+      <div class="tab-pane" id="tab-reviews">
+        <div class="review-summary-wrap">
+          <div style="text-align:center;flex-shrink:0">
+            <div class="review-score-big">4.9</div>
+            <div style="color:#F59E0B;font-size:1.1rem;margin:4px 0">★★★★★</div>
+            <div class="review-score-sub">18 đánh giá</div>
+          </div>
+          <div class="review-bars">
+            ${[['5 sao','80%',14],['4 sao','12%',2],['3 sao','5%',1],['2 sao','2%',1],['1 sao','1%',0]].map(([l,w,n]) => `
+            <div class="review-bar-row">
+              <span class="review-bar-label">${l}</span>
+              <div class="review-bar-track"><div class="review-bar-fill" style="width:${w}"></div></div>
+              <span class="review-bar-count">${n}</span>
+            </div>`).join('')}
+          </div>
+        </div>
+        <div>
+          ${[
+            {av:'L',nm:'Nguyễn Thị Lan',loc:'Quận 7 · Mua tháng 2/2026',bg:'var(--terracotta)',r:5,txt:'Bé nhà mình mê lắm! Làm xong còn khoe với cả nhà và bạn bè ở lớp. Nguyên liệu rất an toàn, đóng gói cẩn thận. Sẽ mua thêm kit khác cho bé!'},
+            {av:'H',nm:'Trần Văn Hùng',loc:'Bình Thạnh · Mua tháng 1/2026',bg:'var(--green)',r:5,txt:'Video hướng dẫn rõ ràng từng bước, bé 7 tuổi tự làm được phần lớn mà không cần ba ngồi kèm. Giao hàng nhanh, hộp đựng rất đẹp và chắc chắn.'},
+            {av:'P',nm:'Phạm Quỳnh Mai',loc:'Quận 3 · Mua tháng 3/2026',bg:'#3B82F6',r:5,txt:'Quà sinh nhật hoàn hảo! Con mình 8 tuổi mất cả buổi chiều ngồi làm, hỏi tưới cây mỗi ngày. Lần đầu tiên thấy con tập trung lâu như vậy. Cảm ơn Sprouty!'},
+          ].map(rv => `
+          <div class="review-item">
+            <div class="reviewer-row">
+              <div class="reviewer-av" style="background:${rv.bg}">${rv.av}</div>
+              <div>
+                <div class="reviewer-name">${rv.nm}</div>
+                <div class="reviewer-loc">${rv.loc}</div>
+              </div>
+              <div class="reviewer-stars">${'★'.repeat(rv.r)}</div>
+            </div>
+            <p class="review-text">"${rv.txt}"</p>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Related products -->
+  <div class="related-section">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px">
+      <div>
+        <span class="label">Có thể bạn thích</span>
+        <h2 style="margin-top:6px">Sản phẩm liên quan</h2>
+      </div>
+      <a href="shop.html" class="btn btn-outline btn-sm">Xem tất cả →</a>
+    </div>
+    <div class="grid-4" id="relGrid"></div>
+  </div>`;
+
+  // Related products
+  const rel = allProds.filter(x => x.id !== pid && (x.cat === p.cat || x.col === p.col)).slice(0, 4);
+  document.getElementById('relGrid').innerHTML = (rel.length ? rel : allProds.filter(x => x.id !== pid).slice(0, 4))
+    .map(r => productCardHTML(r, '../')).join('');
+
+  const _svgFb   = `../assets/images/products/kit-${pid}.svg`;
+  const _primary = (Array.isArray(p.images) && p.images[0] && !p.images[0].includes('product-images')) ? '..' + p.images[0] : _svgFb;
+  const _thumbBg = [p.bg||'var(--parchment)', '#F8F8F8', '#FFF0E8', '#F0FDF4'];
+  thumbData = [1,2,3,4].map((n,i) => ({
+    src: _primary,
+    svgFallback: _svgFb,
+    em: p.em || '',
+    bg: _thumbBg[i],
+    isReal: false,
+  }));
+  loadPdpVideos();
+}
+
+async function loadPdpVideos() {
+  const pane = document.getElementById('tab-videos');
+  if (!pane) return;
+  if (!Auth.isLoggedIn()) {
+    pane.innerHTML = `<div style="text-align:center;padding:36px 18px;background:var(--cream-2);border-radius:12px">
+      <div style="font-size:2.4rem;margin-bottom:10px">🔐</div>
+      <h4 style="margin-bottom:8px">Đăng nhập để xem video hướng dẫn</h4>
+      <button class="btn btn-primary btn-sm" onclick="LoginModal.open()">Đăng nhập</button>
+    </div>`;
+    return;
+  }
+  pane.innerHTML = `<div style="padding:24px;color:var(--ink-4)">Đang tải video...</div>`;
+  try {
+    const { videos } = await API.videos.listForProduct(pid);
+    const btn = [...document.querySelectorAll('.pdp-tab-btn')].find(b => b.textContent.includes('Video'));
+    if (btn) btn.textContent = `Video (${videos.length})`;
+    if (!videos.length) {
+      pane.innerHTML = `<div style="text-align:center;padding:40px 20px">
+        <div style="font-size:3rem;margin-bottom:12px;opacity:.5">🎬</div>
+        <h4 style="margin-bottom:8px;color:var(--ink-3)">Video đang được chuẩn bị</h4>
+        <p style="font-size:.86rem;color:var(--ink-4)">Vui lòng quay lại sau.</p>
+      </div>`;
+      return;
+    }
+    pane.innerHTML = `<div class="vid-grid">${videos.map(v => `
+      <div class="vid-item" onclick="openInstructionVideo('${v.id}')">
+        <div class="vid-item-inner">
+          <div class="vid-play-btn">${v.progress?.completedAt ? '✓' : '▶'}</div>
+          <div class="vid-item-title">${esc(v.title)}</div>
+          <div class="vid-item-dur">${v.durationSec ? Math.round(v.durationSec / 60) + ' phút' : ''}</div>
+        </div>
+        <span class="vid-status ${v.progress?.completedAt ? 'vs-done' : 'vs-new'}">${v.progress?.completedAt ? 'Đã xem' : 'Xem ngay'}</span>
+      </div>`).join('')}</div>`;
+  } catch (e) {
+    pane.innerHTML = `<div style="text-align:center;padding:36px 18px;background:var(--cream-2);border-radius:12px;color:var(--ink-3)">
+      ${e.status === 403 ? 'Mua sản phẩm hoặc nhập mã để xem video hướng dẫn.' : esc(e.message || 'Không thể tải video.')}
+      <div style="margin-top:14px"><a class="btn btn-outline btn-sm" href="redeem.html">Nhập mã kích hoạt</a></div>
+    </div>`;
+  }
+}
+
+async function openInstructionVideo(videoId) {
+  try {
+    const { video } = await API.videos.get(videoId);
+    const player = video.externalUrl
+      ? `<iframe src="${esc(video.url)}" style="width:100%;aspect-ratio:16/9;border:0;border-radius:12px" allowfullscreen></iframe>`
+      : `<video src="${esc(video.url)}" controls autoplay style="width:100%;max-height:70vh;border-radius:12px" ontimeupdate="API.videos.progress('${video.id}',{progressSec:Math.floor(this.currentTime),completed:false}).catch(()=>{})" onended="API.videos.progress('${video.id}',{progressSec:Math.floor(this.duration||0),completed:true}).catch(()=>{})"></video>`;
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay open';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px';
+    modal.innerHTML = `<div style="background:var(--surface);border-radius:16px;padding:18px;width:min(920px,100%);position:relative">
+      <button onclick="this.closest('.modal-overlay').remove();loadPdpVideos()" style="position:absolute;right:12px;top:8px;background:none;border:0;font-size:1.5rem;cursor:pointer">✕</button>
+      <h3 style="margin:0 36px 12px 0">${esc(video.title)}</h3>${player}
+      ${video.description ? `<p style="margin-top:12px;color:var(--ink-3)">${esc(video.description)}</p>` : ''}
+    </div>`;
+    document.body.appendChild(modal);
+  } catch (e) {
+    Toast.show(e.message || 'Không thể mở video', 'error');
+  }
+}
+
+function setThumb(btn, idx) {
+  document.querySelectorAll('.pdp-thumb').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const mainBox = document.getElementById('mainImg');
+  const imgEl   = document.getElementById('mainImgEl');
+  const fbEl    = document.getElementById('mainImgFb');
+  const t = thumbData[idx];
+
+  imgEl.src = t.src;
+  imgEl.className = t.isReal ? 'pdp-real-img' : 'pdp-svg-img';
+  imgEl.style.display = '';
+  fbEl.style.display = 'none';
+  mainBox.classList.toggle('has-real-photo', !!t.isReal);
+  mainBox.style.background = t.bg;
+
+  imgEl.onerror = function() {
+    this.src = t.svgFallback;
+    this.className = 'pdp-svg-img';
+    mainBox.classList.remove('has-real-photo');
+    this.onerror = function() {
+      this.style.display = 'none';
+      fbEl.style.display = 'flex';
+      fbEl.textContent = t.em;
+    };
+  };
+}
+
+function chgQ(d) {
+  QTY = Math.max(1, Math.min(10, QTY + d));
+  document.getElementById('qtyVal').textContent = QTY;
+}
+
+function addCart() {
+  if (!p) return;
+  for (let i = 0; i < QTY; i++) Cart.add(p.id);
+}
+
+function buyNow() { addCart(); location.href = 'cart.html'; }
+
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-pane').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.pdp-tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+</script>
+</body>
+</html>

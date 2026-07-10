@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý đơn hàng · Sprouty Employee</title>
+  <link rel="stylesheet" href="../../assets/css/style.css">
+  <style>
+    body{background:#F8F9FC}
+    .emp-layout{display:flex;min-height:100vh;padding-top:64px}
+    .emp-sidebar{width:220px;flex-shrink:0;background:var(--ink);padding:24px 16px;position:fixed;top:64px;bottom:0;overflow-y:auto}
+    .emp-sidebar .brand{color:#fff;font-family:var(--font-display);font-size:1.1rem;margin-bottom:28px;display:block}
+    .emp-sidebar a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-md);color:rgba(255,255,255,.7);text-decoration:none;font-family:var(--font-h);font-size:.85rem;font-weight:600;margin-bottom:4px;transition:all .15s}
+    .emp-sidebar a:hover,.emp-sidebar a.active{background:rgba(255,255,255,.12);color:#fff}
+    .emp-sidebar .divider{height:1px;background:rgba(255,255,255,.12);margin:16px 0}
+    .emp-main{margin-left:220px;flex:1;padding:28px 32px}
+    .page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+    .filters{display:flex;gap:10px;flex-wrap:wrap}
+    .filter-btn{padding:7px 14px;border-radius:var(--r-full);font-size:.78rem;font-family:var(--font-h);font-weight:700;border:2px solid var(--parchment);background:var(--surface);cursor:pointer;transition:all .15s}
+    .filter-btn.active,.filter-btn:hover{border-color:var(--orange);color:var(--orange);background:var(--orange-pale)}
+    .search-box{display:flex;gap:8px}
+    .search-box input{padding:8px 14px;border:1.5px solid var(--parchment);border-radius:var(--r-md);font-size:.87rem;font-family:var(--font-body);min-width:200px}
+    .search-box input:focus{outline:none;border-color:var(--orange)}
+    .emp-table{width:100%;border-collapse:collapse;background:var(--surface);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh-sm)}
+    .emp-table th{background:var(--parchment);padding:11px 14px;text-align:left;font-family:var(--font-h);font-size:.75rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+    .emp-table td{padding:12px 14px;border-bottom:1px solid var(--parchment);font-size:.85rem;vertical-align:middle}
+    .emp-table tr:last-child td{border-bottom:none}
+    .emp-table tr:hover td{background:var(--cream-2)}
+    .status-select{padding:4px 8px;border-radius:var(--r-sm);border:1.5px solid var(--parchment);font-size:.78rem;font-family:var(--font-h);font-weight:700;cursor:pointer}
+    .pagination{display:flex;gap:8px;margin-top:20px;align-items:center;justify-content:flex-end}
+    .pagination button{padding:6px 12px;border-radius:var(--r-md);border:1.5px solid var(--parchment);background:var(--surface);cursor:pointer;font-family:var(--font-h);font-size:.82rem}
+    .pagination button:disabled{opacity:.4;cursor:not-allowed}
+    .pagination button.active{background:var(--orange);color:#fff;border-color:var(--orange)}
+    @media(max-width:900px){.emp-sidebar{display:none}.emp-main{margin-left:0;padding:20px}}
+  </style>
+</head>
+<body>
+<div id="login-modal-mount"></div>
+<aside class="emp-sidebar">
+  <span class="brand">✂ Sprouty Staff</span>
+  <a href="orders.html" class="active">📦 Đơn hàng</a>
+  <a href="products.html">🎨 Sản phẩm</a>
+  <div class="divider"></div>
+  <a href="../../index.html">🏠 Về trang chủ</a>
+  <a href="#" onclick="Auth.logout();return false" style="color:rgba(255,100,100,.8)">🚪 Đăng xuất</a>
+</aside>
+<main class="emp-main">
+  <div id="access-check" style="text-align:center;padding:80px 0">
+    <div style="font-size:2rem;margin-bottom:12px">⏳</div>
+    <p>Đang kiểm tra quyền truy cập...</p>
+  </div>
+  <div id="emp-content" style="display:none">
+    <div class="page-header">
+      <div>
+        <h1 style="font-size:1.6rem;margin-bottom:4px">Quản lý đơn hàng</h1>
+        <p style="margin:0;color:var(--ink-4)">Xem và cập nhật trạng thái đơn hàng</p>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+      <div class="filters" id="status-filters">
+        <button class="filter-btn active" data-status="">Tất cả</button>
+        <button class="filter-btn" data-status="pending">Chờ xác nhận</button>
+        <button class="filter-btn" data-status="processing">Đang xử lý</button>
+        <button class="filter-btn" data-status="shipped">Đang giao</button>
+        <button class="filter-btn" data-status="delivered">Đã giao</button>
+        <button class="filter-btn" data-status="cancelled">Đã hủy</button>
+      </div>
+      <div class="search-box">
+        <input type="search" id="search-input" placeholder="Tìm tên, SĐT, email..." oninput="debounceSearch()">
+      </div>
+    </div>
+
+    <div id="table-wrap">
+      <table class="emp-table">
+        <thead>
+          <tr><th>Mã đơn</th><th>Khách hàng</th><th>Sản phẩm</th><th>Tổng tiền</th><th>Ngày đặt</th><th>Trạng thái</th></tr>
+        </thead>
+        <tbody id="orders-tbody">
+          <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--ink-4)">Đang tải...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination" id="pagination"></div>
+  </div>
+</main>
+<script src="../../assets/js/env.js"></script>
+<script src="../../assets/js/api.js"></script>
+<script src="../../assets/js/app.js"></script>
+<script>
+const STATUS_VN  = { pending:'Chờ xác nhận', processing:'Đang xử lý', shipped:'Đang giao', delivered:'Đã giao', cancelled:'Đã hủy' };
+const STATUS_OPT = ['pending','processing','shipped','delivered','cancelled'];
+
+let _page = 1, _status = '', _search = '', _searchTimer;
+
+document.getElementById('status-filters').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  _status = btn.dataset.status;
+  _page = 1;
+  loadOrders();
+});
+
+function debounceSearch() {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => { _search = document.getElementById('search-input').value; _page = 1; loadOrders(); }, 400);
+}
+
+async function loadOrders() {
+  const tbody = document.getElementById('orders-tbody');
+  tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--ink-4)">Đang tải...</td></tr>`;
+  try {
+    const params = { page: _page, limit: 20 };
+    if (_status) params.status = _status;
+    if (_search) params.search = _search;
+    const { orders, total, pages } = await API.admin.orders.list(params);
+    if (!orders.length) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--ink-4)">Không có đơn hàng nào.</td></tr>`;
+      document.getElementById('pagination').innerHTML = '';
+      return;
+    }
+    tbody.innerHTML = orders.map(o => `
+      <tr>
+        <td><span style="font-family:var(--font-h);font-size:.78rem;font-weight:700;color:var(--ink-3)">#${o.id.slice(-8).toUpperCase()}</span></td>
+        <td>
+          <div style="font-weight:600;font-size:.85rem">${esc(o.shippingName)}</div>
+          <div style="font-size:.75rem;color:var(--ink-4)">${esc(o.shippingPhone)}</div>
+          <div style="font-size:.72rem;color:var(--ink-5)">${esc(o.user?.email||'')}</div>
+        </td>
+        <td style="max-width:200px">
+          <div style="font-size:.78rem;color:var(--ink-3)">${o.items.map(i=>`${esc(i.product?.name||'SP')} ×${i.qty}`).join(', ')}</div>
+        </td>
+        <td style="font-family:var(--font-h);font-weight:700;color:var(--orange)">${o.total.toLocaleString('vi-VN')}đ</td>
+        <td style="font-size:.78rem;color:var(--ink-4)">${new Date(o.createdAt).toLocaleDateString('vi-VN')}</td>
+        <td>
+          <select class="status-select" data-id="${o.id}" onchange="updateStatus(this)">
+            ${STATUS_OPT.map(s=>`<option value="${s}"${s===o.status?' selected':''}>${STATUS_VN[s]}</option>`).join('')}
+          </select>
+        </td>
+      </tr>`).join('');
+
+    // Pagination
+    const pg = document.getElementById('pagination');
+    if (pages <= 1) { pg.innerHTML = ''; return; }
+    let html = `<span style="font-size:.8rem;color:var(--ink-4)">Tổng: ${total}</span>`;
+    html += `<button onclick="_page=Math.max(1,_page-1);loadOrders()" ${_page<=1?'disabled':''}>‹</button>`;
+    for (let i=1;i<=pages;i++) html += `<button onclick="_page=${i};loadOrders()" class="${i===_page?'active':''}">${i}</button>`;
+    html += `<button onclick="_page=Math.min(${pages},_page+1);loadOrders()" ${_page>=pages?'disabled':''}>›</button>`;
+    pg.innerHTML = html;
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--rose);padding:24px">${e.message}</td></tr>`;
+  }
+}
+
+async function updateStatus(select) {
+  const id = select.dataset.id;
+  const status = select.value;
+  try {
+    await API.admin.orders.updateStatus(id, status);
+    Toast.show('Đã cập nhật trạng thái', 'success');
+  } catch(e) {
+    Toast.show('Lỗi: ' + e.message, 'error');
+    loadOrders(); // reload to revert
+  }
+}
+
+Auth.onReady(async user => {
+  document.getElementById('access-check').style.display = 'none';
+  if (!user || !['employee','admin'].includes(user.role)) {
+    document.getElementById('access-check').innerHTML = `
+      <div style="padding:80px 0;text-align:center">
+        <div style="font-size:2.5rem;margin-bottom:16px">🔒</div>
+        <h2>Truy cập bị từ chối</h2>
+        <p>Chỉ nhân viên và quản trị viên mới có thể truy cập trang này.</p>
+        <a href="../../index.html" class="btn btn-primary" style="margin-top:16px;display:inline-block">Về trang chủ</a>
+      </div>`;
+    document.getElementById('access-check').style.display = 'block';
+    return;
+  }
+  document.getElementById('emp-content').style.display = 'block';
+  await loadOrders();
+});
+</script>
+</body>
+</html>

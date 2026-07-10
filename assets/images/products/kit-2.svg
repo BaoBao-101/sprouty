@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480">
+  <defs>
+    <radialGradient id="bg2" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#F0FDF4"/><stop offset="100%" stop-color="#DCFCE7"/></radialGradient>
+    <filter id="sf"><feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="rgba(88,129,87,.2)"/></filter>
+  </defs>
+  <rect width="480" height="480" fill="url(#bg2)" rx="24"/>
+  <!-- Flower stems -->
+  <line x1="160" y1="360" x2="155" y2="260" stroke="#4ADE80" stroke-width="4" stroke-linecap="round"/>
+  <line x1="240" y1="360" x2="240" y2="240" stroke="#22C55E" stroke-width="4" stroke-linecap="round"/>
+  <line x1="320" y1="360" x2="325" y2="260" stroke="#4ADE80" stroke-width="4" stroke-linecap="round"/>
+  <!-- Leaves -->
+  <ellipse cx="150" cy="310" rx="22" ry="10" fill="#86EFAC" transform="rotate(-30,150,310)"/>
+  <ellipse cx="248" cy="300" rx="22" ry="10" fill="#86EFAC" transform="rotate(20,248,300)"/>
+  <ellipse cx="336" cy="305" rx="22" ry="10" fill="#86EFAC" transform="rotate(-20,336,305)"/>
+  <!-- Ground -->
+  <rect x="80" y="355" width="320" height="30" rx="15" fill="#BBF7D0"/>
+  <!-- Big butterfly center -->
+  <ellipse cx="240" cy="185" rx="14" ry="36" fill="#7C3AED" opacity=".85" filter="url(#sf)"/>
+  <ellipse cx="198" cy="165" rx="48" ry="42" fill="#C084FC" opacity=".92" transform="rotate(-18,198,165)" filter="url(#sf)"/>
+  <ellipse cx="192" cy="218" rx="38" ry="30" fill="#A855F7" opacity=".78" transform="rotate(14,192,218)" filter="url(#sf)"/>
+  <ellipse cx="282" cy="165" rx="48" ry="42" fill="#C084FC" opacity=".92" transform="rotate(18,282,165)" filter="url(#sf)"/>
+  <ellipse cx="288" cy="218" rx="38" ry="30" fill="#A855F7" opacity=".78" transform="rotate(-14,288,218)" filter="url(#sf)"/>
+  <!-- Wing patterns -->
+  <ellipse cx="206" cy="160" rx="16" ry="18" fill="white" opacity=".35"/>
+  <ellipse cx="274" cy="160" rx="16" ry="18" fill="white" opacity=".35"/>
+  <circle cx="203" cy="157" r="7" fill="#F9A8D4" opacity=".6"/>
+  <circle cx="277" cy="157" r="7" fill="#F9A8D4" opacity=".6"/>
+  <!-- Antennae -->
+  <path d="M233,151 Q220,128 214,118" stroke="#6D28D9" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <circle cx="214" cy="118" r="5" fill="#7C3AED"/>
+  <path d="M247,151 Q260,128 266,118" stroke="#6D28D9" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <circle cx="266" cy="118" r="5" fill="#7C3AED"/>
+  <!-- Small butterflies -->
+  <ellipse cx="130" cy="240" rx="8" ry="6" fill="#EC4899" opacity=".8" transform="rotate(-15,130,240)"/>
+  <ellipse cx="118" cy="240" rx="8" ry="6" fill="#EC4899" opacity=".8" transform="rotate(15,118,240)"/>
+  <circle cx="124" cy="240" r="4" fill="#BE185D" opacity=".7"/>
+  <ellipse cx="370" cy="200" rx="7" ry="5" fill="#8B5CF6" opacity=".8" transform="rotate(20,370,200)"/>
+  <ellipse cx="358" cy="200" rx="7" ry="5" fill="#8B5CF6" opacity=".8" transform="rotate(-20,358,200)"/>
+  <circle cx="364" cy="200" r="3.5" fill="#6D28D9" opacity=".7"/>
+  <!-- Flowers -->
+  <circle cx="160" cy="253" r="22" fill="#FCD34D" filter="url(#sf)"/>
+  <circle cx="160" cy="253" r="12" fill="#F59E0B"/>
+  <circle cx="240" cy="233" r="24" fill="#F9A8D4" filter="url(#sf)"/>
+  <circle cx="240" cy="233" r="13" fill="#EC4899"/>
+  <circle cx="320" cy="252" r="22" fill="#86EFAC" filter="url(#sf)"/>
+  <circle cx="320" cy="252" r="12" fill="#22C55E"/>
+</svg>

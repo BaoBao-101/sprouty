@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý sản phẩm · Sprouty Employee</title>
+  <link rel="stylesheet" href="../../assets/css/style.css">
+  <style>
+    body{background:#F8F9FC}
+    .emp-layout{display:flex;min-height:100vh}
+    .emp-sidebar{width:220px;flex-shrink:0;background:var(--ink);padding:24px 16px;position:fixed;top:0;bottom:0;overflow-y:auto}
+    .emp-sidebar .brand{color:#fff;font-family:var(--font-display);font-size:1.1rem;margin-bottom:28px;display:block}
+    .emp-sidebar a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-md);color:rgba(255,255,255,.7);text-decoration:none;font-family:var(--font-h);font-size:.85rem;font-weight:600;margin-bottom:4px;transition:all .15s}
+    .emp-sidebar a:hover,.emp-sidebar a.active{background:rgba(255,255,255,.12);color:#fff}
+    .emp-sidebar .divider{height:1px;background:rgba(255,255,255,.12);margin:16px 0}
+    .emp-main{margin-left:220px;flex:1;padding:28px 32px}
+    .page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+    .emp-table{width:100%;border-collapse:collapse;background:var(--surface);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh-sm)}
+    .emp-table th{background:var(--parchment);padding:11px 14px;text-align:left;font-family:var(--font-h);font-size:.75rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+    .emp-table td{padding:12px 14px;border-bottom:1px solid var(--parchment);font-size:.85rem;vertical-align:middle}
+    .emp-table tr:last-child td{border-bottom:none}
+    .emp-table tr:hover td{background:var(--cream-2)}
+    .prod-img{width:48px;height:48px;border-radius:var(--r-sm);object-fit:cover;background:var(--parchment)}
+    .pill{display:inline-block;padding:2px 9px;border-radius:var(--r-full);font-size:.68rem;font-family:var(--font-h);font-weight:700}
+    .pill-pub{background:#D1FAE5;color:#065F46}.pill-draft{background:#FEF9C3;color:#854D0E}.pill-arch{background:#F3F4F6;color:#6B7280}
+    .act-btn{padding:5px 10px;border-radius:var(--r-sm);font-size:.75rem;font-family:var(--font-h);font-weight:700;cursor:pointer;border:1.5px solid;transition:all .15s}
+    .act-edit{border-color:var(--orange);color:var(--orange);background:transparent}.act-edit:hover{background:var(--orange-pale)}
+    .act-del{border-color:var(--rose);color:var(--rose);background:transparent}.act-del:hover{background:#FEE2E2}
+    /* Modal */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;overflow-y:auto;padding:20px}
+    .modal-overlay.open{display:flex;align-items:flex-start;justify-content:center}
+    .modal{background:var(--surface);border-radius:var(--r-xl);padding:28px;width:100%;max-width:600px;margin:auto;position:relative}
+    @media(max-width:900px){.emp-sidebar{display:none}.emp-main{margin-left:0;padding:20px}}
+  </style>
+</head>
+<body>
+<div id="login-modal-mount"></div>
+<aside class="emp-sidebar">
+  <span class="brand">✂ Sprouty Staff</span>
+  <a href="orders.html">📦 Đơn hàng</a>
+  <a href="products.html" class="active">🎨 Sản phẩm</a>
+  <div class="divider"></div>
+  <a href="../../index.html">🏠 Về trang chủ</a>
+  <a href="#" onclick="Auth.logout();return false" style="color:rgba(255,100,100,.8)">🚪 Đăng xuất</a>
+</aside>
+
+<main class="emp-main">
+  <div id="access-check" style="text-align:center;padding:80px 0">
+    <div style="font-size:2rem;margin-bottom:12px">⏳</div>
+    <p>Đang kiểm tra quyền truy cập...</p>
+  </div>
+  <div id="emp-content" style="display:none">
+    <div class="page-header">
+      <div>
+        <h1 style="font-size:1.6rem;margin-bottom:4px">Quản lý sản phẩm</h1>
+        <p style="margin:0;color:var(--ink-4)">Thêm, sửa và quản lý catalog sản phẩm</p>
+      </div>
+      <button class="btn btn-primary" onclick="openEditModal()">+ Thêm sản phẩm</button>
+    </div>
+
+    <div id="table-wrap">
+      <table class="emp-table">
+        <thead>
+          <tr><th>Ảnh</th><th>Tên sản phẩm</th><th>Danh mục</th><th>Giá</th><th>Độ tuổi</th><th>Trạng thái</th><th>Thao tác</th></tr>
+        </thead>
+        <tbody id="products-tbody">
+          <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--ink-4)">Đang tải...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Product edit modal -->
+<div class="modal-overlay" id="prod-modal">
+  <div class="modal">
+    <button style="position:absolute;top:12px;right:14px;font-size:1.3rem;color:var(--ink-3);background:none;border:none;cursor:pointer" onclick="closeProdModal()">✕</button>
+    <h2 id="modal-title" style="margin-bottom:20px;font-size:1.2rem">Thêm sản phẩm</h2>
+    <form id="prod-form" onsubmit="saveProd(event)">
+      <input type="hidden" id="prod-id">
+      <div class="form-group">
+        <label class="form-label">Tên sản phẩm *</label>
+        <input class="form-input" type="text" id="prod-name" required minlength="2">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label class="form-label">Danh mục *</label>
+          <select class="form-input" id="prod-cat" required>
+            <option value="kit">Kit trồng cây</option>
+            <option value="book">Hướng dẫn chăm cây</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Độ tuổi *</label>
+          <input class="form-input" type="text" id="prod-age" placeholder="VD: 4–6 tuổi" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Giá (đ) *</label>
+          <input class="form-input" type="number" id="prod-price" min="1000" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Giá gốc (đ)</label>
+          <input class="form-input" type="number" id="prod-oldprice" min="1000">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Bộ sưu tập *</label>
+        <input class="form-input" type="text" id="prod-col" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mô tả *</label>
+        <textarea class="form-input" id="prod-desc" rows="3" style="resize:vertical" required minlength="10"></textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label class="form-label">Emoji</label>
+          <input class="form-input" type="text" id="prod-emoji" placeholder="🎨" maxlength="4">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Badge</label>
+          <select class="form-input" id="prod-badge">
+            <option value="">Không có</option>
+            <option value="hot">🔥 Bán chạy (hot)</option>
+            <option value="new">✨ Mới (new)</option>
+            <option value="sale">🏷 Giảm giá (sale)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">URL ảnh (mỗi URL một dòng)</label>
+        <textarea class="form-input" id="prod-images" rows="2" style="resize:vertical" placeholder="/assets/images/products/kit-1.svg"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Bao gồm trong hộp (mỗi dòng một mục)</label>
+        <textarea class="form-input" id="prod-includes" rows="4" style="resize:vertical" placeholder="Chậu, hạt giống, đất trồng, màu acrylic..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Trạng thái *</label>
+        <select class="form-input" id="prod-status" required>
+          <option value="published">Đang bán</option>
+          <option value="draft">Bản nháp</option>
+          <option value="archived">Lưu trữ</option>
+        </select>
+      </div>
+      <div id="prod-err" style="display:none;color:var(--rose);margin-bottom:12px;font-size:.85rem"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+        <button type="button" class="btn btn-ghost" onclick="closeProdModal()">Hủy</button>
+        <button type="submit" id="prod-save" class="btn btn-primary">Lưu sản phẩm</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="video-modal">
+  <div class="modal" style="max-width:820px">
+    <button style="position:absolute;top:12px;right:14px;font-size:1.3rem;color:var(--ink-3);background:none;border:none;cursor:pointer" onclick="closeVideosModal()">✕</button>
+    <h2 id="video-title" style="margin-bottom:14px;font-size:1.15rem">Video hướng dẫn</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <input class="form-input" id="vid-name" placeholder="Tiêu đề video">
+      <input class="form-input" id="vid-url" placeholder="URL video ngoài (tuỳ chọn)">
+      <input class="form-input" id="vid-order" type="number" min="0" value="0" placeholder="Thứ tự">
+      <select class="form-input" id="vid-status"><option value="draft">Bản nháp</option><option value="published">Xuất bản</option><option value="archived">Lưu trữ</option></select>
+    </div>
+    <textarea class="form-input" id="vid-desc" rows="2" placeholder="Mô tả" style="margin-bottom:10px"></textarea>
+    <input class="form-input" id="vid-file" type="file" accept="video/mp4,video/webm,video/quicktime" style="margin-bottom:10px">
+    <button class="btn btn-primary btn-sm" onclick="createVideo()">Thêm video</button>
+    <div id="video-list" style="margin-top:16px"></div>
+  </div>
+</div>
+
+<script src="../../assets/js/env.js"></script>
+<script src="../../assets/js/api.js"></script>
+<script src="../../assets/js/app.js"></script>
+<script>
+const STATUS_CLS = { published:'pill-pub', draft:'pill-draft', archived:'pill-arch' };
+const STATUS_VN = { published:'Đang bán', draft:'Bản nháp', archived:'Lưu trữ' };
+let _products = [];
+let _videoProductId = null;
+
+async function loadProducts() {
+  const tbody = document.getElementById('products-tbody');
+  try {
+    const { products } = await API.admin.products.list();
+    _products = products;
+    if (!products.length) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--ink-4)">Chưa có sản phẩm nào.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = products.map(p => `
+      <tr>
+        <td>
+          ${p.images?.[0]
+            ? `<img class="prod-img" src="${p.images[0]}" alt="" onerror="this.style.display='none'">`
+            : `<div class="prod-img" style="display:flex;align-items:center;justify-content:center;font-size:1.4rem">${esc(p.emoji||'🎨')}</div>`}
+        </td>
+        <td>
+          <div style="font-weight:600">${esc(p.name)}</div>
+          <div style="font-size:.75rem;color:var(--ink-4)">${esc(p.collection)}</div>
+        </td>
+        <td style="font-size:.8rem">${p.category==='kit'?'Kit trồng cây':'Hướng dẫn chăm cây'}</td>
+        <td>
+          <div style="font-family:var(--font-h);font-weight:700;color:var(--orange)">${p.price.toLocaleString('vi-VN')}đ</div>
+          ${p.oldPrice?`<div style="font-size:.75rem;color:var(--ink-4);text-decoration:line-through">${p.oldPrice.toLocaleString('vi-VN')}đ</div>`:''}
+        </td>
+        <td style="font-size:.8rem">${esc(p.ageRange)}</td>
+        <td><span class="pill ${STATUS_CLS[p.status]||''}">${STATUS_VN[p.status]||esc(p.status)}</span></td>
+        <td>
+          <div style="display:flex;gap:6px">
+            <button class="act-btn act-edit" onclick="openEditModal(${p.id})">Sửa</button>
+            <button class="act-btn act-edit" onclick="openVideosModal(${p.id})">Video</button>
+            <button class="act-btn act-del" data-pid="${p.id}" onclick="deleteProduct(${p.id})">Xóa</button>
+          </div>
+        </td>
+      </tr>`).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--rose);padding:24px">${e.message}</td></tr>`;
+  }
+}
+
+function openEditModal(id) {
+  const form = document.getElementById('prod-form');
+  form.reset();
+  document.getElementById('prod-err').style.display = 'none';
+  if (id) {
+    const p = _products.find(x=>x.id===id);
+    if (!p) return;
+    document.getElementById('modal-title').textContent = 'Sửa sản phẩm';
+    document.getElementById('prod-id').value = p.id;
+    document.getElementById('prod-name').value = p.name;
+    document.getElementById('prod-cat').value = p.category;
+    document.getElementById('prod-age').value = p.ageRange;
+    document.getElementById('prod-price').value = p.price;
+    document.getElementById('prod-oldprice').value = p.oldPrice || '';
+    document.getElementById('prod-col').value = p.collection;
+    document.getElementById('prod-desc').value = p.description;
+    document.getElementById('prod-emoji').value = p.emoji || '';
+    document.getElementById('prod-badge').value = p.badge || '';
+    document.getElementById('prod-images').value = (p.images||[]).join('\n');
+    document.getElementById('prod-includes').value = (p.includes||[]).join('\n');
+    document.getElementById('prod-status').value = p.status;
+  } else {
+    document.getElementById('modal-title').textContent = 'Thêm sản phẩm';
+    document.getElementById('prod-id').value = '';
+  }
+  document.getElementById('prod-modal').classList.add('open');
+}
+
+function closeProdModal() {
+  document.getElementById('prod-modal').classList.remove('open');
+}
+
+async function saveProd(e) {
+  e.preventDefault();
+  const saveBtn = document.getElementById('prod-save');
+  const errEl = document.getElementById('prod-err');
+  errEl.style.display = 'none';
+  saveBtn.disabled = true; saveBtn.textContent = 'Đang lưu...';
+
+  const id = document.getElementById('prod-id').value;
+  const data = {
+    name: document.getElementById('prod-name').value,
+    category: document.getElementById('prod-cat').value,
+    ageRange: document.getElementById('prod-age').value,
+    price: parseInt(document.getElementById('prod-price').value, 10),
+    oldPrice: parseInt(document.getElementById('prod-oldprice').value, 10) || null,
+    collection: document.getElementById('prod-col').value,
+    description: document.getElementById('prod-desc').value,
+    emoji: document.getElementById('prod-emoji').value || '🎨',
+    badge: document.getElementById('prod-badge').value || null,
+    images: document.getElementById('prod-images').value.split('\n').map(s=>s.trim()).filter(Boolean),
+    includes: document.getElementById('prod-includes').value.split('\n').map(s=>s.trim()).filter(Boolean),
+    status: document.getElementById('prod-status').value,
+  };
+
+  try {
+    if (id) {
+      await API.admin.products.update(id, data);
+      Toast.show('Đã cập nhật sản phẩm', 'success');
+    } else {
+      await API.admin.products.create(data);
+      Toast.show('Đã thêm sản phẩm mới', 'success');
+    }
+    closeProdModal();
+    await loadProducts();
+  } catch(err) {
+    errEl.textContent = err.message || 'Lỗi lưu sản phẩm';
+    errEl.style.display = 'block';
+  } finally {
+    saveBtn.disabled = false; saveBtn.textContent = 'Lưu sản phẩm';
+  }
+}
+
+async function deleteProduct(id) {
+  const p = _products.find(x => x.id === id);
+  const name = p?.name || `#${id}`;
+  if (!confirm(`Xóa sản phẩm "${name}"?\n(Nếu có đơn hàng, sản phẩm sẽ được lưu trữ thay vì xóa)`)) return;
+  try {
+    const result = await API.admin.products.remove(id);
+    Toast.show(result.message || 'Đã xóa sản phẩm', 'success');
+    await loadProducts();
+  } catch(e) {
+    Toast.show('Lỗi: ' + e.message, 'error');
+  }
+}
+
+async function openVideosModal(productId) {
+  _videoProductId = productId;
+  const p = _products.find(x => x.id === productId);
+  document.getElementById('video-title').textContent = `Video hướng dẫn · ${p?.name || productId}`;
+  document.getElementById('video-modal').classList.add('open');
+  await loadVideos(productId);
+}
+
+function closeVideosModal() {
+  document.getElementById('video-modal').classList.remove('open');
+}
+
+async function loadVideos(productId = _videoProductId) {
+  const el = document.getElementById('video-list');
+  el.innerHTML = `<div style="color:var(--ink-4)">Đang tải...</div>`;
+  try {
+    const { videos } = await API.admin.videos.list(productId);
+    el.innerHTML = videos.length ? `<table class="emp-table"><thead><tr><th>Tiêu đề</th><th>Trạng thái</th><th>Thứ tự</th><th>Thumb</th><th></th></tr></thead><tbody>${videos.map(v => `
+      <tr>
+        <td><div style="font-weight:700">${esc(v.title)}</div><div style="font-size:.72rem;color:var(--ink-4)">${esc(v.externalUrl || v.asset?.url || '')}</div></td>
+        <td><select onchange="updateVideo('${v.id}',{status:this.value})">${['draft','published','archived'].map(s=>`<option value="${s}"${v.status===s?' selected':''}>${s}</option>`).join('')}</select></td>
+        <td><input type="number" value="${v.sortOrder}" style="width:70px" onchange="updateVideo('${v.id}',{sortOrder:parseInt(this.value,10)||0})"></td>
+        <td><input type="file" accept="image/jpeg,image/png,image/webp" onchange="uploadVideoThumb('${v.id}',this.files[0])"></td>
+        <td><button class="act-btn act-del" onclick="archiveVideo('${v.id}')">Lưu trữ</button></td>
+      </tr>`).join('')}</tbody></table>` : `<div style="color:var(--ink-4)">Chưa có video.</div>`;
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--rose)">${esc(e.message || 'Không tải được video.')}</div>`;
+  }
+}
+
+async function createVideo() {
+  const payload = {
+    title: document.getElementById('vid-name').value.trim(),
+    description: document.getElementById('vid-desc').value.trim(),
+    externalUrl: document.getElementById('vid-url').value.trim(),
+    sortOrder: parseInt(document.getElementById('vid-order').value, 10) || 0,
+    status: document.getElementById('vid-status').value,
+  };
+  const file = document.getElementById('vid-file').files[0];
+  try {
+    if (file) {
+      const form = new FormData();
+      Object.entries(payload).forEach(([k, v]) => form.append(k, v));
+      form.append('video', file);
+      await API.admin.videos.create(_videoProductId, form);
+    } else {
+      await API.admin.videos.create(_videoProductId, payload);
+    }
+    Toast.show('Đã thêm video', 'success');
+    document.getElementById('vid-name').value = '';
+    document.getElementById('vid-desc').value = '';
+    document.getElementById('vid-url').value = '';
+    document.getElementById('vid-file').value = '';
+    loadVideos();
+  } catch(e) {
+    Toast.show(e.message || 'Không thêm được video', 'error');
+  }
+}
+
+async function updateVideo(id, data) {
+  try { await API.admin.videos.update(id, data); Toast.show('Đã cập nhật video', 'success'); }
+  catch(e) { Toast.show(e.message || 'Không cập nhật được video', 'error'); loadVideos(); }
+}
+
+async function uploadVideoThumb(id, file) {
+  if (!file) return;
+  const form = new FormData();
+  form.append('thumbnail', file);
+  try { await API.admin.videos.thumbnail(id, form); Toast.show('Đã upload thumbnail', 'success'); loadVideos(); }
+  catch(e) { Toast.show(e.message || 'Không upload được thumbnail', 'error'); }
+}
+
+async function archiveVideo(id) {
+  if (!confirm('Lưu trữ video này?')) return;
+  try { await API.admin.videos.remove(id); Toast.show('Đã lưu trữ video', 'success'); loadVideos(); }
+  catch(e) { Toast.show(e.message || 'Không lưu trữ được video', 'error'); }
+}
+
+Auth.onReady(async user => {
+  document.getElementById('access-check').style.display = 'none';
+  if (!user || !['employee','admin'].includes(user.role)) {
+    document.getElementById('access-check').innerHTML = `
+      <div style="padding:80px 0;text-align:center">
+        <div style="font-size:2.5rem;margin-bottom:16px">🔒</div>
+        <h2>Truy cập bị từ chối</h2>
+        <p>Chỉ nhân viên và quản trị viên mới có thể truy cập trang này.</p>
+        <a href="../../index.html" class="btn btn-primary" style="margin-top:16px;display:inline-block">Về trang chủ</a>
+      </div>`;
+    document.getElementById('access-check').style.display = 'block';
+    return;
+  }
+  document.getElementById('emp-content').style.display = 'block';
+  await loadProducts();
+});
+</script>
+</body>
+</html>

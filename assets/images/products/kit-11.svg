@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480">
+  <defs>
+    <linearGradient id="bg11" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFF7ED"/><stop offset="100%" stop-color="#FFEDD5"/></linearGradient>
+    <filter id="sf11"><feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="rgba(234,88,12,.2)"/></filter>
+  </defs>
+  <rect width="480" height="480" fill="url(#bg11)" rx="24"/>
+  <!-- Gift box bottom -->
+  <rect x="118" y="258" width="244" height="160" rx="10" fill="#F97316" filter="url(#sf11)"/>
+  <!-- Stripes on box bottom -->
+  <rect x="118" y="278" width="244" height="18" fill="#EA580C" opacity=".5"/>
+  <rect x="118" y="318" width="244" height="18" fill="#EA580C" opacity=".5"/>
+  <rect x="118" y="358" width="244" height="18" fill="#EA580C" opacity=".5"/>
+  <!-- Gift box lid -->
+  <rect x="104" y="215" width="272" height="50" rx="8" fill="#FB923C" filter="url(#sf11)"/>
+  <!-- Ribbon vertical -->
+  <rect x="228" y="215" width="24" height="203" rx="4" fill="#FCD34D"/>
+  <!-- Ribbon horizontal on lid -->
+  <rect x="104" y="226" width="272" height="20" rx="4" fill="#FCD34D" opacity=".9"/>
+  <!-- Bow -->
+  <path d="M240,215 C210,185 175,188 178,215 C181,230 215,225 240,215Z" fill="#FBBF24" filter="url(#sf11)"/>
+  <path d="M240,215 C270,185 305,188 302,215 C299,230 265,225 240,215Z" fill="#F59E0B" filter="url(#sf11)"/>
+  <circle cx="240" cy="215" r="14" fill="#FCD34D" filter="url(#sf11)"/>
+  <!-- Star decorations -->
+  <polygon points="118,280 121,270 124,280 114,274 128,274" fill="#FBBF24" opacity=".8"/>
+  <polygon points="362,330 365,320 368,330 358,324 372,324" fill="#FEF3C7" opacity=".8"/>
+  <polygon points="140,350 143,340 146,350 136,344 150,344" fill="#FBBF24" opacity=".6"/>
+  <!-- 12 small kit icons arranged around the gift -->
+  <text x="95" y="250" font-size="16">⭐</text>
+  <text x="142" y="205" font-size="14">🦋</text>
+  <text x="330" y="210" font-size="16">🐉</text>
+  <text x="372" y="250" font-size="14">🏠</text>
+  <text x="375" y="310" font-size="16">🌊</text>
+  <text x="370" y="370" font-size="14">🏮</text>
+  <text x="330" y="410" font-size="16">🚀</text>
+  <text x="240" y="422" font-size="14">🌳</text>
+  <text x="150" y="415" font-size="16">📖</text>
+  <text x="95" y="380" font-size="14">♻️</text>
+  <text x="88" y="315" font-size="16">🎁</text>
+  <text x="90" y="170" font-size="14">🎭</text>
+  <!-- Badge "12 tháng" -->
+  <circle cx="380" cy="155" r="44" fill="#F97316" filter="url(#sf11)"/>
+  <text x="380" y="148" text-anchor="middle" font-size="22" font-weight="bold" fill="white" font-family="sans-serif">12</text>
+  <text x="380" y="168" text-anchor="middle" font-size="12" fill="rgba(255,255,255,.85)" font-family="sans-serif">tháng</text>
+</svg>

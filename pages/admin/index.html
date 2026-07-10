@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard · Sprouty</title>
+  <link rel="stylesheet" href="../../assets/css/style.css">
+  <style>
+    body{background:#F8F9FC}
+    .admin-sidebar{width:230px;flex-shrink:0;background:var(--ink);padding:24px 16px;position:fixed;top:0;bottom:0;overflow-y:auto;z-index:10}
+    .admin-sidebar .brand{color:#fff;font-family:var(--font-display);font-size:1.1rem;margin-bottom:4px;display:block;font-weight:700}
+    .admin-sidebar .brand-sub{color:rgba(255,255,255,.4);font-size:.68rem;font-family:var(--font-h);margin-bottom:28px;display:block;text-transform:uppercase;letter-spacing:.08em}
+    .admin-sidebar a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-md);color:rgba(255,255,255,.65);text-decoration:none;font-family:var(--font-h);font-size:.85rem;font-weight:600;margin-bottom:4px;transition:all .15s}
+    .admin-sidebar a:hover,.admin-sidebar a.active{background:rgba(255,255,255,.12);color:#fff}
+    .admin-sidebar .divider{height:1px;background:rgba(255,255,255,.1);margin:12px 0}
+    .admin-main{margin-left:230px;padding:28px 32px;min-height:100vh}
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-bottom:28px}
+    .stat-card{background:var(--surface);border-radius:var(--r-lg);padding:20px;box-shadow:var(--sh-sm);position:relative;overflow:hidden}
+    .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent,var(--orange))}
+    .stat-num{font-family:var(--font-display);font-size:1.9rem;font-weight:700;color:var(--ink)}
+    .stat-label{font-size:.72rem;font-weight:700;font-family:var(--font-h);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-4);margin-top:4px}
+    .stat-sub{font-size:.7rem;color:var(--ink-5);margin-top:2px}
+    .admin-card{background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--sh-sm);margin-bottom:24px;overflow:hidden}
+    .admin-card-header{padding:14px 20px;border-bottom:1px solid var(--parchment);display:flex;justify-content:space-between;align-items:center}
+    .admin-card-header h3{font-size:.97rem;margin:0;font-family:var(--font-h);font-weight:700}
+    .admin-table{width:100%;border-collapse:collapse}
+    .admin-table th{background:var(--parchment);padding:10px 14px;text-align:left;font-family:var(--font-h);font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+    .admin-table td{padding:11px 14px;border-bottom:1px solid var(--parchment);font-size:.84rem;vertical-align:middle}
+    .admin-table tr:last-child td{border-bottom:none}
+    .admin-table tr:hover td{background:var(--cream-2)}
+    .role-badge{display:inline-block;padding:2px 9px;border-radius:var(--r-full);font-size:.68rem;font-family:var(--font-h);font-weight:700;text-transform:uppercase}
+    .role-admin{background:#FEE2E2;color:#991B1B}.role-employee{background:#DBEAFE;color:#1D4ED8}.role-customer{background:#D1FAE5;color:#065F46}
+    .act-btn{padding:4px 10px;border-radius:var(--r-sm);font-size:.74rem;font-family:var(--font-h);font-weight:700;cursor:pointer;border:1.5px solid;transition:all .15s}
+    @media(max-width:900px){.admin-sidebar{display:none}.admin-main{margin-left:0;padding:16px}}
+  </style>
+</head>
+<body>
+<div id="login-modal-mount"></div>
+
+<aside class="admin-sidebar">
+  <span class="brand">✂ Sprouty</span>
+  <span class="brand-sub">Admin Dashboard</span>
+  <a href="#" onclick="showSection('dashboard');return false" class="active" id="nav-dashboard">📊 Dashboard</a>
+  <a href="#" onclick="showSection('users');return false" id="nav-users">👥 Người dùng</a>
+  <a href="#" onclick="showSection('orders');return false" id="nav-orders">📦 Đơn hàng</a>
+  <a href="#" onclick="showSection('sales');return false" id="nav-sales">💰 Báo cáo bán hàng</a>
+  <a href="#" onclick="showSection('workshops');return false" id="nav-workshops">🎓 Workshop</a>
+  <a href="#" onclick="showSection('redeem');return false" id="nav-redeem">🎟 Mã kích hoạt</a>
+  <a href="#" onclick="showSection('blog');return false" id="nav-blog">📝 Blog</a>
+  <a href="#" onclick="showSection('userimages');return false" id="nav-userimages">🖼 Ảnh người dùng</a>
+  <div class="divider"></div>
+  <a href="../employee/products.html">🎨 Quản lý sản phẩm</a>
+  <a href="../../index.html">🏠 Trang chủ</a>
+  <a href="#" onclick="Auth.logout();return false" style="color:rgba(255,100,100,.8)">🚪 Đăng xuất</a>
+</aside>
+
+<main class="admin-main">
+  <div id="access-check" style="text-align:center;padding:80px 0">
+    <div style="font-size:2rem;margin-bottom:12px">⏳</div>
+    <p>Đang kiểm tra quyền truy cập...</p>
+  </div>
+
+  <div id="admin-content" style="display:none">
+
+    <!-- Dashboard Section -->
+    <section id="sec-dashboard">
+      <h1 style="font-size:1.5rem;margin-bottom:20px">Dashboard</h1>
+      <div class="stat-grid">
+        <div class="stat-card" style="--accent:var(--orange)">
+          <div class="stat-num" id="st-users">—</div><div class="stat-label">Người dùng</div>
+          <div class="stat-sub" id="st-users-sub"></div>
+        </div>
+        <div class="stat-card" style="--accent:var(--green)">
+          <div class="stat-num" id="st-orders">—</div><div class="stat-label">Đơn hàng</div>
+        </div>
+        <div class="stat-card" style="--accent:var(--blue)">
+          <div class="stat-num" id="st-products">—</div><div class="stat-label">Sản phẩm</div>
+        </div>
+        <div class="stat-card" style="--accent:var(--amber)">
+          <div class="stat-num" id="st-rev7">—</div><div class="stat-label">Doanh thu 7 ngày</div>
+        </div>
+        <div class="stat-card" style="--accent:var(--terracotta)">
+          <div class="stat-num" id="st-rev30">—</div><div class="stat-label">Doanh thu 30 ngày</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+        <div class="admin-card">
+          <div class="admin-card-header"><h3>Đơn hàng theo trạng thái</h3></div>
+          <div id="orders-by-status" style="padding:16px"></div>
+        </div>
+        <div class="admin-card">
+          <div class="admin-card-header"><h3>Top 5 sản phẩm bán chạy</h3></div>
+          <div id="top-products" style="padding:16px"></div>
+        </div>
+      </div>
+
+      <div class="admin-card">
+        <div class="admin-card-header"><h3>Đơn hàng gần đây</h3></div>
+        <div style="overflow-x:auto">
+          <table class="admin-table">
+            <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Tổng tiền</th><th>Ngày đặt</th><th>Trạng thái</th></tr></thead>
+            <tbody id="recent-orders"><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--ink-4)">Đang tải...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Users Section -->
+    <section id="sec-users" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+        <h1 style="font-size:1.5rem;margin:0">Quản lý người dùng</h1>
+        <button class="btn btn-primary" onclick="openAddUserModal()">+ Thêm người dùng</button>
+      </div>
+      <div class="admin-card">
+        <div style="overflow-x:auto">
+          <table class="admin-table">
+            <thead><tr><th>Tên</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
+            <tbody id="users-tbody"><tr><td colspan="6" style="text-align:center;padding:32px;color:var(--ink-4)">Đang tải...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Add user modal -->
+    <div class="modal-overlay" id="add-user-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;overflow-y:auto;padding:20px">
+      <div style="background:var(--surface);border-radius:var(--r-xl);padding:28px;width:100%;max-width:480px;margin:auto;position:relative">
+        <button style="position:absolute;top:12px;right:14px;font-size:1.3rem;color:var(--ink-3);background:none;border:none;cursor:pointer" onclick="closeAddUserModal()" aria-label="Đóng">✕</button>
+        <h2 style="margin-bottom:18px;font-size:1.2rem">Thêm người dùng mới</h2>
+        <form id="add-user-form" onsubmit="submitAddUser(event)">
+          <div class="form-group">
+            <label class="form-label">Họ và tên <span class="required">*</span></label>
+            <input class="form-input" type="text" id="au-name" required minlength="2" maxlength="100" autocomplete="name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email <span class="required">*</span></label>
+            <input class="form-input" type="email" id="au-email" required autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mật khẩu tạm <span class="required">*</span></label>
+            <input class="form-input" type="text" id="au-password" required minlength="6" maxlength="200" autocomplete="new-password">
+            <div class="form-hint">Tối thiểu 6 ký tự. Người dùng nên đổi sau lần đăng nhập đầu.</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="form-group">
+              <label class="form-label">Vai trò <span class="required">*</span></label>
+              <select class="form-input" id="au-role" required>
+                <option value="customer">Khách hàng</option>
+                <option value="employee">Nhân viên</option>
+                <option value="admin">Quản trị viên</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Trạng thái</label>
+              <select class="form-input" id="au-status">
+                <option value="active">Hoạt động</option>
+                <option value="disabled">Vô hiệu</option>
+              </select>
+            </div>
+          </div>
+          <div id="au-err" style="display:none;color:var(--rose);margin-bottom:12px;font-size:.85rem"></div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+            <button type="button" class="btn btn-ghost" onclick="closeAddUserModal()">Hủy</button>
+            <button type="submit" id="au-submit" class="btn btn-primary">Tạo tài khoản</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Orders Section -->
+    <section id="sec-orders" style="display:none">
+      <h1 style="font-size:1.5rem;margin-bottom:16px">Tất cả đơn hàng</h1>
+      <div style="margin-bottom:12px">
+        <input type="search" id="ord-search" class="form-input" style="max-width:300px;display:inline-block"
+          placeholder="Tìm tên, SĐT, email..." oninput="debounceOrdSearch()">
+      </div>
+      <div class="admin-card">
+        <div style="overflow-x:auto">
+          <table class="admin-table">
+            <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Sản phẩm</th><th>Tổng tiền</th><th>Ngày đặt</th><th>Trạng thái</th></tr></thead>
+            <tbody id="admin-orders-tbody"><tr><td colspan="6" style="text-align:center;padding:32px;color:var(--ink-4)">Đang tải...</td></tr></tbody>
+          </table>
+        </div>
+        <div id="admin-ord-pg" style="padding:12px 16px;display:flex;gap:8px;align-items:center;justify-content:flex-end"></div>
+      </div>
+    </section>
+
+    <!-- Sales Report Section -->
+    <section id="sec-sales" style="display:none">
+      <h1 style="font-size:1.5rem;margin-bottom:8px">Báo cáo bán hàng</h1>
+      <p style="margin:0 0 16px;color:var(--ink-4);font-size:.86rem">Số lượng bán và doanh thu theo từng sản phẩm (đã loại đơn hủy).</p>
+      <div class="admin-card">
+        <div style="overflow-x:auto">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Sản phẩm</th>
+                <th style="text-align:right">Đã bán</th>
+                <th style="text-align:right">Số đơn</th>
+                <th style="text-align:right">Doanh thu</th>
+                <th>Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody id="sales-tbody">
+              <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--ink-4)">Đang tải...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Workshops Section -->
+    <section id="sec-workshops" style="display:none">
+      <h1 style="font-size:1.5rem;margin-bottom:8px">Workshop</h1>
+      <p style="margin:0 0 16px;color:var(--ink-4);font-size:.86rem">Số lượng đăng ký theo từng buổi và từng địa điểm tổ chức.</p>
+
+      <div class="stat-grid" id="ws-totals">
+        <div class="stat-card" style="--accent:var(--orange)"><div class="stat-num" id="ws-tot-w">—</div><div class="stat-label">Số workshop</div></div>
+        <div class="stat-card" style="--accent:var(--blue)"><div class="stat-num" id="ws-tot-c">—</div><div class="stat-label">Tổng sức chứa</div></div>
+        <div class="stat-card" style="--accent:var(--green)"><div class="stat-num" id="ws-tot-r">—</div><div class="stat-label">Tổng đăng ký</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:20px">
+        <div class="admin-card">
+          <div class="admin-card-header"><h3>Theo từng workshop</h3></div>
+          <div style="overflow-x:auto">
+            <table class="admin-table">
+              <thead><tr><th>Workshop</th><th>Ngày</th><th>Địa điểm</th><th style="text-align:right">Đăng ký / Sức chứa</th></tr></thead>
+              <tbody id="ws-list-tbody"><tr><td colspan="4" style="text-align:center;padding:24px;color:var(--ink-4)">Đang tải...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="admin-card">
+          <div class="admin-card-header"><h3>Theo địa điểm (venue)</h3></div>
+          <div style="overflow-x:auto">
+            <table class="admin-table">
+              <thead><tr><th>Địa điểm</th><th style="text-align:right">Buổi</th><th style="text-align:right">Đăng ký</th></tr></thead>
+              <tbody id="ws-loc-tbody"><tr><td colspan="3" style="text-align:center;padding:24px;color:var(--ink-4)">Đang tải...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-redeem" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;flex-wrap:wrap">
+        <h1 style="font-size:1.5rem;margin:0">Mã kích hoạt</h1>
+        <button class="btn btn-primary" onclick="createRedeemCode()">+ Tạo mã</button>
+      </div>
+      <div class="admin-card" style="padding:16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+          <input class="form-input" id="rc-label" placeholder="Nhãn mã">
+          <input class="form-input" id="rc-product" type="number" min="1" placeholder="Product ID (tuỳ chọn)">
+          <input class="form-input" id="rc-qty" type="number" min="1" max="100" value="1" placeholder="Số lượng">
+        </div>
+        <label style="margin-right:12px"><input type="checkbox" class="rc-feature" value="ai_assistant" checked> AI</label>
+        <label style="margin-right:12px"><input type="checkbox" class="rc-feature" value="instruction_videos" checked> Video</label>
+        <label><input type="checkbox" class="rc-feature" value="image_uploads" checked> Upload ảnh</label>
+        <div id="rc-created" style="margin-top:12px"></div>
+      </div>
+      <div class="admin-card"><table class="admin-table"><thead><tr><th>Nhãn</th><th>Tính năng</th><th>Lượt dùng</th><th>Trạng thái</th><th></th></tr></thead><tbody id="redeem-tbody"></tbody></table></div>
+      <div class="admin-card" id="rc-redemptions-card" style="display:none;margin-top:16px;padding:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <h2 style="font-size:1.1rem;margin:0" id="rc-redemptions-title">Lượt kích hoạt</h2>
+          <button class="btn" onclick="document.getElementById('rc-redemptions-card').style.display='none'">Đóng</button>
+        </div>
+        <p style="font-size:.8rem;color:var(--ink-4);margin:0 0 10px">Nếu phát hiện tài khoản kích hoạt không phải chủ đơn hàng thật (đối chiếu với thông tin đơn hàng/giao hàng), thu hồi lượt kích hoạt để mở lại mã cho đúng người mua.</p>
+        <table class="admin-table"><thead><tr><th>Người dùng</th><th>Thời gian</th><th></th></tr></thead><tbody id="rc-redemptions-tbody"></tbody></table>
+      </div>
+    </section>
+
+    <section id="sec-blog" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;flex-wrap:wrap">
+        <h1 style="font-size:1.5rem;margin:0">Blog</h1>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline" id="blog-cancel-edit" onclick="resetBlogEditor()" style="display:none">Huỷ sửa</button>
+          <button class="btn btn-primary" id="blog-save-button" onclick="saveBlogPost()">+ Lưu bài mới</button>
+        </div>
+      </div>
+      <div class="admin-card" style="padding:16px">
+        <input id="blog-edit-id" type="hidden">
+        <input class="form-input" id="blog-title" placeholder="Tiêu đề" style="margin-bottom:10px">
+        <input class="form-input" id="blog-excerpt" placeholder="Tóm tắt" style="margin-bottom:10px">
+        <div style="border:1px solid var(--parchment-2);border-radius:12px;padding:14px 14px 12px;margin-bottom:10px;background:var(--cream-2)">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+            <div>
+              <div style="font-size:.82rem;font-weight:700">Sản phẩm đề xuất</div>
+              <div style="font-size:.76rem;color:var(--ink-4)">Chọn sản phẩm sẽ hiển thị ở cuối bài để dẫn thẳng sang trang bán hàng.</div>
+            </div>
+            <input class="form-input" id="blog-product-search" placeholder="Tìm sản phẩm..." oninput="renderBlogProductPicker()" style="max-width:240px">
+          </div>
+          <div id="blog-product-picker" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px"></div>
+          <div id="blog-product-picker-empty" style="display:none;font-size:.8rem;color:var(--ink-4);padding:8px 0">Không có sản phẩm phù hợp.</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+          <label class="btn btn-outline btn-sm" style="cursor:pointer;margin:0">
+            🖼 Chọn ảnh bìa
+            <input id="blog-cover" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+          </label>
+          <span id="blog-cover-name" style="font-size:.82rem;color:var(--ink-4)">Chưa chọn ảnh bìa</span>
+          <label class="btn btn-outline btn-sm" style="cursor:pointer;margin:0">
+            ＋ Chèn ảnh vào bài
+            <input id="blog-inline-image" type="file" accept="image/jpeg,image/png,image/webp" hidden onchange="uploadBlogInlineImage(this)">
+          </label>
+          <span id="blog-image-status" style="font-size:.82rem;color:var(--ink-4)"></span>
+        </div>
+        <textarea class="form-input" id="blog-content" rows="12" placeholder="Nội dung Markdown. Đặt con trỏ tại vị trí cần chèn ảnh rồi bấm “Chèn ảnh vào bài”."></textarea>
+      </div>
+      <div class="admin-card"><table class="admin-table"><thead><tr><th>Ảnh bìa</th><th>Tiêu đề</th><th>Slug</th><th>SP đề xuất</th><th>Trạng thái</th><th>Cập nhật</th><th></th></tr></thead><tbody id="blog-tbody"></tbody></table></div>
+    </section>
+
+    <section id="sec-userimages" style="display:none">
+      <h1 style="font-size:1.5rem;margin-bottom:16px">Ảnh người dùng</h1>
+      <div class="admin-card"><table class="admin-table"><thead><tr><th>Ảnh</th><th>Người dùng</th><th>Sản phẩm</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="userimages-tbody"></tbody></table></div>
+    </section>
+
+  </div>
+</main>
+
+<script src="../../assets/js/env.js"></script>
+<script src="../../assets/js/api.js"></script>
+<script src="../../assets/js/app.js"></script>
+<script>
+const STATUS_VN  = { pending:'Chờ xác nhận', processing:'Đang xử lý', shipped:'Đang giao', delivered:'Đã giao', cancelled:'Đã hủy' };
+const STATUS_OPT = ['pending','processing','shipped','delivered','cancelled'];
+let _ordPage=1, _ordSearch='', _ordTimer;
+let _users = [];
+let _blogProducts = [];
+let _blogProductsLoaded = false;
+let _blogSelectedProductIds = [];
+
+function showSection(sec) {
+  ['dashboard','users','orders','sales','workshops','redeem','blog','userimages'].forEach(s => {
+    document.getElementById('sec-'+s).style.display = s===sec ? '' : 'none';
+    document.getElementById('nav-'+s)?.classList.toggle('active', s===sec);
+  });
+  if (sec==='dashboard') loadDashboard();
+  if (sec==='users') loadUsers();
+  if (sec==='orders') { _ordPage=1; loadAdminOrders(); }
+  if (sec==='sales') loadSales();
+  if (sec==='workshops') loadWorkshopStats();
+  if (sec==='redeem') loadRedeemCodes();
+  if (sec==='blog') loadBlogAdmin();
+  if (sec==='userimages') loadUserImagesAdmin();
+}
+
+async function loadDashboard() {
+  try {
+    const s = await API.admin.stats();
+    const fmtMoney = n => {
+      if (n >= 1_000_000) return (n/1_000_000).toFixed(1)+'M';
+      if (n >= 1_000) return (n/1_000).toFixed(0)+'K';
+      return n.toLocaleString('vi-VN');
+    };
+    document.getElementById('st-users').textContent = s.totals.users;
+    document.getElementById('st-users-sub').textContent = `+${s.totals.newUsers7d} tuần này`;
+    document.getElementById('st-orders').textContent = s.totals.orders;
+    document.getElementById('st-products').textContent = s.totals.products;
+    document.getElementById('st-rev7').textContent = fmtMoney(s.totals.revenue7d)+'đ';
+    document.getElementById('st-rev30').textContent = fmtMoney(s.totals.revenue30d)+'đ';
+
+    document.getElementById('orders-by-status').innerHTML =
+      Object.keys(STATUS_VN).map(k=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--parchment)">
+          <span style="font-size:.83rem">${STATUS_VN[k]}</span>
+          <strong style="font-family:var(--font-h)">${s.ordersByStatus?.[k]||0}</strong>
+        </div>`).join('');
+
+    document.getElementById('top-products').innerHTML =
+      (s.topProducts||[]).slice(0,5).map((tp,i)=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--parchment)">
+          <div>
+            <div style="font-size:.83rem;font-weight:600">${i+1}. ${esc(tp.product?.emoji||'')} ${esc(tp.product?.name||'Sản phẩm')}</div>
+            <div style="font-size:.72rem;color:var(--ink-4)">×${tp.totalQty} bán ra</div>
+          </div>
+          <div style="font-family:var(--font-h);font-weight:700;color:var(--orange);font-size:.84rem">${(tp.totalRevenue||0).toLocaleString('vi-VN')}đ</div>
+        </div>`).join('') || '<div style="color:var(--ink-4);font-size:.84rem;padding:8px 0">Chưa có dữ liệu</div>';
+
+    document.getElementById('recent-orders').innerHTML =
+      (s.recentOrders||[]).slice(0,8).map(o=>`
+        <tr>
+          <td style="font-family:var(--font-h);font-size:.75rem;font-weight:700;color:var(--ink-3)">#${o.id.slice(-8).toUpperCase()}</td>
+          <td><div style="font-weight:600;font-size:.84rem">${esc(o.shippingName)}</div><div style="font-size:.72rem;color:var(--ink-4)">${esc(o.user?.email||'')}</div></td>
+          <td style="font-family:var(--font-h);font-weight:700;color:var(--orange)">${o.total.toLocaleString('vi-VN')}đ</td>
+          <td style="font-size:.76rem;color:var(--ink-4)">${new Date(o.createdAt).toLocaleDateString('vi-VN')}</td>
+          <td style="font-size:.78rem;font-weight:600">${STATUS_VN[o.status]||esc(o.status)}</td>
+        </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--ink-4)">Chưa có đơn hàng</td></tr>`;
+  } catch(e) {
+    console.error('Dashboard error:', e);
+    document.getElementById('recent-orders').innerHTML = `<tr><td colspan="5" style="color:var(--rose);text-align:center;padding:20px">${e.message}</td></tr>`;
+  }
+}
+
+async function loadUsers() {
+  const tbody = document.getElementById('users-tbody');
+  try {
+    const { users } = await API.admin.users.list();
+    _users = users;
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td style="font-weight:600">${esc(u.name)}</td>
+        <td style="font-size:.82rem">${esc(u.email)}</td>
+        <td><span class="role-badge role-${esc(u.role)}">${esc(u.role)}</span></td>
+        <td style="font-size:.82rem;font-weight:600;color:${u.status==='active'?'var(--green)':'var(--rose)'}">${u.status==='active'?'Hoạt động':'Vô hiệu'}</td>
+        <td style="font-size:.76rem;color:var(--ink-4)">${new Date(u.createdAt).toLocaleDateString('vi-VN')}</td>
+        <td>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <select style="padding:4px 6px;border-radius:var(--r-sm);border:1.5px solid var(--parchment);font-size:.74rem;font-family:var(--font-h);font-weight:600" onchange="updateUserRole('${u.id}',this.value)">
+              <option value="customer"${u.role==='customer'?' selected':''}>customer</option>
+              <option value="employee"${u.role==='employee'?' selected':''}>employee</option>
+              <option value="admin"${u.role==='admin'?' selected':''}>admin</option>
+            </select>
+            <button class="act-btn" style="border-color:${u.status==='active'?'var(--rose)':'var(--green)'};color:${u.status==='active'?'var(--rose)':'var(--green)'}" onclick="toggleUser('${u.id}','${u.status}')">
+              ${u.status==='active'?'Vô hiệu':'Kích hoạt'}
+            </button>
+          </div>
+        </td>
+      </tr>`).join('') || `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink-4)">Không có người dùng</td></tr>`;
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="6" style="color:var(--rose);text-align:center;padding:24px">${e.message}</td></tr>`;
+  }
+}
+
+async function updateUserRole(id, role) {
+  try { await API.admin.users.update(id, { role }); Toast.show('Đã cập nhật vai trò', 'success'); await loadUsers(); }
+  catch(e) { Toast.show('Lỗi: '+e.message, 'error'); await loadUsers(); }
+}
+async function toggleUser(id, current) {
+  const ns = current==='active'?'disabled':'active';
+  const target = _users.find(u => u.id === id);
+  const name = target?.name || 'tài khoản này';
+  const msg = ns === 'disabled'
+    ? `Vô hiệu hóa tài khoản của ${name}?\n\nHọ sẽ không thể đăng nhập, nhưng đơn hàng và lịch sử vẫn được giữ. Có thể kích hoạt lại bất cứ lúc nào.`
+    : `Kích hoạt lại tài khoản của ${name}?\n\nHọ sẽ có thể đăng nhập trở lại.`;
+  if (!confirm(msg)) return;
+  try {
+    await API.admin.users.update(id, { status: ns });
+    Toast.show(ns === 'disabled' ? `Đã vô hiệu hóa ${name}` : `Đã kích hoạt ${name}`, 'success');
+    await loadUsers();
+  } catch(e) {
+    Toast.show('Lỗi: ' + e.message, 'error');
+  }
+}
+
+function debounceOrdSearch() {
+  clearTimeout(_ordTimer);
+  _ordTimer = setTimeout(() => { _ordSearch=document.getElementById('ord-search').value; _ordPage=1; loadAdminOrders(); }, 400);
+}
+
+async function loadAdminOrders() {
+  const tbody = document.getElementById('admin-orders-tbody');
+  tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--ink-4)">Đang tải...</td></tr>`;
+  try {
+    const params = { page: _ordPage, limit: 20 };
+    if (_ordSearch) params.search = _ordSearch;
+    const { orders, total, pages } = await API.admin.orders.list(params);
+    tbody.innerHTML = orders.map(o=>`
+      <tr>
+        <td style="font-family:var(--font-h);font-size:.76rem;font-weight:700;color:var(--ink-3)">#${o.id.slice(-8).toUpperCase()}</td>
+        <td><div style="font-weight:600;font-size:.83rem">${esc(o.shippingName)}</div><div style="font-size:.72rem;color:var(--ink-4)">${esc(o.shippingPhone)}</div></td>
+        <td style="font-size:.76rem;color:var(--ink-3);max-width:200px">${o.items.map(i=>`${esc(i.product?.name||'SP')} ×${i.qty}`).join(', ')}</td>
+        <td style="font-family:var(--font-h);font-weight:700;color:var(--orange);font-size:.83rem">${o.total.toLocaleString('vi-VN')}đ</td>
+        <td style="font-size:.76rem;color:var(--ink-4)">${new Date(o.createdAt).toLocaleDateString('vi-VN')}</td>
+        <td>
+          <select style="padding:4px 6px;border-radius:var(--r-sm);border:1.5px solid var(--parchment);font-size:.74rem;font-family:var(--font-h);font-weight:600" data-id="${o.id}" onchange="updateOrdStatus(this)">
+            ${STATUS_OPT.map(s=>`<option value="${s}"${s===o.status?' selected':''}>${STATUS_VN[s]}</option>`).join('')}
+          </select>
+        </td>
+      </tr>`).join('') || `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--ink-4)">Không có đơn hàng</td></tr>`;
+
+    const pg = document.getElementById('admin-ord-pg');
+    if (pages<=1) { pg.innerHTML=''; return; }
+    pg.innerHTML = `<span style="font-size:.78rem;color:var(--ink-4)">Tổng ${total}</span>
+      <button onclick="_ordPage=Math.max(1,_ordPage-1);loadAdminOrders()" ${_ordPage<=1?'disabled':''} class="act-btn" style="border-color:var(--parchment);background:var(--surface)">‹</button>
+      ${Array.from({length:pages},(_,i)=>`<button onclick="_ordPage=${i+1};loadAdminOrders()" class="act-btn" style="border-color:${_ordPage===i+1?'var(--orange)':'var(--parchment)'};background:${_ordPage===i+1?'var(--orange)':'var(--surface)'};color:${_ordPage===i+1?'#fff':'inherit'}">${i+1}</button>`).join('')}
+      <button onclick="_ordPage=Math.min(${pages},_ordPage+1);loadAdminOrders()" ${_ordPage>=pages?'disabled':''} class="act-btn" style="border-color:var(--parchment);background:var(--surface)">›</button>`;
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="6" style="color:var(--rose);text-align:center;padding:24px">${e.message}</td></tr>`;
+  }
+}
+
+async function updateOrdStatus(sel) {
+  try { await API.admin.orders.updateStatus(sel.dataset.id, sel.value); Toast.show('Đã cập nhật', 'success'); }
+  catch(e) { Toast.show('Lỗi: '+e.message, 'error'); loadAdminOrders(); }
+}
+
+function openAddUserModal() {
+  document.getElementById('add-user-form').reset();
+  document.getElementById('au-err').style.display = 'none';
+  document.getElementById('au-status').value = 'active';
+  document.getElementById('au-role').value = 'customer';
+  document.getElementById('add-user-modal').style.display = 'flex';
+}
+function closeAddUserModal() {
+  document.getElementById('add-user-modal').style.display = 'none';
+}
+async function submitAddUser(e) {
+  e.preventDefault();
+  const errEl = document.getElementById('au-err');
+  const submit = document.getElementById('au-submit');
+  errEl.style.display = 'none';
+  const data = {
+    name: document.getElementById('au-name').value.trim(),
+    email: document.getElementById('au-email').value.trim(),
+    password: document.getElementById('au-password').value,
+    role: document.getElementById('au-role').value,
+    status: document.getElementById('au-status').value,
+  };
+  submit.disabled = true; submit.textContent = 'Đang tạo...';
+  try {
+    const { user } = await API.admin.users.create(data);
+    Toast.show(`Đã tạo tài khoản ${user.name}`, 'success');
+    closeAddUserModal();
+    await loadUsers();
+  } catch(err) {
+    errEl.textContent = err.message || 'Không thể tạo tài khoản.';
+    errEl.style.display = 'block';
+  } finally {
+    submit.disabled = false; submit.textContent = 'Tạo tài khoản';
+  }
+}
+
+async function loadSales() {
+  const tbody = document.getElementById('sales-tbody');
+  tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--ink-4)">Đang tải...</td></tr>`;
+  try {
+    const { products } = await API.admin.products.sales();
+    const STATUS_LBL = { published:'Đang bán', draft:'Bản nháp', archived:'Lưu trữ' };
+    if (!products.length) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--ink-4)">Chưa có sản phẩm.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = products.map(p => `
+      <tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:1.2rem">${esc(p.emoji||'🎨')}</span>
+            <div>
+              <div style="font-weight:600;font-size:.86rem">${esc(p.name)}</div>
+              <div style="font-size:.72rem;color:var(--ink-4)">${(p.price||0).toLocaleString('vi-VN')}đ</div>
+            </div>
+          </div>
+        </td>
+        <td style="text-align:right;font-family:var(--font-h);font-weight:700">${(p.totalQty||0).toLocaleString('vi-VN')}</td>
+        <td style="text-align:right;font-family:var(--font-h)">${(p.orderCount||0).toLocaleString('vi-VN')}</td>
+        <td style="text-align:right;font-family:var(--font-h);font-weight:700;color:var(--orange)">${(p.totalRevenue||0).toLocaleString('vi-VN')}đ</td>
+        <td style="font-size:.78rem">${STATUS_LBL[p.status]||esc(p.status)}</td>
+      </tr>`).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="5" style="color:var(--rose);text-align:center;padding:24px">${e.message}</td></tr>`;
+  }
+}
+
+async function loadWorkshopStats() {
+  const listTbody = document.getElementById('ws-list-tbody');
+  const locTbody = document.getElementById('ws-loc-tbody');
+  listTbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--ink-4)">Đang tải...</td></tr>`;
+  locTbody.innerHTML = `<tr><td colspan="3" style="text-align:center;padding:24px;color:var(--ink-4)">Đang tải...</td></tr>`;
+  try {
+    const { workshops, byLocation, totals } = await API.admin.workshops.stats();
+    document.getElementById('ws-tot-w').textContent = totals.workshopCount || 0;
+    document.getElementById('ws-tot-c').textContent = (totals.totalCapacity || 0).toLocaleString('vi-VN');
+    document.getElementById('ws-tot-r').textContent = (totals.totalRegistrations || 0).toLocaleString('vi-VN');
+
+    listTbody.innerHTML = workshops.length ? workshops.map(w => {
+      const dt = new Date(w.dateTime).toLocaleString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      const pct = w.pctFull;
+      const barColor = pct >= 90 ? 'var(--rose)' : pct >= 60 ? 'var(--orange)' : 'var(--green)';
+      return `
+      <tr>
+        <td>
+          <div style="font-weight:600;font-size:.85rem">${esc(w.title)}</div>
+          <div style="font-size:.7rem;color:var(--ink-4)">${w.upcoming?'Sắp tới':'Đã diễn ra'}</div>
+        </td>
+        <td style="font-size:.78rem;color:var(--ink-3)">${esc(dt)}</td>
+        <td style="font-size:.78rem;color:var(--ink-3);max-width:280px">${esc(w.location)}</td>
+        <td style="text-align:right;min-width:160px">
+          <div style="font-family:var(--font-h);font-weight:700">${w.registrations}/${w.capacity}</div>
+          <div style="height:5px;background:var(--parchment);border-radius:var(--r-full);overflow:hidden;margin-top:4px">
+            <div style="height:100%;width:${Math.min(100,pct)}%;background:${barColor}"></div>
+          </div>
+        </td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--ink-4)">Chưa có workshop.</td></tr>`;
+
+    locTbody.innerHTML = byLocation.length ? byLocation.map(l => `
+      <tr>
+        <td style="font-size:.82rem">${esc(l.location)}</td>
+        <td style="text-align:right;font-family:var(--font-h);font-weight:700">${l.workshopCount}</td>
+        <td style="text-align:right;font-family:var(--font-h);font-weight:700;color:var(--orange)">${l.totalRegistrations}</td>
+      </tr>`).join('') : `<tr><td colspan="3" style="text-align:center;padding:24px;color:var(--ink-4)">Chưa có dữ liệu.</td></tr>`;
+  } catch(e) {
+    listTbody.innerHTML = `<tr><td colspan="4" style="color:var(--rose);text-align:center;padding:24px">${e.message}</td></tr>`;
+    locTbody.innerHTML = `<tr><td colspan="3" style="color:var(--rose);text-align:center;padding:24px">${e.message}</td></tr>`;
+  }
+}
+
+let _redeemCodesCache = [];
+
+async function loadRedeemCodes() {
+  const tbody = document.getElementById('redeem-tbody');
+  tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--ink-4)">Đang tải...</td></tr>`;
+  try {
+    const { codes } = await API.admin.redeemCodes.list();
+    _redeemCodesCache = codes;
+    tbody.innerHTML = codes.map(c => `
+      <tr>
+        <td><div style="font-weight:700">${esc(c.label)}</div><div style="font-size:.72rem;color:var(--ink-4)">${c.product?.name ? esc(c.product.name) : 'Toàn hệ thống'}</div></td>
+        <td style="font-size:.78rem">${(c.features||[]).join(', ')}</td>
+        <td>${c.usedCount}${c.maxUses ? '/' + c.maxUses : ''}</td>
+        <td>${esc(c.status)}</td>
+        <td>
+          <button class="act-btn" onclick="viewRedemptions('${c.id}')">Lượt kích hoạt</button>
+          <button class="act-btn act-del" onclick="disableRedeemCode('${c.id}')">Tắt</button>
+        </td>
+      </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--ink-4)">Chưa có mã.</td></tr>`;
+  } catch(e) { tbody.innerHTML = `<tr><td colspan="5" style="color:var(--rose);text-align:center;padding:24px">${e.message}</td></tr>`; }
+}
+
+async function createRedeemCode() {
+  const features = [...document.querySelectorAll('.rc-feature:checked')].map(x => x.value);
+  const label = document.getElementById('rc-label').value.trim() || 'Mã Sprouty';
+  const productId = parseInt(document.getElementById('rc-product').value, 10) || null;
+  const quantity = parseInt(document.getElementById('rc-qty').value, 10) || 1;
+  try {
+    const { codes } = await API.admin.redeemCodes.create({ label, features, productId, quantity, perUserLimit: 1 });
+    document.getElementById('rc-created').innerHTML = `<div style="font-weight:700;color:var(--green);margin-bottom:6px">Mã mới, chỉ hiển thị lần này:</div>
+      <pre style="white-space:pre-wrap;background:var(--parchment);padding:10px;border-radius:8px">${codes.map(c => c.code).join('\n')}</pre>`;
+    await loadRedeemCodes();
+  } catch(e) { Toast.show(e.message || 'Không tạo được mã', 'error'); }
+}
+
+async function disableRedeemCode(id) {
+  if (!confirm('Tắt mã này?')) return;
+  try { await API.admin.redeemCodes.remove(id); Toast.show('Đã tắt mã', 'success'); loadRedeemCodes(); }
+  catch(e) { Toast.show(e.message || 'Không tắt được mã', 'error'); }
+}
+
+async function viewRedemptions(codeId) {
+  const code = _redeemCodesCache.find(c => c.id === codeId);
+  const card = document.getElementById('rc-redemptions-card');
+  const tbody = document.getElementById('rc-redemptions-tbody');
+  document.getElementById('rc-redemptions-title').textContent = `Lượt kích hoạt — ${code ? code.label : codeId}`;
+  card.style.display = '';
+  tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;padding:24px;color:var(--ink-4)">Đang tải...</td></tr>`;
+  try {
+    const { redemptions } = await API.admin.redeemCodes.redemptions(codeId);
+    tbody.innerHTML = redemptions.map(r => `
+      <tr>
+        <td><div style="font-weight:700">${esc(r.user?.name || '')}</div><div style="font-size:.78rem;color:var(--ink-4)">${esc(r.user?.email || '')}</div></td>
+        <td style="font-size:.82rem">${new Date(r.redeemedAt).toLocaleString('vi-VN')}</td>
+        <td><button class="act-btn act-del" onclick="revokeRedemption('${codeId}', '${r.id}')">Thu hồi</button></td>
+      </tr>`).join('') || `<tr><td colspan="3" style="text-align:center;padding:24px;color:var(--ink-4)">Chưa có ai kích hoạt.</td></tr>`;
+  } catch(e) { tbody.innerHTML = `<tr><td colspan="3" style="color:var(--rose);text-align:center;padding:24px">${e.message}</td></tr>`; }
+}
+
+async function revokeRedemption(codeId, redemptionId) {
+  if (!confirm('Thu hồi lượt kích hoạt này? Người dùng đó sẽ mất quyền lợi đã được cấp từ mã này, và mã sẽ mở lại cho người khác kích hoạt.')) return;
+  try {
+    await API.admin.redeemCodes.revokeRedemption(codeId, redemptionId);
+    Toast.show('Đã thu hồi lượt kích hoạt', 'success');
+    await viewRedemptions(codeId);
+    await loadRedeemCodes();
+  } catch(e) { Toast.show(e.message || 'Không thu hồi được', 'error'); }
+}
+
+async function loadBlogAdmin() {
+  const tbody = document.getElementById('blog-tbody');
+  tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink-4)">Đang tải...</td></tr>`;
+  try {
+    await loadBlogProducts();
+    const { posts } = await API.admin.blog.list();
+    blogPostsById = Object.fromEntries(posts.map(p => [p.id, p]));
+    tbody.innerHTML = posts.map(p => `
+      <tr>
+        <td>
+          <label style="display:block;cursor:pointer" title="Thay ảnh bìa">
+            ${p.coverAsset?.url
+              ? `<img src="${esc(p.coverAsset.url)}" alt="" style="width:72px;height:48px;object-fit:cover;border-radius:8px">`
+              : `<span class="act-btn">＋ Ảnh bìa</span>`}
+            <input type="file" accept="image/jpeg,image/png,image/webp" hidden onchange="uploadBlogCover('${p.id}',this)">
+          </label>
+        </td>
+        <td style="font-weight:700">${esc(p.title)}</td>
+        <td style="font-size:.78rem">${esc(p.slug)}</td>
+        <td style="font-size:.78rem;color:var(--ink-3)">${(p.recommendedProductIds || []).length ? `${p.recommendedProductIds.length} sản phẩm` : '—'}</td>
+        <td>
+          <select onchange="setBlogStatus('${p.id}',this.value)">
+            ${['draft','published','archived'].map(s => `<option value="${s}"${p.status===s?' selected':''}>${s}</option>`).join('')}
+          </select>
+        </td>
+        <td style="font-size:.78rem;color:var(--ink-4)">${new Date(p.updatedAt).toLocaleDateString('vi-VN')}</td>
+        <td style="white-space:nowrap">
+          <button class="act-btn" onclick="editBlogPost('${p.id}')">Sửa</button>
+          <button class="act-btn act-del" onclick="archiveBlog('${p.id}')">Lưu trữ</button>
+        </td>
+      </tr>`).join('') || `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink-4)">Chưa có bài.</td></tr>`;
+    renderBlogProductPicker();
+  } catch(e) { tbody.innerHTML = `<tr><td colspan="7" style="color:var(--rose);text-align:center;padding:24px">${e.message}</td></tr>`; }
+}
+
+let blogPostsById = {};
+
+async function loadBlogProducts() {
+  if (_blogProductsLoaded) return;
+  const { products } = await API.admin.products.list();
+  _blogProducts = (products || []).map(normalizeProduct);
+  _blogProductsLoaded = true;
+}
+
+function renderBlogProductPicker() {
+  const host = document.getElementById('blog-product-picker');
+  const empty = document.getElementById('blog-product-picker-empty');
+  if (!host || !empty) return;
+  const q = (document.getElementById('blog-product-search')?.value || '').trim().toLowerCase();
+  const products = _blogProducts.filter(p => {
+    const haystack = `${p.name} ${p.col} ${p.age} ${p.desc}`.toLowerCase();
+    return !q || haystack.includes(q);
+  });
+  if (!products.length) {
+    host.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+  host.innerHTML = products.map(p => {
+    const selected = _blogSelectedProductIds.includes(p.id);
+    const disabled = p.status && p.status !== 'published' ? 'disabled' : '';
+    const note = p.status && p.status !== 'published' ? ` · ${esc(p.status)}` : '';
+    return `
+      <label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid ${selected ? 'var(--orange)' : 'var(--parchment-2)'};border-radius:12px;background:#fff;cursor:${p.status && p.status !== 'published' ? 'not-allowed' : 'pointer'};opacity:${p.status && p.status !== 'published' ? '.55' : '1'}">
+        <input type="checkbox" ${selected ? 'checked' : ''} ${disabled} onchange="toggleBlogProduct(${p.id}, this.checked)" style="margin-top:4px">
+        <div style="min-width:0;flex:1">
+          <div style="display:flex;justify-content:space-between;gap:8px">
+            <div style="font-size:.82rem;font-weight:700;line-height:1.35">${esc(p.name)}</div>
+            <div style="font-size:.76rem;color:var(--ink-4);white-space:nowrap">${Number(p.price || 0).toLocaleString('vi-VN')}đ</div>
+          </div>
+          <div style="font-size:.72rem;color:var(--ink-4);margin-top:4px">${esc(p.col)} · ${esc(p.age)}${note}</div>
+        </div>
+      </label>`;
+  }).join('');
+}
+
+function toggleBlogProduct(productId, checked) {
+  const id = Number(productId);
+  if (checked) {
+    if (!_blogSelectedProductIds.includes(id)) _blogSelectedProductIds.push(id);
+  } else {
+    _blogSelectedProductIds = _blogSelectedProductIds.filter(x => x !== id);
+  }
+}
+
+async function saveBlogPost() {
+  const editId = document.getElementById('blog-edit-id').value;
+  const data = {
+    title: document.getElementById('blog-title').value.trim(),
+    excerpt: document.getElementById('blog-excerpt').value.trim(),
+    content: document.getElementById('blog-content').value,
+    recommendedProductIds: _blogSelectedProductIds.slice(),
+  };
+  if (!editId) data.status = 'draft';
+  try {
+    const { post } = editId
+      ? await API.admin.blog.update(editId, data)
+      : await API.admin.blog.create(data);
+    const cover = document.getElementById('blog-cover').files[0];
+    if (cover) {
+      const form = new FormData();
+      form.append('file', cover);
+      await API.admin.blog.cover(post.id, form);
+    }
+    Toast.show(editId ? 'Đã cập nhật bài blog' : 'Đã lưu bài blog', 'success');
+    resetBlogEditor();
+    loadBlogAdmin();
+  } catch(e) { Toast.show(e.message || 'Không lưu được bài', 'error'); }
+}
+
+function editBlogPost(id) {
+  const post = blogPostsById[id];
+  if (!post) return;
+  document.getElementById('blog-edit-id').value = post.id;
+  document.getElementById('blog-title').value = post.title || '';
+  document.getElementById('blog-excerpt').value = post.excerpt || '';
+  document.getElementById('blog-content').value = post.content || '';
+  document.getElementById('blog-cover').value = '';
+  _blogSelectedProductIds = Array.isArray(post.recommendedProductIds) ? post.recommendedProductIds.slice() : [];
+  document.getElementById('blog-cover-name').textContent = post.coverAsset?.url
+    ? 'Giữ ảnh bìa hiện tại hoặc chọn ảnh mới'
+    : 'Chưa có ảnh bìa';
+  document.getElementById('blog-save-button').textContent = 'Lưu thay đổi';
+  document.getElementById('blog-cancel-edit').style.display = '';
+  renderBlogProductPicker();
+  document.getElementById('blog-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function resetBlogEditor() {
+  document.getElementById('blog-edit-id').value = '';
+  document.getElementById('blog-title').value = '';
+  document.getElementById('blog-excerpt').value = '';
+  document.getElementById('blog-content').value = '';
+  document.getElementById('blog-cover').value = '';
+  document.getElementById('blog-cover-name').textContent = 'Chưa chọn ảnh bìa';
+  document.getElementById('blog-image-status').textContent = '';
+  _blogSelectedProductIds = [];
+  renderBlogProductPicker();
+  document.getElementById('blog-save-button').textContent = '+ Lưu bài mới';
+  document.getElementById('blog-cancel-edit').style.display = 'none';
+}
+
+document.getElementById('blog-cover').addEventListener('change', function() {
+  document.getElementById('blog-cover-name').textContent = this.files[0]?.name || 'Chưa chọn ảnh bìa';
+});
+
+async function uploadBlogCover(id, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    await API.admin.blog.cover(id, form);
+    Toast.show('Đã cập nhật ảnh bìa', 'success');
+    loadBlogAdmin();
+  } catch(e) {
+    Toast.show(e.message || 'Không tải được ảnh bìa', 'error');
+  } finally {
+    input.value = '';
+  }
+}
+
+async function uploadBlogInlineImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const textarea = document.getElementById('blog-content');
+  const status = document.getElementById('blog-image-status');
+  const insertAt = textarea.selectionStart;
+  status.textContent = 'Đang tải ảnh...';
+  input.disabled = true;
+  try {
+    const form = new FormData();
+    form.append('file', file);
+    const { markdown } = await API.admin.blog.image(form);
+    const before = textarea.value.slice(0, insertAt);
+    const after = textarea.value.slice(insertAt);
+    const prefix = before && !before.endsWith('\n') ? '\n\n' : '';
+    const suffix = after && !after.startsWith('\n') ? '\n\n' : '';
+    const inserted = `${prefix}${markdown}${suffix}`;
+    textarea.value = before + inserted + after;
+    textarea.focus();
+    textarea.selectionStart = textarea.selectionEnd = before.length + inserted.length;
+    status.textContent = `Đã chèn ${file.name}`;
+    Toast.show('Đã tải và chèn ảnh minh họa', 'success');
+  } catch(e) {
+    status.textContent = '';
+    Toast.show(e.message || 'Không tải được ảnh minh họa', 'error');
+  } finally {
+    input.disabled = false;
+    input.value = '';
+  }
+}
+
+async function setBlogStatus(id, status) {
+  try { await API.admin.blog.status(id, status); Toast.show('Đã cập nhật blog', 'success'); }
+  catch(e) { Toast.show(e.message || 'Không cập nhật được blog', 'error'); loadBlogAdmin(); }
+}
+
+async function archiveBlog(id) {
+  if (!confirm('Lưu trữ bài viết này?')) return;
+  try { await API.admin.blog.remove(id); Toast.show('Đã lưu trữ', 'success'); loadBlogAdmin(); }
+  catch(e) { Toast.show(e.message || 'Không lưu trữ được', 'error'); }
+}
+
+async function loadUserImagesAdmin() {
+  const tbody = document.getElementById('userimages-tbody');
+  tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--ink-4)">Đang tải...</td></tr>`;
+  try {
+    const { images } = await API.admin.userImages.list();
+    tbody.innerHTML = images.map(img => `
+      <tr>
+        <td><img src="${esc(img.asset?.url || '')}" style="width:64px;height:64px;object-fit:cover;border-radius:8px"></td>
+        <td>${esc(img.user?.name || '')}<div style="font-size:.72rem;color:var(--ink-4)">${esc(img.user?.email || '')}</div></td>
+        <td>${esc(img.product?.name || '')}</td>
+        <td>${esc(img.status)}</td>
+        <td>
+          <button class="act-btn" onclick="setUserImageStatus('${img.id}','active')">Hiện</button>
+          <button class="act-btn act-del" onclick="setUserImageStatus('${img.id}','hidden')">Ẩn</button>
+        </td>
+      </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--ink-4)">Chưa có ảnh.</td></tr>`;
+  } catch(e) { tbody.innerHTML = `<tr><td colspan="5" style="color:var(--rose);text-align:center;padding:24px">${e.message}</td></tr>`; }
+}
+
+async function setUserImageStatus(id, status) {
+  try { await API.admin.userImages.status(id, status); Toast.show('Đã cập nhật ảnh', 'success'); loadUserImagesAdmin(); }
+  catch(e) { Toast.show(e.message || 'Không cập nhật được ảnh', 'error'); }
+}
+
+Auth.onReady(async user => {
+  document.getElementById('access-check').style.display = 'none';
+  if (!user || user.role !== 'admin') {
+    document.getElementById('access-check').innerHTML = `
+      <div style="padding:80px 0;text-align:center">
+        <div style="font-size:2.5rem;margin-bottom:16px">🔒</div>
+        <h2>Chỉ dành cho quản trị viên</h2>
+        <p style="margin-bottom:16px">Bạn cần đăng nhập với tài khoản Admin.</p>
+        <button class="btn btn-primary" onclick="LoginModal.open()">Đăng nhập</button>
+        <a href="../../index.html" class="btn btn-ghost" style="margin-left:8px">Về trang chủ</a>
+      </div>`;
+    document.getElementById('access-check').style.display = 'block';
+    return;
+  }
+  document.getElementById('admin-content').style.display = 'block';
+  await loadDashboard();
+});
+</script>
+</body>
+</html>

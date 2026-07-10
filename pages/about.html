@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Giới thiệu — Sprouty</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    /* Team section — centered, balanced layout (5 members: 3 + 2 centered) */
+    #doi-ngu .team-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 30px;
+      max-width: 1040px;
+      margin: 0 auto;
+    }
+
+    #doi-ngu .team-card {
+      flex: 0 1 300px;
+      max-width: 300px;
+      display: flex;
+      flex-direction: column;
+      border-radius: 18px;
+      border-width: 1.5px;
+      overflow: hidden;
+    }
+
+    /* Photo fills the frame edge-to-edge; top corners rounded to hug the border */
+    #doi-ngu .team-photo-wrap {
+      aspect-ratio: 4/5;
+      border-radius: 0;
+      margin: 0;
+      background: var(--parchment);
+    }
+
+    #doi-ngu .team-photo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+      display: block;
+    }
+
+    #doi-ngu .team-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column
+    }
+
+    @media(max-width:760px) {
+      #doi-ngu .team-card {
+        flex: 0 1 260px;
+        max-width: 320px
+      }
+    }
+
+    @media(max-width:520px) {
+      #doi-ngu .team-card {
+        flex: 1 1 100%;
+        max-width: 340px
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="login-modal-mount"></div>
+  <div id="hdr"></div>
+
+  <!-- Mission Banner -->
+  <div
+    style="background:linear-gradient(135deg,#1A1209 0%,#2D1B0E 50%,var(--terracotta) 100%);padding:64px 0 56px;position:relative;overflow:hidden">
+    <div
+      style="position:absolute;right:4%;top:50%;transform:translateY(-50%);font-size:14rem;opacity:.04;pointer-events:none;line-height:1">
+      🌱</div>
+    <div class="container">
+      <span class="eyebrow"
+        style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);border-color:rgba(255,255,255,.15)">Về
+        Sprouty</span>
+      <h1 style="color:#fff;margin-top:14px;max-width:580px">Gieo hạt thật, <em
+          style="font-style:italic;color:var(--terra-3)">lưu kỷ niệm số</em></h1>
+      <p style="color:rgba(255,255,255,.6);max-width:500px;line-height:1.78;margin-top:16px;font-size:.97rem">Sprouty
+        bắt đầu từ một ý tưởng đơn giản: gia đình cần nhiều khoảnh khắc chậm lại cùng nhau, chạm vào thiên nhiên thật và
+        lưu giữ hành trình lớn lên của bé theo cách ấm áp hơn.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:28px">
+        <a href="shop.html" class="btn btn-white btn-lg">Xem sản phẩm →</a>
+        <a href="workshop.html" class="btn btn-white-ol btn-lg">Workshop</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div style="background:var(--parchment);border-bottom:1.5px solid var(--parchment-2);padding:36px 0">
+    <div class="container">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:24px">
+        <div style="text-align:center">
+          <div style="font-family:var(--font-display);font-size:2.4rem;font-weight:700;color:var(--orange)">168</div>
+          <div style="font-size:.82rem;color:var(--ink-3);margin-top:5px;font-family:var(--font-h)">Phụ huynh khảo sát
+          </div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-family:var(--font-display);font-size:2.4rem;font-weight:700;color:var(--orange)">60%</div>
+          <div style="font-size:.82rem;color:var(--ink-3);margin-top:5px;font-family:var(--font-h)">Trẻ hoàn thành kit
+            đầu tiên</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-family:var(--font-display);font-size:2.4rem;font-weight:700;color:var(--orange)">90%</div>
+          <div style="font-size:.82rem;color:var(--ink-3);margin-top:5px;font-family:var(--font-h)">Phụ huynh muốn mua
+            thêm</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-family:var(--font-display);font-size:2.4rem;font-weight:700;color:var(--orange)">90</div>
+          <div style="font-size:.82rem;color:var(--ink-3);margin-top:5px;font-family:var(--font-h)">Ngày thí điểm</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Why Sprouty -->
+  <section class="section" id="nghien-cuu">
+    <div class="container">
+      <div class="sh center">
+        <span class="label">Vấn đề chúng tôi giải quyết</span>
+        <h2>Nghiên cứu từ 168 phụ huynh tại TP.HCM</h2>
+        <p class="lead">Trước khi xây dựng Sprouty, chúng tôi lắng nghe phụ huynh về nhu cầu cân bằng giữa học qua chơi,
+          thiên nhiên và công nghệ an toàn cho trẻ.</p>
+      </div>
+      <div class="grid-3" style="gap:20px">
+        <div class="card" style="padding:28px">
+          <div
+            style="width:52px;height:52px;background:var(--orange-pale);border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:18px">
+            📱</div>
+          <h3 style="margin-bottom:10px;font-size:1.05rem">Quá nhiều thời gian màn hình</h3>
+          <p style="font-size:.87rem;color:var(--ink-3);line-height:1.75">72% phụ huynh lo ngại bé dành hơn 3 giờ/ngày
+            xem điện thoại. Họ muốn có lựa chọn thay thế đủ hấp dẫn để bé tự chọn bỏ điện thoại xuống.</p>
+        </div>
+        <div class="card" style="padding:28px">
+          <div
+            style="width:52px;height:52px;background:var(--sage-bg);border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:18px">
+            🧩</div>
+          <h3 style="margin-bottom:10px;font-size:1.05rem">Thiếu hướng dẫn rõ ràng</h3>
+          <p style="font-size:.87rem;color:var(--ink-3);line-height:1.75">Nhiều bộ đồ chơi không đi kèm hướng dẫn cụ
+            thể. Bé bắt đầu hứng thú nhưng nhanh nản vì không biết bước tiếp theo — và ba mẹ cũng không biết giúp thế
+            nào.</p>
+        </div>
+        <div class="card" style="padding:28px">
+          <div
+            style="width:52px;height:52px;background:var(--amber-bg);border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:18px">
+            🎖</div>
+          <h3 style="margin-bottom:10px;font-size:1.05rem">Cần cảm giác "con chăm được"</h3>
+          <p style="font-size:.87rem;color:var(--ink-3);line-height:1.75">Trẻ em cần thấy nỗ lực của mình tạo ra kết quả
+            thật. Khi một hạt giống nảy mầm nhờ bé chăm sóc, sự tự tin đó trở thành một kỷ niệm gia đình.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Story / Timeline + Beliefs -->
+  <section class="section bg-cream" id="hanh-trinh">
+    <div class="container">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start">
+        <div>
+          <div class="sh">
+            <span class="label">Hành trình</span>
+            <h2>Từ ý tưởng đến sản phẩm thực</h2>
+          </div>
+          <div class="timeline">
+            <div class="timeline-item">
+              <div class="timeline-date">Tháng 9 / 2025</div>
+              <div class="timeline-title">Nảy sinh ý tưởng</div>
+              <div class="timeline-desc">Nhóm sinh viên FPT University nhận ra khoảng trống: gia đình cần một hoạt động
+                vừa có thiên nhiên thật, vừa có công nghệ lưu giữ kỷ niệm. Bắt đầu khảo sát và phỏng vấn phụ huynh.
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-date">Tháng 11 / 2025</div>
+              <div class="timeline-title">Nghiên cứu thực địa</div>
+              <div class="timeline-desc">Khảo sát 168 phụ huynh tại TP.HCM. Phỏng vấn sâu 12 gia đình để hiểu thực sự bé
+                cần gì — không chỉ ba mẹ muốn gì.</div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-date">Tháng 1 / 2026</div>
+              <div class="timeline-title">Thí điểm 90 ngày</div>
+              <div class="timeline-desc">Thử nghiệm những bộ kit vẽ chậu và gieo hạt đầu tiên với các gia đình tình
+                nguyện. Bé tự trang trí chậu, gieo hạt và lưu lại chiếc lá kỷ niệm đầu tiên.</div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-date">Tháng 3 / 2026</div>
+              <div class="timeline-title">Sprouty chính thức ra mắt</div>
+              <div class="timeline-desc">Bộ kit trồng cây, Cây Kỷ Niệm số, Plant Buddy AI và workshop gia đình cùng xuất
+                hiện trong một trải nghiệm thống nhất.</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="sh">
+            <span class="label">Sứ mệnh</span>
+            <h2>Những điều chúng tôi tin</h2>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="card" style="padding:22px">
+              <div style="display:flex;gap:16px">
+                <div style="font-size:1.8rem;flex-shrink:0;margin-top:2px">🌱</div>
+                <div>
+                  <h3 style="font-size:1rem;margin-bottom:7px">Thiên nhiên là lớp học đầu tiên</h3>
+                  <p style="font-size:.85rem;color:var(--ink-3);line-height:1.7">Gieo hạt, tưới nước và quan sát cây lớn
+                    giúp bé luyện kiên nhẫn, trách nhiệm và khả năng kể chuyện từ trải nghiệm thật.</p>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="padding:22px">
+              <div style="display:flex;gap:16px">
+                <div style="font-size:1.8rem;flex-shrink:0;margin-top:2px">🌏</div>
+                <div>
+                  <h3 style="font-size:1rem;margin-bottom:7px">Gia đình trong từng chiếc lá</h3>
+                  <p style="font-size:.85rem;color:var(--ink-3);line-height:1.7">Mỗi bộ kit mở ra một hoạt động chung:
+                    ba mẹ cùng bé vẽ chậu, đặt tên cho cây và lưu lại ảnh, video, nhật ký trên Cây Kỷ Niệm.</p>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="padding:22px">
+              <div style="display:flex;gap:16px">
+                <div style="font-size:1.8rem;flex-shrink:0;margin-top:2px">📱</div>
+                <div>
+                  <h3 style="font-size:1rem;margin-bottom:7px">Ít màn hình, nhiều kỷ niệm</h3>
+                  <p style="font-size:.85rem;color:var(--ink-3);line-height:1.7">Sprouty dùng AI, IoT và Cây Kỷ Niệm số
+                    để hỗ trợ gia đình quan sát, ghi lại và kể tiếp hành trình của cây ngoài đời.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Team -->
+  <section class="section" id="doi-ngu">
+    <div class="container">
+      <div class="sh center">
+        <span class="label">Đội ngũ</span>
+        <h2>Đội ngũ xây dựng Sprouty</h2>
+        <p class="lead">Nhóm sinh viên Đại học FPT TP.HCM.</p>
+      </div>
+      <div class="team-grid" id="teamGrid"></div>
+    </div>
+  </section>
+
+  <!-- Contact CTA -->
+  <section class="section bg-cream" id="lien-he-ve">
+    <div class="container" style="max-width:640px;text-align:center">
+      <span class="label" style="justify-content:center">Liên hệ</span>
+      <h2 style="margin-top:12px">Bạn muốn hợp tác hoặc góp ý?</h2>
+      <p style="color:var(--ink-3);margin:14px auto 28px;font-size:.96rem;line-height:1.75;max-width:480px">Chúng tôi
+        luôn mở cửa với phụ huynh muốn góp ý, giáo viên muốn đưa hoạt động gieo hạt vào lớp, hay đối tác muốn tổ chức
+        workshop Sprouty cùng.</p>
+      <div style="display:flex;justify-content:center;gap:14px;flex-wrap:wrap">
+        <a href="contact.html" class="btn btn-primary btn-lg">Gửi lời nhắn cho Sprouty</a>
+        <a href="contact.html" class="btn btn-outline btn-lg">Liên hệ Sprouty</a>
+      </div>
+    </div>
+  </section>
+
+  <div id="ftr"></div>
+  <script src="../assets/js/env.js"></script>
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/app.js"></script>
+  <script>
+    document.getElementById('hdr').innerHTML = renderHeader('about', '../');
+    document.getElementById('ftr').innerHTML = renderFooter('../');
+
+    const TEAM = [
+      { id: 'SE190176', name: 'Huỳnh Trọng Phước', role: 'Product Concept & Design Lead', dept: '3D Generalist with a passion for creative work and illustration.', bio: '' },
+      { id: 'SE194132', name: 'Phan Chính Hiếu', role: 'Product Developement', dept: 'Creating innovative solutions with technology and creativity.', bio: '' },
+      { id: 'SE181830', name: 'Nguyễn Thị Thanh Ngân', role: 'Product Concept & Design', dept: 'LIVE WITH PASSION TO DIE ', bio: '' },
+      { id: 'SE190091', name: 'Lê Huỳnh Quốc Đại', role: 'Product Concept & Design', dept: 'Graphic designer with a love for creativity, illustration, and visual communication.', bio: '' },
+      { id: 'SE191117', name: 'Trương Tuấn Minh', role: 'Product Development', dept: '“ Do it as your enterprise ”', bio: '' },
+      { id: 'SS190207', name: 'Phạm Xuân Tùng', role: 'Business & Concept Strategist', dept: 'Money , money , money', bio: '' },
+    ];
+
+    document.getElementById('teamGrid').innerHTML = TEAM.map(m => `
+<div class="team-card" style="cursor:default">
+  <div class="team-photo-wrap">
+    <img class="team-photo" src="../assets/images/team/${m.id}.png?v=3" alt="${m.name}" loading="lazy"
+      onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <div class="team-avatar-fallback" style="display:none;position:absolute;inset:0">
+      <span style="font-family:var(--font-display);font-size:3rem;font-weight:700;color:var(--orange);opacity:.35">${m.name.split(' ').slice(-1)[0].charAt(0)}</span>
+    </div>
+  </div>
+  <div class="team-info">
+    <div class="team-id">${m.id}</div>
+    <div class="team-name">${m.name}</div>
+    <div class="team-role">${m.role}</div>
+    <div style="font-size:.74rem;color:var(--ink-4);font-family:var(--font-h);margin-bottom:9px;line-height:1.45">${m.dept}</div>
+    <div class="team-bio">${m.bio}</div>
+  </div>
+</div>`).join('');
+  </script>
+</body>
+
+</html>

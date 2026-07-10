@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480">
+  <defs>
+    <radialGradient id="bg6" cx="50%" cy="50%" r="55%"><stop offset="0%" stop-color="#1A0A00"/><stop offset="100%" stop-color="#0D0500"/></radialGradient>
+    <filter id="glow6"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="sf6"><feDropShadow dx="0" dy="0" stdDeviation="12" flood-color="rgba(253,186,0,.5)"/></filter>
+  </defs>
+  <rect width="480" height="480" fill="url(#bg6)" rx="24"/>
+  <!-- Stars -->
+  <circle cx="50" cy="50" r="2" fill="white" opacity=".9"/>
+  <circle cx="130" cy="30" r="1.5" fill="white" opacity=".7"/>
+  <circle cx="380" cy="45" r="2" fill="white" opacity=".8"/>
+  <circle cx="440" cy="90" r="1.5" fill="white" opacity=".6"/>
+  <circle cx="60" cy="120" r="1.5" fill="white" opacity=".7"/>
+  <circle cx="420" cy="150" r="1" fill="white" opacity=".8"/>
+  <circle cx="90" cy="200" r="2" fill="white" opacity=".5"/>
+  <circle cx="410" cy="250" r="1.5" fill="white" opacity=".6"/>
+  <circle cx="30" cy="310" r="2.5" fill="white" opacity=".4"/>
+  <circle cx="450" cy="320" r="1" fill="white" opacity=".7"/>
+  <!-- Lantern string -->
+  <path d="M30,120 Q240,95 450,118" stroke="#F59E0B" stroke-width="1.5" fill="none" opacity=".8"/>
+  <!-- Big center lantern -->
+  <ellipse cx="240" cy="225" rx="55" ry="75" fill="#DC2626" filter="url(#sf6)"/>
+  <!-- Lantern cap -->
+  <rect x="220" y="152" width="40" height="22" rx="5" fill="#B91C1C"/>
+  <ellipse cx="240" cy="152" rx="20" ry="7" fill="#991B1B"/>
+  <!-- Lantern bottom cap -->
+  <rect x="218" y="296" width="44" height="16" rx="5" fill="#B91C1C"/>
+  <!-- Vertical ribs -->
+  <line x1="215" y1="162" x2="210" y2="296" stroke="#FCA5A5" stroke-width="1.5" opacity=".6"/>
+  <line x1="228" y1="154" x2="224" y2="298" stroke="#FCA5A5" stroke-width="1" opacity=".5"/>
+  <line x1="252" y1="154" x2="256" y2="298" stroke="#FCA5A5" stroke-width="1" opacity=".5"/>
+  <line x1="265" y1="162" x2="270" y2="296" stroke="#FCA5A5" stroke-width="1.5" opacity=".6"/>
+  <!-- Center horizontal bands -->
+  <ellipse cx="240" cy="192" rx="55" ry="10" fill="#B91C1C" opacity=".8"/>
+  <ellipse cx="240" cy="258" rx="55" ry="10" fill="#B91C1C" opacity=".8"/>
+  <!-- Inner glow -->
+  <ellipse cx="240" cy="225" rx="35" ry="52" fill="#FCD34D" opacity=".18"/>
+  <circle cx="240" cy="225" r="20" fill="#FCD34D" opacity=".22"/>
+  <!-- Chinese character -->
+  <text x="240" y="236" text-anchor="middle" font-size="32" fill="#FCD34D" font-family="serif" filter="url(#sf6)">福</text>
+  <!-- Tassels -->
+  <line x1="228" y1="312" x2="222" y2="368" stroke="#FCA5A5" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="240" y1="312" x2="240" y2="374" stroke="#FCA5A5" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="252" y1="312" x2="258" y2="368" stroke="#FCA5A5" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="222" cy="370" r="4" fill="#FCA5A5"/>
+  <circle cx="240" cy="376" r="4" fill="#FCA5A5"/>
+  <circle cx="258" cy="370" r="4" fill="#FCA5A5"/>
+  <!-- Hang string -->
+  <line x1="240" y1="150" x2="240" y2="120" stroke="#F59E0B" stroke-width="2"/>
+  <!-- Small lanterns -->
+  <ellipse cx="110" cy="152" rx="28" ry="38" fill="#F97316" filter="url(#glow6)"/>
+  <circle cx="110" cy="152" r="14" fill="#FBBF24" opacity=".25"/>
+  <rect x="96" y="115" width="28" height="12" rx="3" fill="#C2410C"/>
+  <text x="110" y="157" text-anchor="middle" font-size="14" fill="#FCD34D" font-family="serif">喜</text>
+  <ellipse cx="370" cy="148" rx="28" ry="38" fill="#F97316" filter="url(#glow6)"/>
+  <circle cx="370" cy="148" r="14" fill="#FBBF24" opacity=".25"/>
+  <rect x="356" y="111" width="28" height="12" rx="3" fill="#C2410C"/>
+  <text x="370" y="153" text-anchor="middle" font-size="14" fill="#FCD34D" font-family="serif">喜</text>
+</svg>

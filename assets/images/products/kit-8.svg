@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480">
+  <defs>
+    <radialGradient id="bg8" cx="50%" cy="60%" r="55%"><stop offset="0%" stop-color="#F0FDF4"/><stop offset="100%" stop-color="#DCFCE7"/></radialGradient>
+    <filter id="sf8"><feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="rgba(22,163,74,.2)"/></filter>
+  </defs>
+  <rect width="480" height="480" fill="url(#bg8)" rx="24"/>
+  <!-- Sky area -->
+  <rect x="0" y="0" width="480" height="230" fill="#EFF6FF" rx="24"/>
+  <!-- Ground -->
+  <rect x="0" y="360" width="480" height="120" fill="#4ADE80"/>
+  <ellipse cx="240" cy="360" rx="280" ry="18" fill="#22C55E"/>
+  <!-- Big tree left -->
+  <rect x="74" y="245" width="22" height="140" rx="6" fill="#92400E" filter="url(#sf8)"/>
+  <ellipse cx="85" cy="195" rx="66" ry="70" fill="#16A34A" filter="url(#sf8)"/>
+  <ellipse cx="62" cy="220" rx="46" ry="55" fill="#15803D" opacity=".75"/>
+  <ellipse cx="108" cy="215" rx="48" ry="60" fill="#166534" opacity=".65"/>
+  <!-- Big tree right -->
+  <rect x="384" y="260" width="20" height="125" rx="5" fill="#92400E" filter="url(#sf8)"/>
+  <ellipse cx="394" cy="215" rx="58" ry="65" fill="#22C55E" filter="url(#sf8)"/>
+  <ellipse cx="372" cy="232" rx="42" ry="52" fill="#16A34A" opacity=".75"/>
+  <!-- Middle tree -->
+  <rect x="230" y="290" width="16" height="95" rx="4" fill="#92400E"/>
+  <ellipse cx="238" cy="260" rx="45" ry="50" fill="#4ADE80" filter="url(#sf8)"/>
+  <!-- Owl on branch -->
+  <ellipse cx="152" cy="272" rx="20" ry="26" fill="#D97706" filter="url(#sf8)"/>
+  <ellipse cx="142" cy="264" rx="10" ry="10" fill="#FEF9C3"/>
+  <ellipse cx="158" cy="264" rx="10" ry="10" fill="#FEF9C3"/>
+  <circle cx="142" cy="264" r="6" fill="#1A1209"/>
+  <circle cx="158" cy="264" r="6" fill="#1A1209"/>
+  <circle cx="140" cy="262" r="2.5" fill="white"/>
+  <circle cx="156" cy="262" r="2.5" fill="white"/>
+  <path d="M146,276 Q152,282 158,276" stroke="#92400E" stroke-width="2" fill="none"/>
+  <!-- Mushroom -->
+  <rect x="230" y="385" width="22" height="32" rx="4" fill="#FAFAFA"/>
+  <ellipse cx="241" cy="384" rx="34" ry="20" fill="#DC2626" filter="url(#sf8)"/>
+  <circle cx="234" cy="378" r="5" fill="white" opacity=".9"/>
+  <circle cx="250" cy="376" r="4" fill="white" opacity=".9"/>
+  <circle cx="241" cy="385" r="4.5" fill="white" opacity=".8"/>
+  <!-- Fireflies/firefly glows -->
+  <circle cx="160" cy="175" r="4" fill="#FCD34D" filter="url(#sf8)"/>
+  <circle cx="172" cy="168" r="3" fill="#FBBF24" opacity=".7"/>
+  <circle cx="320" cy="185" r="4" fill="#FCD34D" filter="url(#sf8)"/>
+  <circle cx="308" cy="175" r="3" fill="#FBBF24" opacity=".7"/>
+  <!-- Small flowers on ground -->
+  <circle cx="108" cy="378" r="10" fill="#FCD34D"/>
+  <circle cx="108" cy="378" r="5" fill="#F59E0B"/>
+  <circle cx="360" cy="375" r="9" fill="#F9A8D4"/>
+  <circle cx="360" cy="375" r="5" fill="#EC4899"/>
+  <circle cx="300" cy="390" r="8" fill="#A78BFA"/>
+  <circle cx="300" cy="390" r="4" fill="#8B5CF6"/>
+</svg>

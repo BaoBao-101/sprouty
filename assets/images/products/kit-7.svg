@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480">
+  <defs>
+    <radialGradient id="bg7" cx="50%" cy="50%" r="55%"><stop offset="0%" stop-color="#1e1b4b"/><stop offset="100%" stop-color="#0f0a1a"/></radialGradient>
+    <filter id="glow7"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="sf7"><feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="rgba(100,100,255,.3)"/></filter>
+  </defs>
+  <rect width="480" height="480" fill="url(#bg7)" rx="24"/>
+  <!-- Stars background -->
+  <circle cx="40" cy="40" r="1.5" fill="white" opacity=".9"/>
+  <circle cx="100" cy="25" r="1" fill="white" opacity=".7"/>
+  <circle cx="400" cy="35" r="2" fill="white" opacity=".8"/>
+  <circle cx="450" cy="80" r="1.5" fill="white" opacity=".6"/>
+  <circle cx="50" cy="140" r="2" fill="white" opacity=".5"/>
+  <circle cx="440" cy="180" r="1" fill="white" opacity=".9"/>
+  <circle cx="25" cy="380" r="2.5" fill="white" opacity=".4"/>
+  <circle cx="460" cy="350" r="1.5" fill="white" opacity=".7"/>
+  <!-- Milky way swipe -->
+  <path d="M0,200 Q240,170 480,200" stroke="rgba(200,200,255,.08)" stroke-width="40" fill="none"/>
+  <!-- Saturn planet -->
+  <circle cx="340" cy="120" r="44" fill="#F59E0B" filter="url(#glow7)"/>
+  <ellipse cx="340" cy="120" rx="70" ry="16" fill="none" stroke="#D97706" stroke-width="6" opacity=".8"/>
+  <ellipse cx="340" cy="120" rx="80" ry="18" fill="none" stroke="#B45309" stroke-width="3" opacity=".5"/>
+  <circle cx="340" cy="120" r="40" fill="#FBBF24"/>
+  <!-- Saturn bands -->
+  <ellipse cx="340" cy="112" rx="40" ry="8" fill="#F59E0B" opacity=".6"/>
+  <ellipse cx="340" cy="128" rx="40" ry="6" fill="#D97706" opacity=".5"/>
+  <!-- Rocket -->
+  <path d="M195,330 L178,248 Q195,205 212,248 Z" fill="#E2E8F0" filter="url(#sf7)"/>
+  <path d="M178,248 Q195,210 212,248 L195,262 Z" fill="#CBD5E1"/>
+  <!-- Rocket nose -->
+  <ellipse cx="195" cy="206" rx="17" ry="24" fill="#EF4444" filter="url(#sf7)"/>
+  <!-- Window -->
+  <circle cx="195" cy="260" r="10" fill="#BFDBFE"/>
+  <circle cx="195" cy="260" r="6" fill="#93C5FD"/>
+  <!-- Wings -->
+  <polygon points="178,295 155,335 178,316" fill="#60A5FA" filter="url(#sf7)"/>
+  <polygon points="212,295 235,335 212,316" fill="#60A5FA" filter="url(#sf7)"/>
+  <!-- Exhaust flame -->
+  <path d="M185,330 Q195,365 205,330 Q195,350 185,330Z" fill="#FBBF24" opacity=".9" filter="url(#glow7)"/>
+  <path d="M188,330 Q195,358 202,330" fill="#F97316" opacity=".8"/>
+  <!-- Earth -->
+  <circle cx="100" cy="340" r="40" fill="#3B82F6" filter="url(#sf7)"/>
+  <path d="M78,320 Q94,308 110,322 Q124,334 108,348 Q92,356 78,342 Z" fill="#22C55E"/>
+  <path d="M115,310 Q130,318 125,330" stroke="#22C55E" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <ellipse cx="100" cy="340" rx="40" ry="40" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="2"/>
+  <!-- Moon -->
+  <circle cx="400" cy="300" r="26" fill="#F9FAFB" filter="url(#sf7)"/>
+  <circle cx="410" cy="294" r="20" fill="#1e1b4b"/>
+  <!-- Comet -->
+  <circle cx="380" cy="50" r="6" fill="white" filter="url(#glow7)"/>
+  <path d="M386,56 Q420,40 460,30" stroke="rgba(255,255,255,.4)" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M386,56 Q418,50 454,46" stroke="rgba(255,255,255,.2)" stroke-width="2" fill="none" stroke-linecap="round"/>
+</svg>

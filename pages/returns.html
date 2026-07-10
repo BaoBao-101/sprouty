@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"><meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Chính sách đổi trả — Sprouty</title>
+  <meta name="description" content="Chính sách đổi trả Sprouty cho bộ kit trồng cây, phụ kiện IoT và workshop gia đình.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    .policy-hero { background:linear-gradient(135deg,#1A1209 0%,#3D2B1F 60%,var(--terracotta) 100%); padding:64px 0 52px; color:#fff; text-align:center }
+    .policy-hero h1 { color:#fff }
+    .policy-hero p { color:rgba(255,255,255,.75) }
+    .policy-body { padding:64px 0 80px }
+    .policy-layout { display:grid; grid-template-columns:240px 1fr; gap:48px; align-items:start }
+    .policy-toc { position:sticky; top:108px; background:var(--surface); border:1.5px solid var(--parchment-2); border-radius:var(--r-xl); padding:22px; box-shadow:var(--sh-sm) }
+    .policy-toc h4 { font-family:var(--font-h); font-size:.78rem; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-4); margin-bottom:14px }
+    .toc-link { display:block; font-family:var(--font-h); font-size:.87rem; font-weight:600; color:var(--ink-3); padding:8px 12px; border-radius:var(--r-lg); text-decoration:none; margin-bottom:2px; transition:all .15s }
+    .toc-link:hover { background:var(--parchment); color:var(--ink) }
+    .toc-link.active { background:var(--orange-pale); color:var(--orange) }
+    .policy-content h2 { font-family:var(--font-display); font-size:1.4rem; font-weight:700; color:var(--ink); margin:48px 0 16px; padding-top:16px; border-top:2px solid var(--parchment-2) }
+    .policy-content h2:first-child { margin-top:0; border-top:none; padding-top:0 }
+    .policy-content h3 { font-family:var(--font-h); font-size:1rem; font-weight:700; color:var(--ink-2); margin:24px 0 10px }
+    .policy-content p { color:var(--ink-3); line-height:1.85; font-size:.93rem; margin-bottom:14px }
+    .policy-content ul, .policy-content ol { padding-left:22px; margin-bottom:16px }
+    .policy-content li { color:var(--ink-3); font-size:.93rem; line-height:1.8; margin-bottom:6px }
+    .policy-content strong { color:var(--ink-2) }
+    .policy-content a { color:var(--orange) }
+    .policy-card { border-radius:var(--r-xl); padding:22px 24px; margin-bottom:20px; border:1.5px solid; }
+    .policy-card.green { background:#F0FDF4; border-color:#BBF7D0 }
+    .policy-card.orange { background:var(--orange-pale); border-color:rgba(232,93,4,.2) }
+    .policy-card.red { background:#FEF2F2; border-color:#FECACA }
+    .policy-card.blue { background:#EFF6FF; border-color:#BFDBFE }
+    .policy-card h4 { font-family:var(--font-h); font-size:.9rem; font-weight:800; margin-bottom:8px }
+    .policy-card.green h4 { color:var(--green) }
+    .policy-card.orange h4 { color:var(--orange) }
+    .policy-card.red h4 { color:var(--rose) }
+    .policy-card.blue h4 { color:var(--blue) }
+    .policy-card p { margin:0; font-size:.88rem; line-height:1.7 }
+    .timeline-steps { display:flex; flex-direction:column; gap:0; margin:20px 0 }
+    .tstep { display:flex; gap:16px; align-items:flex-start; padding-bottom:24px; position:relative }
+    .tstep:last-child { padding-bottom:0 }
+    .tstep:not(:last-child)::before { content:''; position:absolute; left:19px; top:40px; bottom:0; width:2px; background:var(--parchment-2) }
+    .tstep-num { width:40px; height:40px; border-radius:50%; background:var(--orange); color:#fff; font-family:var(--font-h); font-size:.9rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; z-index:1; box-shadow:0 2px 8px rgba(232,93,4,.25) }
+    .tstep-body { padding-top:8px }
+    .tstep-title { font-family:var(--font-h); font-size:.92rem; font-weight:700; color:var(--ink-2); margin-bottom:5px }
+    .tstep-desc { font-size:.86rem; color:var(--ink-3); line-height:1.7 }
+    .last-updated { font-family:var(--font-h); font-size:.8rem; color:var(--ink-5); margin-bottom:32px; padding:10px 16px; background:var(--parchment); border-radius:var(--r-lg); display:inline-flex; align-items:center; gap:8px }
+    @media(max-width:1024px) { .policy-layout { grid-template-columns:1fr } .policy-toc { position:static; display:flex; flex-wrap:wrap; gap:6px; padding:16px } .policy-toc h4 { width:100%; margin-bottom:4px } .toc-link { padding:5px 12px; border-radius:var(--r-full); font-size:.8rem } }
+  </style>
+</head>
+<body>
+<div id="login-modal-mount"></div>
+<div id="hdr"></div>
+
+<!-- Hero -->
+<div class="policy-hero">
+  <div class="container">
+    <div class="breadcrumb" style="color:rgba(255,255,255,.45);justify-content:center;display:flex;gap:6px;margin-bottom:16px">
+      <a href="../index.html" style="color:rgba(255,255,255,.45)">Trang chủ</a> › <span>Chính sách đổi trả</span>
+    </div>
+    <span style="font-family:var(--font-h);font-size:.78rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.6);display:block;margin-bottom:12px">Minh bạch & Rõ ràng</span>
+    <h1>Chính sách đổi trả & Hoàn tiền</h1>
+    <p class="lead" style="max-width:520px;margin:12px auto 0">Sprouty cam kết bảo vệ quyền lợi khách hàng. Nếu không hài lòng, chúng tôi sẽ giải quyết thỏa đáng.</p>
+  </div>
+</div>
+
+<!-- Body -->
+<div class="policy-body">
+  <div class="container">
+    <div class="policy-layout">
+      <!-- TOC -->
+      <aside class="policy-toc">
+        <h4>Nội dung</h4>
+        <a href="#tong-quan" class="toc-link active">1. Tổng quan</a>
+        <a href="#dieu-kien" class="toc-link">2. Điều kiện đổi trả</a>
+        <a href="#quy-trinh" class="toc-link">3. Quy trình đổi trả</a>
+        <a href="#hoan-tien" class="toc-link">4. Hoàn tiền</a>
+        <a href="#khong-chap-nhan" class="toc-link">5. Trường hợp không chấp nhận</a>
+        <a href="#san-pham-loi" class="toc-link">6. Sản phẩm lỗi / Sai hàng</a>
+        <a href="#lien-he" class="toc-link">7. Liên hệ hỗ trợ</a>
+      </aside>
+
+      <!-- Content -->
+      <div class="policy-content">
+        <div class="last-updated">📅 Cập nhật lần cuối: 01/03/2026</div>
+
+        <div class="policy-card green" style="margin-bottom:32px">
+          <h4>✅ Cam kết của Sprouty</h4>
+          <p>Nếu sản phẩm không đúng mô tả, bị hư hỏng khi giao hoặc bạn không hài lòng vì lý do chính đáng, Sprouty cam kết xử lý đổi trả hoặc hoàn tiền đầy đủ — không rắc rối, không phán xét.</p>
+        </div>
+
+        <h2 id="tong-quan">1. Tổng quan về chính sách</h2>
+        <p>Sprouty áp dụng chính sách đổi trả trong vòng <strong>7 ngày</strong> kể từ ngày nhận hàng. Chính sách này áp dụng cho tất cả sản phẩm được mua trực tiếp trên website sprouty.id.vn.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0">
+          <div class="policy-card green"><h4>✅ Trong 7 ngày</h4><p>Đổi trả tự do với điều kiện hàng nguyên vẹn, chưa sử dụng</p></div>
+          <div class="policy-card orange"><h4>⚠️ Sau 7 ngày</h4><p>Chỉ chấp nhận đổi trả với sản phẩm lỗi kỹ thuật từ nhà sản xuất</p></div>
+        </div>
+
+        <h2 id="dieu-kien">2. Điều kiện đổi trả</h2>
+        <h3>Sản phẩm đủ điều kiện đổi trả khi:</h3>
+        <ul>
+          <li>Còn trong thời hạn <strong>7 ngày</strong> kể từ ngày nhận hàng (theo dấu bưu điện)</li>
+          <li>Sản phẩm <strong>chưa mở hộp</strong> hoặc mới mở nhưng chưa sử dụng nguyên liệu</li>
+          <li>Còn đầy đủ <strong>hộp, bao bì, thẻ hướng dẫn và tất cả phụ kiện</strong></li>
+          <li>Có <strong>hóa đơn mua hàng</strong> hoặc email xác nhận đơn hàng</li>
+          <li>Không có dấu hiệu bị hư hỏng do người dùng</li>
+        </ul>
+
+        <h3>Trường hợp được đổi trả ngay:</h3>
+        <ul>
+          <li>Giao <strong>sai sản phẩm</strong> (sai kit, sai màu sắc, sai số lượng)</li>
+          <li>Sản phẩm <strong>bị hư hỏng</strong> trong quá trình vận chuyển</li>
+          <li>Thiếu nguyên liệu so với danh sách trong hộp</li>
+          <li>Lỗi kỹ thuật từ nhà sản xuất (kéo gãy ngay khi mở, màu vẽ bị khô cứng, v.v.)</li>
+        </ul>
+
+        <h2 id="quy-trinh">3. Quy trình đổi trả</h2>
+        <div class="timeline-steps">
+          <div class="tstep"><div class="tstep-num">1</div><div class="tstep-body"><div class="tstep-title">Liên hệ Sprouty</div><div class="tstep-desc">Gửi yêu cầu qua trang Liên hệ với tiêu đề "Yêu cầu đổi trả — [Mã đơn hàng]"</div></div></div>
+          <div class="tstep"><div class="tstep-num">2</div><div class="tstep-body"><div class="tstep-title">Cung cấp thông tin</div><div class="tstep-desc">Gửi kèm: mã đơn hàng, lý do đổi trả và ảnh sản phẩm (nếu hàng lỗi/hư hỏng). Chúng tôi xác nhận trong vòng 4 giờ (trong giờ làm việc)</div></div></div>
+          <div class="tstep"><div class="tstep-num">3</div><div class="tstep-body"><div class="tstep-title">Gửi hàng về</div><div class="tstep-desc">Sau khi được xác nhận, đóng gói sản phẩm cẩn thận và gửi về địa chỉ được đội ngũ Sprouty xác nhận. Sprouty hỗ trợ chi phí gửi hàng nếu lỗi từ phía chúng tôi</div></div></div>
+          <div class="tstep"><div class="tstep-num">4</div><div class="tstep-body"><div class="tstep-title">Kiểm tra & Xử lý</div><div class="tstep-desc">Sau khi nhận hàng, chúng tôi kiểm tra trong 1–2 ngày làm việc. Nếu đủ điều kiện, tiến hành gửi hàng đổi hoặc hoàn tiền ngay</div></div></div>
+          <div class="tstep"><div class="tstep-num">5</div><div class="tstep-body"><div class="tstep-title">Nhận hàng mới / Hoàn tiền</div><div class="tstep-desc">Hàng đổi sẽ được giao trong 2–3 ngày làm việc. Hoàn tiền xử lý trong 3–5 ngày làm việc</div></div></div>
+        </div>
+
+        <h2 id="hoan-tien">4. Chính sách hoàn tiền</h2>
+        <div style="overflow-x:auto;margin:16px 0">
+          <table style="width:100%;border-collapse:collapse;font-size:.9rem">
+            <thead>
+              <tr style="background:var(--parchment)">
+                <th style="padding:12px 16px;text-align:left;font-family:var(--font-h);font-size:.78rem;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--parchment-2)">Phương thức thanh toán</th>
+                <th style="padding:12px 16px;text-align:left;font-family:var(--font-h);font-size:.78rem;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--parchment-2)">Thời gian hoàn tiền</th>
+                <th style="padding:12px 16px;text-align:left;font-family:var(--font-h);font-size:.78rem;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--parchment-2)">Ghi chú</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom:1px solid var(--parchment-2)"><td style="padding:12px 16px;color:var(--ink-2);font-weight:600">Chuyển khoản ngân hàng</td><td style="padding:12px 16px;color:var(--ink-3)">1–3 ngày làm việc</td><td style="padding:12px 16px;color:var(--ink-3)">Hoàn vào số TK đã dùng</td></tr>
+              <tr style="border-bottom:1px solid var(--parchment-2)"><td style="padding:12px 16px;color:var(--ink-2);font-weight:600">Ví MoMo / ZaloPay</td><td style="padding:12px 16px;color:var(--ink-3)">1–2 ngày làm việc</td><td style="padding:12px 16px;color:var(--ink-3)">Hoàn về ví điện tử</td></tr>
+              <tr style="border-bottom:1px solid var(--parchment-2)"><td style="padding:12px 16px;color:var(--ink-2);font-weight:600">VNPay</td><td style="padding:12px 16px;color:var(--ink-3)">3–5 ngày làm việc</td><td style="padding:12px 16px;color:var(--ink-3)">Hoàn qua cổng VNPay</td></tr>
+              <tr><td style="padding:12px 16px;color:var(--ink-2);font-weight:600">COD (tiền mặt)</td><td style="padding:12px 16px;color:var(--ink-3)">2–5 ngày làm việc</td><td style="padding:12px 16px;color:var(--ink-3)">Chuyển khoản theo thông tin khách cung cấp</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><em>Lưu ý: Thời gian trên tính từ ngày Sprouty xác nhận hoàn tiền, không phải ngày yêu cầu.</em></p>
+
+        <h2 id="khong-chap-nhan">5. Trường hợp không được đổi trả</h2>
+        <div class="policy-card red">
+          <h4>❌ Không chấp nhận đổi trả trong các trường hợp sau:</h4>
+          <p>Các trường hợp này đã được nêu rõ để tránh tranh cãi không đáng có:</p>
+        </div>
+        <ul>
+          <li>Sản phẩm đã <strong>được sử dụng</strong> (hạt giống, đất trồng hoặc phụ kiện đã mở và dùng)</li>
+          <li>Vượt quá thời hạn <strong>7 ngày</strong> kể từ khi nhận hàng</li>
+          <li>Hộp/bao bì bị hư hỏng do người dùng không phải do vận chuyển</li>
+          <li>Thiếu bộ phận do người dùng làm mất (không phải từ nhà sản xuất)</li>
+          <li>Thay đổi ý kiến sau khi đã sử dụng thử</li>
+          <li>Sản phẩm là <strong>gói thành viên kỹ thuật số</strong> hoặc quyền truy cập video đã được kích hoạt</li>
+          <li>Sản phẩm mua từ đại lý hoặc bên thứ ba (chỉ áp dụng cho đơn mua trực tiếp từ sprouty.id.vn)</li>
+        </ul>
+
+        <h2 id="san-pham-loi">6. Sản phẩm lỗi / Giao sai hàng</h2>
+        <p>Trong trường hợp nhận được <strong>sản phẩm lỗi từ nhà sản xuất</strong> hoặc <strong>giao sai hàng</strong>, chính sách ưu tiên áp dụng:</p>
+        <ul>
+          <li>Thời hạn khiếu nại: <strong>48 giờ</strong> kể từ khi nhận hàng</li>
+          <li>Sprouty chịu toàn bộ chi phí gửi lại hàng</li>
+          <li>Ưu tiên xử lý trong <strong>24 giờ làm việc</strong></li>
+          <li>Khách hàng được chọn: nhận hàng đổi, hoặc hoàn tiền 100% bao gồm cả phí ship</li>
+        </ul>
+        <div class="policy-card blue">
+          <h4>📸 Ghi nhớ quan trọng</h4>
+          <p>Luôn chụp ảnh/quay video sản phẩm ngay khi mở hộp. Đây là bằng chứng quan trọng nhất để chúng tôi xử lý nhanh nhất cho bạn trong trường hợp có vấn đề.</p>
+        </div>
+
+        <h2 id="lien-he">7. Liên hệ hỗ trợ đổi trả</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0">
+          <div class="policy-card orange">
+            <h4>📧 Email hỗ trợ</h4>
+            <p><a href="contact.html" style="color:var(--orange);font-weight:700">Gửi yêu cầu hỗ trợ</a><br><span style="font-size:.8rem;color:var(--ink-4)">Phản hồi trong 4 giờ (T2–T7, 8h–18h)</span></p>
+          </div>
+          <div class="policy-card green">
+            <h4>📞 Hotline</h4>
+            <p><a href="contact.html" style="color:var(--green);font-weight:700">Trang liên hệ</a><br><span style="font-size:.8rem;color:var(--ink-4)">T2–T7: 8:00–18:00 | T8-CN: 9:00–15:00</span></p>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:40px;padding:36px;background:var(--cream-2);border-radius:var(--r-2xl);border:1.5px solid var(--parchment-2)">
+          <div style="font-size:2.8rem;margin-bottom:12px">🤝</div>
+          <h3 style="margin-bottom:8px">Chúng tôi ở đây để giúp bạn</h3>
+          <p style="color:var(--ink-3);max-width:420px;margin:0 auto 24px">Đội ngũ Sprouty luôn sẵn sàng hỗ trợ. Đừng ngại liên hệ — câu hỏi nào cũng có câu trả lời.</p>
+          <div style="display:flex;justify-content:center;gap:14px;flex-wrap:wrap">
+            <a href="contact.html" class="btn btn-primary btn-lg">Liên hệ ngay</a>
+            <a href="faq.html" class="btn btn-outline btn-lg">Xem FAQ</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="ftr"></div>
+<script src="../assets/js/env.js"></script>
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/app.js"></script>
+<script>
+document.getElementById('hdr').innerHTML = renderHeader('','../');
+document.getElementById('ftr').innerHTML = renderFooter('../');
+
+// Highlight active TOC link on scroll
+const headings = document.querySelectorAll('.policy-content h2');
+const tocLinks = document.querySelectorAll('.toc-link');
+window.addEventListener('scroll', () => {
+  let current = '';
+  headings.forEach(h => { if(window.scrollY >= h.offsetTop - 130) current = h.id; });
+  tocLinks.forEach(l => { l.classList.toggle('active', l.getAttribute('href') === '#'+current); });
+});
+</script>
+</body>
+</html>

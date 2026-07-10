@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480">
+  <defs>
+    <radialGradient id="bg3" cx="40%" cy="40%" r="60%"><stop offset="0%" stop-color="#FAF5FF"/><stop offset="100%" stop-color="#EDE9FE"/></radialGradient>
+    <linearGradient id="dg3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7C3AED"/><stop offset="100%" stop-color="#DC2626"/></linearGradient>
+    <filter id="sf3"><feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="rgba(124,58,237,.25)"/></filter>
+  </defs>
+  <rect width="480" height="480" fill="url(#bg3)" rx="24"/>
+  <!-- Dragon body sinuous path -->
+  <path d="M60,300 C90,260 140,240 190,260 C240,280 290,250 340,210 C370,188 400,178 430,185" stroke="url(#dg3)" stroke-width="28" fill="none" stroke-linecap="round" filter="url(#sf3)"/>
+  <path d="M60,300 C90,260 140,240 190,260 C240,280 290,250 340,210 C370,188 400,178 430,185" stroke="#A855F7" stroke-width="12" fill="none" stroke-linecap="round" stroke-dasharray="20,15"/>
+  <!-- Scales detail -->
+  <path d="M60,300 C90,260 140,240 190,260 C240,280 290,250 340,210 C370,188 400,178 430,185" stroke="rgba(255,255,255,.2)" stroke-width="5" fill="none" stroke-dasharray="8,12"/>
+  <!-- Dragon head -->
+  <ellipse cx="430" cy="185" rx="34" ry="28" fill="#9333EA" filter="url(#sf3)"/>
+  <!-- Eye -->
+  <circle cx="442" cy="177" r="8" fill="#FCD34D"/>
+  <circle cx="443" cy="177" r="4" fill="#1A1A1A"/>
+  <circle cx="441" cy="175" r="2" fill="white" opacity=".7"/>
+  <!-- Smile -->
+  <path d="M415,195 Q430,208 444,196" stroke="#C084FC" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- Horns -->
+  <path d="M424,160 C420,140 428,130 432,138" stroke="#F59E0B" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <path d="M436,157 C440,138 432,128 428,136" stroke="#F59E0B" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <!-- Wings -->
+  <path d="M230,255 Q205,200 180,215 Q200,245 230,255Z" fill="#C084FC" opacity=".85"/>
+  <path d="M230,255 Q258,208 278,225 Q260,252 230,255Z" fill="#A855F7" opacity=".75"/>
+  <!-- Wing veins -->
+  <path d="M230,255 Q208,228 190,220" stroke="rgba(255,255,255,.3)" stroke-width="1.5" fill="none"/>
+  <path d="M230,255 Q252,232 268,228" stroke="rgba(255,255,255,.3)" stroke-width="1.5" fill="none"/>
+  <!-- Fire breath -->
+  <path d="M448,200 Q468,215 458,228 Q448,218 450,230 Q440,218 442,232 Q430,215 448,200Z" fill="#FBBF24" opacity=".9"/>
+  <path d="M450,205 Q464,216 458,225" stroke="#F97316" stroke-width="2" fill="none"/>
+  <!-- Decorative stars -->
+  <circle cx="100" cy="150" r="3" fill="#C084FC" opacity=".5"/>
+  <circle cx="350" cy="320" r="4" fill="#7C3AED" opacity=".4"/>
+  <circle cx="380" cy="135" r="2.5" fill="#A855F7" opacity=".6"/>
+  <circle cx="140" cy="340" r="3" fill="#C084FC" opacity=".4"/>
+  <text x="95" y="148" font-size="10" fill="#A855F7" opacity=".6">✦</text>
+  <text x="345" y="316" font-size="12" fill="#7C3AED" opacity=".4">✦</text>
+</svg>
