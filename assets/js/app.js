@@ -306,6 +306,7 @@ function showUserMenu() {
   const items = [
     { label:'🌳 Cây của tôi', href:`${prefix}my-products.html` },
     { label:'🎟 Nhập mã kích hoạt', href:`${prefix}redeem.html` },
+    { label:'👑 VIP Garden', href:`${prefix}vip.html` },
     { label:'📦 Đơn hàng của tôi', href:`${prefix}account.html` },
     { label:'🛒 Giỏ hàng', href:`${prefix}cart.html` },
     ...(isEmp ? [{ label:'👷 Cổng nhân viên', href:`${prefix}employee/orders.html` }] : []),

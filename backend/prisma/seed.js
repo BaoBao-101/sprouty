@@ -33,14 +33,6 @@ const PRODUCTS = [
     description: "Trồng cà chua bi, chăm sóc từ hạt đến quả chín đỏ và ghi lại cả hành trình trên Cây Kỷ Niệm.",
     includes: ["Chậu đất nung", "6 màu acrylic", "Hạt giống cà chua", "Đất trồng", "Sách hướng dẫn", "Quyền truy cập app Sprouty"],
     images: ["/assets/images/sprouty-icons/Tomato.png"], status: "published" },
-  { id: 3, name: "Basic Workshop", emoji: "🎨", collection: "Workshop gia đình", category: "workshop", ageRange: "4–10 tuổi", price: 220000, oldPrice: null, smartPriceDelta: null, badge: "new", bgColor: "#FFF7ED",
-    description: "Một buổi vẽ chậu, gieo hạt, setup tài khoản Sprouty và tạo chiếc lá kỷ niệm đầu tiên cùng gia đình.",
-    includes: ["1 kit trồng cây (chọn loại hạt)", "1 buổi hướng dẫn nhóm nhỏ", "Setup tài khoản Sprouty", "Ảnh kỷ niệm sau buổi học"],
-    images: [], status: "published" },
-  { id: 4, name: "Smart Kit Workshop", emoji: "🔌", collection: "STEM & IoT", category: "workshop", ageRange: "10+ tuổi", price: 450000, oldPrice: null, smartPriceDelta: null, badge: "new", bgColor: "#E0F2FE",
-    description: "Workshop lắp cảm biến, màn hình OLED và LED cho cây. Phù hợp học sinh yêu STEM và phụ huynh muốn học cùng con.",
-    includes: ["1 kit trồng cây bản Smart", "1 buổi hướng dẫn lắp mạch", "Kết nối cảm biến cây", "Tài liệu thực hành IoT"],
-    images: [], status: "published" },
   { id: 5, name: "VIP Garden Monthly", emoji: "🌙", collection: "Golden Garden", category: "membership", ageRange: "Gia đình", price: 20000, oldPrice: null, smartPriceDelta: null, badge: null, bgColor: "#FEFCE8",
     description: "Mở khóa chế độ ban đêm, hiệu ứng theo mùa, Plant Buddies hiếm và AI recap hàng tháng cho Cây Kỷ Niệm.",
     includes: ["Night Mode", "Seasonal effects", "Rare Plant Buddies", "Monthly AI recap", "Ưu tiên hỗ trợ"],
@@ -112,6 +104,26 @@ async function main() {
     });
   }
   console.log(`✅ Seeded ${PRODUCTS.length} products`);
+
+  // One-time cleanup: "Basic Workshop" (#3) and "Smart Kit Workshop" (#4)
+  // were removed from the catalog — the real workshop booking flow is the
+  // separate Workshop/WorkshopRegistration models (pages/workshop.html),
+  // these Product rows were vestigial duplicates it never actually used.
+  // Idempotent: no-ops on repeat runs once the rows are gone.
+  for (const id of [3, 4]) {
+    try {
+      await prisma.product.delete({ where: { id } });
+      console.log(`✅ Removed retired workshop product #${id}`);
+    } catch (e) {
+      if (e.code === 'P2025') {
+        // already deleted, fine
+      } else if (e.code === 'P2003') {
+        console.warn(`⚠️  Product #${id} still referenced by existing orders — left in place, archive it manually instead.`);
+      } else {
+        throw e;
+      }
+    }
+  }
 
   // Reset the auto-increment sequence so new products get IDs after the seeded ones
   await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"Product"', 'id'), COALESCE((SELECT MAX(id) FROM "Product"), 0))`;

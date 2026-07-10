@@ -495,8 +495,8 @@
 
 <div id="ftr"></div>
 <script src="../assets/js/env.js"></script>
-<script src="../assets/js/api.js?v=20260710k"></script>
-<script src="../assets/js/app.js?v=20260710k"></script>
+<script src="../assets/js/api.js?v=20260710l"></script>
+<script src="../assets/js/app.js?v=20260710l"></script>
 <script>
 document.getElementById('hdr').innerHTML = renderHeader('shop','../');
 document.getElementById('ftr').innerHTML = renderFooter('../');
@@ -705,7 +705,13 @@ document.getElementById('mobileDrawer')?.addEventListener('click', e => {
 (async function initShop() {
   try {
     const { products } = await API.products.list();
-    ALL_PRODUCTS = products.map(normalizeProduct);
+    // VIP membership has its own dedicated page (vip.html) with real
+    // benefit info and its own purchase flow — it doesn't belong in the
+    // general kit/book shop grid. "workshop" is excluded too — those
+    // Product rows are retired (real workshop booking is the separate
+    // Workshop model / workshop.html); a couple may still linger here if
+    // seed.js couldn't delete them due to old orders referencing them.
+    ALL_PRODUCTS = products.map(normalizeProduct).filter(p => p.cat !== 'membership' && p.cat !== 'workshop');
     Cart.register(ALL_PRODUCTS);
     // Update category chip counts from actual API data
     const total = ALL_PRODUCTS.length;

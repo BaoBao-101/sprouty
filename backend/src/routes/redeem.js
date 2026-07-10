@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import { z } from 'zod';
 import { requireAuth, requireCsrf } from '../middleware/rbac.js';
 import { AppError } from '../utils/errors.js';
-import { activeEntitlements } from '../services/access.js';
+import { activeEntitlements, isVipUser } from '../services/access.js';
 import { noHtml, parseOrThrow } from '../utils/validation.js';
 import { auditLog } from '../services/audit.js';
 
@@ -96,7 +96,10 @@ export default async function redeemRoutes(fastify) {
   });
 
   fastify.get('/me/entitlements', { preHandler: [requireAuth] }, async (req) => {
-    const entitlements = await activeEntitlements(fastify.prisma, req.user.id);
+    const [entitlements, isVip] = await Promise.all([
+      activeEntitlements(fastify.prisma, req.user.id),
+      isVipUser(fastify.prisma, req.user.id),
+    ]);
     const features = {
       ai_assistant: entitlements.some(e => e.feature === 'ai_assistant'),
       instruction_videos: entitlements.some(e => e.feature === 'instruction_videos'),
@@ -105,6 +108,7 @@ export default async function redeemRoutes(fastify) {
     return {
       entitlements,
       features,
+      isVip,
       aiRequiresEntitlement: process.env.AI_REQUIRES_ENTITLEMENT === 'true',
     };
   });
