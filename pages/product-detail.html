@@ -169,8 +169,8 @@
 
 <div id="ftr"></div>
 <script src="../assets/js/env.js"></script>
-<script src="../assets/js/api.js?v=20260710c"></script>
-<script src="../assets/js/app.js?v=20260710c"></script>
+<script src="../assets/js/api.js?v=20260710d"></script>
+<script src="../assets/js/app.js?v=20260710d"></script>
 <script>
 document.getElementById('hdr').innerHTML = renderHeader('shop','../');
 document.getElementById('ftr').innerHTML = renderFooter('../');
@@ -426,6 +426,13 @@ function _renderPage(p, allProds) {
     isReal: false,
   }));
   loadPdpVideos();
+
+  // Deep-link support: coming from "Cây của tôi" → Xem video hướng dẫn
+  // should land straight on the Video tab, not the buy/info tab.
+  if (new URLSearchParams(location.search).get('tab') === 'videos') {
+    const videoBtn = [...document.querySelectorAll('.pdp-tab-btn')].find(b => b.textContent.includes('Video'));
+    if (videoBtn) switchTab('tab-videos', videoBtn);
+  }
 }
 
 async function loadPdpVideos() {

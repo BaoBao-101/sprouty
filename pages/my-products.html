@@ -88,8 +88,8 @@
 
 <div id="ftr"></div>
 <script src="../assets/js/env.js"></script>
-<script src="../assets/js/api.js?v=20260710c"></script>
-<script src="../assets/js/app.js?v=20260710c"></script>
+<script src="../assets/js/api.js?v=20260710d"></script>
+<script src="../assets/js/app.js?v=20260710d"></script>
 <script>
 document.getElementById('hdr').innerHTML = renderHeader('myproducts','../');
 document.getElementById('ftr').innerHTML = renderFooter('../');
@@ -239,7 +239,7 @@ function buildKitCard(p, prog) {
       </div>
 
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-        <a class="btn btn-outline btn-sm" href="product-detail.html?id=${p.id}">Xem video hướng dẫn</a>
+        <a class="btn btn-outline btn-sm" href="product-detail.html?id=${p.id}&tab=videos">Xem video hướng dẫn</a>
         <button class="btn btn-ghost btn-sm" onclick="loadImageGallery(${p.id})">Ảnh của tôi</button>
       </div>
 
