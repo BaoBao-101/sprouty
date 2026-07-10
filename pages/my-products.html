@@ -120,10 +120,14 @@ function onAuthChange() {
 }
 
 async function loadPurchasedKits() {
-  // Catalog and orders are independent — fetch in parallel.
-  const [_, ordersResult] = await Promise.all([
+  // A kit can be unlocked two ways: the account bought it directly (orders),
+  // or someone gifted it and this account redeemed the kit's code
+  // (entitlements). Both must be shown here, or a gifted user has no way to
+  // reach the upload UI even though the API already grants them access.
+  const [_, ordersResult, entitlementsResult] = await Promise.all([
     ensureCatalog(),
     API.orders.list().catch(() => ({ orders: [] })),
+    API.redeem.entitlements().catch(() => ({ entitlements: [] })),
   ]);
   const orders = ordersResult.orders || [];
   const purchasedIds = new Set();
@@ -131,6 +135,9 @@ async function loadPurchasedKits() {
     if (o.paidAt && !['cancelled'].includes(o.status)) {
       o.items.forEach(i => purchasedIds.add(i.productId));
     }
+  });
+  (entitlementsResult.entitlements || []).forEach(e => {
+    if (e.productId) purchasedIds.add(e.productId);
   });
   renderKits({ purchases: [...purchasedIds] });
 }
