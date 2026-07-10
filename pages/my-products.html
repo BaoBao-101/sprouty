@@ -377,7 +377,7 @@ function markDone(pid) {
   renderKits(Auth.user);
 }
 
-onAuthChange();
+Auth.onReady(onAuthChange);
 </script>
 </body>
 </html>
