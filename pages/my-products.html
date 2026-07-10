@@ -88,15 +88,15 @@
 
 <div id="ftr"></div>
 <script src="../assets/js/env.js"></script>
-<script src="../assets/js/api.js?v=20260710f"></script>
-<script src="../assets/js/app.js?v=20260710f"></script>
+<script src="../assets/js/api.js?v=20260710g"></script>
+<script src="../assets/js/app.js?v=20260710g"></script>
 <script>
 document.getElementById('hdr').innerHTML = renderHeader('myproducts','../');
 document.getElementById('ftr').innerHTML = renderFooter('../');
 
-const KP_KEY = 'crf_kit_progress';
-function getProgress() { try { return JSON.parse(localStorage.getItem(KP_KEY) || '{}'); } catch { return {}; } }
-function saveProgress(pid, data) { const p = getProgress(); p[pid] = data; localStorage.setItem(KP_KEY, JSON.stringify(p)); }
+// Keep in sync with MAX_LEAVES_PER_PRODUCT in backend/src/routes/user-images.js
+// and MAX_LEAVES in pages/tree.html.
+const MAX_LEAVES = 20;
 
 let _catalog = [];
 
@@ -145,15 +145,24 @@ async function loadPurchasedKits() {
   (entitlementsResult.entitlements || []).forEach(e => {
     if (e.productId) purchasedIds.add(e.productId);
   });
-  renderKits({ purchases: [...purchasedIds] });
+
+  const kits = _catalog.filter(p => purchasedIds.has(p.id) && p.cat === 'kit');
+  // Real progress = leaves grown (photos uploaded) out of the cap, per kit —
+  // not a manual "mark as done" toggle disconnected from actual activity.
+  const leafCounts = await Promise.all(kits.map(async (k) => {
+    try {
+      const { images } = await API.myImages.list(k.id);
+      return [k.id, images.length];
+    } catch {
+      return [k.id, 0];
+    }
+  }));
+  renderKits(kits, Object.fromEntries(leafCounts));
 }
 
-function renderKits(user) {
-  const purchases = user.purchases || [];
-  const kits = _catalog.filter(p => purchases.includes(p.id) && p.cat === 'kit');
-  const prog = getProgress();
-  const totalDone = kits.filter(k => (prog[k.id]?.pct || 0) >= 100).length;
-  const anyProgress = kits.some(k => prog[k.id]);
+function renderKits(kits, leafCounts) {
+  const totalDone = kits.filter(k => (leafCounts[k.id] || 0) >= MAX_LEAVES).length;
+  const anyProgress = kits.some(k => (leafCounts[k.id] || 0) > 0);
   const journeyStep = kits.length === 0 ? 0 : anyProgress ? Math.min(4, 2 + totalDone) : 1;
 
   document.getElementById('journeyMeta').textContent = `${kits.length} kit · ${totalDone} hoàn thành`;
@@ -178,13 +187,13 @@ function renderKits(user) {
     return;
   }
   document.getElementById('noKitsMsg').style.display = 'none';
-  document.getElementById('kitsWrap').innerHTML = kits.map(kit => buildKitCard(kit, prog[kit.id] || { pct: 0 })).join('');
+  document.getElementById('kitsWrap').innerHTML = kits.map(kit => buildKitCard(kit, leafCounts[kit.id] || 0)).join('');
 }
 
-function buildKitCard(p, prog) {
+function buildKitCard(p, leafCount) {
   const vids = []; // Video management coming soon
-  const pct = prog.pct || 0;
-  const done = pct >= 100;
+  const pct = Math.round(Math.min(100, (leafCount / MAX_LEAVES) * 100));
+  const done = leafCount >= MAX_LEAVES;
   const curIdx = Math.floor(vids.length * (pct / 100));
   return `
   <div class="kit-card" style="background:var(--surface);border:1.5px solid var(--parchment-2);border-radius:var(--r-xl);margin-bottom:16px;box-shadow:var(--sh-sm);overflow:hidden">
@@ -235,7 +244,7 @@ function buildKitCard(p, prog) {
 
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
         <h4 style="font-family:var(--font-h);font-size:.8rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3)">🌳 Cây Kỷ Niệm</h4>
-        ${!done ? `<button class="btn btn-ghost btn-sm" onclick="markDone(${p.id})">✓ Đánh dấu hoàn thành</button>` : ''}
+        <span style="font-size:.78rem;color:var(--ink-4);font-family:var(--font-h)">🍃 ${leafCount}/${MAX_LEAVES} lá</span>
       </div>
 
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -257,12 +266,6 @@ function toggleKit(id) {
     if (open) card.classList.add('open');
     else card.classList.remove('open');
   }
-}
-
-function markDone(pid) {
-  saveProgress(pid, { pct: 100 });
-  Toast.show('🎉 Tuyệt vời! Bé đã hoàn thành kit này!', 'success');
-  renderKits(Auth.user);
 }
 
 Auth.onReady(onAuthChange);
