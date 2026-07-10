@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"><meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Cây Kỷ Niệm — Sprouty</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    .tree-hero { background:linear-gradient(135deg,#1A1209 0%,#3D2B1F 55%,var(--terracotta) 100%); padding:36px 0 28px; color:#fff }
+    .tree-hero h1 { color:#fff; margin:0 }
+    .tree-hero p { color:rgba(255,255,255,.75); margin-top:6px; font-size:.92rem }
+    .tree-breadcrumb { color:rgba(255,255,255,.45); margin-bottom:10px; font-size:.84rem }
+    .tree-breadcrumb a { color:rgba(255,255,255,.45) }
+
+    .tree-stage {
+      position:relative;
+      width:100%;
+      max-width:640px;
+      margin:0 auto;
+      aspect-ratio:4/5;
+      background:radial-gradient(ellipse at 50% 100%, #FEF9EF 0%, var(--surface) 70%);
+      border:1.5px solid var(--parchment-2);
+      border-radius:var(--r-2xl);
+      box-shadow:var(--sh-md);
+      overflow:hidden;
+    }
+    .tree-trunk {
+      position:absolute; left:50%; bottom:0; width:9%; height:38%;
+      background:linear-gradient(90deg,#6B4226,#8B5A2B 45%,#6B4226);
+      border-radius:10px 10px 0 0;
+      transform:translateX(-50%);
+    }
+    .tree-ground {
+      position:absolute; left:0; right:0; bottom:0; height:6%;
+      background:linear-gradient(180deg,#BBF7D0,#86EFAC);
+    }
+    .leaf-slot {
+      position:absolute;
+      width:11%; aspect-ratio:1;
+      transform:translate(-50%,-50%);
+      border-radius:0% 100% 0% 100%;
+      display:flex; align-items:center; justify-content:center;
+      transition:transform .2s var(--ease,ease), box-shadow .2s;
+      cursor:default;
+    }
+    .leaf-slot.filled { cursor:pointer; box-shadow:var(--sh-sm); overflow:hidden; background:var(--parchment) }
+    .leaf-slot.filled img { width:100%; height:100%; object-fit:cover }
+    .leaf-slot.filled:hover { transform:translate(-50%,-50%) scale(1.12); box-shadow:var(--sh-lg); z-index:5 }
+    .leaf-slot.next {
+      cursor:pointer;
+      background:var(--parchment);
+      border:2px dashed var(--green);
+      color:var(--ink-3);
+      font-size:1.3rem;
+      animation:leafPulse 2.2s ease-in-out infinite;
+    }
+    .leaf-slot.next:hover { transform:translate(-50%,-50%) scale(1.1); background:var(--parchment-2) }
+    @keyframes leafPulse { 0%,100%{ opacity:.75 } 50%{ opacity:1 } }
+
+    .tree-full-msg {
+      position:absolute; left:50%; top:8%; transform:translateX(-50%);
+      background:rgba(255,255,255,.92); border:1px solid var(--parchment-2);
+      border-radius:var(--r-full); padding:8px 16px; font-size:.8rem;
+      font-family:var(--font-h); font-weight:700; color:var(--ink-2);
+      box-shadow:var(--sh-sm); white-space:nowrap;
+    }
+    .leaf-count-badge {
+      display:inline-flex; align-items:center; gap:6px;
+      background:var(--parchment); border-radius:var(--r-full);
+      padding:6px 14px; font-family:var(--font-h); font-size:.82rem; font-weight:700; color:var(--ink-2);
+    }
+  </style>
+</head>
+<body>
+<div id="login-modal-mount"></div>
+<div id="hdr"></div>
+
+<div id="lockedView" style="display:none">
+  <div class="locked-screen-wrap">
+    <div class="locked-card">
+      <div style="font-size:4rem;margin-bottom:20px">🔐</div>
+      <h2 style="margin-bottom:10px">Đăng nhập để xem Cây Kỷ Niệm</h2>
+      <button class="btn btn-primary btn-lg btn-block" onclick="LoginModal.open()">Đăng nhập ngay →</button>
+    </div>
+  </div>
+</div>
+
+<div id="mainView" style="display:none">
+  <div class="tree-hero">
+    <div class="container">
+      <div class="tree-breadcrumb">
+        <a href="../index.html">Trang chủ</a> › <a href="my-products.html">Cây của tôi</a> › <span id="treeCrumb">Cây Kỷ Niệm</span>
+      </div>
+      <h1 id="treeTitle">Cây Kỷ Niệm</h1>
+      <p>Mỗi tấm ảnh bé chăm cây sẽ nở thành một chiếc lá trên cây. Bấm vào lá xanh nhạt để thêm khoảnh khắc mới.</p>
+    </div>
+  </div>
+
+  <section style="padding:32px 0 72px">
+    <div class="container">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+        <span class="leaf-count-badge">🍃 <span id="leafCount">0</span>/20 lá</span>
+        <div style="display:flex;gap:8px">
+          <a class="btn btn-outline btn-sm" id="videoLink" href="#">🎬 Video hướng dẫn</a>
+          <a class="btn btn-ghost btn-sm" href="my-products.html">← Quay lại</a>
+        </div>
+      </div>
+
+      <div class="tree-stage" id="treeStage"></div>
+
+      <input type="file" id="leafFileInput" accept="image/*" style="display:none">
+    </div>
+  </section>
+</div>
+
+<!-- Lightbox for a filled leaf -->
+<div class="modal-overlay" id="leafModal" style="position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:300;display:none;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border-radius:16px;padding:18px;width:min(560px,100%);position:relative">
+    <button onclick="closeLeafModal()" style="position:absolute;right:12px;top:8px;background:none;border:0;font-size:1.5rem;cursor:pointer">✕</button>
+    <div id="leafModalBody"></div>
+  </div>
+</div>
+
+<div id="ftr"></div>
+<script src="../assets/js/env.js"></script>
+<script src="../assets/js/api.js?v=20260710e"></script>
+<script src="../assets/js/app.js?v=20260710e"></script>
+<script>
+document.getElementById('hdr').innerHTML = renderHeader('myproducts','../');
+document.getElementById('ftr').innerHTML = renderFooter('../');
+
+const MAX_LEAVES = 20;
+const pid = +new URLSearchParams(location.search).get('id');
+let product = null;
+let images = [];
+
+// Hand-placed canopy positions (percent of stage), roughly oval, 20 slots.
+const LEAF_POSITIONS = [
+  [50,10],[38,13],[62,13],[27,18],[73,18],[45,20],[55,20],
+  [18,26],[82,26],[33,28],[67,28],[50,30],
+  [24,36],[76,36],[40,38],[60,38],
+  [30,45],[70,45],[45,48],[55,48],
+];
+
+function onAuthChange() {
+  if (!Auth.isLoggedIn()) {
+    document.getElementById('lockedView').style.display = 'block';
+    document.getElementById('mainView').style.display = 'none';
+    return;
+  }
+  document.getElementById('lockedView').style.display = 'none';
+  document.getElementById('mainView').style.display = 'block';
+  init();
+}
+
+async function init() {
+  if (!pid) { location.href = 'my-products.html'; return; }
+  try {
+    const { product: p } = await API.products.get(pid);
+    product = p;
+    document.getElementById('treeTitle').textContent = `Cây Kỷ Niệm — ${p.name}`;
+    document.getElementById('treeCrumb').textContent = p.name;
+    document.getElementById('videoLink').href = `product-detail.html?id=${pid}&tab=videos`;
+  } catch {
+    document.getElementById('treeTitle').textContent = 'Cây Kỷ Niệm';
+  }
+  await loadLeaves();
+}
+
+async function loadLeaves() {
+  try {
+    const { images: imgs } = await API.myImages.list(pid);
+    images = imgs;
+  } catch (e) {
+    Toast.show(e.message || 'Không tải được cây kỷ niệm', 'error');
+    images = [];
+  }
+  renderTree();
+}
+
+function renderTree() {
+  document.getElementById('leafCount').textContent = images.length;
+  const stage = document.getElementById('treeStage');
+  const full = images.length >= MAX_LEAVES;
+
+  let html = `<div class="tree-ground"></div><div class="tree-trunk"></div>`;
+  if (full) {
+    html += `<div class="tree-full-msg">🌳 Cây đã đủ ${MAX_LEAVES} lá kỷ niệm rồi!</div>`;
+  }
+
+  for (let i = 0; i < MAX_LEAVES; i += 1) {
+    const [x, y] = LEAF_POSITIONS[i];
+    if (i < images.length) {
+      const img = images[i];
+      html += `<div class="leaf-slot filled" style="left:${x}%;top:${y}%" onclick="openLeaf('${img.id}')" title="${esc(img.title || 'Kỷ niệm')}">
+        <img src="${esc(img.url)}" alt="">
+      </div>`;
+    } else if (i === images.length && !full) {
+      html += `<div class="leaf-slot next" style="left:${x}%;top:${y}%" onclick="addLeaf()" title="Thêm khoảnh khắc mới">+</div>`;
+      break; // only the next slot is clickable — leaves grow one at a time
+    } else {
+      break; // future slots stay hidden until earlier ones are filled
+    }
+  }
+  stage.innerHTML = html;
+}
+
+function addLeaf() {
+  document.getElementById('leafFileInput').click();
+}
+
+document.getElementById('leafFileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const form = new FormData();
+  form.append('image', file);
+  try {
+    await API.myImages.upload(pid, form);
+    Toast.show('🍃 Một chiếc lá mới đã nở!', 'success');
+    await loadLeaves();
+    showNewLeafFeedback(file);
+  } catch (err) {
+    Toast.show(err.message || 'Không thể thêm lá mới', 'error');
+  }
+});
+
+function showNewLeafFeedback(file) {
+  const url = URL.createObjectURL(file);
+  const body = document.getElementById('leafModalBody');
+  body.innerHTML = `
+    <img src="${url}" style="width:100%;max-height:50vh;object-fit:contain;border-radius:12px;margin-bottom:14px">
+    <div style="display:flex;gap:8px;align-items:flex-start;padding:12px;background:var(--cream-2);border-radius:10px">
+      <div class="spinner"></div><span style="color:var(--ink-4)">Plant Buddy đang đọc kỷ niệm...</span>
+    </div>`;
+  document.getElementById('leafModal').style.display = 'flex';
+  callAIFeedback();
+}
+
+async function callAIFeedback() {
+  const box = document.querySelector('#leafModalBody > div:last-child');
+  try {
+    const { reply } = await API.chat.send(
+      [{ role: 'user', content: `Bé đã chăm sóc Sprouty Kit "${product?.name || 'kit'}" và vừa tải ảnh kỷ niệm lên. Hãy khen ngợi sự kiên nhẫn chăm cây của bé, gợi ý 1-2 bước chăm sóc tiếp theo, rồi khuyến khích gia đình tiếp tục lưu nhật ký.` }],
+      'Bạn là Plant Buddy thân thiện của Sprouty Vietnam. Trả lời bằng tiếng Việt, giọng văn ấm áp, khích lệ như đang nói chuyện với phụ huynh và bé, khoảng 4-6 câu.'
+    );
+    if (box) box.innerHTML = `<span style="font-size:1.2rem;flex-shrink:0">🤖</span><div>${esc(reply).replace(/\n/g, '<br>')}</div>`;
+  } catch {
+    if (box) box.innerHTML = `<span style="font-size:1.2rem;flex-shrink:0">🎨</span><div>Tuyệt vời! Bé đã chăm cây rất kiên nhẫn. Hãy ghi lại hôm nay cây thay đổi điều gì, bé đã tưới nước ra sao và cảm xúc của cả nhà khi nhìn thấy mầm cây lớn lên nhé!</div>`;
+  }
+}
+
+function openLeaf(imageId) {
+  const img = images.find(i => i.id === imageId);
+  if (!img) return;
+  const body = document.getElementById('leafModalBody');
+  body.innerHTML = `
+    <img src="${esc(img.url)}" style="width:100%;max-height:60vh;object-fit:contain;border-radius:12px;margin-bottom:14px">
+    <input class="form-input" id="leafTitleInput" value="${esc(img.title || '')}" placeholder="Đặt tên cho khoảnh khắc này" style="margin-bottom:10px">
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary btn-sm" onclick="saveLeafTitle('${img.id}')">Lưu tên</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--rose)" onclick="removeLeaf('${img.id}')">Xoá lá này</button>
+    </div>`;
+  document.getElementById('leafModal').style.display = 'flex';
+}
+
+function closeLeafModal() {
+  document.getElementById('leafModal').style.display = 'none';
+}
+
+async function saveLeafTitle(imageId) {
+  const title = document.getElementById('leafTitleInput').value;
+  try {
+    await API.myImages.update(imageId, { title });
+    Toast.show('Đã lưu', 'success');
+    closeLeafModal();
+    await loadLeaves();
+  } catch (e) { Toast.show(e.message || 'Không thể lưu', 'error'); }
+}
+
+async function removeLeaf(imageId) {
+  if (!confirm('Xoá chiếc lá này khỏi cây?')) return;
+  try {
+    await API.myImages.remove(imageId);
+    Toast.show('Đã xoá lá', 'success');
+    closeLeafModal();
+    await loadLeaves();
+  } catch (e) { Toast.show(e.message || 'Không thể xoá', 'error'); }
+}
+
+Auth.onReady(onAuthChange);
+</script>
+</body>
+</html>

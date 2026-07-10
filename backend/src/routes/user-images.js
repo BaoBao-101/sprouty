@@ -10,6 +10,10 @@ const updateSchema = z.object({
   note: noHtml('Ghi chú').and(z.string().max(1000)).optional().nullable(),
 });
 
+// Cây Kỷ Niệm caps leaves (photos) per kit so storage doesn't grow unbounded —
+// keep in sync with MAX_LEAVES in pages/tree.html.
+const MAX_LEAVES_PER_PRODUCT = 20;
+
 function imageDto(row) {
   return {
     id: row.id,
@@ -41,6 +45,12 @@ export default async function userImageRoutes(fastify) {
     const productId = intParam(req.params.productId, 'ID sản phẩm');
     const ok = await canAccessProductFeature(fastify.prisma, req.user, productId, 'image_uploads');
     if (!ok) throw new AppError('Mua sản phẩm hoặc nhập mã để tải ảnh cho sản phẩm này.', 403);
+    const existingCount = await fastify.prisma.userProductImage.count({
+      where: { userId: req.user.id, productId, status: { not: 'deleted' } },
+    });
+    if (existingCount >= MAX_LEAVES_PER_PRODUCT) {
+      throw new AppError(`Cây đã đủ ${MAX_LEAVES_PER_PRODUCT} lá kỷ niệm rồi — hãy xoá bớt ảnh cũ nếu muốn thêm ảnh mới.`, 409);
+    }
     const { file, fields } = await multipartFields(req);
     const asset = await createAsset(fastify.prisma, {
       ownerUserId: req.user.id,
