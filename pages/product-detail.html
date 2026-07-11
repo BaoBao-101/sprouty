@@ -237,29 +237,33 @@ function _renderPage(p, allProds) {
   const discount = p.old ? Math.round((1 - p.price/p.old)*100) : 0;
 
   const kitNum = String(p.id).padStart(2,'0');
-  const svgSrc    = `../assets/images/products/kit-${p.id}.svg`;
-  const firstImage = Array.isArray(p.images) && p.images[0] && !p.images[0].includes('product-images') ? '..' + p.images[0] : '';
-  const primaryImg = firstImage || svgSrc;
-  const thumbBgs  = [p.bg, '#F8F8F8', '#FFF0E8', '#F0FDF4'];
+  const svgSrc = `../assets/images/products/kit-${p.id}.svg`;
+  // A product can have a real photo collection (e.g. multiple angles/scenes);
+  // filter out the old orphaned "product-images" path and keep every real one.
+  const realImages = (Array.isArray(p.images) ? p.images : [])
+    .filter(u => u && !u.includes('product-images'))
+    .map(u => '..' + u);
+  const primaryImg = realImages[0] || svgSrc;
+  const thumbBgs = [p.bg, '#F8F8F8', '#FFF0E8', '#F0FDF4'];
 
   document.getElementById('pdpWrap').innerHTML = `
   <div class="pdp-wrap">
     <!-- Gallery -->
     <div class="pdp-gallery">
       <div class="pdp-img-main has-real-photo" id="mainImg" style="background:${p.bg}">
-        <img src="${primaryImg}" alt="${esc(p.name)}" id="mainImgEl" class="pdp-svg-img"
+        <img src="${primaryImg}" alt="${esc(p.name)}" id="mainImgEl" class="${realImages.length ? 'pdp-real-img' : 'pdp-svg-img'}"
           onerror="this.src='${svgSrc}';this.className='pdp-svg-img';document.getElementById('mainImg').classList.remove('has-real-photo');this.onerror=function(){this.style.display='none';document.getElementById('mainImgFb').style.display='flex'}">
         <div id="mainImgFb" style="display:none;font-size:9rem;width:100%;height:100%;align-items:center;justify-content:center">${esc(p.em)}</div>
         ${p.badge ? `<span class="pdp-badge-main ${p.badge}">${badgeMap[p.badge]}</span>` : ''}
       </div>
-      <div class="pdp-thumbs">
-        ${[1,2,3,4].map((n, i) => `
-        <div class="pdp-thumb ${i === 0 ? 'active' : ''}" onclick="setThumb(this,${i})" style="background:${thumbBgs[i]}">
-          <img src="${primaryImg}"
-            alt="${esc(p.name)} ${n}" style="width:100%;height:100%;object-fit:contain;padding:8px"
+      ${realImages.length > 1 ? `<div class="pdp-thumbs">
+        ${realImages.map((src, i) => `
+        <div class="pdp-thumb ${i === 0 ? 'active' : ''}" onclick="setThumb(this,${i})" style="background:${thumbBgs[i % thumbBgs.length]}">
+          <img src="${src}"
+            alt="${esc(p.name)} ${i + 1}" style="width:100%;height:100%;object-fit:contain;padding:8px"
             onerror="this.src='${svgSrc}';this.style.objectFit='contain';this.style.padding='8px';this.onerror=function(){this.style.display='none';this.parentElement.textContent='${esc(p.em)}'}">
         </div>`).join('')}
-      </div>
+      </div>` : ''}
     </div>
 
     <!-- Info -->
@@ -450,16 +454,15 @@ function _renderPage(p, allProds) {
   document.getElementById('relGrid').innerHTML = (rel.length ? rel : allProds.filter(x => x.id !== pid).slice(0, 4))
     .map(r => productCardHTML(r, '../')).join('');
 
-  const _svgFb   = `../assets/images/products/kit-${pid}.svg`;
-  const _primary = (Array.isArray(p.images) && p.images[0] && !p.images[0].includes('product-images')) ? '..' + p.images[0] : _svgFb;
-  const _thumbBg = [p.bg||'var(--parchment)', '#F8F8F8', '#FFF0E8', '#F0FDF4'];
-  thumbData = [1,2,3,4].map((n,i) => ({
-    src: _primary,
-    svgFallback: _svgFb,
-    em: p.em || '',
-    bg: _thumbBg[i],
-    isReal: false,
-  }));
+  thumbData = realImages.length > 1
+    ? realImages.map((src, i) => ({
+        src,
+        svgFallback: svgSrc,
+        em: p.em || '',
+        bg: thumbBgs[i % thumbBgs.length],
+        isReal: true,
+      }))
+    : [];
   loadPdpVideos();
 
   // Deep-link support: coming from "Cây của tôi" → Xem video hướng dẫn
