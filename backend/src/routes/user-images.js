@@ -16,8 +16,19 @@ const updateSchema = z.object({
 const MAX_LEAVES_STANDARD = 10;
 const MAX_LEAVES_VIP = 25;
 
+// Guards against accidental-upload spam: a user can remove (and re-upload
+// a replacement) at most this many leaves per kit — soft-deleted rows are
+// kept, so counting them doubles as the usage counter, no extra column.
+const MAX_REMOVALS_PER_PRODUCT = 5;
+
 async function maxLeavesFor(prisma, userId) {
   return (await isVipUser(prisma, userId)) ? MAX_LEAVES_VIP : MAX_LEAVES_STANDARD;
+}
+
+async function removalsUsedFor(prisma, userId, productId) {
+  return prisma.userProductImage.count({
+    where: { userId, productId, status: 'deleted' },
+  });
 }
 
 function imageDto(row) {
@@ -39,15 +50,21 @@ export default async function userImageRoutes(fastify) {
     const productId = intParam(req.params.productId, 'ID sản phẩm');
     const ok = await canAccessProductFeature(fastify.prisma, req.user, productId, 'image_uploads');
     if (!ok) throw new AppError('Bạn chưa có quyền quản lý ảnh cho sản phẩm này.', 403);
-    const [images, maxLeaves] = await Promise.all([
+    const [images, maxLeaves, removalsUsed] = await Promise.all([
       fastify.prisma.userProductImage.findMany({
         where: { userId: req.user.id, productId, status: { not: 'deleted' } },
         include: { asset: true },
         orderBy: { createdAt: 'desc' },
       }),
       maxLeavesFor(fastify.prisma, req.user.id),
+      removalsUsedFor(fastify.prisma, req.user.id, productId),
     ]);
-    return { images: images.map(imageDto), maxLeaves };
+    return {
+      images: images.map(imageDto),
+      maxLeaves,
+      removalsUsed,
+      removalsMax: MAX_REMOVALS_PER_PRODUCT,
+    };
   });
 
   fastify.post('/my-products/:productId/images', { preHandler: [requireAuth, requireCsrf] }, async (req, reply) => {
@@ -110,6 +127,10 @@ export default async function userImageRoutes(fastify) {
       where: { id: req.params.imageId, userId: req.user.id, status: { not: 'deleted' } },
     });
     if (!existing) return reply.code(404).send({ message: 'Không tìm thấy ảnh.' });
+    const removalsUsed = await removalsUsedFor(fastify.prisma, req.user.id, existing.productId);
+    if (removalsUsed >= MAX_REMOVALS_PER_PRODUCT) {
+      throw new AppError(`Mỗi cây chỉ được gỡ tối đa ${MAX_REMOVALS_PER_PRODUCT} lần — bạn đã dùng hết lượt gỡ.`, 403);
+    }
     const image = await fastify.prisma.userProductImage.update({
       where: { id: existing.id },
       data: { status: 'deleted' },

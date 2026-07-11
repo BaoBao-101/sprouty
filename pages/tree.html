@@ -71,6 +71,21 @@
       background:var(--parchment); border-radius:var(--r-full);
       padding:6px 14px; font-family:var(--font-h); font-size:.82rem; font-weight:700; color:var(--ink-2);
     }
+
+    /* Leaf lightbox */
+    .leaf-modal-card {
+      background:var(--surface); border-radius:16px; padding:18px;
+      width:min(560px,100%); max-height:90vh; overflow-y:auto; position:relative;
+    }
+    .leaf-media-frame {
+      background:var(--parchment); border:6px solid var(--surface);
+      outline:2px solid var(--primary-300); border-radius:14px;
+      padding:8px; margin-bottom:14px; box-shadow:var(--sh-sm);
+    }
+    .leaf-media-frame img, .leaf-media-frame video {
+      display:block; width:100%; max-height:56vh; object-fit:contain; border-radius:8px;
+    }
+    .leaf-remove-limit { font-size:.76rem; color:var(--ink-4); margin-top:6px }
   </style>
 </head>
 <body>
@@ -116,8 +131,8 @@
 </div>
 
 <!-- Lightbox for a filled leaf -->
-<div class="modal-overlay" id="leafModal" style="position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:300;display:none;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--surface);border-radius:16px;padding:18px;width:min(560px,100%);max-height:90vh;overflow-y:auto;position:relative">
+<div class="modal-overlay" id="leafModal">
+  <div class="leaf-modal-card">
     <button onclick="closeLeafModal()" style="position:absolute;right:12px;top:8px;background:none;border:0;font-size:1.5rem;cursor:pointer;z-index:1">✕</button>
     <div id="leafModalBody"></div>
   </div>
@@ -137,6 +152,8 @@ let MAX_LEAVES = 10;
 const pid = +new URLSearchParams(location.search).get('id');
 let product = null;
 let images = [];
+let removalsUsed = 0;
+let removalsMax = 5;
 
 // Hand-placed positions (percent of stage) matching Tree.png's 4 canopy
 // lobes (top-left, top-right, bottom-left, bottom-right) — 5 leaves per
@@ -186,9 +203,11 @@ function isVideoLeaf(img) {
 
 async function loadLeaves() {
   try {
-    const { images: imgs, maxLeaves } = await API.myImages.list(pid);
+    const { images: imgs, maxLeaves, removalsUsed: used, removalsMax: max } = await API.myImages.list(pid);
     images = imgs;
     if (maxLeaves) MAX_LEAVES = Math.min(maxLeaves, LEAF_POSITIONS.length);
+    if (typeof used === 'number') removalsUsed = used;
+    if (typeof max === 'number') removalsMax = max;
     document.getElementById('leafMax').textContent = MAX_LEAVES;
   } catch (e) {
     Toast.show(e.message || 'Không tải được cây kỷ niệm', 'error');
@@ -257,13 +276,13 @@ function showNewLeafFeedback(file) {
   const isVideo = file.type.startsWith('video/');
   const body = document.getElementById('leafModalBody');
   body.innerHTML = `
-    ${isVideo
-      ? `<video src="${url}" controls style="width:100%;max-height:50vh;border-radius:12px;margin-bottom:14px"></video>`
-      : `<img src="${url}" style="width:100%;max-height:50vh;object-fit:contain;border-radius:12px;margin-bottom:14px">`}
+    <div class="leaf-media-frame">
+      ${isVideo ? `<video src="${url}" controls></video>` : `<img src="${url}">`}
+    </div>
     <div style="display:flex;gap:8px;align-items:flex-start;padding:12px;background:var(--cream-2);border-radius:10px">
       <div class="spinner"></div><span style="color:var(--ink-4)">Plant Buddy đang đọc kỷ niệm...</span>
     </div>`;
-  document.getElementById('leafModal').style.display = 'flex';
+  openLeafModal();
   callAIFeedback();
 }
 
@@ -285,20 +304,28 @@ function openLeaf(imageId) {
   if (!img) return;
   const body = document.getElementById('leafModalBody');
   const isVideo = isVideoLeaf(img);
+  const removalsLeft = Math.max(0, removalsMax - removalsUsed);
   body.innerHTML = `
-    ${isVideo
-      ? `<video src="${esc(img.url)}" controls style="width:100%;max-height:60vh;border-radius:12px;margin-bottom:14px"></video>`
-      : `<img src="${esc(img.url)}" style="width:100%;max-height:60vh;object-fit:contain;border-radius:12px;margin-bottom:14px">`}
+    <div class="leaf-media-frame">
+      ${isVideo
+        ? `<video src="${esc(img.url)}" controls onerror="this.closest('.leaf-media-frame').innerHTML='<p style=&quot;padding:20px;text-align:center;color:var(--ink-4)&quot;>Không tải được video này.</p>'"></video>`
+        : `<img src="${esc(img.url)}" alt="${esc(img.title || 'Kỷ niệm')}" onerror="this.closest('.leaf-media-frame').innerHTML='<p style=&quot;padding:20px;text-align:center;color:var(--ink-4)&quot;>Không tải được ảnh này.</p>'">`}
+    </div>
     <input class="form-input" id="leafTitleInput" value="${esc(img.title || '')}" placeholder="Đặt tên cho khoảnh khắc này" style="margin-bottom:10px">
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" onclick="saveLeafTitle('${img.id}')">Lưu tên</button>
-      <button class="btn btn-ghost btn-sm" style="color:var(--rose)" onclick="removeLeaf('${img.id}')">Xoá lá này</button>
-    </div>`;
-  document.getElementById('leafModal').style.display = 'flex';
+      <button class="btn btn-ghost btn-sm" style="color:var(--rose)" onclick="removeLeaf('${img.id}')" ${removalsLeft <= 0 ? 'disabled' : ''}>Xoá lá này</button>
+    </div>
+    <p class="leaf-remove-limit">Lượt gỡ &amp; đăng lại đã dùng: ${removalsUsed}/${removalsMax}${removalsLeft <= 0 ? ' — đã hết lượt gỡ cho cây này' : ''}</p>`;
+  openLeafModal();
+}
+
+function openLeafModal() {
+  document.getElementById('leafModal').classList.add('open');
 }
 
 function closeLeafModal() {
-  document.getElementById('leafModal').style.display = 'none';
+  document.getElementById('leafModal').classList.remove('open');
 }
 
 async function saveLeafTitle(imageId) {
