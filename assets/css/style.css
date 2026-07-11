@@ -4,6 +4,10 @@
    ═══════════════════════════════════════════════════════ */
 
 @font-face{font-family:Comfortaa;src:url('../fonts/Comfortaa-VariableFont_wght.ttf') format('truetype');font-weight:300 700;font-style:normal;font-display:swap}
+@font-face{font-family:Baloo;src:url('../fonts/Baloo-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'Avenir Next LT Pro';src:url('../fonts/AvenirNextLTPro-Light.otf') format('opentype');font-weight:300;font-style:normal;font-display:swap}
+@font-face{font-family:'Avenir Next LT Pro';src:url('../fonts/AvenirNextLTPro-Medium.otf') format('opentype');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'Avenir Next LT Pro';src:url('../fonts/AvenirNextLTPro-Bold.otf') format('opentype');font-weight:700;font-style:normal;font-display:swap}
 
 /* ── CSS Variables ──────────────────────────────────── */
 :root {
@@ -31,9 +35,9 @@
   --parchment:   #ECFCCB;
   --parchment-2: #BBF7D0;
   --surface:     #FFFFFF;
-  --font-display:'Comfortaa', system-ui, sans-serif;
-  --font-h:      'Comfortaa', system-ui, sans-serif;
-  --font-body:   'Comfortaa', system-ui, sans-serif;
+  --font-display:'Baloo', 'Comfortaa', system-ui, sans-serif;
+  --font-h:      'Avenir Next LT Pro', 'Comfortaa', system-ui, sans-serif;
+  --font-body:   'Avenir Next LT Pro', 'Comfortaa', system-ui, sans-serif;
   --font-hand:   'Comfortaa', system-ui, sans-serif;
   --r-sm:  6px;  --r-md: 10px; --r-lg: 16px;
   --r-xl:  24px; --r-2xl: 36px; --r-full: 999px;
@@ -57,7 +61,10 @@
 /* ── Reset ──────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
-body{font-family:var(--font-body);font-size:15.5px;line-height:1.72;color:var(--ink-2);background:var(--cream);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:hidden}
+/* Avenir Next LT Pro ("nội dung phụ") tracks ~10-15% tighter than default;
+   inherits everywhere except elements below that set their own explicit
+   letter-spacing (uppercase label tracking etc. is untouched). */
+body{font-family:var(--font-body);font-size:15.5px;line-height:1.72;color:var(--ink-2);background:var(--cream);letter-spacing:-.015em;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:hidden}
 img{display:block;max-width:100%}
 a{color:var(--orange);text-decoration:none}
 a:hover{color:var(--terracotta)}
@@ -65,12 +72,14 @@ button{cursor:pointer;font-family:var(--font-body);border:none;background:none}
 input,textarea,select{font-family:var(--font-body)}
 
 /* ── Typography ─────────────────────────────────────── */
-h1,h2,h3,h4,h5{font-family:var(--font-display);color:var(--ink);letter-spacing:-.01em}
+/* Baloo ("tiêu đề") tracks noticeably wide by default — tightened ~25%. */
+h1,h2,h3,h4,h5{color:var(--ink)}
+h1,h2,h3{font-family:var(--font-display);letter-spacing:-.04em}
 h1{font-size:clamp(1.85rem,4.8vw,3rem);font-weight:700;line-height:1.17}
 h2{font-size:clamp(1.38rem,3.2vw,2rem);font-weight:600;line-height:1.27}
 h3{font-size:clamp(1.06rem,2vw,1.36rem);font-weight:600;line-height:1.33}
-h4{font-size:.97rem;font-weight:700;font-family:var(--font-h);line-height:1.45;letter-spacing:0}
-h5{font-size:.88rem;font-weight:700;font-family:var(--font-h)}
+h4{font-size:.97rem;font-weight:700;font-family:var(--font-h);line-height:1.45;letter-spacing:-.015em}
+h5{font-size:.88rem;font-weight:700;font-family:var(--font-h);letter-spacing:-.015em}
 p{color:var(--ink-3);font-size:.94rem;line-height:1.75}
 strong{color:var(--ink-2)}
 .lead{font-size:1.02rem;line-height:1.8;color:var(--ink-3)}
@@ -108,7 +117,7 @@ strong{color:var(--ink-2)}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
 .brand-logo{height:84px;width:auto;object-fit:contain;transition:transform .25s}
 .brand:hover .brand-logo{transform:scale(1.04)}
-.brand-text{font-family:var(--font-display);font-size:2rem;font-weight:700;color:var(--orange);letter-spacing:-.02em}
+.brand-text{font-family:var(--font-display);font-size:2rem;font-weight:700;color:var(--orange);letter-spacing:-.04em}
 .nav-links{display:flex;align-items:center;gap:4px;margin-left:36px;flex:1}
 .nav-links a{font-family:var(--font-h);font-size:.92rem;font-weight:600;color:var(--ink-3);padding:6px 14px;border-radius:var(--r-full);transition:all .2s;text-decoration:none}
 .nav-links a:hover{background:var(--parchment);color:var(--ink)}
