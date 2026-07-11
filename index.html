@@ -7,7 +7,7 @@
   <title>Sprouty — Gieo hạt thật, lưu kỷ niệm số cho gia đình</title>
   <meta name="description" content="Sprouty kết hợp bộ kit trồng cây, vẽ chậu, IoT/STEM, Cây Kỷ Niệm số và AI để gia đình lưu lại hành trình lớn lên của bé.">
   <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="assets/css/style.css?v=20260711c">
+  <link rel="stylesheet" href="assets/css/style.css?v=20260712a">
   <style>
     /* Homepage-only extras */
     .section-title { text-align:center; margin-bottom:48px }
@@ -20,10 +20,10 @@
     .uflow-circle { width:100px; height:100px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; box-shadow:0 8px 28px rgba(0,0,0,.15); flex-shrink:0; position:relative; z-index:2 }
     .uflow-num { font-family:var(--font-h); font-size:.7rem; font-weight:800; color:rgba(255,255,255,.7); letter-spacing:.05em }
     .uflow-em { font-size:2rem; line-height:1 }
-    .c1 { background:linear-gradient(135deg,#60A5FA,#3B82F6) }
-    .c2 { background:linear-gradient(135deg,#F87171,#EF4444) }
-    .c3 { background:linear-gradient(135deg,#FBBF24,#F59E0B) }
-    .c4 { background:linear-gradient(135deg,#4ADE80,#22C55E) }
+    .c1 { background:linear-gradient(135deg,#8DDFF7,var(--accent-sky)) }
+    .c2 { background:linear-gradient(135deg,#FFA9B1,var(--accent-coral)) }
+    .c3 { background:linear-gradient(135deg,#FFDB7A,var(--accent-yellow)) }
+    .c4 { background:linear-gradient(135deg,var(--primary-300),var(--primary-500)) }
     .uflow-connector { width:80px; height:24px; flex-shrink:0; position:relative; margin:8px 0; z-index:1 }
     .uflow-connector.right { color:var(--orange) }
     .uflow-connector.left { color:var(--green) }
@@ -37,13 +37,20 @@
     .uflow-m-dot { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#fff; font-family:var(--font-h); font-size:.78rem; font-weight:800; box-shadow:0 4px 14px rgba(0,0,0,.15) }
     .uflow-m-line { width:2px; background:var(--parchment-2); flex-shrink:0; margin:48px 0 0; height:calc(100% - 48px); align-self:stretch }
 
-    .feat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; margin-top:44px }
-    .feat-card { background:var(--surface); border:1.5px solid var(--parchment-2); border-radius:var(--r-xl); padding:28px 24px; transition:all .25s var(--ease); box-shadow:var(--sh-sm) }
-    .feat-card:hover { transform:translateY(-4px); box-shadow:var(--sh-lg); border-color:var(--terra-3) }
-    .feat-em { font-size:2.2rem; margin-bottom:14px; display:block }
-    .feat-title { font-family:var(--font-display); font-size:1.08rem; font-weight:600; color:var(--ink); margin-bottom:8px }
-    .feat-desc { font-size:.86rem; color:var(--ink-3); line-height:1.7 }
+    .feat-list { display:grid; grid-template-columns:repeat(2,1fr); gap:32px 40px; margin-top:44px }
+    .feat-list-item { display:flex; gap:16px; align-items:flex-start }
+    .feat-icon { width:48px; height:48px; border-radius:var(--r-lg); display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0; color:#fff }
+    .feat-icon.green  { background:linear-gradient(135deg,var(--primary-300),var(--primary-500)) }
+    .feat-icon.coral  { background:linear-gradient(135deg,#FFA9B1,var(--accent-coral)) }
+    .feat-icon.lavender { background:linear-gradient(135deg,#C4AEFF,var(--accent-lavender)) }
+    .feat-icon.sky    { background:linear-gradient(135deg,#8DDFF7,var(--accent-sky)) }
+    .feat-title { font-family:var(--font-display); font-size:1.05rem; font-weight:600; color:var(--ink); margin-bottom:5px }
+    .feat-desc { font-size:.86rem; color:var(--ink-3); line-height:1.65 }
     .review-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; margin-top:44px }
+    .age-icon-wrap { width:68px; height:68px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2rem; margin:0 auto 14px }
+    .age-icon-wrap.green  { background:var(--primary-100) }
+    .age-icon-wrap.orange { background:var(--accent-orange-soft) }
+    .age-icon-wrap.coral  { background:#FFE3E5 }
     .cta-banner { background:linear-gradient(135deg,var(--terracotta) 0%,var(--orange-lt) 100%); border-radius:var(--r-2xl); padding:56px 48px; text-align:center; position:relative; overflow:hidden }
     .cta-banner::before { content:''; position:absolute; top:-60px; right:-60px; width:300px; height:300px; border-radius:50%; background:rgba(255,255,255,.07) }
     .cta-banner::after { content:''; position:absolute; bottom:-40px; left:-40px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.05) }
@@ -52,10 +59,10 @@
     @media(max-width:1024px) {
       .user-flow-track { display:none }
       .user-flow-mobile { display:flex; flex-direction:column }
-      .feat-grid { grid-template-columns:1fr }
+      .feat-list { grid-template-columns:1fr }
       .review-grid { grid-template-columns:1fr }
     }
-    @media(max-width:640px) { .feat-grid { grid-template-columns:1fr } .cta-banner { padding:36px 24px } }
+    @media(max-width:640px) { .feat-list { grid-template-columns:1fr } .cta-banner { padding:36px 24px } }
   </style>
 </head>
 <body>
@@ -67,18 +74,18 @@
   <div class="container">
     <div class="hero-grid">
       <div class="hero-left fade-up">
-        <div class="hero-eyebrow">🌍 Kỷ niệm từ thiên nhiên cho gia đình</div>
+        <div class="hero-eyebrow">🌿 Kit trồng cây & lưu giữ ký ức cho bé</div>
         <h1 class="hero-title">Gieo kỷ niệm,<br><em>lớn lên cùng nhau</em></h1>
-        <p class="hero-subtitle">Plant real seeds, paint your pot, and watch memories bloom — Sprouty biến mỗi chậu cây của bé thành một Cây Kỷ Niệm số đầy phép màu.</p>
+        <p class="hero-subtitle">Sprouty kết hợp trồng cây, khám phá khoa học và lưu giữ ký ức để mỗi khoảnh khắc của bé đều trở thành một chặng đường đáng nhớ.</p>
         <div class="hero-actions">
-          <a href="pages/shop.html" class="btn btn-primary btn-lg">Khám phá Sprouty Kit →</a>
+          <a href="pages/shop.html" class="btn btn-primary btn-lg">Khám phá bộ KIT →</a>
           <a href="pages/workshop.html" class="btn btn-outline btn-lg">Xem Workshop trồng cây</a>
         </div>
         <div class="hero-chips">
-          <span class="hero-chip">🌱 Hạt giống thật</span>
-          <span class="hero-chip">🎨 Vẽ chậu của bé</span>
-          <span class="hero-chip">🌳 Cây Kỷ Niệm số</span>
-          <span class="hero-chip">🤖 AI Plant Buddy</span>
+          <span class="hero-chip">⭐ Phù hợp 3-11 tuổi</span>
+          <span class="hero-chip">🛡️ An toàn & thân thiện</span>
+          <span class="hero-chip">🎓 Giáo dục STEM</span>
+          <span class="hero-chip">🤖 Plant Buddy AI</span>
         </div>
       </div>
       <div class="hero-right fade-up delay-2">
@@ -123,7 +130,7 @@
   <div style="position:absolute;right:-80px;bottom:-60px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(88,129,87,.07) 0%,transparent 70%);pointer-events:none"></div>
   <div class="container" style="position:relative;z-index:1">
     <div class="section-title">
-      <div class="overline">Quy trình sử dụng</div>
+      <div class="overline">Hành trình cùng Sprouty</div>
       <h2>Hành trình của bé với Sprouty</h2>
       <p class="lead" style="max-width:520px;margin:12px auto 0">Từ một bộ kit ngoài đời đến khu vườn kỷ niệm số — chỉ 4 bước gia đình có thể làm cùng nhau.</p>
     </div>
@@ -205,11 +212,11 @@
 <section class="section" style="background:var(--cream-2)">
   <div class="container">
     <div class="section-title">
-      <div class="overline">Sản phẩm nổi bật</div>
+      <div class="overline">Các bộ kit nổi bật</div>
       <h2>Được bé yêu thích nhất</h2>
-      <p class="lead" style="max-width:480px;margin:12px auto 0">Những bộ kit trồng cây, vẽ chậu và IoT giúp bé học bằng tay, gia đình lưu lại bằng trái tim.</p>
+      <p class="lead" style="max-width:480px;margin:12px auto 0">Những bộ kit trồng cây sáng tạo, an toàn và phù hợp cho cả người mới bắt đầu.</p>
     </div>
-    <div class="grid-4" id="featuredGrid"></div>
+    <div class="grid-3" id="featuredGrid"></div>
     <div style="text-align:center;margin-top:36px">
       <a href="pages/shop.html" class="btn btn-outline btn-lg">Xem tất cả sản phẩm →</a>
     </div>
@@ -220,39 +227,39 @@
 <section class="section">
   <div class="container">
     <div class="section-title">
-      <div class="overline">Tại sao chọn Sprouty</div>
+      <div class="overline">Vì sao chọn Sprouty</div>
       <h2>Nhiều hơn một chậu cây nhỏ</h2>
     </div>
-    <div class="feat-grid">
-      <div class="feat-card">
-        <span class="feat-em">🌳</span>
-        <div class="feat-title">Digital Memory Tree</div>
-        <p class="feat-desc">Mỗi chiếc lá lưu một ảnh, video hoặc nhật ký. Cây số lớn dần theo từng khoảnh khắc bé chăm cây ngoài đời.</p>
+    <div class="feat-list">
+      <div class="feat-list-item">
+        <div class="feat-icon coral">🌳</div>
+        <div><div class="feat-title">Lưu giữ ký ức trọn vẹn</div>
+        <p class="feat-desc">Mỗi chiếc lá lưu một ảnh, video hoặc nhật ký. Cây số lớn dần theo từng khoảnh khắc bé chăm cây ngoài đời.</p></div>
       </div>
-      <div class="feat-card">
-        <span class="feat-em">🤖</span>
-        <div class="feat-title">AI Story Magic</div>
-        <p class="feat-desc">AI tạo caption dễ thương, lời nhắn từ Bạn Cây và bản tóm tắt câu chuyện hàng tháng cho gia đình.</p>
+      <div class="feat-list-item">
+        <div class="feat-icon lavender">🤖</div>
+        <div><div class="feat-title">AI Plant Buddy</div>
+        <p class="feat-desc">AI tạo caption dễ thương, lời nhắn từ Bạn Cây và bản tóm tắt câu chuyện hàng tháng cho gia đình.</p></div>
       </div>
-      <div class="feat-card">
-        <span class="feat-em">🪴</span>
-        <div class="feat-title">Paint Your Pot</div>
-        <p class="feat-desc">Bé tự trang trí chậu đất nung bằng màu acrylic. Mỗi chậu là một dấu ấn riêng và là nhà đầu tiên của Bạn Cây.</p>
+      <div class="feat-list-item">
+        <div class="feat-icon green">🎨</div>
+        <div><div class="feat-title">Học mà chơi</div>
+        <p class="feat-desc">Bé tự trang trí chậu, gieo hạt thật và kết hợp kiến thức khoa học, kỹ năng sống vào từng buổi chăm cây.</p></div>
       </div>
-      <div class="feat-card">
-        <span class="feat-em">✅</span>
-        <div class="feat-title">An toàn cho gia đình</div>
-        <p class="feat-desc">Sprouty ưu tiên quyền riêng tư của trẻ em, không bán dữ liệu, không dùng ảnh gia đình để huấn luyện AI.</p>
+      <div class="feat-list-item">
+        <div class="feat-icon green">🛡️</div>
+        <div><div class="feat-title">An toàn cho bé</div>
+        <p class="feat-desc">Nguyên liệu tự nhiên, không độc hại, dụng cụ vừa tay và an toàn tuyệt đối cho trẻ nhỏ.</p></div>
       </div>
-      <div class="feat-card">
-        <span class="feat-em">🏫</span>
-        <div class="feat-title">Workshop trồng cây & STEM</div>
-        <p class="feat-desc">Workshop nhóm nhỏ giúp bé vẽ chậu, gieo hạt, setup tài khoản Sprouty hoặc lắp cảm biến IoT cùng phụ huynh.</p>
+      <div class="feat-list-item">
+        <div class="feat-icon sky">🎓</div>
+        <div><div class="feat-title">Workshop & STEM</div>
+        <p class="feat-desc">Workshop nhóm nhỏ giúp bé vẽ chậu, gieo hạt, setup tài khoản Sprouty hoặc lắp cảm biến IoT cùng phụ huynh.</p></div>
       </div>
-      <div class="feat-card">
-        <span class="feat-em">💝</span>
-        <div class="feat-title">Family Memories</div>
-        <p class="feat-desc">Chia sẻ cột mốc với ông bà, lưu lại hành trình cây lớn lên và biến ký ức gia đình thành một khu vườn sống động.</p>
+      <div class="feat-list-item">
+        <div class="feat-icon coral">💝</div>
+        <div><div class="feat-title">Kết nối gia đình</div>
+        <p class="feat-desc">Chia sẻ cột mốc với ông bà, lưu lại hành trình cây lớn lên và biến ký ức gia đình thành một khu vườn sống động.</p></div>
       </div>
     </div>
   </div>
@@ -262,28 +269,28 @@
 <section class="section" style="background:var(--cream-2)">
   <div class="container">
     <div class="section-title">
-      <div class="overline">Chọn theo gia đình</div>
+      <div class="overline">Sprouty phù hợp với ai</div>
       <h2>Sprouty phù hợp với ai?</h2>
       <p class="lead" style="max-width:480px;margin:12px auto 0">Từ bé nhỏ thích vẽ chậu đến học sinh mê STEM, Sprouty có một hành trình trồng cây phù hợp.</p>
     </div>
     <div class="age-grid">
       <div class="age-card" onclick="location.href='pages/shop.html?age=4-6'">
-        <span class="age-em">🌱</span>
+        <div class="age-icon-wrap green"><span class="age-em" style="margin:0">🌱</span></div>
         <span class="age-range">4–10 tuổi</span>
         <p class="age-sub">Vẽ chậu, gieo hạt, tưới nước và lưu ảnh mỗi tuần. Ba mẹ đồng hành nhưng bé là người chăm cây chính.</p>
       </div>
       <div class="age-card" onclick="location.href='pages/shop.html?age=6-8'">
-        <span class="age-em">🌿</span>
+        <div class="age-icon-wrap green"><span class="age-em" style="margin:0">🌿</span></div>
         <span class="age-range">10–18 tuổi</span>
         <p class="age-sub">Smart Kit với Arduino, cảm biến độ ẩm, OLED và LED giúp học sinh học STEM qua cây thật.</p>
       </div>
       <div class="age-card" onclick="location.href='pages/shop.html?age=8-10'">
-        <span class="age-em">🌳</span>
+        <div class="age-icon-wrap orange"><span class="age-em" style="margin:0">🌳</span></div>
         <span class="age-range">Phụ huynh</span>
         <p class="age-sub">Lưu ảnh, video, nhật ký và những câu nói nhỏ của con thành một Cây Kỷ Niệm riêng tư cho gia đình.</p>
       </div>
       <div class="age-card" onclick="location.href='pages/shop.html?age=10-12'">
-        <span class="age-em">✨</span>
+        <div class="age-icon-wrap coral"><span class="age-em" style="margin:0">✨</span></div>
         <span class="age-range">VIP Garden</span>
         <p class="age-sub">Mở khóa hiệu ứng ban đêm, cây vàng, Plant Buddies hiếm và nhật ký AI hàng tháng.</p>
       </div>
@@ -332,7 +339,7 @@
   <div class="container">
     <div class="ai-promo">
       <div style="position:relative;z-index:1;max-width:600px">
-        <div class="overline" style="color:var(--terra-3)">Tính năng đặc biệt</div>
+        <div class="overline" style="color:rgba(255,255,255,.85)">Tính năng đặc biệt</div>
         <h2 style="color:#fff;margin:10px 0 14px">AI Plant Buddy biết kể chuyện cùng bé</h2>
         <p style="color:rgba(255,255,255,.75);font-size:.97rem;line-height:1.75;margin-bottom:28px">Tạo lời nhắn từ Bạn Cây, caption cho ảnh mới, hoặc gợi ý cách ghi lại một ngày chăm cây thành kỷ niệm đáng nhớ.</p>
         <div style="display:flex;gap:12px;flex-wrap:wrap">
@@ -383,12 +390,12 @@ const BASE_IMG = 'assets/images/products/';
   // Make the catalog available to Cart so add-to-cart resolves correctly.
   Cart.register(catalog);
 
-  // Featured grid: prioritize hot, then new, then any other kit, capped at 4.
+  // Featured grid: prioritize hot, then new, then any other kit, capped at 3.
   const featured = [
     ...catalog.filter(p => p.badge === 'hot').slice(0, 2),
     ...catalog.filter(p => p.badge === 'new').slice(0, 1),
     ...catalog.filter(p => !p.badge && p.cat === 'kit').slice(0, 1),
-  ].slice(0, 4);
+  ].slice(0, 3);
   document.getElementById('featuredGrid').innerHTML =
     featured.map(p => productCardHTML(p, '')).join('') ||
     `<div style="grid-column:1/-1;text-align:center;color:var(--ink-4);padding:32px">Chưa có sản phẩm nổi bật.</div>`;
