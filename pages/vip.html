@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>VIP Garden — Sprouty</title>
   <meta name="description" content="Nâng cấp VIP Garden để mở khóa thêm lá kỷ niệm, hiệu ứng theo mùa, Plant Buddies hiếm và AI recap hàng tháng cho Cây Kỷ Niệm.">
-  <link rel="stylesheet" href="../assets/css/style.css?v=20260711b">
+  <link rel="stylesheet" href="../assets/css/style.css?v=20260711c">
   <style>
     .vip-hero { background:linear-gradient(135deg,#1A1209 0%,#3D2B1F 55%,#B45309 100%); padding:56px 0 44px; color:#fff; text-align:center }
     .vip-hero h1 { color:#fff; margin-bottom:10px }
@@ -70,7 +70,7 @@
         </ul>
       </div>
       <div class="vip-col vip-highlight">
-        <h3>👑 VIP Garden</h3>
+        <h3><img src="../assets/images/sprouty-icons/VIP.png" alt="" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;margin-right:6px">VIP Garden</h3>
         <ul class="vip-feat-list">
           <li><span class="yes">✓</span> Tối đa <strong>25 lá</strong> kỷ niệm mỗi kit</li>
           <li><span class="yes">✓</span> Upload ảnh &amp; video kỷ niệm</li>
@@ -91,7 +91,7 @@
 <div id="ftr"></div>
 <script src="../assets/js/env.js"></script>
 <script src="../assets/js/api.js?v=20260710m"></script>
-<script src="../assets/js/app.js?v=20260710m"></script>
+<script src="../assets/js/app.js?v=20260711c"></script>
 <script>
 document.getElementById('hdr').innerHTML = renderHeader('','../');
 document.getElementById('ftr').innerHTML = renderFooter('../');
@@ -106,7 +106,9 @@ async function loadVipStatus() {
   try {
     const { isVip } = await API.redeem.entitlements();
     chip.style.display = 'inline-flex';
-    chip.textContent = isVip ? '👑 Bạn đang là thành viên VIP Garden' : '🌱 Bạn đang dùng gói Thường';
+    chip.innerHTML = isVip
+      ? '<img src="../assets/images/sprouty-icons/VIP.png" alt="" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:4px">Bạn đang là thành viên VIP Garden'
+      : '🌱 Bạn đang dùng gói Thường';
   } catch { chip.style.display = 'none'; }
 }
 
@@ -129,7 +131,7 @@ async function loadVipPlans() {
         <div class="vip-plan-name">${esc(p.name)}</div>
         <div class="vip-plan-price">${p.price.toLocaleString('vi-VN')}đ${p.oldPrice ? `<span class="vip-plan-old">${p.oldPrice.toLocaleString('vi-VN')}đ</span>` : ''}</div>
         <div class="vip-plan-period">${isAnnual ? 'mỗi năm' : 'mỗi tháng'}</div>
-        <button class="btn btn-primary btn-lg btn-block" onclick="upgradeVip(${p.id})">👑 Nâng cấp ngay</button>
+        <button class="btn btn-primary btn-lg btn-block" onclick="upgradeVip(${p.id})"><img src="../assets/images/sprouty-icons/VIP.png" alt="" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:6px">Nâng cấp ngay</button>
       </div>`;
     }).join('');
   } catch (e) {

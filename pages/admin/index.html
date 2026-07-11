@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard · Sprouty</title>
-  <link rel="stylesheet" href="../../assets/css/style.css?v=20260711b">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20260711c">
   <style>
     body{background:#F8F9FC}
     .admin-sidebar{width:230px;flex-shrink:0;background:var(--ink);padding:24px 16px;position:fixed;top:0;bottom:0;overflow-y:auto;z-index:10}
@@ -44,8 +44,8 @@
   <a href="#" onclick="showSection('users');return false" id="nav-users">👥 Người dùng</a>
   <a href="#" onclick="showSection('orders');return false" id="nav-orders">📦 Đơn hàng</a>
   <a href="#" onclick="showSection('sales');return false" id="nav-sales">💰 Báo cáo bán hàng</a>
-  <a href="#" onclick="showSection('workshops');return false" id="nav-workshops">🎓 Workshop</a>
-  <a href="#" onclick="showSection('redeem');return false" id="nav-redeem">🎟 Mã kích hoạt</a>
+  <a href="#" onclick="showSection('workshops');return false" id="nav-workshops"><img src="../../assets/images/sprouty-icons/Workshop.png" alt="" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:4px">Workshop</a>
+  <a href="#" onclick="showSection('redeem');return false" id="nav-redeem"><img src="../../assets/images/sprouty-icons/RedeemCode.png" alt="" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:4px">Mã kích hoạt</a>
   <a href="#" onclick="showSection('blog');return false" id="nav-blog">📝 Blog</a>
   <a href="#" onclick="showSection('userimages');return false" id="nav-userimages">🖼 Ảnh người dùng</a>
   <div class="divider"></div>
@@ -322,7 +322,7 @@
 
 <script src="../../assets/js/env.js"></script>
 <script src="../../assets/js/api.js?v=20260710m"></script>
-<script src="../../assets/js/app.js?v=20260710m"></script>
+<script src="../../assets/js/app.js?v=20260711c"></script>
 <script>
 const STATUS_VN  = { pending:'Chờ xác nhận', processing:'Đang xử lý', shipped:'Đang giao', delivered:'Đã giao', cancelled:'Đã hủy' };
 const STATUS_OPT = ['pending','processing','shipped','delivered','cancelled'];
@@ -405,7 +405,7 @@ async function loadUsers() {
         <td style="font-size:.82rem">${esc(u.email)}</td>
         <td><span class="role-badge role-${esc(u.role)}">${esc(u.role)}</span></td>
         <td style="font-size:.82rem;font-weight:600;color:${u.status==='active'?'var(--green)':'var(--rose)'}">${u.status==='active'?'Hoạt động':'Vô hiệu'}</td>
-        <td>${u.isVip ? '<span class="role-badge" style="background:#FEF3C7;color:#92400E">👑 VIP</span>' : '<span style="font-size:.76rem;color:var(--ink-5)">—</span>'}</td>
+        <td>${u.isVip ? '<span class="role-badge" style="background:#FEF3C7;color:#92400E"><img src="../../assets/images/sprouty-icons/VIP.png" alt="" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:3px">VIP</span>' : '<span style="font-size:.76rem;color:var(--ink-5)">—</span>'}</td>
         <td style="font-size:.76rem;color:var(--ink-4)">${new Date(u.createdAt).toLocaleDateString('vi-VN')}</td>
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -419,7 +419,7 @@ async function loadUsers() {
             </button>
             ${u.isVip
               ? `<button class="act-btn act-del" onclick="revokeVip('${u.id}')">Thu hồi VIP</button>`
-              : `<button class="act-btn" style="border-color:#D97706;color:#D97706" onclick="grantVip('${u.id}')">👑 Cấp VIP</button>`}
+              : `<button class="act-btn" style="border-color:#D97706;color:#D97706" onclick="grantVip('${u.id}')"><img src="../../assets/images/sprouty-icons/VIP.png" alt="" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:3px">Cấp VIP</button>`}
           </div>
         </td>
       </tr>`).join('') || `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink-4)">Không có người dùng</td></tr>`;

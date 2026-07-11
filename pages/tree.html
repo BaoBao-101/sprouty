@@ -4,7 +4,7 @@
   <meta charset="UTF-8"><meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Cây Kỷ Niệm — Sprouty</title>
-  <link rel="stylesheet" href="../assets/css/style.css?v=20260711b">
+  <link rel="stylesheet" href="../assets/css/style.css?v=20260711c">
   <style>
     .tree-hero { background:linear-gradient(135deg,#1A1209 0%,#3D2B1F 55%,var(--terracotta) 100%); padding:36px 0 28px; color:#fff }
     .tree-hero h1 { color:#fff; margin:0 }
@@ -55,6 +55,7 @@
       animation:leafPulse 2.2s ease-in-out infinite;
     }
     .leaf-slot.next:hover { transform:translate(-50%,-50%) scale(1.1); background:var(--parchment-2) }
+    .leaf-slot.next img { width:55%; height:55%; object-fit:contain }
     @keyframes leafPulse { 0%,100%{ opacity:.75 } 50%{ opacity:1 } }
 
     .tree-full-msg {
@@ -124,7 +125,7 @@
 <div id="ftr"></div>
 <script src="../assets/js/env.js"></script>
 <script src="../assets/js/api.js?v=20260710m"></script>
-<script src="../assets/js/app.js?v=20260710m"></script>
+<script src="../assets/js/app.js?v=20260711c"></script>
 <script>
 document.getElementById('hdr').innerHTML = renderHeader('myproducts','../');
 document.getElementById('ftr').innerHTML = renderFooter('../');
@@ -207,7 +208,7 @@ function renderTree() {
   const bgSrc = product?.images?.[0] ? '..' + product.images[0] : '../assets/images/sprouty-icons/Tree.png';
   let html = `<img class="tree-bg-img" src="${esc(bgSrc)}" alt="${esc(product?.name || 'Cây Kỷ Niệm')}">`;
   if (full) {
-    html += `<div class="tree-full-msg">🌳 Cây đã đủ ${MAX_LEAVES} lá kỷ niệm rồi!</div>`;
+    html += `<div class="tree-full-msg"><img src="../assets/images/sprouty-icons/MyTree.png" alt="" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;margin-right:4px">Cây đã đủ ${MAX_LEAVES} lá kỷ niệm rồi!</div>`;
   }
 
   for (let i = 0; i < MAX_LEAVES; i += 1) {
@@ -221,7 +222,7 @@ function renderTree() {
           : `<img src="${esc(img.url)}" alt="">`}
       </div>`;
     } else if (i === images.length && !full) {
-      html += `<div class="leaf-slot next" style="left:${x}%;top:${y}%" onclick="addLeaf()" title="Thêm khoảnh khắc mới">+</div>`;
+      html += `<div class="leaf-slot next" style="left:${x}%;top:${y}%" onclick="addLeaf()" title="Thêm khoảnh khắc mới"><img src="../assets/images/sprouty-icons/AddPhoto.png" alt="Thêm ảnh"></div>`;
       break; // only the next slot is clickable — leaves grow one at a time
     } else {
       break; // future slots stay hidden until earlier ones are filled

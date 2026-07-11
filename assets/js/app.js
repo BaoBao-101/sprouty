@@ -264,7 +264,7 @@ function renderHeader(active, base='') {
       <nav class="nav-links">${navItems}</nav>
       <div class="nav-right">
         <button class="nav-cart-btn" onclick="location.href='${base}pages/cart.html'" title="Giỏ hàng">
-          🛒<span class="cart-count">0</span>
+          <img src="${base}assets/images/sprouty-icons/Cart.png" alt="Giỏ hàng" class="nav-cart-icon"><span class="cart-count">0</span>
         </button>
         <button class="btn-login" onclick="LoginModal.open()">Đăng nhập</button>
         <button class="nav-user" id="navUser" onclick="showUserMenu()">
@@ -303,12 +303,14 @@ function showUserMenu() {
   const isAdmin = Auth.isAdmin();
   const isEmp = Auth.isEmployee();
   const prefix = window.location.pathname.includes('/pages/') ? '' : 'pages/';
+  const imgBase = window.location.pathname.includes('/pages/') ? '../' : '';
+  const icon = (file, alt) => `<img src="${imgBase}assets/images/sprouty-icons/${file}" alt="${alt}" class="menu-item-icon">`;
   const items = [
-    { label:'🌳 Cây của tôi', href:`${prefix}my-products.html` },
-    { label:'🎟 Nhập mã kích hoạt', href:`${prefix}redeem.html` },
-    { label:'👑 VIP Garden', href:`${prefix}vip.html` },
+    { label:`${icon('MyTree.png','Cây')} Cây của tôi`, href:`${prefix}my-products.html` },
+    { label:`${icon('RedeemCode.png','Mã')} Nhập mã kích hoạt`, href:`${prefix}redeem.html` },
+    { label:`${icon('VIP.png','VIP')} VIP Garden`, href:`${prefix}vip.html` },
     { label:'📦 Đơn hàng của tôi', href:`${prefix}account.html` },
-    { label:'🛒 Giỏ hàng', href:`${prefix}cart.html` },
+    { label:`${icon('Cart.png','Giỏ hàng')} Giỏ hàng`, href:`${prefix}cart.html` },
     ...(isEmp ? [{ label:'👷 Cổng nhân viên', href:`${prefix}employee/orders.html` }] : []),
     ...(isAdmin ? [{ label:'⚙️ Quản trị', href:`${prefix}admin/index.html` }] : []),
     { label:'🚪 Đăng xuất', action:'Auth.logout()' },
@@ -347,7 +349,7 @@ function renderFooter(base='') {
             <a class="footer-social" title="Liên hệ Sprouty" aria-label="Liên hệ Sprouty" href="${base}pages/contact.html">🌱</a>
             <a class="footer-social" title="Workshop Sprouty" aria-label="Workshop Sprouty" href="${base}pages/workshop.html">🎨</a>
             <a class="footer-social" title="Trợ lý AI Sprouty" aria-label="Trợ lý AI Sprouty" href="${base}pages/ai.html">🤖</a>
-            <a class="footer-social" title="Cây Kỷ Niệm" aria-label="Cây Kỷ Niệm" href="${base}pages/my-products.html">🌳</a>
+            <a class="footer-social" title="Cây Kỷ Niệm" aria-label="Cây Kỷ Niệm" href="${base}pages/my-products.html"><img src="${base}assets/images/sprouty-icons/MyTree.png" alt="Cây Kỷ Niệm" class="footer-social-icon"></a>
           </div>
         </div>
         <div class="footer-col">

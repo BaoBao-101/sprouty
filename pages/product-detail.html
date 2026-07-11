@@ -4,7 +4,7 @@
   <meta charset="UTF-8"><meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Chi tiết sản phẩm — Sprouty</title>
-  <link rel="stylesheet" href="../assets/css/style.css?v=20260711b">
+  <link rel="stylesheet" href="../assets/css/style.css?v=20260711c">
   <style>
     /* ═══ Product Detail Page ═══ */
     .pdp-wrap { display:grid; grid-template-columns:1fr 480px; gap:56px; padding:44px 0 72px; align-items:start }
@@ -179,7 +179,7 @@
 <div id="ftr"></div>
 <script src="../assets/js/env.js"></script>
 <script src="../assets/js/api.js?v=20260710m"></script>
-<script src="../assets/js/app.js?v=20260710m"></script>
+<script src="../assets/js/app.js?v=20260711c"></script>
 <script>
 document.getElementById('hdr').innerHTML = renderHeader('shop','../');
 document.getElementById('ftr').innerHTML = renderFooter('../');
@@ -325,7 +325,7 @@ function _renderPage(p, allProds) {
 
       <!-- CTA buttons -->
       <div class="pdp-cta">
-        <button class="btn-add" onclick="addCart()">🛒 Thêm vào giỏ</button>
+        <button class="btn-add" onclick="addCart()"><img src="../assets/images/sprouty-icons/Cart.png" alt="" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;margin-right:6px"> Thêm vào giỏ</button>
         <button class="btn-buy" onclick="buyNow()">Mua ngay →</button>
       </div>
 

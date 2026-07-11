@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tài khoản của tôi · Sprouty</title>
-  <link rel="stylesheet" href="../assets/css/style.css?v=20260711b">
+  <link rel="stylesheet" href="../assets/css/style.css?v=20260711c">
   <style>
     .account-layout{display:grid;grid-template-columns:220px 1fr;gap:32px;margin-top:32px}
     .account-nav{background:var(--surface);border:1px solid var(--parchment);border-radius:var(--r-lg);padding:16px;height:fit-content}
@@ -81,7 +81,7 @@
 <div id="site-footer"></div>
 <script src="../assets/js/env.js"></script>
 <script src="../assets/js/api.js?v=20260710m"></script>
-<script src="../assets/js/app.js?v=20260710m"></script>
+<script src="../assets/js/app.js?v=20260711c"></script>
 <script>
 const STATUS_VN = { pending:'Chờ xác nhận', processing:'Đang xử lý', shipped:'Đang giao', delivered:'Đã giao', cancelled:'Đã hủy' };
 const STATUS_CLS = { pending:'status-pending', processing:'status-processing', shipped:'status-shipped', delivered:'status-delivered', cancelled:'status-cancelled' };
@@ -178,7 +178,7 @@ function renderRedeemCodes(codes, orderId) {
   if (!codes.length) return '';
   return `<div class="track-note" style="align-items:flex-start">
     <div style="width:100%">
-      <div style="font-weight:800;margin-bottom:6px;color:var(--ink)">🎟 Mã kích hoạt sau mua hàng</div>
+      <div style="font-weight:800;margin-bottom:6px;color:var(--ink)"><img src="../assets/images/sprouty-icons/RedeemCode.png" alt="" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:4px">Mã kích hoạt sau mua hàng</div>
       ${codes.map((c, i) => {
         const id = `redeem_${orderId}_${i}`.replace(/[^a-zA-Z0-9_]/g, '_');
         return `<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:${i ? '8px' : '0'}">
