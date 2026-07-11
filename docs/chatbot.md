@@ -33,7 +33,7 @@ AI_MODEL=claude-haiku-4-5-20251001
 # OR — Gemini (aistudio.google.com/apikey)
 AI_PROVIDER=gemini
 GEMINI_API_KEY=AIza...
-AI_MODEL=gemini-2.0-flash
+AI_MODEL=gemini-flash-latest
 
 # OR (free, local)
 AI_PROVIDER=ollama
@@ -42,7 +42,7 @@ AI_MODEL=llama3.2
 ```
 
 `AI_MODEL` is optional for every provider above — if unset it defaults per-provider
-(`gpt-4.1-mini` / `claude-haiku-4-5-20251001` / `gemini-2.0-flash` / `llama3.2`).
+(`gpt-4.1-mini` / `claude-haiku-4-5-20251001` / `gemini-flash-latest` / `llama3.2`).
 Only `AI_PROVIDER` decides which provider is called; leftover keys for other
 providers in the same `.env` are simply ignored.
 

@@ -21,10 +21,13 @@ const AI_ENDPOINT = process.env.AI_ENDPOINT || 'https://api.openai.com/v1/chat/c
 // Each provider has its own model naming scheme — an unset AI_MODEL must
 // default per-provider, not to a single OpenAI model name that would be
 // sent (and rejected) by whichever provider is actually selected.
+// Gemini uses the 'gemini-flash-latest' rolling alias (rather than a dated
+// version like 'gemini-2.5-flash') so Google retiring a specific model
+// version for new API keys doesn't silently break chat again.
 const DEFAULT_MODEL_BY_PROVIDER = {
   openai: 'gpt-4.1-mini',
   anthropic: 'claude-haiku-4-5-20251001',
-  gemini: 'gemini-2.0-flash',
+  gemini: 'gemini-flash-latest',
   ollama: 'llama3.2',
 };
 const AI_MODEL = process.env.AI_MODEL || DEFAULT_MODEL_BY_PROVIDER[PROVIDER] || 'gpt-4.1-mini';
