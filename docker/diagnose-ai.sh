@@ -21,7 +21,7 @@ done
 echo
 
 echo "=== 1. Env vars ==="
-grep -E 'AI_PROVIDER|GEMINI_API_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY' .env | sed -E 's/(API_KEY=.{6}).*/\1.../'
+grep -E 'AI_PROVIDER|GEMINI_API_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY' .env | sed -E 's/(API_KEY=.{6}).*/\1.../' || echo "(no matching env vars found in .env)"
 echo
 
 echo "=== 2. Backend image/container status ==="
@@ -31,7 +31,7 @@ echo
 
 echo "=== 3. Confirm the RUNNING container has the latest chat.js (logging fix) ==="
 echo "Expect: fastify.log.error({ err }, 'Chat error');"
-docker compose exec -T backend grep -A1 'Chat error' src/routes/chat.js
+docker compose exec -T backend grep -A1 'Chat error' src/routes/chat.js || echo "(grep found no match — check manually)"
 echo
 
 echo "=== 4. Health check ==="
@@ -46,4 +46,4 @@ read -p "Nhấn Enter sau khi đã gửi thử tin nhắn chat... " _
 
 echo
 echo "=== 5. Recent backend logs (chat/gemini/error) ==="
-docker compose logs --tail=150 backend | grep -i -A5 'chat\|gemini\|error'
+docker compose logs --tail=150 backend | grep -i -A5 'chat\|gemini\|error' || echo "(no matching log lines)"
