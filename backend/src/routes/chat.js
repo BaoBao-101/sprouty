@@ -179,7 +179,7 @@ export default async function chatRoute(fastify) {
 
       return { reply: reply_text };
     } catch (err) {
-      fastify.log.error('Chat error:', err.message);
+      fastify.log.error({ err }, 'Chat error');
       return reply.code(502).send({ message: 'Dịch vụ AI tạm thời không khả dụng. Thử lại sau.' });
     }
   });
