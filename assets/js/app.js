@@ -337,7 +337,7 @@ function renderFooter(base='') {
       <div class="footer-grid">
         <div>
           <div class="footer-logo-wrap">
-            <img class="footer-logo" src="${base}assets/images/logo.png" alt="Sprouty"
+            <img class="footer-logo" src="${base}assets/images/logo-footer.png" alt="Sprouty"
               onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
             <span class="footer-logo-fallback" style="display:none">
               <span class="footer-logo-fallback-mark">🌱</span>

@@ -93,9 +93,9 @@ button{cursor:pointer;font-family:var(--font-body);border:none;background:none}
 input,textarea,select{font-family:var(--font-body)}
 
 /* ── Typography ─────────────────────────────────────── */
-/* Baloo ("tiêu đề") tracks noticeably wide by default — tightened ~25%. */
+/* Baloo display text needs a little positive tracking for Vietnamese readability. */
 h1,h2,h3,h4,h5{color:var(--ink)}
-h1,h2,h3{font-family:var(--font-display);letter-spacing:-.04em}
+h1,h2,h3{font-family:var(--font-display);letter-spacing:.012em}
 h1{font-size:clamp(1.85rem,4.8vw,3rem);font-weight:700;line-height:1.17}
 h2{font-size:clamp(1.38rem,3.2vw,2rem);font-weight:600;line-height:1.27}
 h3{font-size:clamp(1.06rem,2vw,1.36rem);font-weight:600;line-height:1.33}
@@ -138,7 +138,7 @@ strong{color:var(--ink-2)}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
 .brand-logo{height:64px;width:auto;object-fit:contain;transition:transform .25s}
 .brand:hover .brand-logo{transform:scale(1.04)}
-.brand-text{font-family:var(--font-display);font-size:2rem;font-weight:700;color:var(--primary-600);letter-spacing:-.04em}
+.brand-text{font-family:var(--font-display);font-size:2rem;font-weight:700;color:var(--primary-600);letter-spacing:.012em}
 .nav-links{display:flex;align-items:center;gap:3px;margin-left:24px;flex:1;min-width:0}
 .nav-links a{font-family:var(--font-h);font-size:.92rem;font-weight:600;color:var(--ink-3);padding:6px 11px;border-radius:var(--r-full);transition:all .2s;text-decoration:none;white-space:nowrap}
 .nav-links a:hover{background:var(--primary-100);color:var(--ink)}
@@ -1230,6 +1230,9 @@ input[type="range"]::-webkit-slider-thumb:hover { transform:scale(1.2) }
    TYPOGRAPHY POLISH — Global font consistency
    ══════════════════════════════════════════ */
 
+/* Baloo display text */
+:is(.modal-title,.slide-fallback .slide-name,.stat-n,.metric strong,.product-name,.age-range,.footer-logo-fallback-name,.footer-brand-name,.cart-name,.kit-card-title,.team-name,.timeline-title,.workshop-title,.admin-title,.stat-val,.video-info-bar h3,.kit-name,.review-score-big,.faq-group-title,.policy-content h2,.pdp-name,.ws-stat-n,.schedule-title,.vip-col h3,.vip-plan-price,.admin-sidebar .brand,.emp-sidebar .brand,.stat-num){letter-spacing:.012em}
+
 /* Nav links — slightly larger for readability */
 .nav-links a { font-size:.88rem; letter-spacing:.005em }
 
@@ -1325,7 +1328,6 @@ input[type="range"]::-webkit-slider-thumb:hover { transform:scale(1.2) }
 .uflow-m-item p { font-size:.79rem }
 
 /* PDP info */
-.pdp-name { letter-spacing:-.015em }
 .pdp-desc { font-size:.95rem; line-height:1.8 }
 .pdp-qty-label { font-size:.74rem; letter-spacing:.09em }
 .pdp-stock { font-size:.83rem }
