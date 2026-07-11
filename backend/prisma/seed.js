@@ -36,11 +36,11 @@ const PRODUCTS = [
   { id: 5, name: "VIP Garden Monthly", emoji: "🌙", collection: "Golden Garden", category: "membership", ageRange: "Gia đình", price: 20000, oldPrice: null, smartPriceDelta: null, badge: null, bgColor: "#FEFCE8",
     description: "Mở khóa chế độ ban đêm, hiệu ứng theo mùa, Plant Buddies hiếm và AI recap hàng tháng cho Cây Kỷ Niệm.",
     includes: ["Night Mode", "Seasonal effects", "Rare Plant Buddies", "Monthly AI recap", "Ưu tiên hỗ trợ"],
-    images: [], status: "published" },
+    images: ["/assets/images/sprouty-icons/VIPGardenMonthly.png"], status: "published" },
   { id: 6, name: "VIP Garden Annual", emoji: "✨", collection: "Golden Garden", category: "membership", ageRange: "Gia đình", price: 180000, oldPrice: 240000, smartPriceDelta: null, badge: "sale", bgColor: "#FEF3C7",
     description: "Gói VIP hằng năm cho gia đình muốn lưu giữ trọn vẹn hành trình cây lớn lên cùng bé.",
     includes: ["Tất cả quyền lợi VIP Monthly", "Tiết kiệm 25%", "Golden Memory Tree", "Ưu tiên tính năng mới"],
-    images: [], status: "published" },
+    images: ["/assets/images/sprouty-icons/VIPGardenAnnual.png"], status: "published" },
 ];
 
 const WORKSHOPS = [

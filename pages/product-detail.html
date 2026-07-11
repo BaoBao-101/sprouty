@@ -4,7 +4,7 @@
   <meta charset="UTF-8"><meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Chi tiết sản phẩm — Sprouty</title>
-  <link rel="stylesheet" href="../assets/css/style.css?v=20260711a">
+  <link rel="stylesheet" href="../assets/css/style.css?v=20260711b">
   <style>
     /* ═══ Product Detail Page ═══ */
     .pdp-wrap { display:grid; grid-template-columns:1fr 480px; gap:56px; padding:44px 0 72px; align-items:start }
@@ -98,6 +98,7 @@
     }
     .pdp-variant-opt:has(input:checked) { border-color:var(--orange); background:var(--orange-pale) }
     .pdp-variant-opt input { accent-color:var(--orange) }
+    .pdp-variant-thumb { width:44px; height:44px; border-radius:8px; object-fit:cover; flex-shrink:0 }
 
     /* CTA buttons */
     .pdp-cta { display:flex; gap:12px; margin-bottom:18px; flex-wrap:wrap }
@@ -290,6 +291,7 @@ function _renderPage(p, allProds) {
         <div class="pdp-qty-label">Phiên bản</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <label class="pdp-variant-opt">
+            <img src="../assets/images/sprouty-icons/StandardVariant.png" alt="Standard" class="pdp-variant-thumb">
             <input type="radio" name="pdpVariant" value="standard" checked onchange="onVariantChange()">
             <div>
               <strong>Standard</strong>
@@ -297,6 +299,7 @@ function _renderPage(p, allProds) {
             </div>
           </label>
           <label class="pdp-variant-opt">
+            <img src="../assets/images/sprouty-icons/SmartVariant.png" alt="Smart IoT" class="pdp-variant-thumb">
             <input type="radio" name="pdpVariant" value="smart" onchange="onVariantChange()">
             <div>
               <strong>Smart · IoT 🤖</strong>

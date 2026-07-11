@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Workshop — Sprouty</title>
   <meta name="description" content="Workshop trồng cây Sprouty tại TP.HCM — lớp học nhóm nhỏ trực tiếp cho bé 4–12 tuổi. Đăng ký ngay!">
-  <link rel="stylesheet" href="../assets/css/style.css?v=20260711a">
+  <link rel="stylesheet" href="../assets/css/style.css?v=20260711b">
   <style>
     .ws-stat-row { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; margin-top:40px }
     .ws-stat { background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); border-radius:var(--r-xl); padding:22px 18px; text-align:center }
@@ -20,7 +20,15 @@
     .ws-schedule { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; margin-top:36px }
     .schedule-card { background:var(--surface); border:1.5px solid var(--parchment-2); border-radius:var(--r-xl); overflow:hidden; box-shadow:var(--sh-sm); transition:all .25s var(--ease) }
     .schedule-card:hover { box-shadow:var(--sh-lg); transform:translateY(-4px); border-color:var(--green) }
-    .schedule-header { padding:20px; background:linear-gradient(135deg,#E8F5E9,#F0FDF4); border-bottom:1.5px solid var(--parchment-2) }
+    .schedule-photo { position:relative; aspect-ratio:16/10; overflow:hidden; background:var(--parchment) }
+    .schedule-photo img { width:100%; height:100%; object-fit:cover }
+    .schedule-emoji-badge {
+      position:absolute; bottom:-16px; left:16px; width:44px; height:44px;
+      background:var(--surface); border:2px solid var(--surface); border-radius:50%;
+      display:flex; align-items:center; justify-content:center; font-size:1.3rem;
+      box-shadow:var(--sh-md);
+    }
+    .schedule-header { padding:26px 20px 20px; background:linear-gradient(135deg,#E8F5E9,#F0FDF4); border-bottom:1.5px solid var(--parchment-2) }
     .schedule-date { font-family:var(--font-h); font-size:.75rem; font-weight:700; color:var(--green); display:flex; align-items:center; gap:6px; margin-bottom:6px }
     .schedule-title { font-family:var(--font-display); font-size:1.05rem; font-weight:600; color:var(--ink) }
     .schedule-body { padding:20px }
@@ -495,13 +503,16 @@ document.getElementById('hdr').innerHTML = renderHeader('workshop','../');
 document.getElementById('ftr').innerHTML = renderFooter('../');
 
 // Workshops schedule
+// img: ws2 gets the real Smart Kit Workshop photo (matches its IoT sensor
+// content exactly); everything else uses the general family workshop photo —
+// only 2 real workshop photos exist so far, no generic per-topic photos yet.
 const WORKSHOPS = [
-  { id:'ws1', emoji:'🦋', title:'Vẽ Chậu & Gieo Hạt Đầu Tiên', date:'Thứ Bảy, 22/03/2026', time:'9:00 – 11:30', age:'4–8 tuổi', slots:4, maxSlots:12, price:150000, status:'open', desc:'Bé trang trí chậu, gieo hạt thật và tạo chiếc lá kỷ niệm đầu tiên trên Sprouty.' },
-  { id:'ws2', emoji:'🏮', title:'Smart Kit Cảm Biến Cây', date:'Thứ Bảy, 29/03/2026', time:'9:00 – 11:30', age:'5–10 tuổi', slots:2, maxSlots:12, price:180000, status:'open', desc:'Lắp cảm biến độ ẩm đất, OLED và LED để bé hiểu cây đang cần gì qua tín hiệu đơn giản.' },
-  { id:'ws3', emoji:'🐉', title:'Family Memory Tree Day', date:'Thứ Bảy, 05/04/2026', time:'9:00 – 12:00', age:'6–12 tuổi', slots:8, maxSlots:12, price:200000, status:'soon', desc:'Workshop gia đình: cùng chăm cây, chụp ảnh, viết nhật ký và lưu lại hành trình trên Cây Kỷ Niệm.' },
-  { id:'ws4', emoji:'🚀', title:'Hệ Mặt Trời Mini', date:'Thứ Bảy, 12/04/2026', time:'9:00 – 12:00', age:'7–12 tuổi', slots:10, maxSlots:10, price:220000, status:'open', desc:'Tạo mô hình hệ mặt trời mini — vẽ màu 8 hành tinh, lắp ráp giá đỡ và học về thiên văn học qua đôi bàn tay.' },
-  { id:'ws5', emoji:'🌊', title:'Plant Buddy Story Lab', date:'Thứ Bảy, 19/04/2026', time:'9:00 – 11:30', age:'4–9 tuổi', slots:6, maxSlots:12, price:160000, status:'open', desc:'Bé đặt tên Plant Buddy, tạo câu chuyện cho cây và học cách ghi lại mốc phát triển mỗi tuần.' },
-  { id:'ws6', emoji:'🎭', title:'Con Rối Tự Thiết Kế', date:'Thứ Bảy, 26/04/2026', time:'9:00 – 12:00', age:'5–9 tuổi', slots:9, maxSlots:12, price:180000, status:'open', desc:'Làm con rối tay từ vải felt, tự thiết kế nhân vật và dàn dựng vở kịch mini ngay tại lớp. Phát triển ngôn ngữ và khả năng biểu đạt.' },
+  { id:'ws1', emoji:'🦋', img:'../assets/images/workshop/basic-workshop.png', title:'Vẽ Chậu & Gieo Hạt Đầu Tiên', date:'Thứ Bảy, 22/03/2026', time:'9:00 – 11:30', age:'4–8 tuổi', slots:4, maxSlots:12, price:150000, status:'open', desc:'Bé trang trí chậu, gieo hạt thật và tạo chiếc lá kỷ niệm đầu tiên trên Sprouty.' },
+  { id:'ws2', emoji:'🏮', img:'../assets/images/workshop/smart-kit-workshop.png', title:'Smart Kit Cảm Biến Cây', date:'Thứ Bảy, 29/03/2026', time:'9:00 – 11:30', age:'5–10 tuổi', slots:2, maxSlots:12, price:180000, status:'open', desc:'Lắp cảm biến độ ẩm đất, OLED và LED để bé hiểu cây đang cần gì qua tín hiệu đơn giản.' },
+  { id:'ws3', emoji:'🐉', img:'../assets/images/workshop/basic-workshop.png', title:'Family Memory Tree Day', date:'Thứ Bảy, 05/04/2026', time:'9:00 – 12:00', age:'6–12 tuổi', slots:8, maxSlots:12, price:200000, status:'soon', desc:'Workshop gia đình: cùng chăm cây, chụp ảnh, viết nhật ký và lưu lại hành trình trên Cây Kỷ Niệm.' },
+  { id:'ws4', emoji:'🚀', img:'../assets/images/workshop/basic-workshop.png', title:'Hệ Mặt Trời Mini', date:'Thứ Bảy, 12/04/2026', time:'9:00 – 12:00', age:'7–12 tuổi', slots:10, maxSlots:10, price:220000, status:'open', desc:'Tạo mô hình hệ mặt trời mini — vẽ màu 8 hành tinh, lắp ráp giá đỡ và học về thiên văn học qua đôi bàn tay.' },
+  { id:'ws5', emoji:'🌊', img:'../assets/images/workshop/basic-workshop.png', title:'Plant Buddy Story Lab', date:'Thứ Bảy, 19/04/2026', time:'9:00 – 11:30', age:'4–9 tuổi', slots:6, maxSlots:12, price:160000, status:'open', desc:'Bé đặt tên Plant Buddy, tạo câu chuyện cho cây và học cách ghi lại mốc phát triển mỗi tuần.' },
+  { id:'ws6', emoji:'🎭', img:'../assets/images/workshop/basic-workshop.png', title:'Con Rối Tự Thiết Kế', date:'Thứ Bảy, 26/04/2026', time:'9:00 – 12:00', age:'5–9 tuổi', slots:9, maxSlots:12, price:180000, status:'open', desc:'Làm con rối tay từ vải felt, tự thiết kế nhân vật và dàn dựng vở kịch mini ngay tại lớp. Phát triển ngôn ngữ và khả năng biểu đạt.' },
 ];
 
 const statusLabel = { open:'Còn chỗ', full:'Hết chỗ', soon:'Mở sớm' };
@@ -513,8 +524,11 @@ document.getElementById('wsSchedule').innerHTML = WORKSHOPS.slice(0,6).map(w => 
   const isFull = w.slots === 0;
   return `
   <div class="schedule-card">
+    <div class="schedule-photo">
+      <img src="${w.img}" alt="${esc(w.title)}" loading="lazy">
+      <span class="schedule-emoji-badge">${w.emoji}</span>
+    </div>
     <div class="schedule-header">
-      <div style="font-size:3rem;margin-bottom:10px">${w.emoji}</div>
       <div class="schedule-date">📅 ${w.date} · ${w.time}</div>
       <div class="schedule-title">${w.title}</div>
     </div>

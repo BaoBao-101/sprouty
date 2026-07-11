@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>VIP Garden — Sprouty</title>
   <meta name="description" content="Nâng cấp VIP Garden để mở khóa thêm lá kỷ niệm, hiệu ứng theo mùa, Plant Buddies hiếm và AI recap hàng tháng cho Cây Kỷ Niệm.">
-  <link rel="stylesheet" href="../assets/css/style.css?v=20260711a">
+  <link rel="stylesheet" href="../assets/css/style.css?v=20260711b">
   <style>
     .vip-hero { background:linear-gradient(135deg,#1A1209 0%,#3D2B1F 55%,#B45309 100%); padding:56px 0 44px; color:#fff; text-align:center }
     .vip-hero h1 { color:#fff; margin-bottom:10px }
@@ -35,6 +35,7 @@
       position:absolute; top:14px; right:14px; background:#FEF3C7; color:#92400E;
       font-family:var(--font-h); font-size:.72rem; font-weight:800; padding:4px 12px; border-radius:var(--r-full);
     }
+    .vip-plan-img { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:var(--r-lg); margin:-4px 0 18px }
     .vip-plan-name { font-family:var(--font-h); font-size:.82rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-4); margin-bottom:8px }
     .vip-plan-price { font-family:var(--font-display); font-size:2.1rem; font-weight:700; color:var(--ink) }
     .vip-plan-old { font-size:1rem; color:var(--ink-5); text-decoration:line-through; margin-left:8px }
@@ -120,9 +121,11 @@ async function loadVipPlans() {
     }
     wrap.innerHTML = products.map(p => {
       const isAnnual = /annual|năm/i.test(p.name);
+      const img = Array.isArray(p.images) && p.images[0] ? '..' + p.images[0] : '';
       return `
       <div class="vip-plan-card${isAnnual ? ' best' : ''}">
         ${isAnnual ? '<span class="vip-plan-badge">Tiết kiệm nhất</span>' : ''}
+        ${img ? `<img src="${esc(img)}" alt="${esc(p.name)}" class="vip-plan-img">` : ''}
         <div class="vip-plan-name">${esc(p.name)}</div>
         <div class="vip-plan-price">${p.price.toLocaleString('vi-VN')}đ${p.oldPrice ? `<span class="vip-plan-old">${p.oldPrice.toLocaleString('vi-VN')}đ</span>` : ''}</div>
         <div class="vip-plan-period">${isAnnual ? 'mỗi năm' : 'mỗi tháng'}</div>
