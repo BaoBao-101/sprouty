@@ -9,7 +9,7 @@
   <style>
     body{background:#F8F9FC}
     .admin-sidebar{width:230px;flex-shrink:0;background:var(--ink);padding:24px 16px;position:fixed;top:0;bottom:0;overflow-y:auto;z-index:10}
-    .admin-sidebar .brand{color:#fff;font-family:var(--font-display);font-size:1.1rem;margin-bottom:4px;display:block;font-weight:700}
+    .admin-sidebar-logo{height:34px;width:auto;object-fit:contain;display:block;margin-bottom:8px}
     .admin-sidebar .brand-sub{color:rgba(255,255,255,.4);font-size:.68rem;font-family:var(--font-h);margin-bottom:28px;display:block;text-transform:uppercase;letter-spacing:.08em}
     .admin-sidebar a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-md);color:rgba(255,255,255,.65);text-decoration:none;font-family:var(--font-h);font-size:.85rem;font-weight:600;margin-bottom:4px;transition:all .15s}
     .admin-sidebar a:hover,.admin-sidebar a.active{background:rgba(255,255,255,.12);color:#fff}
@@ -39,7 +39,7 @@
 <div id="login-modal-mount"></div>
 
 <aside class="admin-sidebar">
-  <span class="brand">✂ Sprouty</span>
+  <img src="../../assets/images/logo-footer.png" alt="Sprouty" class="admin-sidebar-logo">
   <span class="brand-sub">Admin Dashboard</span>
   <a href="#" onclick="showSection('dashboard');return false" class="active" id="nav-dashboard">📊 Dashboard</a>
   <a href="#" onclick="showSection('users');return false" id="nav-users">👥 Người dùng</a>
