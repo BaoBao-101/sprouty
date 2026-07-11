@@ -49,6 +49,13 @@ TRUST_PROXY=false
 Điền thêm nếu dùng tính năng tương ứng:
 - Chatbot AI: `AI_PROVIDER`, `OPENAI_API_KEY` (hoặc `ANTHROPIC_API_KEY`), `AI_MODEL`, `AI_ENDPOINT`
 - Thanh toán SePay: `SEPAY_API_KEY`, `SEPAY_BANK_CODE`, `SEPAY_ACCOUNT_NUMBER`, `SEPAY_ACCOUNT_NAME`
+  - **`SEPAY_BANK_CODE` phải là mã mà `qr.sepay.vn` chấp nhận — không phải lúc nào cũng trùng mã SWIFT quen thuộc.** Ví dụ hay nhầm nhất: **VietinBank là `ICB`, không phải `VTB`** — dùng nhầm `VTB` sẽ khiến API trả về lỗi `"Ngân hàng này không được hỗ trợ"` (HTML, không phải ảnh) và QR không hiện được, dù mọi biến khác đều đúng.
+  - Đã verify trực tiếp các mã sau đều hợp lệ: `VCB` (Vietcombank), `MB` (MBBank), `TCB` (Techcombank), `ACB`, `BIDV`, `ICB` (VietinBank), `AGRIBANK`.
+  - Cách tự kiểm tra 1 mã bất kỳ trước khi điền vào `.env` — nếu lệnh dưới trả về `image/png` là đúng, trả về `text/html` (kèm thông báo lỗi) là sai:
+    ```bash
+    curl -s -o /dev/null -w "%{content_type}\n" \
+      "https://qr.sepay.vn/img?acc=<số_tài_khoản>&bank=<mã_ngân_hàng>&amount=10000&des=TEST"
+    ```
 - Lưu file: mặc định `ASSET_STORAGE_PROVIDER=local` (lưu trong volume `backend_uploads`); nếu dùng S3 thì điền các biến `S3_*`
 
 ## 5. Deploy

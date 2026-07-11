@@ -6,7 +6,7 @@ See `docs/assets-entitlements-blog.md` for the asset upload, instruction video, 
 
 ## Authentication
 
-Uses httpOnly session cookie (`session_id`). All mutating authenticated requests require `X-CSRF-Token` header.
+Uses httpOnly session cookie (`session_id`). Sessions have a server-enforced idle timeout and absolute timeout. All mutating authenticated requests require `X-CSRF-Token` header.
 
 ---
 
@@ -26,7 +26,7 @@ Rate limited: 10/min
 
 // Response 200
 { "user": { "id": "...", "email": "...", "name": "...", "role": "customer" }, "csrfToken": "abc..." }
-// Sets session_id cookie (httpOnly, SameSite=Strict)
+// Sets a rotated session_id cookie (httpOnly, SameSite=Strict)
 ```
 
 ### `POST /api/v1/auth/register`
@@ -138,12 +138,25 @@ Customer-facing payment URL: `/pages/payment.html?orderId=<ORDER_ID>`
 |-------------------------|----------|------------------------------------------|
 | `SEPAY_API_KEY`         | prod     | Webhook bearer token (validated on `POST /api/v1/webhooks/sepay`) |
 | `SEPAY_ACCOUNT_NUMBER`  | prod     | Receiving bank account number            |
-| `SEPAY_BANK_CODE`       | prod     | Bank code (e.g. `MB`, `VCB`)             |
+| `SEPAY_BANK_CODE`       | prod     | Bank code accepted by `qr.sepay.vn` (e.g. `MB`, `VCB`, `ICB` for VietinBank — **not** `VTB`) |
 | `SEPAY_ACCOUNT_NAME`    | optional | Display-only account holder name         |
 
 When `SEPAY_ACCOUNT_NUMBER` or `SEPAY_BANK_CODE` is missing the order endpoints
 return `payment: null` and the payment page shows a "SePay chưa được cấu hình"
 state — the order itself is still created.
+
+A **wrong-but-present** `SEPAY_BANK_CODE` fails differently and less obviously:
+`buildPaymentInfo()` still returns a `qrUrl`, so the payment page renders
+normally, but `qr.sepay.vn` responds with an HTML error body
+(`"Ngân hàng này không được hỗ trợ"`) instead of a PNG when the `<img>` tries
+to load it — the QR silently doesn't appear, no error surfaces anywhere in
+the app. Verify a bank code before deploying:
+```bash
+curl -s -o /dev/null -w "%{content_type}\n" \
+  "https://qr.sepay.vn/img?acc=<account_number>&bank=<bank_code>&amount=10000&des=TEST"
+# image/png  -> valid code
+# text/html  -> invalid code, response body has the real error message
+```
 
 ---
 
