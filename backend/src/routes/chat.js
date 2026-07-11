@@ -95,7 +95,9 @@ async function callGemini(messages, systemPrompt) {
     body: JSON.stringify({
       contents,
       systemInstruction: { parts: [{ text: systemPrompt || DEFAULT_SYSTEM }] },
-      generationConfig: { maxOutputTokens: 1024 },
+      // Newer Gemini models spend part of this budget on internal "thinking"
+      // before the visible answer, so 1024 was truncating replies mid-sentence.
+      generationConfig: { maxOutputTokens: 4096 },
     }),
   });
 

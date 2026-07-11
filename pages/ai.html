@@ -149,6 +149,7 @@ function addMsg(role,text,imgData){
   // Escape user/AI text first, THEN re-introduce only the markdown markup we control.
   const safeText = esc(text)
     .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/(^|\n)[*-] /g,'$1• ')
     .replace(/\n/g,'<br>');
   // imgData is a blob: URL we created locally — still set via attribute write to keep CSP-friendly.
   const avSpan = document.createElement('div'); avSpan.className = 'msg-av'; avSpan.textContent = av;
