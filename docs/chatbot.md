@@ -20,20 +20,31 @@ Browser → POST /api/v1/chat → Fastify backend → AI Provider
 Set via environment variables (no provider key in frontend):
 
 ```env
-AI_PROVIDER=openai          # openai | anthropic | ollama
+AI_PROVIDER=openai          # openai | anthropic | gemini | ollama
 OPENAI_API_KEY=sk-...       # for openai/ShopAIKey
 AI_ENDPOINT=https://api.openai.com/v1/chat/completions
 AI_MODEL=gpt-4.1-mini
 
 # OR
+AI_PROVIDER=anthropic
 ANTHROPIC_API_KEY=sk-ant-...
 AI_MODEL=claude-haiku-4-5-20251001
+
+# OR — Gemini (aistudio.google.com/apikey)
+AI_PROVIDER=gemini
+GEMINI_API_KEY=AIza...
+AI_MODEL=gemini-2.0-flash
 
 # OR (free, local)
 AI_PROVIDER=ollama
 OLLAMA_URL=http://localhost:11434
 AI_MODEL=llama3.2
 ```
+
+`AI_MODEL` is optional for every provider above — if unset it defaults per-provider
+(`gpt-4.1-mini` / `claude-haiku-4-5-20251001` / `gemini-2.0-flash` / `llama3.2`).
+Only `AI_PROVIDER` decides which provider is called; leftover keys for other
+providers in the same `.env` are simply ignored.
 
 ## RAG (Retrieval-Augmented Generation)
 

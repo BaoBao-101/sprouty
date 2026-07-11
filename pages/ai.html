@@ -253,7 +253,7 @@ function toggleVoice(){
   recognition.start();
 }
 
-onAuthChange();
+Auth.onReady(onAuthChange);
 </script>
 </body>
 </html>

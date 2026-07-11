@@ -14,9 +14,20 @@ const chatSchema = z.object({
 const PROVIDER = process.env.AI_PROVIDER || 'openai';
 const OPENAI_KEY = process.env.OPENAI_API_KEY || process.env.AI_API_KEY || '';
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
+const GEMINI_KEY = process.env.GEMINI_API_KEY || '';
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-const AI_MODEL = process.env.AI_MODEL || 'gpt-4.1-mini';
 const AI_ENDPOINT = process.env.AI_ENDPOINT || 'https://api.openai.com/v1/chat/completions';
+
+// Each provider has its own model naming scheme — an unset AI_MODEL must
+// default per-provider, not to a single OpenAI model name that would be
+// sent (and rejected) by whichever provider is actually selected.
+const DEFAULT_MODEL_BY_PROVIDER = {
+  openai: 'gpt-4.1-mini',
+  anthropic: 'claude-haiku-4-5-20251001',
+  gemini: 'gemini-2.0-flash',
+  ollama: 'llama3.2',
+};
+const AI_MODEL = process.env.AI_MODEL || DEFAULT_MODEL_BY_PROVIDER[PROVIDER] || 'gpt-4.1-mini';
 
 const DEFAULT_SYSTEM = `Bạn là trợ lý AI của Sprouty — thương hiệu bộ kit trồng cây, Cây Kỷ Niệm số và workshop gia đình cho trẻ em Việt Nam.
 Phong cách: thân thiện, vui vẻ, phù hợp với phụ huynh và trẻ em.
@@ -55,7 +66,7 @@ async function callAnthropic(messages, systemPrompt) {
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: AI_MODEL || 'claude-haiku-4-5-20251001',
+      model: AI_MODEL,
       max_tokens: 1024,
       system: systemPrompt || DEFAULT_SYSTEM,
       messages,
@@ -67,12 +78,35 @@ async function callAnthropic(messages, systemPrompt) {
   return data.content?.[0]?.text?.trim() || 'Xin lỗi, không nhận được phản hồi.';
 }
 
+async function callGemini(messages, systemPrompt) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${AI_MODEL}:generateContent?key=${GEMINI_KEY}`;
+  // Gemini has no 'assistant' role — prior AI turns are 'model'.
+  const contents = messages.map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }));
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents,
+      systemInstruction: { parts: [{ text: systemPrompt || DEFAULT_SYSTEM }] },
+      generationConfig: { maxOutputTokens: 1024 },
+    }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error?.message || 'Gemini error');
+  return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || 'Xin lỗi, không nhận được phản hồi.';
+}
+
 async function callOllama(messages, systemPrompt) {
   const response = await fetch(`${OLLAMA_URL}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: AI_MODEL || 'llama3.2',
+      model: AI_MODEL,
       messages: [
         { role: 'system', content: systemPrompt || DEFAULT_SYSTEM },
         ...messages,
@@ -130,14 +164,17 @@ export default async function chatRoute(fastify) {
 
     try {
       let reply_text;
-      if (PROVIDER === 'anthropic' && ANTHROPIC_KEY) {
+      if (PROVIDER === 'anthropic') {
+        if (!ANTHROPIC_KEY) return reply.code(503).send({ message: 'ANTHROPIC_API_KEY chưa được cấu hình.' });
         reply_text = await callAnthropic(messages, enrichedSystem);
+      } else if (PROVIDER === 'gemini') {
+        if (!GEMINI_KEY) return reply.code(503).send({ message: 'GEMINI_API_KEY chưa được cấu hình.' });
+        reply_text = await callGemini(messages, enrichedSystem);
       } else if (PROVIDER === 'ollama') {
         reply_text = await callOllama(messages, enrichedSystem);
-      } else if (OPENAI_KEY) {
-        reply_text = await callOpenAI(messages, enrichedSystem);
       } else {
-        return reply.code(503).send({ message: 'Dịch vụ AI chưa được cấu hình.' });
+        if (!OPENAI_KEY) return reply.code(503).send({ message: 'OPENAI_API_KEY chưa được cấu hình.' });
+        reply_text = await callOpenAI(messages, enrichedSystem);
       }
 
       return { reply: reply_text };

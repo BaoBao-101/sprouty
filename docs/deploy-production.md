@@ -47,7 +47,7 @@ ALLOWED_ORIGIN=https://sprouty.id.vn
 TRUST_PROXY=false
 ```
 Điền thêm nếu dùng tính năng tương ứng:
-- Chatbot AI: `AI_PROVIDER`, `OPENAI_API_KEY` (hoặc `ANTHROPIC_API_KEY`), `AI_MODEL`, `AI_ENDPOINT`
+- Chatbot AI: `AI_PROVIDER` (`openai`|`anthropic`|`gemini`|`ollama`) + key tương ứng (`OPENAI_API_KEY`/`ANTHROPIC_API_KEY`/`GEMINI_API_KEY`), `AI_MODEL` (tuỳ chọn), `AI_ENDPOINT` (chỉ openai)
 - Thanh toán SePay: `SEPAY_API_KEY`, `SEPAY_BANK_CODE`, `SEPAY_ACCOUNT_NUMBER`, `SEPAY_ACCOUNT_NAME`
   - **`SEPAY_BANK_CODE` phải là mã mà `qr.sepay.vn` chấp nhận — không phải lúc nào cũng trùng mã SWIFT quen thuộc.** Ví dụ hay nhầm nhất: **VietinBank là `ICB`, không phải `VTB`** — dùng nhầm `VTB` sẽ khiến API trả về lỗi `"Ngân hàng này không được hỗ trợ"` (HTML, không phải ảnh) và QR không hiện được, dù mọi biến khác đều đúng.
   - Đã verify trực tiếp các mã sau đều hợp lệ: `VCB` (Vietcombank), `MB` (MBBank), `TCB` (Techcombank), `ACB`, `BIDV`, `ICB` (VietinBank), `AGRIBANK`.
