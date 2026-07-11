@@ -367,8 +367,8 @@ strong{color:var(--ink-2)}
 /* ── Footer ─────────────────────────────────────────── */
 .site-footer{background:var(--primary-700);color:rgba(255,255,255,.7);padding:56px 0 0}
 .footer-grid{display:grid;grid-template-columns:1.4fr repeat(3,1fr);gap:48px;margin-bottom:44px}
-.footer-logo-wrap{display:flex;align-items:center;gap:12px;margin-bottom:16px}
-.footer-logo{height:108px;width:auto;object-fit:contain;opacity:1;filter:drop-shadow(0 2px 12px rgba(0,0,0,.45))}
+.footer-logo-wrap{display:flex;align-items:center;justify-content:flex-start;gap:12px;margin-bottom:16px}
+.footer-logo{height:84px;width:auto;object-fit:contain;object-position:left center;opacity:1;filter:drop-shadow(0 2px 12px rgba(0,0,0,.45));margin-right:auto}
 .footer-logo-fallback{display:none;align-items:center;gap:10px}
 .footer-logo-fallback-mark{font-size:2rem;color:var(--primary-300)}
 .footer-logo-fallback-name{font-family:var(--font-display);font-size:1.8rem;font-weight:700;color:#fff}
