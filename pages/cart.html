@@ -62,8 +62,8 @@
 
 <div id="ftr"></div>
 <script src="../assets/js/env.js"></script>
-<script src="../assets/js/api.js?v=20260710l"></script>
-<script src="../assets/js/app.js?v=20260710l"></script>
+<script src="../assets/js/api.js?v=20260710m"></script>
+<script src="../assets/js/app.js?v=20260710m"></script>
 <script>
 const ENV_EXTRA = { FREE_SHIP_MIN: 200000 };
 document.getElementById('hdr').innerHTML = renderHeader('','../');
@@ -87,14 +87,17 @@ function renderCart() {
   }
 
   const total = Cart.total();
-  const freeLeft = Math.max(0, ENV_EXTRA.FREE_SHIP_MIN - total);
-  const ship = total >= ENV_EXTRA.FREE_SHIP_MIN ? 0 : 30000;
+  // VIP is digital — activates on payment, nothing is ever shipped for it.
+  // Shipping only applies when the cart has at least one physical item.
+  const hasPhysicalItem = items.some(i => i.cat !== 'membership');
+  const freeLeft = hasPhysicalItem ? Math.max(0, ENV_EXTRA.FREE_SHIP_MIN - total) : 0;
+  const ship = hasPhysicalItem && total < ENV_EXTRA.FREE_SHIP_MIN ? 30000 : 0;
   const bgMap = { kit:'var(--terra-bg)', book:'var(--sage-bg)', membership:'var(--amber-bg)' };
 
   body.innerHTML = `
   <div class="cart-layout">
     <div>
-      ${freeLeft > 0
+      ${!hasPhysicalItem ? '' : freeLeft > 0
         ? `<div class="notice">🚚 Thêm <strong>${freeLeft.toLocaleString('vi-VN')}đ</strong> nữa để được miễn phí vận chuyển!</div>`
         : `<div class="notice green">🎉 Bạn đã được <strong>miễn phí vận chuyển</strong>!</div>`}
 
@@ -135,7 +138,9 @@ function renderCart() {
       <div class="order-summary">
         <h3 style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:18px;color:var(--ink)">Tóm tắt đơn hàng</h3>
         <div class="sum-row"><span>Tạm tính (${Cart.count()} sản phẩm)</span><strong>${total.toLocaleString('vi-VN')}đ</strong></div>
-        <div class="sum-row"><span>Vận chuyển</span><strong style="color:${ship?'var(--ink-2)':'var(--green)'}">${ship ? ship.toLocaleString('vi-VN')+'đ' : 'Miễn phí 🎉'}</strong></div>
+        ${hasPhysicalItem
+          ? `<div class="sum-row"><span>Vận chuyển</span><strong style="color:${ship?'var(--ink-2)':'var(--green)'}">${ship ? ship.toLocaleString('vi-VN')+'đ' : 'Miễn phí 🎉'}</strong></div>`
+          : `<div class="sum-row"><span>Vận chuyển</span><strong style="color:var(--ink-4)">Không áp dụng</strong></div>`}
         <div class="sum-divider"></div>
         <div class="sum-total">
           <span class="sum-total-lbl">Tổng cộng</span>
@@ -166,62 +171,65 @@ function checkout() {
 }
 
 function showShippingModal() {
-  let modal = document.getElementById('shipping-modal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'shipping-modal';
-    modal.className = 'modal-overlay open';
-    modal.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:20px';
-    const user = Auth.user;
-    modal.innerHTML = `
-      <div style="background:var(--surface);border-radius:var(--r-xl);padding:28px;width:100%;max-width:440px;position:relative">
-        <button onclick="this.closest('#shipping-modal').remove()" style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:1.3rem;color:var(--ink-3);cursor:pointer">✕</button>
-        <h2 style="margin-bottom:20px;font-size:1.2rem">Thông tin giao hàng</h2>
-        <div class="form-group">
-          <label class="form-label">Tên người nhận *</label>
-          <input class="form-input" type="text" id="ship-name" value="${user?.name||''}" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Số điện thoại *</label>
-          <input class="form-input" type="tel" id="ship-phone" placeholder="0901234567" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Địa chỉ giao hàng *</label>
-          <textarea class="form-input" id="ship-addr" rows="3" placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành" required style="resize:vertical"></textarea>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Ghi chú (tùy chọn)</label>
-          <input class="form-input" type="text" id="ship-note" placeholder="Giao buổi chiều, gọi trước khi giao...">
-        </div>
-        <div id="ship-err" style="display:none;color:var(--rose);font-size:.84rem;margin-bottom:12px"></div>
-        <div style="display:flex;gap:10px;margin-top:16px">
-          <button class="btn btn-ghost" onclick="this.closest('#shipping-modal').remove()">Hủy</button>
-          <button class="btn btn-primary" id="ship-submit" style="flex:1" onclick="submitOrder()">Đặt hàng ngay →</button>
-        </div>
-      </div>`;
-    document.body.appendChild(modal);
-  } else {
-    modal.classList.add('open');
-  }
+  // Rebuilt fresh every time (not cached) — whether the address field is
+  // needed depends on the current cart contents, which can change between
+  // opens in the same page session.
+  document.getElementById('shipping-modal')?.remove();
+  const needsAddress = Cart.items.some(i => i.cat !== 'membership');
+  const modal = document.createElement('div');
+  modal.id = 'shipping-modal';
+  modal.className = 'modal-overlay open';
+  modal.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:20px';
+  const user = Auth.user;
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:var(--r-xl);padding:28px;width:100%;max-width:440px;position:relative">
+      <button onclick="this.closest('#shipping-modal').remove()" style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:1.3rem;color:var(--ink-3);cursor:pointer">✕</button>
+      <h2 style="margin-bottom:20px;font-size:1.2rem">${needsAddress ? 'Thông tin giao hàng' : 'Xác nhận thanh toán'}</h2>
+      ${!needsAddress ? `<p style="font-size:.86rem;color:var(--ink-4);margin-bottom:16px">Gói VIP kích hoạt ngay sau khi thanh toán — không cần giao hàng.</p>` : ''}
+      <div class="form-group">
+        <label class="form-label">Họ tên *</label>
+        <input class="form-input" type="text" id="ship-name" value="${user?.name||''}" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Số điện thoại *</label>
+        <input class="form-input" type="tel" id="ship-phone" placeholder="0901234567" required>
+      </div>
+      ${needsAddress ? `
+      <div class="form-group">
+        <label class="form-label">Địa chỉ giao hàng *</label>
+        <textarea class="form-input" id="ship-addr" rows="3" placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành" required style="resize:vertical"></textarea>
+      </div>` : ''}
+      <div class="form-group">
+        <label class="form-label">Ghi chú (tùy chọn)</label>
+        <input class="form-input" type="text" id="ship-note" placeholder="${needsAddress ? 'Giao buổi chiều, gọi trước khi giao...' : 'Ghi chú thêm (nếu có)'}">
+      </div>
+      <div id="ship-err" style="display:none;color:var(--rose);font-size:.84rem;margin-bottom:12px"></div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn btn-ghost" onclick="this.closest('#shipping-modal').remove()">Hủy</button>
+        <button class="btn btn-primary" id="ship-submit" style="flex:1" onclick="submitOrder()">${needsAddress ? 'Đặt hàng ngay →' : 'Thanh toán ngay →'}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
 }
 
 async function submitOrder() {
+  const needsAddress = Cart.items.some(i => i.cat !== 'membership');
   const name = document.getElementById('ship-name').value.trim();
   const phone = document.getElementById('ship-phone').value.trim();
-  const addr = document.getElementById('ship-addr').value.trim();
+  const addr = needsAddress ? document.getElementById('ship-addr').value.trim() : '';
   const note = document.getElementById('ship-note').value.trim();
   const errEl = document.getElementById('ship-err');
   const btn = document.getElementById('ship-submit');
   errEl.style.display = 'none';
 
-  if (!name || !phone || !addr) { errEl.textContent='Vui lòng điền đầy đủ thông tin.'; errEl.style.display='block'; return; }
+  if (!name || !phone || (needsAddress && !addr)) { errEl.textContent='Vui lòng điền đầy đủ thông tin.'; errEl.style.display='block'; return; }
   if (!/^[0-9]{9,11}$/.test(phone)) { errEl.textContent='Số điện thoại không hợp lệ (9–11 chữ số).'; errEl.style.display='block'; return; }
-  if (addr.length < 10) { errEl.textContent='Địa chỉ quá ngắn, vui lòng nhập đầy đủ.'; errEl.style.display='block'; return; }
+  if (needsAddress && addr.length < 10) { errEl.textContent='Địa chỉ quá ngắn, vui lòng nhập đầy đủ.'; errEl.style.display='block'; return; }
 
-  btn.disabled = true; btn.textContent = 'Đang đặt hàng...';
+  btn.disabled = true; btn.textContent = 'Đang xử lý...';
   try {
     const items = Cart.items.map(i => ({ productId: i.id, qty: i.qty, variant: i.variant === 'smart' ? 'smart' : 'standard' }));
-    const { order } = await API.orders.create({ items, shippingName: name, shippingPhone: phone, shippingAddress: addr, note: note || undefined });
+    const { order } = await API.orders.create({ items, shippingName: name, shippingPhone: phone, shippingAddress: addr || undefined, note: note || undefined });
     document.getElementById('shipping-modal')?.remove();
     Cart.clear();
     // Redirect to the dedicated payment page — it handles QR display, polling,
@@ -230,7 +238,7 @@ async function submitOrder() {
   } catch(e) {
     errEl.textContent = e.message || 'Đặt hàng thất bại. Thử lại sau.';
     errEl.style.display = 'block';
-    btn.disabled = false; btn.textContent = 'Đặt hàng ngay →';
+    btn.disabled = false; btn.textContent = needsAddress ? 'Đặt hàng ngay →' : 'Thanh toán ngay →';
   }
 }
 

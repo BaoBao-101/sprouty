@@ -36,13 +36,18 @@ const noHtml = (label) => z.string().refine(
   { message: `${label} không được chứa ký tự < hoặc >.` }
 );
 
+// shippingAddress is validated conditionally in the route handler, not here —
+// it's only required when the cart contains a physical (non-membership)
+// product. VIP is a digital-only purchase, nothing is ever shipped for it.
 const createOrderSchema = z.object({
   items: z.array(orderItemSchema).min(1, 'Giỏ hàng trống.').max(50, 'Giỏ hàng không được vượt quá 50 sản phẩm.'),
   shippingName: noHtml('Tên người nhận').and(z.string().min(2, 'Tên người nhận không hợp lệ.').max(100)),
   shippingPhone: z.string().regex(/^[0-9]{9,11}$/, 'Số điện thoại không hợp lệ.'),
-  shippingAddress: noHtml('Địa chỉ').and(z.string().min(10, 'Địa chỉ không hợp lệ.').max(500)),
+  shippingAddress: noHtml('Địa chỉ').and(z.string().max(500)).optional(),
   note: noHtml('Ghi chú').and(z.string().max(500)).optional(),
 });
+
+const NO_SHIPPING_PLACEHOLDER = 'Không áp dụng — sản phẩm không cần giao hàng.';
 
 function normalizePurchaseCode(code) {
   return String(code || '').trim().toUpperCase().replace(/\s+/g, '');
@@ -108,7 +113,8 @@ export default async function orderRoutes(fastify) {
       throw new AppError(parsed.error.errors[0]?.message || 'Dữ liệu không hợp lệ.', 400);
     }
 
-    const { items, shippingName, shippingPhone, shippingAddress, note } = parsed.data;
+    const { items, shippingName, shippingPhone, note } = parsed.data;
+    let { shippingAddress } = parsed.data;
 
     // Verify all products exist and are published. Same product can appear
     // twice with different variants (e.g. Bean Standard + Bean Smart), so
@@ -117,7 +123,7 @@ export default async function orderRoutes(fastify) {
     const uniqueProductIds = [...new Set(items.map(i => i.productId))];
     const products = await fastify.prisma.product.findMany({
       where: { id: { in: uniqueProductIds }, status: 'published' },
-      select: { id: true, price: true, name: true, smartPriceDelta: true },
+      select: { id: true, price: true, name: true, smartPriceDelta: true, category: true },
     });
 
     if (products.length !== uniqueProductIds.length) {
@@ -135,6 +141,18 @@ export default async function orderRoutes(fastify) {
       total += unitPrice * item.qty;
       return { productId: item.productId, qty: item.qty, unitPrice, variant: item.variant || null };
     });
+
+    // Only physical (non-membership) products need a real shipping address —
+    // VIP is digital-only, activates immediately on payment, nothing is ever
+    // shipped for it.
+    const needsShipping = products.some(p => p.category !== 'membership');
+    if (needsShipping) {
+      if (!shippingAddress || shippingAddress.length < 10) {
+        throw new AppError('Địa chỉ không hợp lệ.', 400);
+      }
+    } else {
+      shippingAddress = shippingAddress || NO_SHIPPING_PLACEHOLDER;
+    }
 
     const order = await fastify.prisma.order.create({
       data: {
