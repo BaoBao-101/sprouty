@@ -412,7 +412,7 @@ function initHeroCarousel(catalog) {
 
   const slides = [
     ...kits.map(p => ({
-      src: `assets/images/sprouty-icons/${p.name}.png`,
+      src: (Array.isArray(p.images) && p.images[0] && !p.images[0].includes('product-images') ? p.images[0].replace(/^\//, '') : `assets/images/products/kit-${p.id}.svg`),
       label: p.name,
       badge: p.badge === 'hot' ? '🔥 Bán chạy' : p.badge === 'new' ? '✨ Mới' : p.badge === 'sale' ? '🏷 Giảm giá' : `${p.age}`,
       bg: p.bg,
@@ -483,6 +483,12 @@ function initHeroCarousel(catalog) {
     updateFloatCards();
   }
 
+  function setFloatIcon(icon, slide) {
+    if (!icon) return;
+    icon.style.background = slide.bg;
+    icon.innerHTML = `<img src="assets/images/sprouty-icons/${slide.label}.png" alt="" style="object-fit:contain;padding:4px" onerror="this.remove();this.parentElement.textContent='${slide.em}'">`;
+  }
+
   function updateFloatCards() {
     const s = slides[cur];
     const prev = slides[(cur - 1 + total) % total];
@@ -492,20 +498,14 @@ function initHeroCarousel(catalog) {
     const c1 = document.getElementById('floatCard1');
     if (n1) n1.textContent = s.label;
     if (s1) s1.textContent = s.price ? s.price.toLocaleString('vi-VN') + 'đ · ' + s.badge : s.badge;
-    if (c1) {
-      const icon = c1.querySelector('.float-icon');
-      if (icon) { icon.style.background = s.bg; icon.textContent = s.em; }
-    }
+    setFloatIcon(c1?.querySelector('.float-icon'), s);
     // Float card 2 — prev product
     const n2 = document.getElementById('floatName2');
     const s2 = document.getElementById('floatSub2');
     const c2 = document.getElementById('floatCard2');
     if (n2) n2.textContent = prev.label;
     if (s2) s2.textContent = prev.price ? prev.price.toLocaleString('vi-VN') + 'đ · ' + prev.badge : prev.badge;
-    if (c2) {
-      const icon = c2.querySelector('.float-icon');
-      if (icon) { icon.style.background = prev.bg; icon.textContent = prev.em; }
-    }
+    setFloatIcon(c2?.querySelector('.float-icon'), prev);
   }
 
   let timer = setInterval(() => go(cur + 1), 4000);
