@@ -412,7 +412,7 @@ function initHeroCarousel(catalog) {
 
   const slides = [
     ...kits.map(p => ({
-      src: (Array.isArray(p.images) && p.images[0] && !p.images[0].includes('product-images') ? p.images[0].replace(/^\//, '') : `assets/images/products/kit-${p.id}.svg`),
+      src: `assets/images/sprouty-icons/${p.name}.png`,
       label: p.name,
       badge: p.badge === 'hot' ? '🔥 Bán chạy' : p.badge === 'new' ? '✨ Mới' : p.badge === 'sale' ? '🏷 Giảm giá' : `${p.age}`,
       bg: p.bg,
