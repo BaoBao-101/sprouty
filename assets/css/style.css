@@ -136,7 +136,7 @@ strong{color:var(--ink-2)}
 .site-header{position:sticky;top:0;z-index:500;background:rgba(255,252,247,.97);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1.5px solid var(--parchment-2);box-shadow:0 2px 14px rgba(90,50,20,.08)}
 .navbar{display:flex;align-items:center;height:78px}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
-.brand-logo{height:56px;width:auto;object-fit:contain;transition:transform .25s}
+.brand-logo{height:46px;width:auto;object-fit:contain;transition:transform .25s}
 .brand:hover .brand-logo{transform:scale(1.04)}
 .brand-text{font-family:var(--font-display);font-size:2rem;font-weight:700;color:var(--primary-600);letter-spacing:.012em}
 .nav-links{display:flex;align-items:center;gap:3px;margin-left:24px;flex:1;min-width:0}
@@ -708,7 +708,7 @@ strong{color:var(--ink-2)}
   .age-grid{grid-template-columns:repeat(2,1fr)}
 }
 @media(max-width:380px){
-  .brand-logo{height:50px}
+  .brand-logo{height:40px}
   .navbar{height:76px}
   .products-grid{grid-template-columns:1fr}
   .team-grid{grid-template-columns:1fr}
