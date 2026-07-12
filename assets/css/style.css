@@ -348,7 +348,7 @@ strong{color:var(--ink-2)}
 .age-sub{font-size:.82rem;color:var(--ink-4);line-height:1.6;margin:0}
 
 /* ── AI Promo ────────────────────────────────────────── */
-.ai-promo{background:linear-gradient(135deg,var(--accent-sky) 0%,var(--accent-lavender) 100%);border-radius:var(--r-2xl);padding:52px 48px;color:#fff;position:relative;overflow:hidden}
+.ai-promo{background:linear-gradient(135deg,rgba(92,206,245,.72) 0%,rgba(157,124,255,.68) 100%),url(../images/banner/ai-banner.png) center/cover no-repeat;border-radius:var(--r-2xl);padding:52px 48px;color:#fff;position:relative;overflow:hidden}
 .ai-promo::before{content:'🤖';position:absolute;right:-20px;top:-20px;font-size:12rem;opacity:.06;line-height:1}
 .ai-promo h2{color:#fff}
 .ai-promo p{color:rgba(255,255,255,.7)}
