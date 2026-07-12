@@ -206,7 +206,7 @@ function buildKitCard(p, leafCount) {
   <div class="kit-card" style="background:var(--surface);border:1.5px solid var(--parchment-2);border-radius:var(--r-xl);margin-bottom:16px;box-shadow:var(--sh-sm);overflow:hidden">
     <div class="kit-header" onclick="toggleKit(${p.id})">
       <div class="kit-em" style="background:${p.bg}">
-        <img src="${esc(p.images && p.images[0] ? '..' + p.images[0] : '../assets/images/products/kit-' + p.id + '.svg')}" alt="${esc(p.name)}" style="width:90%;height:90%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+        <img src="../assets/images/sprouty-icons/${esc(p.name)}.png" alt="${esc(p.name)}" style="width:80%;height:80%;object-fit:contain" onerror="this.src='../assets/images/products/kit-${p.id}.svg';this.onerror=function(){this.style.display='none';this.nextElementSibling.style.display='block'}">
         <span style="display:none;font-size:2rem">${esc(p.em)}</span>
       </div>
       <div class="kit-info">
