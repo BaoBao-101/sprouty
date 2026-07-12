@@ -411,8 +411,6 @@ function initHeroCarousel(catalog) {
   const kits = catalog.filter(p => p.cat === 'kit');
 
   const slides = [
-    { src: 'assets/images/sprouty-icons/Tree.png', label: 'Cây Kỷ Niệm', badge: '🌳 Memory Tree', bg: '#F0FDF4', em: '🌳', kitId: kits[0]?.id },
-    { src: 'assets/images/sprouty-icons/Tomato.png', label: 'Plant Buddy', badge: '🍅 Bạn Cây', bg: '#FEF2F2', em: '🍅', kitId: kits[0]?.id },
     ...kits.map(p => ({
       src: (Array.isArray(p.images) && p.images[0] && !p.images[0].includes('product-images') ? p.images[0].replace(/^\//, '') : `assets/images/products/kit-${p.id}.svg`),
       label: p.name,
