@@ -453,7 +453,7 @@ strong{color:var(--ink-2)}
 .promo-row input{flex:1}
 
 /* ── AI Page ─────────────────────────────────────────── */
-.ai-hero{background:linear-gradient(135deg,var(--accent-sky) 0%,var(--accent-lavender) 100%);color:#fff;padding:56px 0}
+.ai-hero{background:linear-gradient(135deg,rgba(92,206,245,.72) 0%,rgba(157,124,255,.68) 100%),url(../images/banner/ai-banner.png) center/cover no-repeat;color:#fff;padding:56px 0}
 .ai-hero h1{color:#fff}
 .ai-hero p{color:rgba(255,255,255,.7)}
 .ai-feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:30px}
@@ -556,7 +556,7 @@ strong{color:var(--ink-2)}
 .timeline-desc{font-size:.88rem;color:var(--ink-3)}
 
 /* ── Workshop ─────────────────────────────────────────── */
-.ws-hero{background:linear-gradient(135deg,var(--primary-700) 0%,var(--primary-500) 55%,var(--accent-sky) 100%);color:#fff;padding:64px 0 52px}
+.ws-hero{background:linear-gradient(135deg,rgba(35,107,58,.78) 0%,rgba(53,168,83,.62) 55%,rgba(92,206,245,.55) 100%),url(../images/banner/workshop-banner.png) center/cover no-repeat;color:#fff;padding:64px 0 52px}
 .ws-hero h1{color:#fff}
 .ws-hero p{color:rgba(255,255,255,.8)}
 .workshop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
