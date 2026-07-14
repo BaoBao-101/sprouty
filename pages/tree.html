@@ -381,48 +381,21 @@ async function submitLeaf() {
   submitBtn.disabled = true;
   submitBtn.textContent = 'Đang đăng...';
   const form = new FormData();
-  form.append('image', file);
+  // Keep text fields before the file so Fastify multipart exposes them on
+  // req.file().fields when the upload stream is parsed.
   if (title) form.append('title', title);
   if (note) form.append('note', note);
+  form.append('image', file);
   try {
     await API.myImages.upload(pid, form);
     closeComposeModal();
     Toast.show('🍃 Một chiếc lá mới đã nở!', 'success');
     await loadLeaves();
-    showNewLeafFeedback(file);
   } catch (err) {
     Toast.show(err.message || 'Không thể thêm lá mới', 'error');
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = 'Đăng lên cây 🌱';
-  }
-}
-
-function showNewLeafFeedback(file) {
-  const url = URL.createObjectURL(file);
-  const isVideo = file.type.startsWith('video/');
-  const body = document.getElementById('leafModalBody');
-  body.innerHTML = `
-    <div class="leaf-media-frame">
-      ${isVideo ? `<video src="${url}" controls></video>` : `<img src="${url}">`}
-    </div>
-    <div style="display:flex;gap:8px;align-items:flex-start;padding:12px;background:var(--cream-2);border-radius:10px">
-      <div class="spinner"></div><span style="color:var(--ink-4)">Plant Buddy đang đọc kỷ niệm...</span>
-    </div>`;
-  openLeafModal();
-  callAIFeedback();
-}
-
-async function callAIFeedback() {
-  const box = document.querySelector('#leafModalBody > div:last-child');
-  try {
-    const { reply } = await API.chat.send(
-      [{ role: 'user', content: `Bé đã chăm sóc Sprouty Kit "${product?.name || 'kit'}" và vừa tải ảnh/video kỷ niệm lên. Hãy khen ngợi sự kiên nhẫn chăm cây của bé, gợi ý 1-2 bước chăm sóc tiếp theo, rồi khuyến khích gia đình tiếp tục lưu nhật ký.` }],
-      'Bạn là Plant Buddy thân thiện của Sprouty Vietnam. Trả lời bằng tiếng Việt, giọng văn ấm áp, khích lệ như đang nói chuyện với phụ huynh và bé, khoảng 4-6 câu.'
-    );
-    if (box) box.innerHTML = `<span style="font-size:1.2rem;flex-shrink:0">🤖</span><div>${esc(reply).replace(/\n/g, '<br>')}</div>`;
-  } catch {
-    if (box) box.innerHTML = `<span style="font-size:1.2rem;flex-shrink:0">🎨</span><div>Tuyệt vời! Bé đã chăm cây rất kiên nhẫn. Hãy ghi lại hôm nay cây thay đổi điều gì, bé đã tưới nước ra sao và cảm xúc của cả nhà khi nhìn thấy mầm cây lớn lên nhé!</div>`;
   }
 }
 

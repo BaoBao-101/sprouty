@@ -10,7 +10,7 @@ const chatSchema = z.object({
   })).min(1).max(30),
   systemPrompt: z.string().max(2000).optional(),
   // Data URL (data:image/...;base64,...) of a single image attached to the
-  // LAST user message — used for the "AI gợi ý caption" leaf-upload feature.
+  // LAST user message — used by the pre-submit "AI gợi ý caption" flow.
   // Client resizes the image before sending, so 2MB comfortably covers it.
   imageDataUrl: z.string().max(2_800_000).regex(/^data:image\/(png|jpe?g|webp);base64,/).optional(),
 });
