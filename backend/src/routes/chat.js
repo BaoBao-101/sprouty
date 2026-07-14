@@ -9,6 +9,10 @@ const chatSchema = z.object({
     content: z.string().min(1).max(3000),
   })).min(1).max(30),
   systemPrompt: z.string().max(2000).optional(),
+  // Data URL (data:image/...;base64,...) of a single image attached to the
+  // LAST user message — used for the "AI gợi ý caption" leaf-upload feature.
+  // Client resizes the image before sending, so 2MB comfortably covers it.
+  imageDataUrl: z.string().max(2_800_000).regex(/^data:image\/(png|jpe?g|webp);base64,/).optional(),
 });
 
 const PROVIDER = process.env.AI_PROVIDER || 'openai';
@@ -38,7 +42,19 @@ Nhiệm vụ: Giúp khách hàng tìm hiểu sản phẩm, giải đáp câu h�
 Giới hạn: Không thu thập thông tin thanh toán. Không tiết lộ thông tin nội bộ. Không thực hiện các thao tác quản trị.
 Luôn trả lời bằng tiếng Việt, ngắn gọn và hữu ích.`;
 
-async function callOpenAI(messages, systemPrompt) {
+// Splits a "data:image/png;base64,AAAA..." URL into its MIME type and raw
+// base64 payload, as needed by Anthropic/Gemini's separate-field image blocks.
+function splitDataUrl(dataUrl) {
+  const match = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(dataUrl);
+  if (!match) return null;
+  return { mimeType: match[1], base64: match[2] };
+}
+
+async function callOpenAI(messages, systemPrompt, imageDataUrl) {
+  const built = attachImageToLastUserMessage(messages, imageDataUrl, (text, url) => ({
+    role: 'user',
+    content: [{ type: 'text', text }, { type: 'image_url', image_url: { url } }],
+  }));
   const response = await fetch(AI_ENDPOINT, {
     method: 'POST',
     headers: {
@@ -50,7 +66,7 @@ async function callOpenAI(messages, systemPrompt) {
       max_tokens: 1024,
       messages: [
         { role: 'system', content: systemPrompt || DEFAULT_SYSTEM },
-        ...messages,
+        ...built,
       ],
     }),
   });
@@ -60,7 +76,15 @@ async function callOpenAI(messages, systemPrompt) {
   return data.choices?.[0]?.message?.content?.trim() || 'Xin lỗi, không nhận được phản hồi.';
 }
 
-async function callAnthropic(messages, systemPrompt) {
+async function callAnthropic(messages, systemPrompt, imageDataUrl) {
+  const split = imageDataUrl ? splitDataUrl(imageDataUrl) : null;
+  const built = attachImageToLastUserMessage(messages, split ? imageDataUrl : null, (text) => ({
+    role: 'user',
+    content: [
+      { type: 'text', text },
+      { type: 'image', source: { type: 'base64', media_type: split.mimeType, data: split.base64 } },
+    ],
+  }));
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -72,7 +96,7 @@ async function callAnthropic(messages, systemPrompt) {
       model: AI_MODEL,
       max_tokens: 1024,
       system: systemPrompt || DEFAULT_SYSTEM,
-      messages,
+      messages: built,
     }),
   });
 
@@ -81,13 +105,17 @@ async function callAnthropic(messages, systemPrompt) {
   return data.content?.[0]?.text?.trim() || 'Xin lỗi, không nhận được phản hồi.';
 }
 
-async function callGemini(messages, systemPrompt) {
+async function callGemini(messages, systemPrompt, imageDataUrl) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${AI_MODEL}:generateContent?key=${GEMINI_KEY}`;
+  const split = imageDataUrl ? splitDataUrl(imageDataUrl) : null;
   // Gemini has no 'assistant' role — prior AI turns are 'model'.
-  const contents = messages.map(m => ({
-    role: m.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: m.content }],
-  }));
+  const contents = messages.map((m, i) => {
+    const role = m.role === 'assistant' ? 'model' : 'user';
+    if (split && i === messages.length - 1 && m.role === 'user') {
+      return { role, parts: [{ text: m.content }, { inlineData: { mimeType: split.mimeType, data: split.base64 } }] };
+    }
+    return { role, parts: [{ text: m.content }] };
+  });
 
   const response = await fetch(url, {
     method: 'POST',
@@ -104,6 +132,15 @@ async function callGemini(messages, systemPrompt) {
   const data = await response.json();
   if (!response.ok) throw new Error(data.error?.message || 'Gemini error');
   return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || 'Xin lỗi, không nhận được phản hồi.';
+}
+
+// Shared helper for OpenAI/Anthropic: replaces the last user message with
+// one built by `buildFn(text, imageDataUrl)` when an image is attached.
+function attachImageToLastUserMessage(messages, imageDataUrl, buildFn) {
+  if (!imageDataUrl) return messages;
+  const lastIdx = messages.length - 1;
+  if (messages[lastIdx]?.role !== 'user') return messages;
+  return messages.map((m, i) => (i === lastIdx ? buildFn(m.content, imageDataUrl) : m));
 }
 
 async function callOllama(messages, systemPrompt) {
@@ -142,7 +179,7 @@ export default async function chatRoute(fastify) {
       return reply.code(400).send({ message: parsed.error.errors[0]?.message || 'Dữ liệu không hợp lệ.' });
     }
 
-    const { messages, systemPrompt } = parsed.data;
+    const { messages, systemPrompt, imageDataUrl } = parsed.data;
 
     // Retrieve relevant products for grounding
     const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.content || '';
@@ -168,18 +205,21 @@ export default async function chatRoute(fastify) {
     const enrichedSystem = (systemPrompt || DEFAULT_SYSTEM) + contextText;
 
     try {
+      if (imageDataUrl && PROVIDER === 'ollama') {
+        return reply.code(422).send({ message: 'Nhà cung cấp AI hiện tại không hỗ trợ nhận diện ảnh.' });
+      }
       let reply_text;
       if (PROVIDER === 'anthropic') {
         if (!ANTHROPIC_KEY) return reply.code(503).send({ message: 'ANTHROPIC_API_KEY chưa được cấu hình.' });
-        reply_text = await callAnthropic(messages, enrichedSystem);
+        reply_text = await callAnthropic(messages, enrichedSystem, imageDataUrl);
       } else if (PROVIDER === 'gemini') {
         if (!GEMINI_KEY) return reply.code(503).send({ message: 'GEMINI_API_KEY chưa được cấu hình.' });
-        reply_text = await callGemini(messages, enrichedSystem);
+        reply_text = await callGemini(messages, enrichedSystem, imageDataUrl);
       } else if (PROVIDER === 'ollama') {
         reply_text = await callOllama(messages, enrichedSystem);
       } else {
         if (!OPENAI_KEY) return reply.code(503).send({ message: 'OPENAI_API_KEY chưa được cấu hình.' });
-        reply_text = await callOpenAI(messages, enrichedSystem);
+        reply_text = await callOpenAI(messages, enrichedSystem, imageDataUrl);
       }
 
       return { reply: reply_text };

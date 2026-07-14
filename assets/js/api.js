@@ -211,8 +211,8 @@ const API = {
   },
 
   chat: {
-    send(messages, systemPrompt) {
-      return _fetch('/chat', { method: 'POST', body: JSON.stringify({ messages, systemPrompt }) });
+    send(messages, systemPrompt, imageDataUrl) {
+      return _fetch('/chat', { method: 'POST', body: JSON.stringify({ messages, systemPrompt, imageDataUrl }) });
     },
   },
 
