@@ -250,7 +250,7 @@ function renderHeader(active, base='') {
     { href:`${base}pages/ai.html`,          label:'Trợ lý AI',  key:'ai' },
     { href:`${base}pages/blog.html`,        label:'Blog',       key:'blog' },
     { href:`${base}pages/about.html`,       label:'Giới thiệu', key:'about' },
-    { href:`${base}pages/account.html`,     label:'Của tôi',    key:'account' },
+    { href:`${base}pages/vip.html`,         label:'VIP',        key:'vip' },
   ];
   const navItems    = links.map(l=>`<a href="${l.href}" class="${active===l.key?'active':''}">${l.label}</a>`).join('');
   const drawerItems = links.map(l=>`<a href="${l.href}" class="${active===l.key?'active':''}">${l.label}</a>`).join('');
@@ -308,9 +308,7 @@ function showUserMenu() {
   const items = [
     { label:`${icon('MyTree.png','Cây')} Cây của tôi`, href:`${prefix}my-products.html` },
     { label:`${icon('RedeemCode.png','Mã')} Nhập mã kích hoạt`, href:`${prefix}redeem.html` },
-    { label:`${icon('VIP.png','VIP')} VIP Garden`, href:`${prefix}vip.html` },
     { label:'📦 Đơn hàng của tôi', href:`${prefix}account.html` },
-    { label:`${icon('Cart.png','Giỏ hàng')} Giỏ hàng`, href:`${prefix}cart.html` },
     ...(isEmp ? [{ label:'👷 Cổng nhân viên', href:`${prefix}employee/orders.html` }] : []),
     ...(isAdmin ? [{ label:'⚙️ Quản trị', href:`${prefix}admin/index.html` }] : []),
     { label:'🚪 Đăng xuất', action:'Auth.logout()' },
