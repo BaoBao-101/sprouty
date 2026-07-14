@@ -10,7 +10,8 @@
     body{background:#F8F9FC}
     .emp-layout{display:flex;min-height:100vh}
     .emp-sidebar{width:220px;flex-shrink:0;background:var(--ink);padding:24px 16px;position:fixed;top:0;bottom:0;overflow-y:auto}
-    .emp-sidebar .brand{color:#fff;font-family:var(--font-display);font-size:1.1rem;margin-bottom:28px;display:block}
+    .emp-sidebar-logo{height:34px;width:auto;object-fit:contain;display:block;margin:0 auto 12px}
+    .emp-sidebar .brand{color:#fff;font-family:var(--font-display);font-size:1.1rem;margin-bottom:28px;display:block;text-align:center}
     .emp-sidebar a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-md);color:rgba(255,255,255,.7);text-decoration:none;font-family:var(--font-h);font-size:.85rem;font-weight:600;margin-bottom:4px;transition:all .15s}
     .emp-sidebar a:hover,.emp-sidebar a.active{background:rgba(255,255,255,.12);color:#fff}
     .emp-sidebar .divider{height:1px;background:rgba(255,255,255,.12);margin:16px 0}
@@ -37,10 +38,12 @@
 <body>
 <div id="login-modal-mount"></div>
 <aside class="emp-sidebar">
+  <img src="../../assets/images/logo-footer.png" alt="Sprouty" class="emp-sidebar-logo">
   <span class="brand">✂ Sprouty Staff</span>
   <a href="orders.html">📦 Đơn hàng</a>
   <a href="products.html" class="active">🎨 Sản phẩm</a>
   <div class="divider"></div>
+  <a href="../admin/index.html" id="emp-admin-link" style="display:none">🛠 Trang quản trị</a>
   <a href="../../index.html">🏠 Về trang chủ</a>
   <a href="#" onclick="Auth.logout();return false" style="color:rgba(255,100,100,.8)">🚪 Đăng xuất</a>
 </aside>
@@ -395,6 +398,7 @@ Auth.onReady(async user => {
     document.getElementById('access-check').style.display = 'block';
     return;
   }
+  if (user.role === 'admin') document.getElementById('emp-admin-link').style.display = 'flex';
   document.getElementById('emp-content').style.display = 'block';
   await loadProducts();
 });
