@@ -14,25 +14,26 @@
     .section-title .overline { justify-content:center }
 
     /* ── User Flow ── */
-    .user-flow-track { display:grid; grid-template-columns:repeat(4,1fr); gap:0; margin-top:52px; position:relative }
-    /* progress-banner.png's own dot–arrow–arrow–arrow–arrow–dot path, cropped
-       to just the arrow band and centered on the circles, so the 4 step
-       icons sit visually between its arrows instead of floating above them. */
-    .user-flow-path { position:absolute; left:-8%; top:50px; transform:translateY(-50%); width:116%; height:80px; object-fit:cover; object-position:center 37%; z-index:0; pointer-events:none }
-    .uflow-col { display:flex; flex-direction:column; align-items:center; position:relative; padding:0 8px }
-    .uflow-circle { width:100px; height:100px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; box-shadow:0 8px 28px rgba(0,0,0,.15); flex-shrink:0; position:relative; z-index:2 }
-    .uflow-num { font-family:var(--font-h); font-size:.7rem; font-weight:800; color:rgba(255,255,255,.7); letter-spacing:.05em }
-    .uflow-em { font-size:2rem; line-height:1 }
-    .c1 { background:linear-gradient(135deg,#8DDFF7,var(--accent-sky)) }
-    .c2 { background:linear-gradient(135deg,#FFA9B1,var(--accent-coral)) }
-    .c3 { background:linear-gradient(135deg,#FFDB7A,var(--accent-yellow)) }
-    .c4 { background:linear-gradient(135deg,var(--primary-300),var(--primary-500)) }
-    .uflow-text { text-align:center; padding:16px 6px 0; position:relative; z-index:2 }
+    /* progress-banner.png now ships with the 4 step circles + connecting
+       arrows already drawn in, at measured centers x=19.75/40.1/61.2/82.0%,
+       y=48.6% — so we only overlay each circle's icon, then the title/desc
+       row below at matching x-offsets (8.5% side padding + 4 equal columns
+       lands column centers within ~1% of those measured circle centers). */
+    .user-flow-track { margin-top:52px }
+    .uflow-img-wrap { position:relative }
+    .uflow-img { display:block; width:100%; height:auto }
+    .uflow-icon { position:absolute; top:48.6%; font-size:2.1rem; line-height:1; transform:translate(-50%,-50%); filter:drop-shadow(0 2px 3px rgba(0,0,0,.15)) }
+    .uflow-labels { display:grid; grid-template-columns:repeat(4,1fr); padding:0 8.5%; margin-top:18px }
+    .uflow-text { text-align:center; padding:0 6px }
     .uflow-title { font-family:var(--font-h); font-size:.9rem; font-weight:800; color:var(--ink); margin-bottom:6px }
     .uflow-desc { font-size:.78rem; color:var(--ink-4); line-height:1.6; margin:0 }
     .user-flow-mobile { display:none; padding:4px 0 }
     .uflow-m-item { display:flex; gap:16px; align-items:flex-start; margin-bottom:8px }
     .uflow-m-dot { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#fff; font-family:var(--font-h); font-size:.78rem; font-weight:800; box-shadow:0 4px 14px rgba(0,0,0,.15) }
+    .uflow-m-dot.c1 { background:linear-gradient(135deg,#8DDFF7,var(--accent-sky)) }
+    .uflow-m-dot.c2 { background:linear-gradient(135deg,#FFA9B1,var(--accent-coral)) }
+    .uflow-m-dot.c3 { background:linear-gradient(135deg,#FFDB7A,var(--accent-yellow)) }
+    .uflow-m-dot.c4 { background:linear-gradient(135deg,var(--primary-300),var(--primary-500)) }
     .uflow-m-line { width:2px; background:var(--parchment-2); flex-shrink:0; margin:48px 0 0; height:calc(100% - 48px); align-self:stretch }
 
     .feat-list { display:grid; grid-template-columns:repeat(2,1fr); gap:32px 40px; margin-top:44px }
@@ -133,45 +134,25 @@
       <p class="lead" style="max-width:520px;margin:12px auto 0">Từ một bộ kit ngoài đời đến khu vườn kỷ niệm số — chỉ 4 bước gia đình có thể làm cùng nhau.</p>
     </div>
     <div class="user-flow-track">
-      <img src="assets/images/banner/progress-banner.png" alt="" aria-hidden="true" class="user-flow-path">
-      <!-- Step 1 -->
-      <div class="uflow-col">
-        <div class="uflow-circle c1">
-          <span class="uflow-num">01</span>
-          <span class="uflow-em">🎁</span>
-        </div>
+      <div class="uflow-img-wrap">
+        <img src="assets/images/banner/progress-banner.png" alt="" class="uflow-img">
+        <span class="uflow-icon" style="left:19.75%">🎁</span>
+        <span class="uflow-icon" style="left:40.1%">📲</span>
+        <span class="uflow-icon" style="left:61.2%">🪴</span>
+        <span class="uflow-icon" style="left:82%">🌟</span>
+      </div>
+      <div class="uflow-labels">
         <div class="uflow-text">
           <h4 class="uflow-title">Nhận Sprouty Kit</h4>
           <p class="uflow-desc">Hộp gồm chậu, màu acrylic, hạt giống, đất trồng, hướng dẫn và quyền truy cập app Sprouty.</p>
-        </div>
-      </div>
-      <!-- Step 2 -->
-      <div class="uflow-col">
-        <div class="uflow-circle c2">
-          <span class="uflow-num">02</span>
-          <span class="uflow-em">📲</span>
         </div>
         <div class="uflow-text">
           <h4 class="uflow-title">Kích hoạt Plant Buddy</h4>
           <p class="uflow-desc">Quét QR hoặc nhập mã PIN để đánh thức Bạn Cây và mở Cây Kỷ Niệm của bé.</p>
         </div>
-      </div>
-      <!-- Step 3 -->
-      <div class="uflow-col">
-        <div class="uflow-circle c3">
-          <span class="uflow-num">03</span>
-          <span class="uflow-em">🪴</span>
-        </div>
         <div class="uflow-text">
           <h4 class="uflow-title">Vẽ chậu & gieo hạt</h4>
           <p class="uflow-desc">Bé trang trí chậu, gieo hạt thật và bắt đầu chăm sóc cây mỗi ngày.</p>
-        </div>
-      </div>
-      <!-- Step 4 -->
-      <div class="uflow-col">
-        <div class="uflow-circle c4">
-          <span class="uflow-num">04</span>
-          <span class="uflow-em">🌟</span>
         </div>
         <div class="uflow-text">
           <h4 class="uflow-title">Lưu kỷ niệm nở hoa</h4>
