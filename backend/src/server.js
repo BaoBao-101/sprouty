@@ -47,9 +47,27 @@ if (isProd) {
   }
 }
 
+// Trust only a bounded number of proxy hops. If we trusted every hop
+// (trustProxy: true), the leftmost — client-supplied — X-Forwarded-For entry
+// would become req.ip, letting an attacker forge it and rotate the rate-limit
+// key to defeat brute-force protection. Bounding the hop count means req.ip is
+// the address our own proxy appended (the real client).
+//   unset / 'false' → no proxy, use the socket address
+//   'true'          → exactly one reverse proxy (nginx) in front
+//   '<n>'           → n proxy hops
+//   '<ip|cidr|csv>' → trust that specific proxy address(es)
+function resolveTrustProxy(v) {
+  const s = (v || '').trim();
+  if (s === '' || s === 'false') return false;
+  if (s === 'true') return 1;
+  const n = Number(s);
+  if (Number.isInteger(n) && n >= 0) return n;
+  return s;
+}
+
 const app = Fastify({
   logger: { level: isProd ? 'warn' : 'info' },
-  trustProxy: process.env.TRUST_PROXY === 'true',
+  trustProxy: resolveTrustProxy(process.env.TRUST_PROXY),
   bodyLimit: Number(process.env.BODY_LIMIT_MB || 25) * 1024 * 1024,
 });
 
@@ -112,10 +130,9 @@ await app.register(sessionPlugin);
 await app.register(fastifyRateLimit, {
   max: 120,
   timeWindow: '1 minute',
-  keyGenerator: (req) => {
-    const fwd = req.headers['x-forwarded-for'];
-    return fwd ? fwd.split(',')[0].trim() : req.ip;
-  },
+  // Key on req.ip, which Fastify derives from X-Forwarded-For using the bounded
+  // trustProxy setting above — so it can't be spoofed by adding extra XFF hops.
+  keyGenerator: (req) => req.ip,
   errorResponseBuilder: () => ({ message: 'Quá nhiều yêu cầu. Thử lại sau 1 phút.' }),
 });
 

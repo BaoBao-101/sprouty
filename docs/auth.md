@@ -5,9 +5,12 @@
 ### Session Cookie
 - **Cookie name**: `session_id`
 - **Flags**: `httpOnly`, `SameSite=Strict`, `Secure` (in production), `Path=/`
-- **Lifetime**: 7 days
+- **Idle timeout**: 30 minutes by default (`SESSION_IDLE_TIMEOUT_MINUTES`)
+- **Absolute timeout**: 12 hours by default (`SESSION_ABSOLUTE_TIMEOUT_HOURS`)
+- **Renewal**: active sessions refresh `lastSeenAt` at most every 5 minutes (`SESSION_TOUCH_INTERVAL_MINUTES`)
 - **Storage**: PostgreSQL `Session` table (not Redis)
 - **httpOnly**: JavaScript cannot read the cookie — prevents XSS token theft
+- **Rotation**: login/register deletes any existing session cookie before issuing a new session
 
 ### CSRF Protection
 - **Primary**: `SameSite=Strict` session cookie prevents cross-site request forgery automatically
@@ -27,12 +30,20 @@
 ```
 1. Client → POST /api/v1/auth/login { email, password }
 2. Server verifies password against bcrypt hash
-3. Server creates Session record in DB
+3. Server deletes any existing session from the current browser and creates a new Session record in DB
 4. Server sets session_id cookie (httpOnly)
 5. Server returns { user, csrfToken } in response body
 6. Client stores csrfToken in memory (api.js _csrfToken variable)
 7. Subsequent authenticated mutations include X-CSRF-Token header
 ```
+
+## Session Expiration
+
+Sessions expire on the server when either condition is true:
+- `expiresAt` is older than the current time (absolute lifetime)
+- `lastSeenAt` is older than the configured idle timeout
+
+Expired, malformed, or disabled-user sessions are deleted or ignored and the browser cookie is cleared. Expired sessions are also cleaned on startup and every hour.
 
 ## RBAC (Role-Based Access Control)
 

@@ -3,12 +3,13 @@ import { z } from 'zod';
 import { AppError } from '../../utils/errors.js';
 import { requireAdmin, requireCsrf } from '../../middleware/rbac.js';
 import { isVipUser } from '../../services/access.js';
+import { passwordSchema } from '../../utils/password.js';
 
 const createUserSchema = z.object({
   name: z.string().min(2, 'Tên phải có ít nhất 2 ký tự.').max(100)
     .refine(s => !/[<>]/.test(s), { message: 'Tên không được chứa ký tự < hoặc >.' }),
   email: z.string().email('Email không hợp lệ.'),
-  password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự.').max(200),
+  password: passwordSchema,
   role: z.enum(['customer', 'employee', 'admin']),
   status: z.enum(['active', 'disabled']).optional().default('active'),
 });

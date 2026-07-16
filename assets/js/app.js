@@ -3,11 +3,17 @@
    Backend-based auth · API-first architecture
    ═══════════════════════════════════════════ */
 
-/* ── HTML escape helper (XSS prevention) ── */
+/* ── HTML escape helper (XSS prevention) ──
+   Escapes quotes as well as angle brackets so the result is safe inside a
+   double- or single-quoted HTML attribute value, not just in text content. */
 function esc(s) {
-  const d = document.createElement('div');
-  d.textContent = String(s ?? '');
-  return d.innerHTML;
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[c]));
 }
 
 /* ── Product normalizer (API → display keys) ── */

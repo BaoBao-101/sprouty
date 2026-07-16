@@ -21,7 +21,15 @@ const productSchema = z.object({
   badge: z.enum(['hot', 'new', 'sale']).nullable().optional(),
   bgColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional().default('#FEF5EA'),
   includes: z.array(noHtml('Mục bao gồm').and(z.string().min(1).max(300))).max(40).optional().default([]),
-  images: z.array(z.string().min(1).max(2048)).max(20).optional().default([]),
+  // Image entries are interpolated into HTML `src` attributes on the client, so
+  // constrain them to a real relative path or http(s) URL with no characters
+  // that could break out of the attribute (quotes / angle brackets / spaces).
+  images: z.array(
+    z.string().min(1).max(2048).regex(
+      /^(?:https?:\/\/|\/)[^\s"'<>]+$/,
+      'Đường dẫn ảnh không hợp lệ.',
+    ),
+  ).max(20).optional().default([]),
   status: z.enum(['published', 'draft', 'archived']).optional().default('published'),
 });
 
