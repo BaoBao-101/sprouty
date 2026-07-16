@@ -133,7 +133,13 @@ await app.register(fastifyRateLimit, {
   // Key on req.ip, which Fastify derives from X-Forwarded-For using the bounded
   // trustProxy setting above — so it can't be spoofed by adding extra XFF hops.
   keyGenerator: (req) => req.ip,
-  errorResponseBuilder: () => ({ message: 'Quá nhiều yêu cầu. Thử lại sau 1 phút.' }),
+  // The plugin throws this object; carry the status code (429, or 403 when
+  // banning) so our error handler responds with it instead of a generic 500.
+  errorResponseBuilder: (req, ctx) => ({
+    statusCode: ctx.statusCode,
+    error: ctx.statusCode === 403 ? 'Forbidden' : 'Too Many Requests',
+    message: 'Quá nhiều yêu cầu. Thử lại sau 1 phút.',
+  }),
 });
 
 // Health check
