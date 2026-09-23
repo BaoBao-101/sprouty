@@ -1,0 +1,58 @@
+/* Page styles for About. Lifted out of the <style> block that used to sit
+   in the <head> of about.html. */
+
+/* Team section — centered, balanced layout (5 members: 3 + 2 centered) */
+#doi-ngu .team-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 30px;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+#doi-ngu .team-card {
+  flex: 0 1 300px;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  border-width: 1.5px;
+  overflow: hidden;
+}
+
+/* Photo fills the frame edge-to-edge; top corners rounded to hug the border */
+#doi-ngu .team-photo-wrap {
+  aspect-ratio: 4/5;
+  border-radius: 0;
+  margin: 0;
+  background: var(--parchment);
+}
+
+#doi-ngu .team-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+}
+
+#doi-ngu .team-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column
+}
+
+@media(max-width:760px) {
+  #doi-ngu .team-card {
+    flex: 0 1 260px;
+    max-width: 320px
+  }
+}
+
+@media(max-width:520px) {
+  #doi-ngu .team-card {
+    flex: 1 1 100%;
+    max-width: 340px
+  }
+}

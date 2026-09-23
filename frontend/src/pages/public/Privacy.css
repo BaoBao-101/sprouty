@@ -1,0 +1,16 @@
+/* Page styles for Privacy. Lifted out of the <style> block that used to sit
+   in the <head> of privacy.html. */
+
+.privacy-hero{background:linear-gradient(135deg,var(--ink) 0%,#1B4332 55%,var(--green) 100%);padding:56px 0 48px;color:#fff}
+.privacy-hero h1{color:#fff;max-width:720px}
+.privacy-hero p{color:rgba(255,255,255,.76);max-width:680px;margin-top:14px}
+.privacy-layout{display:grid;grid-template-columns:260px 1fr;gap:36px;align-items:start}
+.privacy-toc{position:sticky;top:112px;background:var(--surface);border:1.5px solid var(--parchment-2);border-radius:var(--r-xl);padding:18px;box-shadow:var(--sh-sm)}
+.privacy-toc a{display:block;font-family:var(--font-h);font-size:.84rem;font-weight:700;color:var(--ink-3);padding:9px 10px;border-radius:var(--r-md)}
+.privacy-toc a:hover{background:var(--parchment);color:var(--orange)}
+.privacy-card{background:var(--surface);border:1.5px solid var(--parchment-2);border-radius:var(--r-xl);padding:28px;box-shadow:var(--sh-sm);margin-bottom:18px}
+.privacy-card h2{margin-bottom:12px}
+.privacy-card ul{padding-left:20px;color:var(--ink-3);line-height:1.8}
+.privacy-card li{margin:8px 0}
+.privacy-callout{background:var(--sage-bg);border:1.5px solid var(--parchment-2);border-radius:var(--r-xl);padding:22px;margin-bottom:18px}
+@media(max-width:900px){.privacy-layout{grid-template-columns:1fr}.privacy-toc{position:static}}

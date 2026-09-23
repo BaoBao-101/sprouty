@@ -1,0 +1,46 @@
+/* Page styles for Payment. Lifted out of the <style> block that used to sit
+   in the <head> of payment.html. */
+
+.pay-layout { display:grid; grid-template-columns:1fr 360px; gap:28px; padding:36px 0 72px; align-items:start }
+.pay-card { background:var(--surface); border:1.5px solid var(--parchment-2); border-radius:var(--r-2xl); padding:28px; box-shadow:var(--sh-md) }
+.pay-summary { background:var(--surface); border:1.5px solid var(--parchment-2); border-radius:var(--r-2xl); padding:24px; position:sticky; top:108px; box-shadow:var(--sh-md) }
+.sum-row { display:flex; justify-content:space-between; align-items:center; font-size:.9rem; color:var(--ink-3); margin-bottom:10px; gap:12px }
+.sum-row strong { color:var(--ink-2); font-family:var(--font-h); text-align:right; word-break:break-all }
+.sum-divider { height:1.5px; background:var(--parchment-2); margin:14px 0 }
+.sum-total { display:flex; justify-content:space-between; align-items:center; font-family:var(--font-h); font-weight:800 }
+.sum-total-lbl { font-size:1rem; color:var(--ink) }
+.sum-total-val { font-size:1.3rem; color:var(--orange) }
+.pay-row { display:flex; justify-content:space-between; gap:8px; align-items:center; padding:8px 0; border-bottom:1px solid var(--parchment) }
+.pay-row:last-child { border-bottom:none }
+.pay-row .lbl { color:var(--ink-4); font-size:.86rem }
+.pay-row .val { font-family:var(--font-h); font-weight:700; color:var(--ink); display:flex; align-items:center; gap:8px; word-break:break-all; text-align:right }
+.pay-status { margin-top:18px; padding:11px 15px; border-radius:var(--r-md); font-size:.86rem; display:flex; align-items:center; gap:10px; justify-content:center; font-family:var(--font-h); font-weight:600 }
+.pay-status.pending { background:#FEF3C7; color:#92400E; border:1px solid #FDE68A }
+.pay-status.paid    { background:#DCFCE7; color:#166534; border:1px solid #BBF7D0 }
+.pay-status.warn    { background:#FEE2E2; color:#991B1B; border:1px solid #FECACA }
+.spinner { display:inline-block; width:14px; height:14px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin .9s linear infinite }
+@keyframes spin { to { transform:rotate(360deg) } }
+.copy-btn { background:var(--parchment); border:1.5px solid var(--parchment-2); border-radius:8px; padding:2px 9px; font-size:.74rem; cursor:pointer; color:var(--ink-2); transition:all .15s }
+.copy-btn:hover { background:var(--orange); color:#fff; border-color:var(--orange) }
+.pay-warn { margin-top:14px; padding:10px 14px; background:#FEF3C7; border:1px solid #FDE68A; border-radius:var(--r-md); color:#92400E; font-size:.82rem; font-weight:600 }
+.pay-actions { display:flex; gap:12px; margin-top:22px; flex-wrap:wrap }
+@media(max-width:1024px) { .pay-layout { grid-template-columns:1fr } .pay-summary { position:static } }
+
+/* ── Added during the React rewrite ─────────────────────────── */
+.pay-hero { background: linear-gradient(135deg,#1A1209 0%,#3D2B1F 55%,var(--terracotta) 100%); padding: 40px 0 32px }
+.pay-hero h1 { color: #fff }
+.pay-hero p { color: rgba(255,255,255,.7); margin-top: 6px; font-size: .95rem }
+.pay-hero-crumb, .pay-hero-crumb a { color: rgba(255,255,255,.45) }
+.pay-hero-crumb { margin-bottom: 12px }
+
+.pay-qr { width: 100%; max-width: 260px; display: block; margin: 16px auto; border-radius: var(--r-md) }
+.pay-result-emoji { font-size: 3.4rem; margin-bottom: 10px }
+
+.purchase-codes { text-align: left; margin-top: 20px; background: var(--cream-2); border-radius: var(--r-md); padding: 16px }
+.purchase-codes-title { font-family: var(--font-h); font-weight: 800; margin-bottom: 8px; color: var(--ink) }
+.purchase-codes-note { margin: 0 0 10px; color: var(--ink-4); font-size: .84rem }
+.purchase-code-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--parchment-2); padding: 10px 0 }
+.purchase-code-row[data-first='true'] { border-top: 0; padding-top: 0 }
+.purchase-code-product { font-size: .78rem; color: var(--ink-4) }
+.purchase-code-value { font-family: var(--font-h); font-weight: 800; letter-spacing: .04em; color: var(--orange) }
+.purchase-code-features { font-size: .72rem; color: var(--ink-5) }

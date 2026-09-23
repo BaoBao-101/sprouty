@@ -2,6 +2,25 @@
 
 Checklist triển khai production. Stack: Fastify backend + Postgres + Prisma, nginx làm reverse proxy/static server, Let's Encrypt SSL, tất cả chạy qua `docker-compose.yml` ở root repo.
 
+## Cấu trúc repo
+
+```
+sprouty/
+├── frontend/   TypeScript + Vite — build ra HTML/CSS/JS tĩnh cho nginx
+├── backend/    Fastify + Prisma + Postgres
+├── docker/     nginx.conf (production), nginx.local.conf (máy local), script backup
+└── docs/
+```
+
+**Frontend cần bước build.** Trước đây nginx đọc thẳng file HTML/JS từ repo; giờ
+`frontend/Dockerfile` chạy `npm ci && npm run build` rồi copy thư mục `dist/` vào
+image nginx. Nghĩa là **mọi thay đổi ở frontend đều phải chạy lại
+`docker compose up -d --build`** mới có hiệu lực — không còn chuyện sửa file rồi
+refresh trình duyệt là thấy ngay.
+
+Chi tiết cách làm việc với frontend (lệnh dev, quy ước đường dẫn ảnh, cầu nối
+`window`, lộ trình siết dần TypeScript): xem [`docs/frontend.md`](frontend.md).
+
 ## 0. Chuẩn bị trước
 - [ ] Droplet DigitalOcean đã tạo (khuyến nghị >= 2GB RAM)
 - [ ] Domain `sprouty.id.vn` trỏ về IP droplet:

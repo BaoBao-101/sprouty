@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" fill="none">
+  <rect width="1200" height="720" rx="48" fill="#9E4F68"/>
+  <circle cx="172" cy="146" r="118" fill="#F3BB52" fill-opacity="0.18"/>
+  <circle cx="1038" cy="594" r="154" fill="#FFFFFF" fill-opacity="0.10"/>
+  <rect x="92" y="86" width="1016" height="548" rx="36" fill="#FFF8F0" fill-opacity="0.14" stroke="#FFFFFF" stroke-opacity="0.34" stroke-width="4" stroke-dasharray="14 14"/>
+  <rect x="156" y="150" width="408" height="408" rx="32" fill="#FFFFFF" fill-opacity="0.18"/>
+  <path d="M342.182 245L359.598 297.594H414.863L370.132 330.062L387.547 382.656L342.816 350.188L298.084 382.656L315.5 330.062L270.768 297.594H326.033L342.449 245H342.182Z" fill="#F3BB52"/>
+  <path d="M474.182 330L486.299 366.594H524.863L493.665 389.265L505.782 425.859L474.584 403.188L443.386 425.859L455.503 389.265L424.305 366.594H462.869L475.053 330H474.182Z" fill="#FFFFFF" fill-opacity="0.84"/>
+  <rect x="660" y="174" width="356" height="56" rx="18" fill="#FFFFFF" fill-opacity="0.22"/>
+  <rect x="660" y="254" width="292" height="28" rx="14" fill="#FFFFFF" fill-opacity="0.18"/>
+  <rect x="660" y="304" width="320" height="28" rx="14" fill="#FFFFFF" fill-opacity="0.18"/>
+  <rect x="660" y="354" width="264" height="28" rx="14" fill="#FFFFFF" fill-opacity="0.18"/>
+  <rect x="660" y="438" width="190" height="56" rx="20" fill="#1F7A72"/>
+  <text x="660" y="124" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="26" font-weight="700" letter-spacing="3">KHUNG HÌNH ẢNH SẢN PHẨM</text>
+  <text x="660" y="210" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="28" font-weight="700">Điều Ước Đầu Tiên</text>
+  <text x="660" y="272" fill="#FFFFFF" fill-opacity="0.92" font-family="Arial, sans-serif" font-size="20">Hãy thay tệp này bằng ảnh sản phẩm hoặc ảnh chụp màn hình cuối cùng của bạn.</text>
+  <text x="660" y="322" fill="#FFFFFF" fill-opacity="0.92" font-family="Arial, sans-serif" font-size="20">Giữ nguyên tên tệp để cập nhật trang mà không cần sửa HTML lần nữa.</text>
+  <text x="700" y="472" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="20" font-weight="700">Thêm ảnh tại đây</text>
+</svg>

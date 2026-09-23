@@ -1,0 +1,265 @@
+/* Page styles for Contact. Lifted out of the <style> block that used to sit
+   in the <head> of contact.html. */
+
+.contact-hero {
+  background: linear-gradient(135deg, #1A1209 0%, #3D2B1F 60%, var(--terracotta) 100%);
+  padding: 64px 0 52px;
+  color: #fff
+}
+
+.contact-hero h1 {
+  color: #fff
+}
+
+.contact-hero p {
+  color: rgba(255, 255, 255, .75)
+}
+
+.contact-body {
+  padding: 64px 0 80px
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 440px;
+  gap: 52px;
+  align-items: start
+}
+
+.contact-form-card {
+  background: var(--surface);
+  border-radius: var(--r-2xl);
+  padding: 40px;
+  box-shadow: var(--sh-xl);
+  border: 1.5px solid var(--parchment-2);
+  position: sticky;
+  top: 108px
+}
+
+.contact-form-card h2 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 6px
+}
+
+.contact-form-card>p {
+  font-size: .9rem;
+  color: var(--ink-4);
+  margin-bottom: 28px
+}
+
+.contact-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 44px
+}
+
+.ci-item {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start
+}
+
+.ci-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--r-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  border: 1.5px solid
+}
+
+.ci-icon.orange {
+  background: var(--orange-pale);
+  border-color: rgba(232, 93, 4, .2)
+}
+
+.ci-icon.green {
+  background: #F0FDF4;
+  border-color: #BBF7D0
+}
+
+.ci-icon.blue {
+  background: #EFF6FF;
+  border-color: #BFDBFE
+}
+
+.ci-icon.purple {
+  background: #F5F3FF;
+  border-color: #DDD6FE
+}
+
+.ci-title {
+  font-family: var(--font-h);
+  font-size: .92rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 4px
+}
+
+.ci-val {
+  font-size: .9rem;
+  color: var(--ink-3);
+  line-height: 1.65
+}
+
+.ci-val a {
+  color: var(--orange);
+  font-weight: 600;
+  text-decoration: none
+}
+
+.ci-val a:hover {
+  text-decoration: underline
+}
+
+.ci-note {
+  font-size: .76rem;
+  color: var(--ink-5);
+  margin-top: 2px
+}
+
+.dept-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 36px
+}
+
+.dept-card {
+  background: var(--cream-2);
+  border: 1.5px solid var(--parchment-2);
+  border-radius: var(--r-xl);
+  padding: 18px 20px;
+  transition: all .2s
+}
+
+.dept-card:hover {
+  border-color: var(--terra-3);
+  box-shadow: var(--sh-md)
+}
+
+.dept-em {
+  font-size: 1.6rem;
+  margin-bottom: 10px;
+  display: block
+}
+
+.dept-title {
+  font-family: var(--font-h);
+  font-size: .88rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 5px
+}
+
+.dept-email {
+  font-size: .82rem;
+  color: var(--orange);
+  font-weight: 600;
+  text-decoration: none
+}
+
+.dept-email:hover {
+  text-decoration: underline
+}
+
+.dept-desc {
+  font-size: .78rem;
+  color: var(--ink-4);
+  margin-top: 4px;
+  line-height: 1.55
+}
+
+.map-placeholder {
+  background: linear-gradient(135deg, var(--sage-bg), var(--cobalt-bg));
+  border-radius: var(--r-xl);
+  height: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--parchment-2);
+  text-align: center;
+  margin-top: 36px;
+  padding: 24px
+}
+
+.social-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-h);
+  font-size: .84rem;
+  font-weight: 700;
+  color: var(--ink-2);
+  background: var(--parchment);
+  border: 1.5px solid var(--parchment-2);
+  border-radius: var(--r-full);
+  padding: 8px 16px;
+  text-decoration: none;
+  transition: all .2s
+}
+
+.social-btn:hover {
+  background: var(--orange-pale);
+  border-color: var(--terra-3);
+  color: var(--orange)
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px
+}
+
+.form-success {
+  text-align: center;
+  padding: 32px 20px
+}
+
+@media(max-width:1024px) {
+  .contact-grid {
+    grid-template-columns: 1fr
+  }
+
+  .contact-form-card {
+    position: static
+  }
+
+  .form-row {
+    grid-template-columns: 1fr
+  }
+
+  .dept-grid {
+    grid-template-columns: 1fr
+  }
+}
+
+@media(max-width:640px) {
+  .contact-form-card {
+    padding: 24px
+  }
+}
+
+/* ── Added during the React rewrite ─────────────────────────── */
+.form-label .req { color: var(--rose) }
+.form-label .opt { color: var(--ink-5); font-weight: 400 }
+.contact-success-text { color: var(--ink-3); font-size: .92rem; line-height: 1.75; margin-bottom: 24px }
+.contact-consent { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 20px }
+.contact-consent input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--orange); flex-shrink: 0 }
+.contact-consent label { font-size: .82rem; color: var(--ink-4); line-height: 1.6; cursor: pointer }
+.contact-consent a { color: var(--orange) }
+.contact-form-note { font-size: .74rem; color: var(--ink-5); text-align: center; margin-top: 12px }

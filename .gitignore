@@ -33,3 +33,6 @@ dist/
 # Runtime uploads (served from backend_uploads volume in production)
 backend/uploads/*
 !backend/uploads/.gitkeep
+
+# Cau hinh chay local — khong dua len GitHub
+docker-compose.local.yml

@@ -1,0 +1,56 @@
+/* Page styles for Home. Lifted out of the <style> block that used to sit
+   in the <head> of index.html. */
+
+/* Homepage-only extras */
+.section-title { text-align:center; margin-bottom:48px }
+.section-title .overline { justify-content:center }
+
+/* ── User Flow ── */
+/* progress-banner.png now ships with the 4 step circles + connecting
+   arrows already drawn in, at measured centers x=19.75/40.1/61.2/82.0%,
+   y=48.6% — so we only overlay each circle's icon, then the title/desc
+   row below at matching x-offsets (8.5% side padding + 4 equal columns
+   lands column centers within ~1% of those measured circle centers). */
+.user-flow-track { margin-top:52px }
+.uflow-img-wrap { position:relative }
+.uflow-img { display:block; width:100%; height:auto }
+.uflow-icon { position:absolute; top:48.6%; font-size:2.1rem; line-height:1; transform:translate(-50%,-50%); filter:drop-shadow(0 2px 3px rgba(0,0,0,.15)) }
+.uflow-labels { display:grid; grid-template-columns:repeat(4,1fr); padding:0 8.5%; margin-top:18px }
+.uflow-text { text-align:center; padding:0 6px }
+.uflow-title { font-family:var(--font-h); font-size:.9rem; font-weight:800; color:var(--ink); margin-bottom:6px }
+.uflow-desc { font-size:.78rem; color:var(--ink-4); line-height:1.6; margin:0 }
+.user-flow-mobile { display:none; padding:4px 0 }
+.uflow-m-item { display:flex; gap:16px; align-items:flex-start; margin-bottom:8px }
+.uflow-m-dot { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#fff; font-family:var(--font-h); font-size:.78rem; font-weight:800; box-shadow:0 4px 14px rgba(0,0,0,.15) }
+.uflow-m-dot.c1 { background:linear-gradient(135deg,#8DDFF7,var(--accent-sky)) }
+.uflow-m-dot.c2 { background:linear-gradient(135deg,#FFA9B1,var(--accent-coral)) }
+.uflow-m-dot.c3 { background:linear-gradient(135deg,#FFDB7A,var(--accent-yellow)) }
+.uflow-m-dot.c4 { background:linear-gradient(135deg,var(--primary-300),var(--primary-500)) }
+.uflow-m-line { width:2px; background:var(--parchment-2); flex-shrink:0; margin:48px 0 0; height:calc(100% - 48px); align-self:stretch }
+
+.feat-list { display:grid; grid-template-columns:repeat(2,1fr); gap:32px 40px; margin-top:44px }
+.feat-list-item { display:flex; gap:16px; align-items:flex-start }
+.feat-icon { width:48px; height:48px; border-radius:var(--r-lg); display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0; color:#fff }
+.feat-icon.green  { background:linear-gradient(135deg,var(--primary-300),var(--primary-500)) }
+.feat-icon.coral  { background:linear-gradient(135deg,#FFA9B1,var(--accent-coral)) }
+.feat-icon.lavender { background:linear-gradient(135deg,#C4AEFF,var(--accent-lavender)) }
+.feat-icon.sky    { background:linear-gradient(135deg,#8DDFF7,var(--accent-sky)) }
+.feat-title { font-family:var(--font-display); font-size:1.05rem; font-weight:600; color:var(--ink); margin-bottom:5px }
+.feat-desc { font-size:.86rem; color:var(--ink-3); line-height:1.65 }
+.review-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; margin-top:44px }
+.age-icon-wrap { width:68px; height:68px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2rem; margin:0 auto 14px }
+.age-icon-wrap.green  { background:var(--primary-100) }
+.age-icon-wrap.orange { background:var(--accent-orange-soft) }
+.age-icon-wrap.coral  { background:#FFE3E5 }
+.cta-banner { background:linear-gradient(135deg,rgba(244,138,0,.32) 0%,rgba(253,186,116,.18) 100%),url(/assets/images/banner/footer_banner.png) center/cover no-repeat; border-radius:var(--r-2xl); padding:56px 48px; text-align:center; position:relative; overflow:hidden }
+.cta-banner::before { content:''; position:absolute; top:-60px; right:-60px; width:300px; height:300px; border-radius:50%; background:rgba(255,255,255,.07) }
+.cta-banner::after { content:''; position:absolute; bottom:-40px; left:-40px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.05) }
+.cta-banner h2 { color:#fff; font-size:clamp(1.6rem,3vw,2.4rem) }
+.cta-banner p { color:rgba(255,255,255,.85); font-size:1rem; margin:12px 0 28px }
+@media(max-width:1024px) {
+  .user-flow-track { display:none }
+  .user-flow-mobile { display:flex; flex-direction:column }
+  .feat-list { grid-template-columns:1fr }
+  .review-grid { grid-template-columns:1fr }
+}
+@media(max-width:640px) { .feat-list { grid-template-columns:1fr } .cta-banner { padding:36px 24px } }

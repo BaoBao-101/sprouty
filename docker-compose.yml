@@ -39,14 +39,11 @@ services:
       start_period: 30s
 
   frontend:
-    image: nginx:alpine
+    # Built from frontend/ (Vite + TypeScript) — the image already contains the
+    # compiled site, so no source is mounted here any more.
+    build: ./frontend
     restart: unless-stopped
     volumes:
-      - ./index.html:/usr/share/nginx/html/index.html:ro
-      - ./assets:/usr/share/nginx/html/assets:ro
-      - ./pages:/usr/share/nginx/html/pages:ro
-      - ./robots.txt:/usr/share/nginx/html/robots.txt:ro
-      - ./sitemap.xml:/usr/share/nginx/html/sitemap.xml:ro
       - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/www/certbot:/var/www/certbot:ro
@@ -56,6 +53,7 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+
 
 volumes:
   postgres_data:

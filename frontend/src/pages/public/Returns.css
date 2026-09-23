@@ -1,0 +1,42 @@
+/* Page styles for Returns. Lifted out of the <style> block that used to sit
+   in the <head> of returns.html. */
+
+.policy-hero { background:linear-gradient(135deg,#1A1209 0%,#3D2B1F 60%,var(--terracotta) 100%); padding:64px 0 52px; color:#fff; text-align:center }
+.policy-hero h1 { color:#fff }
+.policy-hero p { color:rgba(255,255,255,.75) }
+.policy-body { padding:64px 0 80px }
+.policy-layout { display:grid; grid-template-columns:240px 1fr; gap:48px; align-items:start }
+.policy-toc { position:sticky; top:108px; background:var(--surface); border:1.5px solid var(--parchment-2); border-radius:var(--r-xl); padding:22px; box-shadow:var(--sh-sm) }
+.policy-toc h4 { font-family:var(--font-h); font-size:.78rem; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-4); margin-bottom:14px }
+.toc-link { display:block; font-family:var(--font-h); font-size:.87rem; font-weight:600; color:var(--ink-3); padding:8px 12px; border-radius:var(--r-lg); text-decoration:none; margin-bottom:2px; transition:all .15s }
+.toc-link:hover { background:var(--parchment); color:var(--ink) }
+.toc-link.active { background:var(--orange-pale); color:var(--orange) }
+.policy-content h2 { font-family:var(--font-display); font-size:1.4rem; font-weight:700; color:var(--ink); margin:48px 0 16px; padding-top:16px; border-top:2px solid var(--parchment-2) }
+.policy-content h2:first-child { margin-top:0; border-top:none; padding-top:0 }
+.policy-content h3 { font-family:var(--font-h); font-size:1rem; font-weight:700; color:var(--ink-2); margin:24px 0 10px }
+.policy-content p { color:var(--ink-3); line-height:1.85; font-size:.93rem; margin-bottom:14px }
+.policy-content ul, .policy-content ol { padding-left:22px; margin-bottom:16px }
+.policy-content li { color:var(--ink-3); font-size:.93rem; line-height:1.8; margin-bottom:6px }
+.policy-content strong { color:var(--ink-2) }
+.policy-content a { color:var(--orange) }
+.policy-card { border-radius:var(--r-xl); padding:22px 24px; margin-bottom:20px; border:1.5px solid; }
+.policy-card.green { background:#F0FDF4; border-color:#BBF7D0 }
+.policy-card.orange { background:var(--orange-pale); border-color:rgba(232,93,4,.2) }
+.policy-card.red { background:#FEF2F2; border-color:#FECACA }
+.policy-card.blue { background:#EFF6FF; border-color:#BFDBFE }
+.policy-card h4 { font-family:var(--font-h); font-size:.9rem; font-weight:800; margin-bottom:8px }
+.policy-card.green h4 { color:var(--green) }
+.policy-card.orange h4 { color:var(--orange) }
+.policy-card.red h4 { color:var(--rose) }
+.policy-card.blue h4 { color:var(--blue) }
+.policy-card p { margin:0; font-size:.88rem; line-height:1.7 }
+.timeline-steps { display:flex; flex-direction:column; gap:0; margin:20px 0 }
+.tstep { display:flex; gap:16px; align-items:flex-start; padding-bottom:24px; position:relative }
+.tstep:last-child { padding-bottom:0 }
+.tstep:not(:last-child)::before { content:''; position:absolute; left:19px; top:40px; bottom:0; width:2px; background:var(--parchment-2) }
+.tstep-num { width:40px; height:40px; border-radius:50%; background:var(--orange); color:#fff; font-family:var(--font-h); font-size:.9rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; z-index:1; box-shadow:0 2px 8px rgba(232,93,4,.25) }
+.tstep-body { padding-top:8px }
+.tstep-title { font-family:var(--font-h); font-size:.92rem; font-weight:700; color:var(--ink-2); margin-bottom:5px }
+.tstep-desc { font-size:.86rem; color:var(--ink-3); line-height:1.7 }
+.last-updated { font-family:var(--font-h); font-size:.8rem; color:var(--ink-5); margin-bottom:32px; padding:10px 16px; background:var(--parchment); border-radius:var(--r-lg); display:inline-flex; align-items:center; gap:8px }
+@media(max-width:1024px) { .policy-layout { grid-template-columns:1fr } .policy-toc { position:static; display:flex; flex-wrap:wrap; gap:6px; padding:16px } .policy-toc h4 { width:100%; margin-bottom:4px } .toc-link { padding:5px 12px; border-radius:var(--r-full); font-size:.8rem } }

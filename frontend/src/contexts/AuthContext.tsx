@@ -1,0 +1,103 @@
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { API } from '@/services/api';
+import { showToast } from '@/services/toast';
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: 'customer' | 'employee' | 'admin';
+  status?: string;
+}
+
+interface AuthValue {
+  user: User | null;
+  /** false until the session check against the backend has finished. */
+  ready: boolean;
+  isLoggedIn: boolean;
+  isEmployee: boolean;
+  isAdmin: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  setUser: (user: User | null) => void;
+}
+
+const AuthContext = createContext<AuthValue | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [ready, setReady] = useState(false);
+
+  // Resolve the session cookie once, on mount.
+  useEffect(() => {
+    let cancelled = false;
+    API.auth
+      .me()
+      .then((data: any) => {
+        if (!cancelled) setUser(data.user || null);
+      })
+      .catch(() => {
+        if (!cancelled) setUser(null);
+      })
+      .finally(() => {
+        if (!cancelled) setReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const value = useMemo<AuthValue>(
+    () => ({
+      user,
+      ready,
+      isLoggedIn: !!user,
+      isEmployee: user?.role === 'employee' || user?.role === 'admin',
+      isAdmin: user?.role === 'admin',
+
+      async login(email, password) {
+        const data = await API.auth.login(email, password);
+        setUser(data.user);
+      },
+
+      async register(name, email, password) {
+        const data = await API.auth.register(name, email, password);
+        setUser(data.user);
+      },
+
+      async logout() {
+        // 401 means the session is already gone, which is the state we want.
+        // API.auth.logout() retries once on 403 with a fresh CSRF token, so a
+        // 403 reaching here means the server session is very likely still
+        // alive — don't claim to have signed out.
+        let cleared = true;
+        try {
+          await API.auth.logout();
+        } catch (err: any) {
+          if (err?.status !== 401) cleared = false;
+        }
+        if (!cleared) {
+          showToast('Đăng xuất thất bại — vui lòng thử lại. Phiên đăng nhập vẫn còn.', 'error');
+          return;
+        }
+        setUser(null);
+        showToast('Đã đăng xuất. Hẹn gặp lại!');
+        // Full reload rather than a route change, so any admin/employee data
+        // held in component state is dropped instead of merely unmounted.
+        setTimeout(() => window.location.replace('/'), 400);
+      },
+
+      setUser,
+    }),
+    [user, ready],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth phải nằm trong <AuthProvider>');
+  return ctx;
+}

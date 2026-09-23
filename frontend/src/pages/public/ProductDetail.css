@@ -1,0 +1,188 @@
+/* Page styles for ProductDetail. Lifted out of the <style> block that used to sit
+   in the <head> of product-detail.html. */
+
+/* ═══ Product Detail Page ═══ */
+.pdp-wrap { display:grid; grid-template-columns:1fr 480px; gap:56px; padding:44px 0 72px; align-items:start }
+
+/* Gallery */
+.pdp-gallery { position:sticky; top:108px }
+.pdp-img-main {
+  border-radius:18px; overflow:hidden;
+  background:var(--parchment);
+  aspect-ratio:16/9;
+  display:flex; align-items:center; justify-content:center;
+  border:1.5px solid var(--parchment-2); margin-bottom:12px;
+  box-shadow:var(--sh-lg); position:relative; cursor:zoom-in;
+}
+/* Real PNG landscape photo */
+.pdp-img-main .pdp-real-img {
+  width:100%; height:100%;
+  object-fit:cover; object-position:center center;
+  transition:transform .4s ease;
+}
+/* SVG illustration — center with padding */
+.pdp-img-main .pdp-svg-img {
+  width:100%; height:100%;
+  object-fit:contain; padding:20px;
+  transition:transform .4s ease;
+}
+.pdp-img-main:hover .pdp-real-img,
+.pdp-img-main:hover .pdp-svg-img { transform:scale(1.03) }
+.pdp-img-main .pdp-badge-main {
+  position:absolute; top:14px; left:14px;
+  font-family:var(--font-h); font-size:.72rem; font-weight:800;
+  padding:5px 12px; border-radius:var(--r-full);
+  text-transform:uppercase; letter-spacing:.04em; z-index:2;
+}
+.pdp-badge-main.hot { background:#FEE2E2; color:#B91C1C }
+.pdp-badge-main.new { background:#DBEAFE; color:#1E40AF }
+.pdp-badge-main.sale { background:#DCFCE7; color:#166534 }
+/* Thumbnails — 4 equal squares */
+.pdp-thumbs { display:grid; grid-template-columns:repeat(4,1fr); gap:8px }
+.pdp-thumb {
+  aspect-ratio:16/9; border-radius:10px; overflow:hidden;
+  background:var(--parchment); border:2px solid transparent;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.8rem; cursor:pointer; transition:all .2s;
+}
+.pdp-thumb img { width:100%; height:100%; object-fit:contain; padding:6px }
+.pdp-thumb:hover { border-color:var(--terra-3); box-shadow:var(--sh-sm) }
+.pdp-thumb.active { border-color:var(--orange); box-shadow:0 0 0 3px rgba(232,93,4,.12) }
+
+/* Info side */
+.pdp-info { }
+.pdp-tags { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:16px }
+.pdp-tag {
+  font-family:var(--font-h); font-size:.76rem; font-weight:700;
+  padding:5px 12px; border-radius:var(--r-full);
+  border:1.5px solid; display:inline-flex; align-items:center; gap:5px;
+}
+.pdp-tag.blue { background:#EFF6FF; color:#2563EB; border-color:#BFDBFE }
+.pdp-tag.gray { background:var(--parchment); color:var(--ink-3); border-color:var(--parchment-2) }
+.pdp-tag.orange { background:var(--orange-pale); color:var(--orange); border-color:rgba(232,93,4,.2) }
+.pdp-tag.red { background:#FEF2F2; color:#DC2626; border-color:#FECACA }
+.pdp-tag.green { background:#F0FDF4; color:#16A34A; border-color:#BBF7D0 }
+.pdp-tag.indigo { background:#EEF2FF; color:#4338CA; border-color:#C7D2FE }
+.pdp-name { font-family:var(--font-display); font-size:clamp(1.6rem,3.5vw,2.2rem); font-weight:700; color:var(--ink); line-height:1.18; margin-bottom:10px }
+.pdp-rating { display:flex; align-items:center; gap:10px; margin-bottom:18px }
+.pdp-stars { color:#F59E0B; font-size:1.05rem; letter-spacing:2px }
+.pdp-rating-count { font-size:.86rem; color:var(--ink-4); font-family:var(--font-h) }
+.pdp-rating-link { color:var(--orange); font-weight:700; text-decoration:none; font-size:.86rem }
+.pdp-rating-link:hover { text-decoration:underline }
+.pdp-price-wrap { margin-bottom:14px }
+.pdp-price { font-family:var(--font-h); font-size:1.9rem; font-weight:800; color:var(--orange) }
+.pdp-price-old { font-family:var(--font-h); font-size:1.1rem; font-weight:600; color:var(--ink-5); text-decoration:line-through; margin-left:10px }
+.pdp-discount-badge { display:inline-flex; align-items:center; margin-left:10px; background:#DCFCE7; color:#15803D; font-family:var(--font-h); font-size:.74rem; font-weight:700; padding:3px 9px; border-radius:var(--r-full) }
+.pdp-desc { font-size:.96rem; color:var(--ink-3); line-height:1.78; margin-bottom:24px }
+.pdp-divider { height:1px; background:var(--parchment-2); margin:20px 0 }
+
+/* Qty control */
+.pdp-qty-section { margin-bottom:22px }
+.pdp-qty-label { font-family:var(--font-h); font-size:.78rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-4); margin-bottom:10px }
+.pdp-qty-row { display:flex; align-items:center; gap:0; background:var(--parchment); border:1.5px solid var(--parchment-2); border-radius:12px; width:fit-content; overflow:hidden }
+.pdp-qty-btn { width:44px; height:44px; background:transparent; border:none; cursor:pointer; font-size:1.3rem; font-weight:700; color:var(--ink-2); transition:all .18s; display:flex; align-items:center; justify-content:center; user-select:none }
+.pdp-qty-btn:hover { background:var(--orange-pale); color:var(--orange) }
+.pdp-qty-num { min-width:52px; text-align:center; font-family:var(--font-h); font-size:1.05rem; font-weight:800; color:var(--ink); border-left:1px solid var(--parchment-2); border-right:1px solid var(--parchment-2); height:44px; display:flex; align-items:center; justify-content:center }
+.pdp-stock { font-size:.84rem; color:var(--green); font-family:var(--font-h); font-weight:600; margin-top:10px; display:flex; align-items:center; gap:5px }
+.pdp-stock::before { content:''; width:8px; height:8px; border-radius:50%; background:var(--green); flex-shrink:0 }
+
+.pdp-variant-opt {
+  display:flex; align-items:center; gap:8px; cursor:pointer;
+  border:1.5px solid var(--parchment-2); border-radius:12px; padding:10px 14px;
+  transition:all .18s;
+}
+.pdp-variant-opt:has(input:checked) { border-color:var(--orange); background:var(--orange-pale) }
+.pdp-variant-opt input { accent-color:var(--orange) }
+.pdp-variant-thumb { width:44px; height:44px; border-radius:8px; object-fit:cover; flex-shrink:0 }
+
+/* CTA buttons */
+.pdp-cta { display:flex; gap:12px; margin-bottom:18px; flex-wrap:wrap }
+.pdp-cta .btn-add { flex:2; font-size:1rem; font-weight:700; padding:14px; border-radius:14px; background:var(--orange); color:#fff; border:none; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:8px }
+.pdp-cta .btn-add:hover { background:var(--terracotta); transform:translateY(-2px); box-shadow:0 8px 20px rgba(232,93,4,.3) }
+.pdp-cta .btn-buy { flex:1; font-size:1rem; font-weight:700; padding:14px; border-radius:14px; background:var(--ink); color:#fff; border:none; cursor:pointer; transition:all .2s; white-space:nowrap }
+.pdp-cta .btn-buy:hover { background:var(--ink-2); transform:translateY(-2px) }
+
+/* Trust badges */
+.trust-badges { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:0 }
+.trust-badge { display:flex; align-items:center; gap:8px; padding:10px 13px; background:var(--cream-2); border:1px solid var(--parchment-2); border-radius:10px; font-family:var(--font-h); font-size:.8rem; font-weight:600; color:var(--ink-3) }
+.trust-badge span:first-child { font-size:1.1rem; flex-shrink:0 }
+
+/* Tabs */
+.pdp-tabs { display:flex; gap:0; border-bottom:2px solid var(--parchment-2); margin:32px 0 0; overflow-x:auto }
+.pdp-tab-btn { font-family:var(--font-h); font-size:.9rem; font-weight:700; color:var(--ink-4); padding:12px 22px; border-bottom:2.5px solid transparent; margin-bottom:-2px; cursor:pointer; background:none; border-top:none; border-left:none; border-right:none; white-space:nowrap; transition:all .18s }
+.pdp-tab-btn:hover { color:var(--orange) }
+.pdp-tab-btn.active { color:var(--orange); border-bottom-color:var(--orange) }
+.tab-pane { display:none; padding:24px 0 }
+.tab-pane.active { display:block }
+
+/* Include list */
+.include-item { display:flex; gap:12px; align-items:flex-start; padding:10px 0; border-bottom:1px solid var(--parchment-2) }
+.include-item:last-child { border-bottom:none }
+.include-check { width:22px; height:22px; border-radius:50%; background:var(--green); color:#fff; display:flex; align-items:center; justify-content:center; font-size:.72rem; font-weight:700; flex-shrink:0; margin-top:1px }
+.include-text { font-size:.9rem; color:var(--ink-2); line-height:1.5 }
+
+/* Spec table */
+.spec-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--parchment-2); font-size:.9rem }
+.spec-row:last-child { border-bottom:none }
+.spec-label { color:var(--ink-4); font-family:var(--font-h) }
+.spec-val { font-weight:700; color:var(--ink-2); font-family:var(--font-h); text-align:right }
+
+/* Review section */
+.review-summary-wrap { display:flex; gap:28px; align-items:center; padding:22px 0; border-bottom:1.5px solid var(--parchment-2); margin-bottom:20px; flex-wrap:wrap }
+.review-score-big { font-family:var(--font-display); font-size:3.5rem; font-weight:700; color:var(--ink); line-height:1 }
+.review-score-sub { font-family:var(--font-h); font-size:.8rem; color:var(--ink-4); margin-top:4px }
+.review-bars { flex:1; min-width:160px }
+.review-bar-row { display:flex; align-items:center; gap:10px; margin-bottom:6px }
+.review-bar-label { font-family:var(--font-h); font-size:.76rem; color:var(--ink-4); width:36px; flex-shrink:0 }
+.review-bar-track { flex:1; height:6px; background:var(--parchment-2); border-radius:3px; overflow:hidden }
+.review-bar-fill { height:100%; background:linear-gradient(90deg,#FBBF24,#F59E0B); border-radius:3px; transition:width .6s }
+.review-bar-count { font-size:.74rem; color:var(--ink-5); width:18px; text-align:right; flex-shrink:0 }
+.review-item { padding:18px 0; border-bottom:1px solid var(--parchment-2) }
+.review-item:last-child { border-bottom:none }
+.reviewer-row { display:flex; align-items:center; gap:10px; margin-bottom:10px }
+.reviewer-av { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:.84rem; flex-shrink:0 }
+.reviewer-name { font-family:var(--font-h); font-weight:700; font-size:.9rem; color:var(--ink) }
+.reviewer-loc { font-size:.76rem; color:var(--ink-4); margin-top:1px }
+.reviewer-stars { margin-left:auto; color:#F59E0B; font-size:.9rem }
+.review-text { font-size:.88rem; color:var(--ink-3); line-height:1.7; font-style:italic }
+
+/* Related */
+.related-section { margin-top:64px; padding-top:44px; border-top:1.5px solid var(--parchment-2) }
+
+@media(max-width:1024px) { .pdp-wrap { grid-template-columns:1fr } .pdp-gallery { position:static } }
+@media(max-width:640px) { .pdp-cta { flex-direction:column } .trust-badges { grid-template-columns:1fr } }
+
+/* ── Added during the React rewrite ───────────────────────────────
+   Replacements for inline styles that used to be built into the JS
+   template strings. Values unchanged. */
+.pdp-crumb-bar { background: linear-gradient(135deg,#1A1209 0%,#3D2B1F 55%,var(--terracotta) 100%); padding: 16px 0 14px }
+.pdp-crumb-bar .breadcrumb, .pdp-crumb-bar .breadcrumb a { color: rgba(255,255,255,.5) }
+.pdp-crumb-current { color: rgba(255,255,255,.85) }
+
+.pdp-state { text-align: center; padding: 100px 20px }
+.pdp-state-emoji { font-size: 4rem; margin-bottom: 20px }
+.pdp-state h2 { margin-bottom: 10px }
+.pdp-state p { color: var(--ink-4); margin-bottom: 28px }
+
+.pdp-img-main img { max-width: 100%; max-height: 100% }
+.pdp-img-fallback { font-size: 9rem; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center }
+.pdp-thumb img { width: 100%; height: 100%; object-fit: contain; padding: 8px }
+
+.pdp-rating-link { background: none; border: none; cursor: pointer; padding: 0 }
+.pdp-variant-row { display: flex; gap: 10px; flex-wrap: wrap }
+.pdp-variant-price { font-size: .78rem; color: var(--ink-4) }
+.pdp-cta-icon { width: 18px; height: 18px; object-fit: contain; vertical-align: middle; margin-right: 6px }
+
+.pdp-subhead { font-family: var(--font-h); font-size: .8rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-4); margin-bottom: 14px }
+.pdp-includes { margin-bottom: 22px }
+
+.pdp-empty-tab { text-align: center; padding: 40px 20px }
+.pdp-empty-emoji { font-size: 3rem; margin-bottom: 12px; opacity: .5 }
+.pdp-empty-tab h4 { margin-bottom: 8px; color: var(--ink-3) }
+.pdp-empty-tab p { font-size: .86rem; color: var(--ink-4) }
+
+.review-score-col { text-align: center; flex-shrink: 0 }
+.review-score-stars { color: #F59E0B; font-size: 1.1rem; margin: 4px 0 }
+
+.related-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px }
+.related-head h2 { margin-top: 6px }

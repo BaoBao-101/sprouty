@@ -1,0 +1,54 @@
+/* Page styles for Workshop. Lifted out of the <style> block that used to sit
+   in the <head> of workshop.html. */
+
+.ws-stat-row { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; margin-top:40px }
+.ws-stat { background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); border-radius:var(--r-xl); padding:22px 18px; text-align:center }
+.ws-stat-n { font-family:var(--font-display); font-size:2.2rem; font-weight:700; color:#fff; display:block }
+.ws-stat-l { font-size:.78rem; color:rgba(255,255,255,.7); font-family:var(--font-h); margin-top:4px; display:block }
+.benefits-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:18px; margin-top:24px }
+.benefit-item { display:flex; gap:14px; align-items:flex-start }
+.benefit-icon { width:40px; height:40px; background:var(--sage-bg); border-radius:var(--r-md); display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; border:1px solid rgba(88,129,87,.2) }
+.benefit-title { font-family:var(--font-h); font-size:.9rem; font-weight:700; color:var(--ink); margin-bottom:4px }
+.benefit-desc { font-size:.82rem; color:var(--ink-3); line-height:1.6 }
+.ws-register-form { background:var(--surface); border-radius:var(--r-2xl); padding:36px; box-shadow:var(--sh-xl); border:1.5px solid var(--parchment-2) }
+.ws-schedule { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; margin-top:36px }
+.schedule-card { background:var(--surface); border:1.5px solid var(--parchment-2); border-radius:var(--r-xl); overflow:hidden; box-shadow:var(--sh-sm); transition:all .25s var(--ease) }
+.schedule-card:hover { box-shadow:var(--sh-lg); transform:translateY(-4px); border-color:var(--green) }
+.schedule-photo { position:relative; aspect-ratio:16/10; overflow:hidden; background:var(--parchment) }
+.schedule-photo img { width:100%; height:100%; object-fit:cover }
+.schedule-emoji-badge {
+  position:absolute; bottom:-16px; left:16px; width:44px; height:44px;
+  background:var(--surface); border:2px solid var(--surface); border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font-size:1.3rem;
+  box-shadow:var(--sh-md);
+}
+.schedule-header { padding:26px 20px 20px; background:linear-gradient(135deg,#E8F5E9,#F0FDF4); border-bottom:1.5px solid var(--parchment-2) }
+.schedule-date { font-family:var(--font-h); font-size:.75rem; font-weight:700; color:var(--green); display:flex; align-items:center; gap:6px; margin-bottom:6px }
+.schedule-title { font-family:var(--font-display); font-size:1.05rem; font-weight:600; color:var(--ink) }
+.schedule-body { padding:20px }
+.schedule-detail { font-size:.84rem; color:var(--ink-3); line-height:1.7; margin-bottom:14px }
+.schedule-footer { display:flex; justify-content:space-between; align-items:center; padding-top:12px; border-top:1px solid var(--parchment-2) }
+.ws-gallery { display:none }  /* replaced by ws-photo-grid */
+.ws-gallery-item { display:none }
+.ws-faq { margin-top:40px }
+.faq-item { border:1.5px solid var(--parchment-2); border-radius:var(--r-lg); margin-bottom:10px; overflow:hidden }
+.faq-q { padding:16px 20px; font-family:var(--font-h); font-size:.92rem; font-weight:700; color:var(--ink-2); cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:background .15s }
+.faq-q:hover { background:var(--parchment) }
+.faq-q.open { background:var(--orange-pale); color:var(--orange) }
+.faq-a { display:none; padding:14px 20px 18px; font-size:.88rem; color:var(--ink-3); line-height:1.75; border-top:1px solid var(--parchment-2) }
+.faq-item.open .faq-a { display:block }
+.badge-full { background:#FEE2E2; color:#B91C1C }
+.badge-open { background:#DCFCE7; color:#15803D }
+.badge-soon { background:#FFF9E6; color:#B45309 }
+@media(max-width:1024px) { .ws-stat-row { grid-template-columns:repeat(2,1fr) } .ws-schedule { grid-template-columns:1fr } .benefits-grid { grid-template-columns:1fr } }
+@media(max-width:640px) { .ws-stat-row { grid-template-columns:repeat(2,1fr) } }
+
+/* ── Added during the React rewrite ─────────────────────────── */
+.ws-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px }
+@media(max-width: 640px) { .ws-form-row { grid-template-columns: 1fr } }
+.ws-form-note { font-size: .76rem; color: var(--ink-5); text-align: center; margin-top: 10px }
+.schedule-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px }
+.schedule-bar { height: 4px; background: var(--parchment-2); border-radius: 2px; overflow: hidden }
+.schedule-taken { font-size: .72rem; color: var(--ink-4); font-family: var(--font-h); margin-top: 5px }
+.faq-arrow { transition: transform .2s; display: inline-block }
+.faq-arrow.open { transform: rotate(90deg) }

@@ -1,0 +1,45 @@
+/* Page styles for Faq. Lifted out of the <style> block that used to sit
+   in the <head> of faq.html. */
+
+.faq-hero { background:linear-gradient(135deg,#1A1209 0%,#3D2B1F 60%,var(--terracotta) 100%); padding:64px 0 52px; color:#fff }
+.faq-hero h1 { color:#fff }
+.faq-hero p { color:rgba(255,255,255,.75) }
+.faq-search-wrap { max-width:560px; margin:28px auto 0; position:relative }
+.faq-search { width:100%; padding:14px 20px 14px 48px; border:2px solid rgba(255,255,255,.2); border-radius:var(--r-full); background:rgba(255,255,255,.1); color:#fff; font-family:var(--font-body); font-size:.96rem; outline:none; transition:border-color .2s; box-sizing:border-box }
+.faq-search:focus { border-color:rgba(255,255,255,.5); background:rgba(255,255,255,.15) }
+.faq-search::placeholder { color:rgba(255,255,255,.4) }
+.faq-search-icon { position:absolute; left:16px; top:50%; transform:translateY(-50%); font-size:1.1rem; pointer-events:none }
+.faq-body { padding:60px 0 80px }
+.faq-layout { display:grid; grid-template-columns:240px 1fr; gap:48px; align-items:start }
+.faq-nav { position:sticky; top:108px; background:var(--surface); border:1.5px solid var(--parchment-2); border-radius:var(--r-xl); padding:20px; box-shadow:var(--sh-sm) }
+.faq-nav h4 { font-family:var(--font-h); font-size:.78rem; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-4); margin-bottom:14px }
+.faq-nav-item { display:block; font-family:var(--font-h); font-size:.88rem; font-weight:600; color:var(--ink-3); padding:9px 12px; border-radius:var(--r-lg); text-decoration:none; margin-bottom:3px; transition:all .15s; cursor:pointer; background:none; border:none; width:100%; text-align:left }
+.faq-nav-item:hover { background:var(--parchment); color:var(--ink) }
+.faq-nav-item.active { background:var(--orange-pale); color:var(--orange) }
+.faq-group { margin-bottom:52px }
+.faq-group-title { font-family:var(--font-display); font-size:1.3rem; font-weight:600; color:var(--ink); margin-bottom:20px; padding-bottom:12px; border-bottom:2px solid var(--parchment-2); display:flex; align-items:center; gap:12px }
+.faq-group-icon { width:40px; height:40px; background:var(--orange-pale); border-radius:var(--r-md); display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0 }
+.faq-item { border:1.5px solid var(--parchment-2); border-radius:var(--r-lg); margin-bottom:10px; overflow:hidden; transition:border-color .2s }
+.faq-item:hover { border-color:var(--terra-3) }
+.faq-item.open { border-color:var(--orange) }
+.faq-q { padding:17px 20px; font-family:var(--font-h); font-size:.93rem; font-weight:700; color:var(--ink-2); cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:16px; transition:background .15s; background:var(--surface) }
+.faq-q:hover { background:var(--parchment) }
+.faq-item.open .faq-q { background:var(--orange-pale); color:var(--orange) }
+.faq-chevron { font-size:.8rem; transition:transform .25s; flex-shrink:0; color:var(--ink-4) }
+.faq-item.open .faq-chevron { transform:rotate(90deg); color:var(--orange) }
+.faq-a { display:none; padding:16px 20px 20px; font-size:.9rem; color:var(--ink-3); line-height:1.8; border-top:1px solid var(--parchment-2); background:var(--cream) }
+.faq-item.open .faq-a { display:block }
+.faq-a strong { color:var(--ink-2) }
+.faq-a a { color:var(--orange); text-decoration:underline }
+.faq-empty { text-align:center; padding:60px 20px; color:var(--ink-4) }
+.faq-empty-icon { font-size:3rem; margin-bottom:14px }
+.contact-cta { background:linear-gradient(135deg,var(--terracotta),var(--orange-lt)); border-radius:var(--r-2xl); padding:48px 44px; text-align:center; color:#fff; margin-top:52px }
+.contact-cta h3 { color:#fff; font-size:1.5rem; margin-bottom:10px }
+.contact-cta p { color:rgba(255,255,255,.8); margin-bottom:24px }
+@media(max-width:1024px) { .faq-layout { grid-template-columns:1fr } .faq-nav { position:static; display:flex; flex-wrap:wrap; gap:8px; padding:16px } .faq-nav h4 { width:100%; margin-bottom:4px } .faq-nav-item { padding:6px 14px; border-radius:var(--r-full); font-size:.82rem } }
+
+/* ── Added during the React rewrite ─────────────────────────── */
+.faq-hero-crumb { color: rgba(255,255,255,.45); justify-content: center; display: flex; gap: 6px; margin-bottom: 16px }
+.faq-hero-crumb a { color: rgba(255,255,255,.45) }
+.faq-hero-eyebrow { font-family: var(--font-h); font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.55) }
+.faq-empty p a { color: var(--orange) }
