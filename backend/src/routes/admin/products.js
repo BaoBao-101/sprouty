@@ -8,29 +8,74 @@ const noHtml = (label) => z.string().refine(
   { message: `${label} không được chứa ký tự < hoặc >.` }
 );
 
+// Every rule carries its own Vietnamese message. Only the first failing issue is
+// returned to the client (see `parsed.error.errors[0]`), so a rule left without a
+// message surfaces Zod's English default — e.g. "String must contain at least 2
+// character(s)" — which does not tell the user which field to fix.
 const productSchema = z.object({
-  name: noHtml('Tên sản phẩm').and(z.string().min(2).max(200)),
-  description: noHtml('Mô tả').and(z.string().min(10).max(5000)),
-  price: z.number().int().positive(),
-  oldPrice: z.number().int().positive().nullable().optional(),
-  smartPriceDelta: z.number().int().positive().nullable().optional(),
-  category: z.enum(['kit', 'book']),
-  ageRange: noHtml('Độ tuổi').and(z.string().min(2).max(50)),
-  collection: noHtml('Bộ sưu tập').and(z.string().min(2).max(100)),
-  emoji: z.string().max(8).optional().default('🎨'),
-  badge: z.enum(['hot', 'new', 'sale']).nullable().optional(),
-  bgColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional().default('#FEF5EA'),
-  includes: z.array(noHtml('Mục bao gồm').and(z.string().min(1).max(300))).max(40).optional().default([]),
+  name: noHtml('Tên sản phẩm').and(
+    z.string()
+      .min(2, 'Tên sản phẩm phải có ít nhất 2 ký tự.')
+      .max(200, 'Tên sản phẩm tối đa 200 ký tự.'),
+  ),
+  description: noHtml('Mô tả').and(
+    z.string()
+      .min(10, 'Mô tả phải có ít nhất 10 ký tự.')
+      .max(5000, 'Mô tả tối đa 5000 ký tự.'),
+  ),
+  price: z.number({ invalid_type_error: 'Giá phải là một số.' })
+    .int('Giá phải là số nguyên.')
+    .positive('Giá phải lớn hơn 0.'),
+  oldPrice: z.number({ invalid_type_error: 'Giá gốc phải là một số.' })
+    .int('Giá gốc phải là số nguyên.')
+    .positive('Giá gốc phải lớn hơn 0.')
+    .nullable().optional(),
+  smartPriceDelta: z.number({ invalid_type_error: 'Phụ phí Smart phải là một số.' })
+    .int('Phụ phí Smart phải là số nguyên.')
+    .positive('Phụ phí Smart phải lớn hơn 0.')
+    .nullable().optional(),
+  category: z.enum(['kit', 'book'], {
+    errorMap: () => ({ message: 'Danh mục phải là "kit" hoặc "book".' }),
+  }),
+  ageRange: noHtml('Độ tuổi').and(
+    z.string()
+      .min(2, 'Độ tuổi phải có ít nhất 2 ký tự.')
+      .max(50, 'Độ tuổi tối đa 50 ký tự.'),
+  ),
+  collection: noHtml('Bộ sưu tập').and(
+    z.string()
+      .min(2, 'Bộ sưu tập phải có ít nhất 2 ký tự.')
+      .max(100, 'Bộ sưu tập tối đa 100 ký tự.'),
+  ),
+  emoji: z.string().max(8, 'Emoji tối đa 8 ký tự.').optional().default('🎨'),
+  badge: z.enum(['hot', 'new', 'sale'], {
+    errorMap: () => ({ message: 'Badge phải là "hot", "new" hoặc "sale".' }),
+  }).nullable().optional(),
+  bgColor: z.string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, 'Màu nền phải có dạng #RRGGBB, ví dụ #FEF5EA.')
+    .optional().default('#FEF5EA'),
+  includes: z.array(
+    noHtml('Mục bao gồm').and(
+      z.string()
+        .min(1, 'Mục bao gồm không được để trống.')
+        .max(300, 'Mỗi mục bao gồm tối đa 300 ký tự.'),
+    ),
+  ).max(40, 'Tối đa 40 mục bao gồm.').optional().default([]),
   // Image entries are interpolated into HTML `src` attributes on the client, so
   // constrain them to a real relative path or http(s) URL with no characters
   // that could break out of the attribute (quotes / angle brackets / spaces).
   images: z.array(
-    z.string().min(1).max(2048).regex(
-      /^(?:https?:\/\/|\/)[^\s"'<>]+$/,
-      'Đường dẫn ảnh không hợp lệ.',
-    ),
-  ).max(20).optional().default([]),
-  status: z.enum(['published', 'draft', 'archived']).optional().default('published'),
+    z.string()
+      .min(1, 'Đường dẫn ảnh không được để trống.')
+      .max(2048, 'Đường dẫn ảnh tối đa 2048 ký tự.')
+      .regex(
+        /^(?:https?:\/\/|\/)[^\s"'<>]+$/,
+        'Đường dẫn ảnh không hợp lệ — phải bắt đầu bằng / hoặc http(s):// và không chứa khoảng trắng.',
+      ),
+  ).max(20, 'Tối đa 20 ảnh.').optional().default([]),
+  status: z.enum(['published', 'draft', 'archived'], {
+    errorMap: () => ({ message: 'Trạng thái phải là "published", "draft" hoặc "archived".' }),
+  }).optional().default('published'),
 });
 
 const updateProductSchema = productSchema.partial();
