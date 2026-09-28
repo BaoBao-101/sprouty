@@ -23,12 +23,12 @@ const productSchema = z.object({
       .min(10, 'Mô tả phải có ít nhất 10 ký tự.')
       .max(5000, 'Mô tả tối đa 5000 ký tự.'),
   ),
-  price: z.number({ invalid_type_error: 'Giá phải là một số.' })
-    .int('Giá phải là số nguyên.')
-    .positive('Giá phải lớn hơn 0.'),
-  oldPrice: z.number({ invalid_type_error: 'Giá gốc phải là một số.' })
-    .int('Giá gốc phải là số nguyên.')
-    .positive('Giá gốc phải lớn hơn 0.')
+  price: z.number({ invalid_type_error: 'Giá bán phải là một số.' })
+    .int('Giá bán phải là số nguyên.')
+    .positive('Giá bán phải lớn hơn 0.'),
+  oldPrice: z.number({ invalid_type_error: 'Giá trước giảm phải là một số.' })
+    .int('Giá trước giảm phải là số nguyên.')
+    .positive('Giá trước giảm phải lớn hơn 0.')
     .nullable().optional(),
   smartPriceDelta: z.number({ invalid_type_error: 'Phụ phí Smart phải là một số.' })
     .int('Phụ phí Smart phải là số nguyên.')
@@ -80,8 +80,31 @@ const productSchema = z.object({
 
 const updateProductSchema = productSchema.partial();
 
+/**
+ * `oldPrice` is rendered struck through next to `price`, so it only makes sense
+ * above it. Nothing enforced that, and a product shipped with price 10.000đ and
+ * oldPrice 8.000đ — the shop card showed a *rise* dressed up as a discount.
+ *
+ * This is a relationship between two fields, and PUT may send only one of them,
+ * so it is checked against the merged record rather than inside the schema.
+ */
+function assertPriceOrder({ price, oldPrice }) {
+  if (oldPrice === null || oldPrice === undefined) return;
+  if (price === null || price === undefined) return;
+  if (oldPrice <= price) {
+    throw new AppError(
+      `Giá trước giảm (${oldPrice.toLocaleString('vi-VN')}đ) phải lớn hơn giá bán (${price.toLocaleString('vi-VN')}đ). ` +
+      'Đây là giá cũ hiển thị gạch ngang — để trống nếu sản phẩm không giảm giá.',
+      400,
+    );
+  }
+}
+
 export default async function adminProductRoutes(fastify) {
-  const auth = [requireEmployee, requireCsrf];
+  // Employees read the catalogue (they answer customer questions from it) but
+  // only an admin owns it: creating a product sets a price, and deleting one
+  // touches order history and the sales report — which is itself admin-only.
+  const writeAuth = [requireAdmin, requireCsrf];
 
   // GET /api/v1/admin/products
   fastify.get('/products', { preHandler: [requireEmployee] }, async (req) => {
@@ -117,11 +140,13 @@ export default async function adminProductRoutes(fastify) {
   });
 
   // POST /api/v1/admin/products
-  fastify.post('/products', { preHandler: auth }, async (req, reply) => {
+  fastify.post('/products', { preHandler: writeAuth }, async (req, reply) => {
     const parsed = productSchema.safeParse(req.body);
     if (!parsed.success) {
       throw new AppError(parsed.error.errors[0]?.message || 'Dữ liệu không hợp lệ.', 400);
     }
+
+    assertPriceOrder(parsed.data);
 
     const product = await fastify.prisma.product.create({ data: parsed.data });
     reply.code(201);
@@ -129,7 +154,7 @@ export default async function adminProductRoutes(fastify) {
   });
 
   // PUT /api/v1/admin/products/:id
-  fastify.put('/products/:id', { preHandler: auth }, async (req, reply) => {
+  fastify.put('/products/:id', { preHandler: writeAuth }, async (req, reply) => {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return reply.code(400).send({ message: 'ID không hợp lệ.' });
 
@@ -141,12 +166,23 @@ export default async function adminProductRoutes(fastify) {
     const existing = await fastify.prisma.product.findUnique({ where: { id } });
     if (!existing) return reply.code(404).send({ message: 'Không tìm thấy sản phẩm.' });
 
+    // Check against the record as it will be, since a PUT may change only one
+    // of the two prices.
+    // Only when the request actually touches a price. Checking unconditionally
+    // meant a product saved before this rule existed could not be edited at all
+    // — renaming it failed with a price error it had nothing to do with. The
+    // admin form always submits both prices, so any edit made through the UI is
+    // still validated.
+    if ('price' in parsed.data || 'oldPrice' in parsed.data) {
+      assertPriceOrder({ ...existing, ...parsed.data });
+    }
+
     const product = await fastify.prisma.product.update({ where: { id }, data: parsed.data });
     return { product };
   });
 
   // DELETE /api/v1/admin/products/:id
-  fastify.delete('/products/:id', { preHandler: auth }, async (req, reply) => {
+  fastify.delete('/products/:id', { preHandler: writeAuth }, async (req, reply) => {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return reply.code(400).send({ message: 'ID không hợp lệ.' });
 

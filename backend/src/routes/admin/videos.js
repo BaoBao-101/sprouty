@@ -5,13 +5,35 @@ import { intParam, multipartFields, noHtml, parseOrThrow } from '../../utils/val
 import { auditLog } from '../../services/audit.js';
 import { createAsset } from '../../services/storage/index.js';
 
+// Only the first failing issue reaches the client, so every rule carries its own
+// Vietnamese message — otherwise Zod's English default ("String must contain at
+// least 2 character(s)") surfaces without naming the field at fault.
 const videoSchema = z.object({
-  title: noHtml('Tiêu đề').and(z.string().min(2).max(200)),
-  description: noHtml('Mô tả').and(z.string().max(2000)).optional().nullable(),
-  durationSec: z.coerce.number().int().min(0).max(86400).optional().nullable(),
-  sortOrder: z.coerce.number().int().min(0).max(10000).optional().default(0),
-  status: z.enum(['draft', 'published', 'archived']).optional().default('draft'),
-  externalUrl: z.string().url().max(2048).optional().nullable().or(z.literal('')),
+  title: noHtml('Tiêu đề').and(
+    z.string()
+      .min(2, 'Tiêu đề video phải có ít nhất 2 ký tự.')
+      .max(200, 'Tiêu đề video tối đa 200 ký tự.'),
+  ),
+  description: noHtml('Mô tả').and(
+    z.string().max(2000, 'Mô tả tối đa 2000 ký tự.'),
+  ).optional().nullable(),
+  durationSec: z.coerce.number({ invalid_type_error: 'Thời lượng phải là một số.' })
+    .int('Thời lượng phải là số nguyên (giây).')
+    .min(0, 'Thời lượng không được âm.')
+    .max(86400, 'Thời lượng tối đa 24 giờ.')
+    .optional().nullable(),
+  sortOrder: z.coerce.number({ invalid_type_error: 'Thứ tự hiển thị phải là một số.' })
+    .int('Thứ tự hiển thị phải là số nguyên.')
+    .min(0, 'Thứ tự hiển thị không được âm.')
+    .max(10000, 'Thứ tự hiển thị tối đa 10000.')
+    .optional().default(0),
+  status: z.enum(['draft', 'published', 'archived'], {
+    errorMap: () => ({ message: 'Trạng thái phải là "draft", "published" hoặc "archived".' }),
+  }).optional().default('draft'),
+  externalUrl: z.string()
+    .url('URL video không hợp lệ — phải bắt đầu bằng http:// hoặc https://.')
+    .max(2048, 'URL video tối đa 2048 ký tự.')
+    .optional().nullable().or(z.literal('')),
 });
 
 const updateVideoSchema = videoSchema.partial();

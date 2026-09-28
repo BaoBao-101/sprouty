@@ -61,7 +61,8 @@ function normalize(p: any, variant?: string): Omit<CartLine, 'qty'> {
     cat: p.cat || p.category || '',
     age: p.age || p.ageRange || '',
     price: variant === 'smart' ? basePrice + (Number(smartDelta) || 0) : basePrice,
-    old: p.old ?? p.oldPrice ?? null,
+    // Only meaningful above the base price — see usableOldPrice in services/products.
+    old: Number(p.old ?? p.oldPrice) > basePrice ? Number(p.old ?? p.oldPrice) : null,
     bg: p.bg || p.bgColor || 'var(--cream)',
     images: p.images || [],
     variant: variant === 'smart' ? 'smart' : 'standard',

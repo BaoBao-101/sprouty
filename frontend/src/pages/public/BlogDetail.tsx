@@ -40,7 +40,9 @@ function RecommendedCard({ product }: { product: RecommendedProduct }) {
           <div className="blog-reco-meta">{product.description}</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          {product.oldPrice && <span className="blog-reco-old">{formatPrice(product.oldPrice)}</span>}
+          {!!product.oldPrice && product.oldPrice > product.price && (
+            <span className="blog-reco-old">{formatPrice(product.oldPrice)}</span>
+          )}
           <div className="blog-reco-price">{formatPrice(Number(product.price) || 0)}</div>
         </div>
         <span className="btn btn-primary btn-sm blog-reco-cta">Xem sản phẩm</span>
