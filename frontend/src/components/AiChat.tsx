@@ -3,9 +3,7 @@ import { Link } from 'react-router-dom';
 import { requireLogin } from './LoginModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { API } from '@/services/api';
-import { fetchProducts } from '@/services/products';
 import { showToast } from '@/services/toast';
-import type { Product } from '@/types/product';
 
 const PROMPTS = [
   '🎁 Kit nào phù hợp cho bé 6 tuổi?',
@@ -47,7 +45,6 @@ export function AiChat() {
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
   const [locked, setLocked] = useState(false);
-  const [catalog, setCatalog] = useState<Product[]>([]);
   const [image, setImage] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
@@ -55,12 +52,6 @@ export function AiChat() {
   const fileInput = useRef<HTMLInputElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const recognition = useRef<any>(null);
-
-  useEffect(() => {
-    fetchProducts()
-      .then(setCatalog)
-      .catch(() => setCatalog([]));
-  }, []);
 
   // The assistant can be gated behind a redeem code; staff always get through.
   useEffect(() => {
@@ -121,21 +112,11 @@ export function AiChat() {
     clearImage();
     setTyping(true);
 
-    const productLine =
-      catalog
-        .slice(0, 6)
-        .map((p) => `${p.name} (${p.price.toLocaleString('vi-VN')}đ, ${p.age})`)
-        .join(', ') || 'đang cập nhật';
-
-    const systemPrompt = [
-      'Bạn là trợ lý AI của Sprouty — thương hiệu bộ kit trồng cây, Cây Kỷ Niệm số và workshop gia đình tại TP.HCM.',
-      'Trả lời bằng tiếng Việt, thân thiện, ngắn gọn. Dùng **text** để in đậm.',
-      `Sản phẩm: ${productLine}...`,
-      isLoggedIn ? `Người dùng hiện tại: ${user?.name}.` : 'Người dùng chưa đăng nhập.',
-    ].join('\n');
-
+    // The system prompt used to be built here and sent along, which meant any
+    // caller could replace it (finding F-07). The server builds it now, from
+    // the session and its own catalogue query — it knows both better than we do.
     try {
-      const { reply } = await API.chat.send(nextHistory.slice(-6), systemPrompt);
+      const { reply } = await API.chat.send(nextHistory.slice(-6));
       setHistory((h) => [...h, { role: 'assistant', content: reply }]);
       setMessages((m) => [...m, { role: 'ai', text: reply, time: now() }]);
     } catch {

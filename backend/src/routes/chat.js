@@ -8,7 +8,11 @@ const chatSchema = z.object({
     role: z.enum(['user', 'assistant']),
     content: z.string().min(1).max(3000),
   })).min(1).max(30),
-  systemPrompt: z.string().max(2000).optional(),
+  // No systemPrompt field on purpose (finding F-07). The client used to supply
+  // the entire system prompt, so anyone could POST here with instructions of
+  // their own — overriding the guardrails below and turning our API key into a
+  // free general-purpose model. The server now builds the prompt itself, from
+  // the signed-in user and a real product lookup rather than the caller's claim.
   // Data URL (data:image/...;base64,...) of a single image attached to the
   // LAST user message — used by the pre-submit "AI gợi ý caption" flow.
   // Client resizes the image before sending, so 2MB comfortably covers it.
@@ -41,6 +45,19 @@ Phong cách: thân thiện, vui vẻ, phù hợp với phụ huynh và trẻ em.
 Nhiệm vụ: Giúp khách hàng tìm hiểu sản phẩm, giải đáp câu hỏi về Sprouty Kit, chăm cây, Plant Buddy, workshop, IoT/STEM và chính sách.
 Giới hạn: Không thu thập thông tin thanh toán. Không tiết lộ thông tin nội bộ. Không thực hiện các thao tác quản trị.
 Luôn trả lời bằng tiếng Việt, ngắn gọn và hữu ích.`;
+
+/**
+ * A missing provider key is our problem, not the caller's (finding F-10).
+ * Naming the variable told an anonymous visitor which AI vendor we use and that
+ * the deployment is half-configured; the operator needs that detail, so it goes
+ * to the log instead of the response.
+ */
+function aiUnavailable(reply, missingVar) {
+  reply.log.error({ missingVar }, 'AI provider is not configured');
+  return reply.code(503).send({
+    message: 'Trợ lý AI tạm thời không khả dụng. Vui lòng thử lại sau.',
+  });
+}
 
 // Splits a "data:image/png;base64,AAAA..." URL into its MIME type and raw
 // base64 payload, as needed by Anthropic/Gemini's separate-field image blocks.
@@ -179,7 +196,7 @@ export default async function chatRoute(fastify) {
       return reply.code(400).send({ message: parsed.error.errors[0]?.message || 'Dữ liệu không hợp lệ.' });
     }
 
-    const { messages, systemPrompt, imageDataUrl } = parsed.data;
+    const { messages, imageDataUrl } = parsed.data;
 
     // Retrieve relevant products for grounding
     const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.content || '';
@@ -202,7 +219,12 @@ export default async function chatRoute(fastify) {
       }
     }
 
-    const enrichedSystem = (systemPrompt || DEFAULT_SYSTEM) + contextText;
+    // Identify the user from the session, not from anything the client sent.
+    const whoLine = req.user
+      ? `\n\nNgười dùng hiện tại: ${req.user.name} (vai trò: ${req.user.role}).`
+      : '\n\nNgười dùng chưa đăng nhập.';
+
+    const enrichedSystem = DEFAULT_SYSTEM + whoLine + contextText;
 
     try {
       if (imageDataUrl && PROVIDER === 'ollama') {
@@ -210,15 +232,15 @@ export default async function chatRoute(fastify) {
       }
       let reply_text;
       if (PROVIDER === 'anthropic') {
-        if (!ANTHROPIC_KEY) return reply.code(503).send({ message: 'ANTHROPIC_API_KEY chưa được cấu hình.' });
+        if (!ANTHROPIC_KEY) return aiUnavailable(reply, 'ANTHROPIC_API_KEY');
         reply_text = await callAnthropic(messages, enrichedSystem, imageDataUrl);
       } else if (PROVIDER === 'gemini') {
-        if (!GEMINI_KEY) return reply.code(503).send({ message: 'GEMINI_API_KEY chưa được cấu hình.' });
+        if (!GEMINI_KEY) return aiUnavailable(reply, 'GEMINI_API_KEY');
         reply_text = await callGemini(messages, enrichedSystem, imageDataUrl);
       } else if (PROVIDER === 'ollama') {
         reply_text = await callOllama(messages, enrichedSystem);
       } else {
-        if (!OPENAI_KEY) return reply.code(503).send({ message: 'OPENAI_API_KEY chưa được cấu hình.' });
+        if (!OPENAI_KEY) return aiUnavailable(reply, 'OPENAI_API_KEY');
         reply_text = await callOpenAI(messages, enrichedSystem, imageDataUrl);
       }
 

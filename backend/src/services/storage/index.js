@@ -42,6 +42,38 @@ function extFor(filename, mimeType) {
   return map[mimeType] || '';
 }
 
+/*
+ * Finding F-06: the checks below trusted the multipart part's Content-Type, a
+ * value the client writes. A file could claim `image/png`, pass validation and
+ * be stored with a .png key while containing something else entirely.
+ *
+ * So read the actual leading bytes. These are fixed signatures at fixed
+ * offsets — enough to confirm the container really is what the header claims,
+ * without pulling in a media-parsing dependency.
+ */
+const MAGIC = {
+  'image/jpeg': (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+  'image/png': (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
+  // RIFF....WEBP
+  'image/webp': (b) => b.subarray(0, 4).toString('ascii') === 'RIFF' && b.subarray(8, 12).toString('ascii') === 'WEBP',
+  // ISO-BMFF: a size field, then the 'ftyp' box. Covers both .mp4 and .mov.
+  'video/mp4': (b) => b.subarray(4, 8).toString('ascii') === 'ftyp',
+  'video/quicktime': (b) => b.subarray(4, 8).toString('ascii') === 'ftyp',
+  // WebM is Matroska: EBML header.
+  'video/webm': (b) => b.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3])),
+};
+
+/** Throws unless the bytes match the declared type. */
+export function assertMagicBytes(buffer, mimeType) {
+  const check = MAGIC[mimeType];
+  // An unknown type never reaches here — validateUpload rejects it first — but
+  // fail closed rather than waving a file through on a missing entry.
+  if (!check) throw new AppError('Định dạng tệp không được hỗ trợ.', 400);
+  if (buffer.length < 16 || !check(buffer)) {
+    throw new AppError('Nội dung tệp không khớp với định dạng đã khai báo.', 400);
+  }
+}
+
 export function validateUpload({ mimeType, filename, bytes, category, maxBytesOverride }) {
   const isImage = category === 'image';
   const allowed = isImage ? IMAGE_MIME : VIDEO_MIME;
@@ -75,6 +107,9 @@ export async function multipartFileToBuffer(file, { category, maxBytesOverride }
     category,
     maxBytesOverride,
   });
+  // Only after validateUpload has confirmed the declared type is one we accept —
+  // otherwise this would be looking up a signature for an arbitrary string.
+  assertMagicBytes(buffer, file.mimetype);
   return { buffer, ext, mimeType: file.mimetype, originalName: file.filename, sizeBytes: buffer.length };
 }
 

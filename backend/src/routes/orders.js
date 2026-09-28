@@ -58,7 +58,21 @@ function hashPurchaseCode(code) {
 }
 
 function buildPurchaseRedeemCode(orderId, userId, productId) {
-  const secret = process.env.REDEEM_CODE_SECRET || process.env.COOKIE_SECRET || 'sprouty-dev-redeem-code-secret';
+  // Finding F-12: the fallback below is a value that ships in the repository, so
+  // anyone reading it could mint valid redeem codes for any order. Harmless in
+  // development, fatal in production — so refuse to start down that path there
+  // instead of silently using a public secret.
+  const secret = process.env.REDEEM_CODE_SECRET || process.env.COOKIE_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new AppError('Máy chủ chưa được cấu hình đúng (REDEEM_CODE_SECRET).', 500);
+    }
+    return buildWithSecret('sprouty-dev-redeem-code-secret', orderId, userId, productId);
+  }
+  return buildWithSecret(secret, orderId, userId, productId);
+}
+
+function buildWithSecret(secret, orderId, userId, productId) {
   const digest = createHmac('sha256', secret)
     .update(`${orderId}:${userId}:${productId}`)
     .digest('hex')

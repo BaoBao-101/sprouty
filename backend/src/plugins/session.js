@@ -17,11 +17,35 @@ const SESSION_TOUCH_INTERVAL_MS = minutes(process.env.SESSION_TOUCH_INTERVAL_MIN
 const isProd = process.env.NODE_ENV === 'production';
 const sessionIdPattern = /^[a-z0-9]{20,40}$/i;
 
+/*
+ * Finding F-08. Two changes here:
+ *
+ * `secure` used to read `isProd` alone, so a deployment that forgot NODE_ENV
+ * silently served the session cookie over plain HTTP. COOKIE_SECURE now makes
+ * it explicit, still defaulting to isProd, and production refuses to start with
+ * it switched off (see the check below) rather than quietly downgrading.
+ *
+ * The cookie is also signed now. The value is a random session id looked up in
+ * the database, so forging one was never practical — but signing means a
+ * tampered cookie is rejected at the parser instead of reaching a DB query, and
+ * it costs nothing.
+ */
+const COOKIE_SECURE = process.env.COOKIE_SECURE
+  ? process.env.COOKIE_SECURE !== 'false'
+  : isProd;
+
+if (isProd && !COOKIE_SECURE) {
+  throw new Error(
+    'COOKIE_SECURE=false in production would send the session cookie over plain HTTP.',
+  );
+}
+
 export const sessionPlugin = fp(async (fastify) => {
   const setSessionCookie = (reply, sessionId, maxAgeMs) => {
     reply.setCookie(SESSION_COOKIE, sessionId, {
       httpOnly: true,
-      secure: isProd,
+      secure: COOKIE_SECURE,
+      signed: true,
       sameSite: 'Strict',
       path: '/',
       maxAge: Math.max(1, Math.floor(maxAgeMs / 1000)),
@@ -32,9 +56,21 @@ export const sessionPlugin = fp(async (fastify) => {
     reply.clearCookie(SESSION_COOKIE, {
       path: '/',
       httpOnly: true,
-      secure: isProd,
+      secure: COOKIE_SECURE,
       sameSite: 'Strict',
     });
+  };
+
+  /**
+   * Signed cookies arrive as "<value>.<signature>" and must be unsigned before
+   * use. An invalid or tampered signature yields no id, so the request is
+   * simply treated as anonymous.
+   */
+  const readSessionId = (req) => {
+    const raw = req.cookies[SESSION_COOKIE];
+    if (!raw) return null;
+    const result = req.unsignCookie(raw);
+    return result.valid ? result.value : null;
   };
 
   // Resolve user from session cookie on every request
@@ -42,7 +78,7 @@ export const sessionPlugin = fp(async (fastify) => {
     req.user = null;
     req.session = null;
 
-    const sessionId = req.cookies[SESSION_COOKIE];
+    const sessionId = readSessionId(req);
     if (!sessionId) return;
     if (!sessionIdPattern.test(sessionId)) {
       clearSessionCookie(reply);
@@ -92,7 +128,7 @@ export const sessionPlugin = fp(async (fastify) => {
 
   // Creates a DB session and sets the session cookie
   fastify.decorate('setSession', async (req, reply, userId) => {
-    const existingSessionId = req.cookies[SESSION_COOKIE];
+    const existingSessionId = readSessionId(req);
     if (existingSessionId && sessionIdPattern.test(existingSessionId)) {
       await fastify.prisma.session.deleteMany({ where: { id: existingSessionId } }).catch(() => {});
     }
@@ -116,7 +152,7 @@ export const sessionPlugin = fp(async (fastify) => {
   // Deletes DB session and clears cookie. Cookie attributes must mirror those
   // set in setSession or some browsers (notably Safari) refuse the overwrite.
   fastify.decorate('clearSession', async (req, reply) => {
-    const sessionId = req.cookies[SESSION_COOKIE];
+    const sessionId = readSessionId(req);
     if (sessionId) {
       await fastify.prisma.session.deleteMany({ where: { id: sessionId } }).catch(() => {});
     }

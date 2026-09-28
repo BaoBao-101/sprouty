@@ -80,15 +80,18 @@ function ComposeModal({
     setSuggesting(true);
     try {
       const dataUrl = await resizeToDataUrl(file);
+      // The instruction rides in the user message, not a system prompt: the
+      // server owns the system prompt now (finding F-07), and a caption request
+      // is ordinary chat content anyway.
       const { reply } = await API.chat.send(
         [
           {
             role: 'user',
             content:
-              'Hãy đặt một caption ngắn gọn (tối đa 8 từ), mô tả đúng những gì có trong ảnh này, dùng làm tên cho khoảnh khắc.',
+              'Hãy đặt một caption tiếng Việt ngắn gọn (tối đa 8 từ) mô tả đúng những gì có trong ảnh này, ' +
+              'dùng làm tên cho khoảnh khắc. Chỉ trả lời đúng một dòng caption, không thêm lời dẫn.',
           },
         ],
-        'Bạn là trợ lý mô tả ảnh cho Sprouty. Chỉ trả lời một dòng caption tiếng Việt ngắn gọn, mô tả chính xác nội dung ảnh được gửi, không thêm ký tự hay lời dẫn thừa.',
         dataUrl,
       );
       setCaption(reply.replace(/^["'“”]+|["'“”]+$/g, '').trim());
