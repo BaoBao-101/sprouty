@@ -17,13 +17,25 @@ interface AuthValue {
   isLoggedIn: boolean;
   isEmployee: boolean;
   isAdmin: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  /** Resolves with the signed-in user so the caller can route by role. */
+  login: (email: string, password: string) => Promise<User>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   setUser: (user: User | null) => void;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
+
+/**
+ * Where a role belongs right after signing in. Customers get null: they stay on
+ * whatever page they were on, because the login modal is usually opened
+ * mid-task (checking out, redeeming a code) and moving them would lose it.
+ */
+export function roleLandingPath(role: User['role']): string | null {
+  if (role === 'admin') return '/admin';
+  if (role === 'employee') return '/employee/orders';
+  return null;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -59,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async login(email, password) {
         const data = await API.auth.login(email, password);
         setUser(data.user);
+        return data.user as User;
       },
 
       async register(name, email, password) {

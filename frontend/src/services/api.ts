@@ -85,6 +85,13 @@ export const API = {
   auth: {
     me() { return _fetch('/auth/me'); },
 
+    changePassword(currentPassword, newPassword) {
+      return _fetch('/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+    },
+
     async login(email, password) {
       const data = await _fetch('/auth/login', {
         method: 'POST',
@@ -167,9 +174,12 @@ export const API = {
 
   admin: {
     users: {
-      list()          { return _fetch('/admin/users'); },
+      list(params = {}) { return _fetch('/admin/users?' + new URLSearchParams(params)); },
       create(d)       { return _fetch('/admin/users', { method: 'POST', body: JSON.stringify(d) }); },
       update(id, d)   { return _fetch(`/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(d) }); },
+      resetPassword(id, password) {
+        return _fetch(`/admin/users/${id}/reset-password`, { method: 'POST', body: JSON.stringify({ password }) });
+      },
       grantVip(id)    { return _fetch(`/admin/users/${id}/grant-vip`, { method: 'POST' }); },
       revokeVip(id)   { return _fetch(`/admin/users/${id}/grant-vip`, { method: 'DELETE' }); },
     },
@@ -189,6 +199,7 @@ export const API = {
     },
     orders: {
       list(params = {})        { return _fetch('/admin/orders?' + new URLSearchParams(params)); },
+      counts()                 { return _fetch('/admin/orders/counts'); },
       updateStatus(id, status) { return _fetch(`/admin/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }); },
     },
     redeemCodes: {
@@ -208,19 +219,34 @@ export const API = {
       cover(id, form)    { return _fetch(`/admin/blog/${id}/cover`, { method: 'POST', body: form }); },
       image(form)        { return _fetch('/admin/blog-images', { method: 'POST', body: form }); },
     },
+    audit: {
+      list(params = {}) { return _fetch('/admin/audit-logs?' + new URLSearchParams(params)); },
+      actions()         { return _fetch('/admin/audit-logs/actions'); },
+    },
     userImages: {
       list(params = {})  { return _fetch('/admin/user-images?' + new URLSearchParams(params)); },
+      counts()           { return _fetch('/admin/user-images/counts'); },
       status(id, status) { return _fetch(`/admin/user-images/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }); },
     },
     workshops: {
-      stats() { return _fetch('/admin/workshops/stats'); },
+      stats()            { return _fetch('/admin/workshops/stats'); },
+      create(data)       { return _fetch('/admin/workshops', { method: 'POST', body: JSON.stringify(data) }); },
+      update(id, data)   { return _fetch(`/admin/workshops/${id}`, { method: 'PUT', body: JSON.stringify(data) }); },
+      remove(id)         { return _fetch(`/admin/workshops/${id}`, { method: 'DELETE' }); },
+      registrations(id)  { return _fetch(`/admin/workshops/${id}/registrations`); },
+      cancelRegistration(id, registrationId) {
+        return _fetch(`/admin/workshops/${id}/registrations/${registrationId}`, { method: 'DELETE' });
+      },
     },
     stats() { return _fetch('/admin/stats'); },
   },
 
   chat: {
-    send(messages, systemPrompt, imageDataUrl?) {
-      return _fetch('/chat', { method: 'POST', body: JSON.stringify({ messages, systemPrompt, imageDataUrl }) });
+    // The server owns the system prompt now (finding F-07) — it knows who is
+    // signed in and looks the catalogue up itself, so sending one from here
+    // would only be a claim it has to ignore.
+    send(messages, imageDataUrl?) {
+      return _fetch('/chat', { method: 'POST', body: JSON.stringify({ messages, imageDataUrl }) });
     },
   },
 

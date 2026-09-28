@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { roleLandingPath, useAuth } from '@/contexts/AuthContext';
 import { showToast } from '@/services/toast';
 
 /** Opened from anywhere via the store below, so a page deep in the tree can ask
@@ -12,6 +13,7 @@ export function requireLogin(view: 'login' | 'register' = 'login') {
 
 export function LoginModal() {
   const { login, register } = useAuth();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<'login' | 'register'>('login');
   const [busy, setBusy] = useState(false);
@@ -45,9 +47,13 @@ export function LoginModal() {
     if (!email || !password) return setError('Vui lòng điền đầy đủ thông tin.');
     setBusy(true);
     try {
-      await login(email, password);
+      const user = await login(email, password);
       close();
       showToast('Đăng nhập thành công!', 'success');
+
+      // Staff land in their own area; customers stay where they were.
+      const landing = roleLandingPath(user.role);
+      if (landing) navigate(landing);
     } catch (err: any) {
       setError(err?.message || 'Đăng nhập thất bại.');
     } finally {
