@@ -1,5 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ProductIcon } from '@/components/ProductIcon';
+import {
+  MeterBar,
+  PageHeader,
+  Panel,
+  Pill,
+  StatCard,
+  StatGrid,
+  TableStates,
+  type LoadState,
+} from '@/components/admin/ui';
 import { API } from '@/services/api';
 import { ORDER_STATUS_VN, ORDER_STATUSES, shortOrderId, type OrderStatus } from '@/types/order';
 import { formatPrice } from '@/types/product';
@@ -32,154 +43,205 @@ function compactVnd(value: number) {
   return value.toLocaleString('vi-VN');
 }
 
+const STATUS_TONE: Record<OrderStatus, string> = {
+  pending: 'amber',
+  processing: 'blue',
+  shipped: 'orange',
+  delivered: 'green',
+  cancelled: 'rose',
+};
+
+const RANK_MEDAL = ['🥇', '🥈', '🥉'];
+
 export default function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    let cancelled = false;
+  const load = useCallback(() => {
+    setState('loading');
     API.admin
       .stats()
-      .then((data: any) => !cancelled && setStats(data))
-      .catch((err: any) => !cancelled && setError(err?.message || 'Không tải được số liệu.'));
-    return () => {
-      cancelled = true;
-    };
+      .then((data: any) => {
+        setStats(data);
+        setState('ready');
+      })
+      .catch((err: any) => {
+        setError(err?.message || 'Không tải được số liệu.');
+        setState('error');
+      });
   }, []);
 
+  useEffect(load, [load]);
+
   const totals = stats?.totals;
+  const loading = state === 'loading';
   const topProducts = (stats?.topProducts || []).slice(0, 5);
   const recentOrders = (stats?.recentOrders || []).slice(0, 8);
 
+  const byStatus = stats?.ordersByStatus || {};
+  const statusTotal = ORDER_STATUSES.reduce((sum, s) => sum + (byStatus[s] ?? 0), 0);
+  const topQty = Math.max(1, ...topProducts.map((p) => p.totalQty || 0));
+
   return (
     <>
-      <div className="page-head" style={{ marginBottom: 22 }}>
-        <h1>Dashboard</h1>
-        <p>Tổng quan hoạt động của Sprouty</p>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        subtitle="Tổng quan hoạt động của Sprouty"
+        actions={
+          <button className="btn btn-ghost btn-sm" onClick={load} disabled={loading}>
+            {loading ? 'Đang tải…' : '↻ Làm mới'}
+          </button>
+        }
+      />
 
-      <div className="stat-grid">
-        <div className="stat-card" style={{ '--accent': 'var(--orange)' } as React.CSSProperties}>
-          <div className="stat-num">{totals?.users ?? '—'}</div>
-          <div className="stat-label">Người dùng</div>
-          <div className="stat-sub">{totals ? `+${totals.newUsers7d} tuần này` : ''}</div>
-        </div>
-        <div className="stat-card" style={{ '--accent': 'var(--green)' } as React.CSSProperties}>
-          <div className="stat-num">{totals?.orders ?? '—'}</div>
-          <div className="stat-label">Đơn hàng</div>
-        </div>
-        <div className="stat-card" style={{ '--accent': 'var(--blue)' } as React.CSSProperties}>
-          <div className="stat-num">{totals?.products ?? '—'}</div>
-          <div className="stat-label">Sản phẩm</div>
-        </div>
-        <div className="stat-card" style={{ '--accent': 'var(--amber)' } as React.CSSProperties}>
-          <div className="stat-num">{totals ? `${compactVnd(totals.revenue7d)}đ` : '—'}</div>
-          <div className="stat-label">Doanh thu 7 ngày</div>
-        </div>
-        <div className="stat-card" style={{ '--accent': 'var(--terracotta)' } as React.CSSProperties}>
-          <div className="stat-num">{totals ? `${compactVnd(totals.revenue30d)}đ` : '—'}</div>
-          <div className="stat-label">Doanh thu 30 ngày</div>
-        </div>
-      </div>
+      <StatGrid>
+        <StatCard
+          icon="👥"
+          tone="blue"
+          loading={loading}
+          value={totals?.users ?? '—'}
+          label="Người dùng"
+          hint={totals ? `+${totals.newUsers7d} trong 7 ngày` : undefined}
+        />
+        <StatCard
+          icon="📦"
+          tone="orange"
+          loading={loading}
+          value={totals?.orders ?? '—'}
+          label="Đơn hàng"
+          hint={statusTotal ? `${byStatus.pending ?? 0} chờ xác nhận` : undefined}
+        />
+        <StatCard
+          icon="🎨"
+          tone="green"
+          loading={loading}
+          value={totals?.products ?? '—'}
+          label="Sản phẩm"
+        />
+        <StatCard
+          icon="💰"
+          tone="amber"
+          loading={loading}
+          value={totals ? `${compactVnd(totals.revenue7d)}đ` : '—'}
+          label="Doanh thu 7 ngày"
+        />
+        <StatCard
+          icon="📈"
+          tone="rose"
+          loading={loading}
+          value={totals ? `${compactVnd(totals.revenue30d)}đ` : '—'}
+          label="Doanh thu 30 ngày"
+        />
+      </StatGrid>
 
-      <div className="admin-grid-2">
-        <div className="admin-card">
-          <div className="admin-card-header">
-            <h3>Đơn hàng theo trạng thái</h3>
-          </div>
-          <div style={{ padding: 16 }}>
-            {ORDER_STATUSES.map((status) => (
-              <div className="stat-line" key={status}>
-                <span style={{ fontSize: '.83rem' }}>{ORDER_STATUS_VN[status]}</span>
-                <strong style={{ fontFamily: 'var(--font-h)' }}>
-                  {stats?.ordersByStatus?.[status] ?? 0}
-                </strong>
+      <div className="ad-split">
+        <Panel
+          title="Đơn hàng theo trạng thái"
+          action={
+            <Link className="btn btn-ghost btn-sm" to="/admin/orders">
+              Xem tất cả →
+            </Link>
+          }
+        >
+          {/* A bar next to each count shows the shape of the queue at a glance —
+              a column of bare numbers did not. */}
+          {ORDER_STATUSES.map((status) => {
+            const count = byStatus[status] ?? 0;
+            return (
+              <Link className="dash-status" to={`/admin/orders?status=${status}`} key={status}>
+                <span className="dash-status-label">{ORDER_STATUS_VN[status]}</span>
+                <MeterBar value={count} max={Math.max(1, statusTotal)} tone={STATUS_TONE[status]} />
+                <strong className="dash-status-count">{count}</strong>
+              </Link>
+            );
+          })}
+        </Panel>
+
+        <Panel
+          title="Top 5 sản phẩm bán chạy"
+          action={
+            <Link className="btn btn-ghost btn-sm" to="/admin/sales">
+              Báo cáo →
+            </Link>
+          }
+        >
+          {topProducts.length === 0 && (
+            <div className="ad-blank">
+              <span className="ad-blank-icon">🌱</span>
+              <p className="ad-blank-title">Chưa có dữ liệu bán hàng</p>
+              <p className="ad-blank-hint">Số liệu xuất hiện sau đơn hàng đã thanh toán đầu tiên.</p>
+            </div>
+          )}
+          {topProducts.map((item, i) => (
+            <div className="dash-top" key={i}>
+              <span className="dash-top-rank">{RANK_MEDAL[i] ?? i + 1}</span>
+              <ProductIcon name={item.product?.name || ''} />
+              <div className="dash-top-main">
+                <div className="ad-cell-main">{item.product?.name || 'Sản phẩm'}</div>
+                <MeterBar value={item.totalQty || 0} max={topQty} tone="orange" />
               </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="admin-card">
-          <div className="admin-card-header">
-            <h3>Top 5 sản phẩm bán chạy</h3>
-          </div>
-          <div style={{ padding: 16 }}>
-            {topProducts.length === 0 && <div className="admin-empty-line">Chưa có dữ liệu</div>}
-            {topProducts.map((item, i) => (
-              <div className="stat-line" key={i}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <ProductIcon name={item.product?.name || ''} />
-                  <div>
-                    <div className="top-product-name">
-                      {i + 1}. {item.product?.name || 'Sản phẩm'}
-                    </div>
-                    <div className="top-product-qty">×{item.totalQty} bán ra</div>
-                  </div>
-                </div>
-                <div className="top-product-revenue">{formatPrice(item.totalRevenue || 0)}</div>
+              <div className="dash-top-right">
+                <div className="dash-top-money">{formatPrice(item.totalRevenue || 0)}</div>
+                <div className="ad-cell-sub">×{item.totalQty} bán ra</div>
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          ))}
+        </Panel>
       </div>
 
-      <div className="admin-card">
-        <div className="admin-card-header">
-          <h3>Đơn hàng gần đây</h3>
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Mã đơn</th>
-                <th>Khách hàng</th>
-                <th>Tổng tiền</th>
-                <th>Ngày đặt</th>
-                <th>Trạng thái</th>
-              </tr>
-            </thead>
-            <tbody>
-              {error && (
-                <tr>
-                  <td colSpan={5} className="admin-cell-error">
-                    {error}
-                  </td>
-                </tr>
-              )}
-              {!error && !stats && (
-                <tr>
-                  <td colSpan={5} className="admin-cell-empty">
-                    Đang tải...
-                  </td>
-                </tr>
-              )}
-              {!error && stats && recentOrders.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="admin-cell-empty">
-                    Chưa có đơn hàng
-                  </td>
-                </tr>
-              )}
-              {recentOrders.map((order) => (
+      <Panel
+        title="Đơn hàng gần đây"
+        flush
+        action={
+          <Link className="btn btn-ghost btn-sm" to="/admin/orders">
+            Quản lý đơn →
+          </Link>
+        }
+      >
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Mã đơn</th>
+              <th>Khách hàng</th>
+              <th style={{ textAlign: 'right' }}>Tổng tiền</th>
+              <th>Ngày đặt</th>
+              <th>Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody>
+            <TableStates
+              state={state}
+              error={error}
+              isEmpty={recentOrders.length === 0}
+              columns={5}
+              emptyIcon="📦"
+              emptyTitle="Chưa có đơn hàng"
+              emptyHint="Đơn hàng mới nhất sẽ hiện ở đây."
+              onRetry={load}
+            />
+            {state === 'ready' &&
+              recentOrders.map((order) => (
                 <tr key={order.id}>
                   <td className="admin-order-id">#{shortOrderId(order.id)}</td>
                   <td>
-                    <div style={{ fontWeight: 600, fontSize: '.84rem' }}>{order.shippingName}</div>
-                    <div className="admin-cell-sub">{order.user?.email}</div>
+                    <div className="ad-cell-main">{order.shippingName}</div>
+                    <div className="ad-cell-sub">{order.user?.email}</div>
                   </td>
-                  <td className="admin-money">{formatPrice(order.total)}</td>
-                  <td className="admin-cell-sub">
+                  <td className="ad-num">{formatPrice(order.total)}</td>
+                  <td className="ad-cell-sub">
                     {new Date(order.createdAt).toLocaleDateString('vi-VN')}
                   </td>
-                  <td style={{ fontSize: '.78rem', fontWeight: 600 }}>
-                    {ORDER_STATUS_VN[order.status] ?? order.status}
+                  <td>
+                    <Pill tone={STATUS_TONE[order.status] ?? 'grey'}>
+                      {ORDER_STATUS_VN[order.status] ?? order.status}
+                    </Pill>
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+          </tbody>
+        </table>
+      </Panel>
     </>
   );
 }

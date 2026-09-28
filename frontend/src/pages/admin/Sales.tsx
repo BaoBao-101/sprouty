@@ -1,5 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ProductIcon } from '@/components/ProductIcon';
+import {
+  MeterBar,
+  PageHeader,
+  Panel,
+  Pill,
+  SearchBox,
+  StatCard,
+  StatGrid,
+  TableStates,
+  Toolbar,
+  type LoadState,
+} from '@/components/admin/ui';
 import { API } from '@/services/api';
 import { formatPrice } from '@/types/product';
 
@@ -19,97 +31,194 @@ const STATUS_LABEL: Record<string, string> = {
   archived: 'Lưu trữ',
 };
 
+const STATUS_TONE: Record<string, string> = {
+  published: 'green',
+  draft: 'amber',
+  archived: 'grey',
+};
+
+type SortKey = 'revenue' | 'qty' | 'orders' | 'name';
+
+const SORTS: Array<{ key: SortKey; label: string }> = [
+  { key: 'revenue', label: 'Doanh thu' },
+  { key: 'qty', label: 'Đã bán' },
+  { key: 'orders', label: 'Số đơn' },
+  { key: 'name', label: 'Tên' },
+];
+
+function compactVnd(value: number) {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(0)}K`;
+  return value.toLocaleString('vi-VN');
+}
+
 export default function Sales() {
   const [rows, setRows] = useState<SalesRow[]>([]);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<SortKey>('revenue');
 
-  useEffect(() => {
-    let cancelled = false;
+  const load = useCallback(() => {
+    setState('loading');
     API.admin.products
       .sales()
       .then((data: any) => {
-        if (cancelled) return;
         setRows(data.products || []);
-        setStatus('ready');
+        setState('ready');
       })
       .catch((err: any) => {
-        if (cancelled) return;
         setError(err?.message || 'Không tải được báo cáo.');
-        setStatus('error');
+        setState('error');
       });
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  useEffect(load, [load]);
+
+  // The report is the whole catalogue in one response, so filtering and sorting
+  // happen here rather than costing a round trip each time.
+  const visible = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const filtered = term ? rows.filter((r) => r.name.toLowerCase().includes(term)) : rows;
+    const sorted = [...filtered];
+    sorted.sort((a, b) => {
+      if (sort === 'name') return a.name.localeCompare(b.name, 'vi');
+      if (sort === 'qty') return (b.totalQty || 0) - (a.totalQty || 0);
+      if (sort === 'orders') return (b.orderCount || 0) - (a.orderCount || 0);
+      return (b.totalRevenue || 0) - (a.totalRevenue || 0);
+    });
+    return sorted;
+  }, [rows, search, sort]);
+
+  const summary = useMemo(() => {
+    const revenue = rows.reduce((sum, r) => sum + (r.totalRevenue || 0), 0);
+    const qty = rows.reduce((sum, r) => sum + (r.totalQty || 0), 0);
+    const best = rows.reduce<SalesRow | null>(
+      (top, r) => ((r.totalRevenue || 0) > (top?.totalRevenue || 0) ? r : top),
+      null,
+    );
+    const selling = rows.filter((r) => (r.totalQty || 0) > 0).length;
+    return { revenue, qty, best, selling };
+  }, [rows]);
+
+  const topRevenue = Math.max(1, ...rows.map((r) => r.totalRevenue || 0));
+  const loading = state === 'loading';
 
   return (
     <>
-      <div className="page-head" style={{ marginBottom: 22 }}>
-        <h1>Báo cáo bán hàng</h1>
-        <p>Số lượng bán ra và doanh thu theo từng sản phẩm</p>
-      </div>
+      <PageHeader
+        title="Báo cáo bán hàng"
+        subtitle="Số lượng bán ra và doanh thu theo từng sản phẩm"
+        actions={
+          <button className="btn btn-ghost btn-sm" onClick={load} disabled={loading}>
+            ↻ Làm mới
+          </button>
+        }
+      />
 
-      <div className="admin-card">
-        <div style={{ overflowX: 'auto' }}>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Sản phẩm</th>
-                <th style={{ textAlign: 'right' }}>Đã bán</th>
-                <th style={{ textAlign: 'right' }}>Số đơn</th>
-                <th style={{ textAlign: 'right' }}>Doanh thu</th>
-                <th>Trạng thái</th>
-              </tr>
-            </thead>
-            <tbody>
-              {status === 'loading' && (
-                <tr>
-                  <td colSpan={5} className="admin-cell-empty">
-                    Đang tải...
-                  </td>
-                </tr>
-              )}
-              {status === 'error' && (
-                <tr>
-                  <td colSpan={5} className="admin-cell-error">
-                    {error}
-                  </td>
-                </tr>
-              )}
-              {status === 'ready' && rows.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="admin-cell-empty">
-                    Chưa có sản phẩm.
-                  </td>
-                </tr>
-              )}
+      <StatGrid>
+        <StatCard
+          icon="💰"
+          tone="orange"
+          loading={loading}
+          value={`${compactVnd(summary.revenue)}đ`}
+          label="Tổng doanh thu"
+        />
+        <StatCard
+          icon="📦"
+          tone="blue"
+          loading={loading}
+          value={summary.qty.toLocaleString('vi-VN')}
+          label="Sản phẩm đã bán"
+        />
+        <StatCard
+          icon="🏆"
+          tone="amber"
+          loading={loading}
+          value={summary.best?.name || '—'}
+          label="Bán chạy nhất"
+          hint={summary.best ? formatPrice(summary.best.totalRevenue || 0) : undefined}
+        />
+        <StatCard
+          icon="🌱"
+          tone="green"
+          loading={loading}
+          value={`${summary.selling}/${rows.length}`}
+          label="Sản phẩm có đơn"
+        />
+      </StatGrid>
 
-              {rows.map((row) => (
+      <Toolbar>
+        <div className="ad-pills">
+          <span className="ad-sort-label">Sắp xếp theo</span>
+          {SORTS.map((option) => (
+            <button
+              key={option.key}
+              className={`ad-pill${sort === option.key ? ' active' : ''}`}
+              onClick={() => setSort(option.key)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <SearchBox value={search} placeholder="Tìm sản phẩm…" onChange={setSearch} />
+      </Toolbar>
+
+      <Panel flush>
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Sản phẩm</th>
+              <th>Tỷ trọng doanh thu</th>
+              <th style={{ textAlign: 'right' }}>Đã bán</th>
+              <th style={{ textAlign: 'right' }}>Số đơn</th>
+              <th style={{ textAlign: 'right' }}>Doanh thu</th>
+              <th>Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody>
+            <TableStates
+              state={state}
+              error={error}
+              isEmpty={visible.length === 0}
+              columns={6}
+              emptyIcon="📊"
+              emptyTitle={search ? 'Không tìm thấy sản phẩm' : 'Chưa có sản phẩm'}
+              emptyHint={search ? 'Thử một từ khoá khác.' : undefined}
+              onRetry={load}
+            />
+            {state === 'ready' &&
+              visible.map((row) => (
                 <tr key={row.id}>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                       <ProductIcon name={row.name} size={22} />
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: '.86rem' }}>{row.name}</div>
-                        <div className="admin-cell-sub">{formatPrice(row.price || 0)}</div>
+                        <div className="ad-cell-main">{row.name}</div>
+                        <div className="ad-cell-sub">{formatPrice(row.price || 0)}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="admin-num">{(row.totalQty || 0).toLocaleString('vi-VN')}</td>
-                  <td className="admin-num" style={{ fontWeight: 400 }}>
+                  <td style={{ minWidth: 120 }}>
+                    <MeterBar value={row.totalRevenue || 0} max={topRevenue} tone="orange" />
+                  </td>
+                  <td className="ad-num">{(row.totalQty || 0).toLocaleString('vi-VN')}</td>
+                  <td className="ad-num" style={{ fontWeight: 400 }}>
                     {(row.orderCount || 0).toLocaleString('vi-VN')}
                   </td>
-                  <td className="admin-num" style={{ color: 'var(--orange)' }}>
+                  <td className="ad-num" style={{ color: 'var(--orange)' }}>
                     {formatPrice(row.totalRevenue || 0)}
                   </td>
-                  <td style={{ fontSize: '.78rem' }}>{STATUS_LABEL[row.status] ?? row.status}</td>
+                  <td>
+                    <Pill tone={STATUS_TONE[row.status] ?? 'grey'}>
+                      {STATUS_LABEL[row.status] ?? row.status}
+                    </Pill>
+                  </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+          </tbody>
+        </table>
+      </Panel>
     </>
   );
 }

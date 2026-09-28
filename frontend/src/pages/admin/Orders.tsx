@@ -1,7 +1,22 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import {
+  FilterPills,
+  Modal,
+  PageHeader,
+  Pagination,
+  Panel,
+  Pill,
+  SearchBox,
+  TableStates,
+  Toolbar,
+  type FilterOption,
+  type LoadState,
+} from '@/components/admin/ui';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import {
+  formatOrderDate,
   ORDER_STATUS_VN,
   ORDER_STATUSES,
   shortOrderId,
@@ -11,173 +26,295 @@ import {
 import { formatPrice } from '@/types/product';
 
 const PAGE_SIZE = 20;
-const SEARCH_DEBOUNCE_MS = 400;
+
+const STATUS_TONE: Record<OrderStatus, string> = {
+  pending: 'amber',
+  processing: 'blue',
+  shipped: 'orange',
+  delivered: 'green',
+  cancelled: 'rose',
+};
+
+/** The move staff make most often from each status, offered as one button. */
+const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
+  pending: 'processing',
+  processing: 'shipped',
+  shipped: 'delivered',
+};
+
+type Filter = '' | OrderStatus;
 
 export default function Orders() {
+  // The status lives in the URL so the dashboard can link straight to a queue
+  // and so a reloaded page keeps showing what the user was working through.
+  const [params, setParams] = useSearchParams();
+  const filter = (params.get('status') || '') as Filter;
+  const search = params.get('q') || '';
+  const page = Math.max(1, parseInt(params.get('page') || '1', 10));
+
   const [orders, setOrders] = useState<Order[]>([]);
-  const [page, setPage] = useState(1);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [countTotal, setCountTotal] = useState(0);
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
 
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
-
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<Order | null>(null);
 
-  // Typing shouldn't fire a request per keystroke.
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearch(searchInput);
-      setPage(1);
-    }, SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
+  const patchParams = useCallback(
+    (next: Record<string, string>) => {
+      setParams((current) => {
+        const merged = new URLSearchParams(current);
+        for (const [key, value] of Object.entries(next)) {
+          if (value) merged.set(key, value);
+          else merged.delete(key);
+        }
+        return merged;
+      });
+    },
+    [setParams],
+  );
+
+  const loadCounts = useCallback(() => {
+    API.admin.orders
+      .counts()
+      .then((data: any) => {
+        setCounts(data.counts || {});
+        setCountTotal(data.total || 0);
+      })
+      .catch(() => undefined);
+  }, []);
 
   const load = useCallback(() => {
-    setStatus('loading');
-    const params: Record<string, unknown> = { page, limit: PAGE_SIZE };
-    if (search) params.search = search;
+    setState('loading');
+    const query: Record<string, unknown> = { page, limit: PAGE_SIZE };
+    if (filter) query.status = filter;
+    if (search) query.search = search;
 
     API.admin.orders
-      .list(params)
+      .list(query)
       .then((data: any) => {
         setOrders(data.orders || []);
         setPages(data.pages || 1);
         setTotal(data.total || 0);
-        setStatus('ready');
+        setState('ready');
       })
       .catch((err: any) => {
         setError(err?.message || 'Không tải được đơn hàng.');
-        setStatus('error');
+        setState('error');
       });
-  }, [page, search]);
+  }, [page, filter, search]);
 
   useEffect(load, [load]);
+  useEffect(loadCounts, [loadCounts]);
 
   async function changeStatus(orderId: string, next: OrderStatus) {
+    setBusyId(orderId);
     try {
       await API.admin.orders.updateStatus(orderId, next);
-      showToast('Đã cập nhật', 'success');
+      showToast(`Đã chuyển sang “${ORDER_STATUS_VN[next]}”`, 'success');
       setOrders((list) => list.map((o) => (o.id === orderId ? { ...o, status: next } : o)));
+      setDetail((current) => (current?.id === orderId ? { ...current, status: next } : current));
+      loadCounts();
     } catch (err: any) {
       showToast(`Lỗi: ${err?.message}`, 'error');
       load();
+    } finally {
+      setBusyId(null);
     }
   }
 
+  const filters: Array<FilterOption<Filter>> = [
+    { value: '', label: 'Tất cả', count: countTotal },
+    ...ORDER_STATUSES.map((s) => ({
+      value: s as Filter,
+      label: ORDER_STATUS_VN[s],
+      count: counts[s] ?? 0,
+    })),
+  ];
+
   return (
     <>
-      <div className="page-header">
-        <h1 style={{ fontSize: '1.5rem', margin: 0 }}>Quản lý đơn hàng</h1>
-        <input
-          type="search"
-          className="form-input admin-search"
-          placeholder="Tìm theo tên, SĐT, mã đơn..."
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
+      <PageHeader
+        title="Quản lý đơn hàng"
+        subtitle="Theo dõi và cập nhật trạng thái giao hàng"
+        actions={
+          <button className="btn btn-ghost btn-sm" onClick={load} disabled={state === 'loading'}>
+            ↻ Làm mới
+          </button>
+        }
+      />
+
+      <Toolbar>
+        <FilterPills
+          options={filters}
+          value={filter}
+          onChange={(next) => patchParams({ status: next, page: '' })}
         />
-      </div>
+        <SearchBox
+          value={search}
+          placeholder="Tìm theo tên, SĐT, email…"
+          onChange={(next) => patchParams({ q: next, page: '' })}
+        />
+      </Toolbar>
 
-      <div className="admin-card">
-        <div style={{ overflowX: 'auto' }}>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Mã đơn</th>
-                <th>Khách hàng</th>
-                <th>Sản phẩm</th>
-                <th>Tổng tiền</th>
-                <th>Ngày đặt</th>
-                <th>Trạng thái</th>
-              </tr>
-            </thead>
-            <tbody>
-              {status === 'loading' && (
-                <tr>
-                  <td colSpan={6} className="admin-cell-empty">
-                    Đang tải...
-                  </td>
-                </tr>
-              )}
-              {status === 'error' && (
-                <tr>
-                  <td colSpan={6} className="admin-cell-error">
-                    {error}
-                  </td>
-                </tr>
-              )}
-              {status === 'ready' && orders.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="admin-cell-empty">
-                    Không có đơn hàng
-                  </td>
-                </tr>
-              )}
+      <Panel flush>
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Mã đơn</th>
+              <th>Khách hàng</th>
+              <th>Sản phẩm</th>
+              <th style={{ textAlign: 'right' }}>Tổng tiền</th>
+              <th>Ngày đặt</th>
+              <th>Trạng thái</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            <TableStates
+              state={state}
+              error={error}
+              isEmpty={orders.length === 0}
+              columns={7}
+              emptyIcon="📦"
+              emptyTitle={search || filter ? 'Không tìm thấy đơn nào' : 'Chưa có đơn hàng'}
+              emptyHint={
+                search || filter
+                  ? 'Thử bỏ bớt bộ lọc hoặc đổi từ khoá tìm kiếm.'
+                  : 'Đơn hàng của khách sẽ xuất hiện ở đây.'
+              }
+              onRetry={load}
+            />
+            {state === 'ready' &&
+              orders.map((order) => {
+                const next = NEXT_STATUS[order.status];
+                return (
+                  <tr
+                    key={order.id}
+                    className={`ad-row-click${busyId === order.id ? ' row-busy' : ''}`}
+                    onClick={() => setDetail(order)}
+                  >
+                    <td className="admin-order-id">#{shortOrderId(order.id)}</td>
+                    <td>
+                      <div className="ad-cell-main">{order.shippingName}</div>
+                      <div className="ad-cell-sub">{order.shippingPhone}</div>
+                    </td>
+                    <td className="admin-items-cell">
+                      {order.items.map((i) => `${i.product?.name || 'SP'} ×${i.qty}`).join(', ')}
+                    </td>
+                    <td className="ad-num">{formatPrice(order.total)}</td>
+                    <td className="ad-cell-sub">
+                      {new Date(order.createdAt).toLocaleDateString('vi-VN')}
+                    </td>
+                    <td>
+                      <Pill tone={STATUS_TONE[order.status]}>{ORDER_STATUS_VN[order.status]}</Pill>
+                    </td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <div className="admin-inline-actions">
+                        {/* One click for the usual next step; the select stays
+                            for the exceptions (cancelling, correcting a slip). */}
+                        {next && (
+                          <button
+                            className="act-btn act-edit"
+                            disabled={busyId === order.id}
+                            onClick={() => changeStatus(order.id, next)}
+                          >
+                            → {ORDER_STATUS_VN[next]}
+                          </button>
+                        )}
+                        <select
+                          className="admin-mini-select"
+                          value={order.status}
+                          disabled={busyId === order.id}
+                          onChange={(e) => changeStatus(order.id, e.target.value as OrderStatus)}
+                        >
+                          {ORDER_STATUSES.map((s) => (
+                            <option value={s} key={s}>
+                              {ORDER_STATUS_VN[s]}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+          </tbody>
+        </table>
+      </Panel>
 
-              {orders.map((order) => (
-                <tr key={order.id}>
-                  <td className="admin-order-id">#{shortOrderId(order.id)}</td>
-                  <td>
-                    <div style={{ fontWeight: 600, fontSize: '.83rem' }}>{order.shippingName}</div>
-                    <div className="admin-cell-sub">{order.shippingPhone}</div>
-                  </td>
-                  <td className="admin-items-cell">
-                    {order.items.map((i) => `${i.product?.name || 'SP'} ×${i.qty}`).join(', ')}
-                  </td>
-                  <td className="admin-money" style={{ fontSize: '.83rem' }}>
-                    {formatPrice(order.total)}
-                  </td>
-                  <td className="admin-cell-sub">
-                    {new Date(order.createdAt).toLocaleDateString('vi-VN')}
-                  </td>
-                  <td>
-                    <select
-                      className="admin-mini-select"
-                      value={order.status}
-                      onChange={(e) => changeStatus(order.id, e.target.value as OrderStatus)}
-                    >
-                      {ORDER_STATUSES.map((s) => (
-                        <option value={s} key={s}>
-                          {ORDER_STATUS_VN[s]}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <Pagination
+        page={page}
+        pages={pages}
+        total={total}
+        unit="đơn"
+        onChange={(next) => patchParams({ page: String(next) })}
+      />
 
-      {pages > 1 && (
-        <div className="admin-pagination">
-          <span className="admin-cell-sub">Tổng {total}</span>
-          <button
-            className="act-btn"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            ‹
-          </button>
-          {Array.from({ length: pages }, (_, i) => (
-            <button
-              key={i}
-              className={`act-btn${page === i + 1 ? ' active' : ''}`}
-              onClick={() => setPage(i + 1)}
-            >
-              {i + 1}
+      {detail && (
+        <Modal
+          title={`Đơn #${shortOrderId(detail.id)}`}
+          subtitle={formatOrderDate(detail.createdAt)}
+          onClose={() => setDetail(null)}
+          footer={
+            <button className="btn btn-ghost" onClick={() => setDetail(null)}>
+              Đóng
             </button>
+          }
+        >
+          <div className="ord-detail-top">
+            <Pill tone={STATUS_TONE[detail.status]}>{ORDER_STATUS_VN[detail.status]}</Pill>
+            <span className="ord-detail-total">{formatPrice(detail.total)}</span>
+          </div>
+
+          <div className="panel-subhead">Người nhận</div>
+          <div className="ord-detail-grid">
+            <div>
+              <div className="ad-cell-sub">Họ tên</div>
+              <div className="ad-cell-main">{detail.shippingName}</div>
+            </div>
+            <div>
+              <div className="ad-cell-sub">Điện thoại</div>
+              <div className="ad-cell-main">{detail.shippingPhone}</div>
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <div className="ad-cell-sub">Địa chỉ</div>
+              <div className="ad-cell-main">{detail.shippingAddress || '—'}</div>
+            </div>
+          </div>
+
+          {detail.note && (
+            <>
+              <div className="panel-subhead">Ghi chú của khách</div>
+              <div className="panel-note">{detail.note}</div>
+            </>
+          )}
+
+          <div className="panel-subhead">Sản phẩm</div>
+          {detail.items.map((item, i) => (
+            <div className="ord-item" key={i}>
+              <span className="ad-cell-main">{item.product?.name || 'Sản phẩm'}</span>
+              <span className="ad-cell-sub">×{item.qty}</span>
+            </div>
           ))}
-          <button
-            className="act-btn"
-            disabled={page >= pages}
-            onClick={() => setPage((p) => Math.min(pages, p + 1))}
-          >
-            ›
-          </button>
-        </div>
+
+          <div className="panel-subhead">Đổi trạng thái</div>
+          <div className="ad-pills">
+            {ORDER_STATUSES.map((s) => (
+              <button
+                key={s}
+                className={`ad-pill${detail.status === s ? ' active' : ''}`}
+                disabled={busyId === detail.id}
+                onClick={() => changeStatus(detail.id, s)}
+              >
+                {ORDER_STATUS_VN[s]}
+              </button>
+            ))}
+          </div>
+        </Modal>
       )}
     </>
   );

@@ -1,4 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  FilterPills,
+  Modal,
+  PageHeader,
+  Panel,
+  Pill,
+  SearchBox,
+  StatCard,
+  StatGrid,
+  TableStates,
+  Toolbar,
+  type FilterOption,
+  type LoadState,
+} from '@/components/admin/ui';
 import { API } from '@/services/api';
 import { normalizeProduct } from '@/services/products';
 import { showToast } from '@/services/toast';
@@ -18,25 +32,43 @@ interface Post {
 
 const STATUSES = ['draft', 'published', 'archived'];
 
+const STATUS_LABEL: Record<string, string> = {
+  draft: 'Bản nháp',
+  published: 'Đã xuất bản',
+  archived: 'Lưu trữ',
+};
+
+const STATUS_TONE: Record<string, string> = {
+  draft: 'amber',
+  published: 'green',
+  archived: 'grey',
+};
+
 const EMPTY_EDITOR = { id: '', title: '', excerpt: '', content: '' };
+
+type Filter = '' | 'draft' | 'published' | 'archived';
 
 export default function BlogAdmin() {
   const [posts, setPosts] = useState<Post[]>([]);
-  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState('');
+  const [filter, setFilter] = useState<Filter>('');
+  const [search, setSearch] = useState('');
 
   const [products, setProducts] = useState<Product[]>([]);
   const [productQuery, setProductQuery] = useState('');
   const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
 
+  const [editorOpen, setEditorOpen] = useState(false);
   const [editor, setEditor] = useState(EMPTY_EDITOR);
+  const [existingCover, setExistingCover] = useState<string | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [coverHint, setCoverHint] = useState('Chưa chọn ảnh bìa');
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [imageStatus, setImageStatus] = useState('');
+  const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
 
   const contentRef = useRef<HTMLTextAreaElement>(null);
-  const titleRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(() => {
     setState('loading');
@@ -61,6 +93,14 @@ export default function BlogAdmin() {
       .catch(() => setProducts([]));
   }, []);
 
+  // A blob URL leaks until it is revoked, and a new one is made per pick.
+  useEffect(() => {
+    if (!coverFile) return setCoverPreview(null);
+    const url = URL.createObjectURL(coverFile);
+    setCoverPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [coverFile]);
+
   const visibleProducts = useMemo(() => {
     const q = productQuery.trim().toLowerCase();
     if (!q) return products;
@@ -69,30 +109,31 @@ export default function BlogAdmin() {
     );
   }, [products, productQuery]);
 
-  function resetEditor() {
-    setEditor(EMPTY_EDITOR);
-    setCoverFile(null);
-    setCoverHint('Chưa chọn ảnh bìa');
-    setImageStatus('');
-    setSelectedProductIds([]);
-  }
-
-  function startEdit(post: Post) {
-    setEditor({
-      id: post.id,
-      title: post.title || '',
-      excerpt: post.excerpt || '',
-      content: post.content || '',
-    });
-    setCoverFile(null);
-    setCoverHint(
-      post.coverAsset?.url ? 'Giữ ảnh bìa hiện tại hoặc chọn ảnh mới' : 'Chưa có ảnh bìa',
+  function openEditor(post?: Post) {
+    setEditor(
+      post
+        ? {
+            id: post.id,
+            title: post.title || '',
+            excerpt: post.excerpt || '',
+            content: post.content || '',
+          }
+        : EMPTY_EDITOR,
     );
-    setSelectedProductIds(post.recommendedProductIds?.slice() ?? []);
-    titleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setExistingCover(post?.coverAsset?.url ?? null);
+    setSelectedProductIds(post?.recommendedProductIds?.slice() ?? []);
+    setCoverFile(null);
+    setProductQuery('');
+    setImageStatus('');
+    setFormError('');
+    setEditorOpen(true);
   }
 
   async function save() {
+    setFormError('');
+    if (editor.title.trim().length < 3) return setFormError('Tiêu đề phải có ít nhất 3 ký tự.');
+    if (!editor.content.trim()) return setFormError('Bài viết chưa có nội dung.');
+
     setSaving(true);
     const payload: Record<string, unknown> = {
       title: editor.title.trim(),
@@ -115,10 +156,10 @@ export default function BlogAdmin() {
       }
 
       showToast(editor.id ? 'Đã cập nhật bài blog' : 'Đã lưu bài blog', 'success');
-      resetEditor();
+      setEditorOpen(false);
       load();
     } catch (err: any) {
-      showToast(err?.message || 'Không lưu được bài', 'error');
+      setFormError(err?.message || 'Không lưu được bài');
     } finally {
       setSaving(false);
     }
@@ -130,7 +171,7 @@ export default function BlogAdmin() {
     if (!textarea) return;
 
     const caret = textarea.selectionStart;
-    setImageStatus('Đang tải ảnh...');
+    setImageStatus('Đang tải ảnh…');
     input.disabled = true;
 
     try {
@@ -175,17 +216,18 @@ export default function BlogAdmin() {
   async function changeStatus(postId: string, status: string) {
     try {
       await API.admin.blog.status(postId, status);
-      showToast('Đã cập nhật blog', 'success');
+      showToast(`Đã chuyển sang “${STATUS_LABEL[status]}”`, 'success');
+      setPosts((list) => list.map((p) => (p.id === postId ? { ...p, status } : p)));
     } catch (err: any) {
       showToast(err?.message || 'Không cập nhật được blog', 'error');
       load();
     }
   }
 
-  async function archive(postId: string) {
-    if (!confirm('Lưu trữ bài viết này?')) return;
+  async function archive(post: Post) {
+    if (!confirm(`Lưu trữ bài “${post.title}”?\n\nBài sẽ không còn hiện trên trang blog.`)) return;
     try {
-      await API.admin.blog.remove(postId);
+      await API.admin.blog.remove(post.id);
       showToast('Đã lưu trữ', 'success');
       load();
     } catch (err: any) {
@@ -199,56 +241,217 @@ export default function BlogAdmin() {
     );
   }
 
+  const counts = useMemo(() => {
+    const out: Record<string, number> = { draft: 0, published: 0, archived: 0 };
+    for (const post of posts) out[post.status] = (out[post.status] || 0) + 1;
+    return out;
+  }, [posts]);
+
+  const visible = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return posts.filter((post) => {
+      if (filter && post.status !== filter) return false;
+      if (!term) return true;
+      return (
+        post.title.toLowerCase().includes(term) || post.slug.toLowerCase().includes(term)
+      );
+    });
+  }, [posts, filter, search]);
+
+  const filters: Array<FilterOption<Filter>> = [
+    { value: '', label: 'Tất cả', count: posts.length },
+    { value: 'published', label: 'Đã xuất bản', count: counts.published },
+    { value: 'draft', label: 'Bản nháp', count: counts.draft },
+    { value: 'archived', label: 'Lưu trữ', count: counts.archived },
+  ];
+
   return (
     <>
-      <div className="page-head" style={{ marginBottom: 22 }}>
-        <h1>Blog</h1>
-        <p>Soạn bài viết, gắn sản phẩm đề xuất và quản lý trạng thái xuất bản</p>
-      </div>
+      <PageHeader
+        title="Blog"
+        subtitle="Soạn bài viết, gắn sản phẩm đề xuất và quản lý trạng thái xuất bản"
+        actions={
+          <button className="btn btn-primary" onClick={() => openEditor()}>
+            + Viết bài mới
+          </button>
+        }
+      />
 
-      <div className="admin-card">
-        <div className="admin-card-header">
-          <h3>{editor.id ? 'Sửa bài viết' : 'Bài viết mới'}</h3>
-          {editor.id && (
-            <button className="act-btn" onClick={resetEditor}>
-              Huỷ sửa
-            </button>
-          )}
-        </div>
+      <StatGrid>
+        <StatCard
+          icon="📝"
+          tone="orange"
+          loading={state === 'loading'}
+          value={posts.length}
+          label="Tổng bài viết"
+        />
+        <StatCard
+          icon="🌍"
+          tone="green"
+          loading={state === 'loading'}
+          value={counts.published || 0}
+          label="Đang hiển thị"
+        />
+        <StatCard
+          icon="✏️"
+          tone="amber"
+          loading={state === 'loading'}
+          value={counts.draft || 0}
+          label="Bản nháp"
+        />
+      </StatGrid>
 
-        <div style={{ padding: 16 }}>
-          <div className="form-group">
-            <label className="form-label">Tiêu đề</label>
+      <Toolbar>
+        <FilterPills options={filters} value={filter} onChange={(next) => setFilter(next)} />
+        <SearchBox value={search} placeholder="Tìm theo tiêu đề hoặc slug…" onChange={setSearch} />
+      </Toolbar>
+
+      <Panel flush>
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th style={{ width: 90 }}>Ảnh bìa</th>
+              <th>Bài viết</th>
+              <th>Sản phẩm</th>
+              <th>Trạng thái</th>
+              <th>Cập nhật</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            <TableStates
+              state={state}
+              error={error}
+              isEmpty={visible.length === 0}
+              columns={6}
+              emptyIcon="📝"
+              emptyTitle={search || filter ? 'Không tìm thấy bài nào' : 'Chưa có bài viết'}
+              emptyHint={
+                search || filter
+                  ? 'Thử bỏ bộ lọc hoặc đổi từ khoá.'
+                  : 'Bấm “Viết bài mới” để đăng bài đầu tiên.'
+              }
+              onRetry={load}
+            />
+            {state === 'ready' &&
+              visible.map((post) => (
+                <tr key={post.id}>
+                  <td>
+                    <label className="blog-cover-cell" title="Thay ảnh bìa">
+                      {post.coverAsset?.url ? (
+                        <img src={post.coverAsset.url} alt="" />
+                      ) : (
+                        <span className="blog-cover-empty">＋</span>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        hidden
+                        onChange={(e) => uploadCover(post.id, e.target)}
+                      />
+                    </label>
+                  </td>
+                  <td>
+                    <div className="ad-cell-main">{post.title}</div>
+                    <div className="ad-cell-sub">/{post.slug}</div>
+                  </td>
+                  <td className="ad-cell-sub">
+                    {post.recommendedProductIds?.length
+                      ? `${post.recommendedProductIds.length} sản phẩm`
+                      : '—'}
+                  </td>
+                  <td>
+                    <select
+                      className="admin-mini-select"
+                      value={post.status}
+                      onChange={(e) => changeStatus(post.id, e.target.value)}
+                    >
+                      {STATUSES.map((s) => (
+                        <option value={s} key={s}>
+                          {STATUS_LABEL[s]}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="ad-cell-sub">
+                    {new Date(post.updatedAt).toLocaleDateString('vi-VN')}
+                  </td>
+                  <td>
+                    <div className="admin-inline-actions">
+                      <button className="act-btn act-edit" onClick={() => openEditor(post)}>
+                        Sửa
+                      </button>
+                      {post.status !== 'archived' && (
+                        <button className="act-btn act-del" onClick={() => archive(post)}>
+                          Lưu trữ
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </Panel>
+
+      {editorOpen && (
+        <Modal
+          title={editor.id ? 'Sửa bài viết' : 'Viết bài mới'}
+          subtitle={
+            editor.id
+              ? 'Thay đổi được lưu ngay khi bấm Lưu'
+              : 'Bài mới được lưu ở trạng thái Bản nháp'
+          }
+          width={860}
+          onClose={() => setEditorOpen(false)}
+          footer={
+            <>
+              <button className="btn btn-ghost" onClick={() => setEditorOpen(false)}>
+                Hủy
+              </button>
+              <button className="btn btn-primary" disabled={saving} onClick={save}>
+                {saving ? 'Đang lưu…' : editor.id ? 'Lưu thay đổi' : 'Lưu bản nháp'}
+              </button>
+            </>
+          }
+        >
+          <label className="field">
+            <span className="field-label">
+              Tiêu đề <span className="req">*</span>
+            </span>
             <input
-              ref={titleRef}
               className="form-input"
+              placeholder="VD: 5 loại cây dễ trồng cho bé mới bắt đầu"
               value={editor.title}
               onChange={(e) => setEditor((s) => ({ ...s, title: e.target.value }))}
             />
-          </div>
+          </label>
 
-          <div className="form-group">
-            <label className="form-label">Mô tả ngắn</label>
+          <label className="field">
+            <span className="field-label">Mô tả ngắn</span>
             <input
               className="form-input"
+              placeholder="Một câu tóm tắt, hiện ở trang danh sách blog"
               value={editor.excerpt}
               onChange={(e) => setEditor((s) => ({ ...s, excerpt: e.target.value }))}
             />
-          </div>
+            <span className="field-hint">{editor.excerpt.length}/200 ký tự khuyến nghị</span>
+          </label>
 
-          <div className="form-group">
-            <label className="form-label">Nội dung (Markdown)</label>
+          <label className="field">
+            <span className="field-label">
+              Nội dung (Markdown) <span className="req">*</span>
+            </span>
             <textarea
               ref={contentRef}
-              className="form-input"
-              rows={12}
+              className="form-input blog-content"
+              rows={14}
               placeholder="Nội dung Markdown. Đặt con trỏ tại vị trí cần chèn ảnh rồi bấm nút bên dưới."
-              style={{ resize: 'vertical' }}
               value={editor.content}
               onChange={(e) => setEditor((s) => ({ ...s, content: e.target.value }))}
             />
             <div className="blog-inline-image">
-              <label className="act-btn">
+              <label className="act-btn act-edit">
                 ＋ Chèn ảnh vào nội dung
                 <input
                   type="file"
@@ -260,41 +463,61 @@ export default function BlogAdmin() {
                   }}
                 />
               </label>
-              <span className="admin-cell-sub">{imageStatus}</span>
+              <span className="ad-cell-sub">
+                {imageStatus || `${editor.content.length.toLocaleString('vi-VN')} ký tự`}
+              </span>
+            </div>
+          </label>
+
+          <div className="field">
+            <span className="field-label">Ảnh bìa</span>
+            <div className="blog-cover-pick">
+              <div className="blog-cover-preview">
+                {coverPreview || existingCover ? (
+                  <img src={coverPreview || existingCover || ''} alt="" />
+                ) : (
+                  <span>🖼</span>
+                )}
+              </div>
+              <div>
+                <label className="act-btn act-edit">
+                  {coverFile || existingCover ? 'Đổi ảnh bìa' : 'Chọn ảnh bìa'}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    hidden
+                    onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+                <div className="field-hint" style={{ marginTop: 6 }}>
+                  {coverFile?.name ||
+                    (existingCover ? 'Đang dùng ảnh bìa hiện tại' : 'Chưa chọn ảnh bìa')}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Ảnh bìa</label>
-            <div className="blog-inline-image">
-              <label className="act-btn">
-                Chọn ảnh bìa
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  hidden
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] ?? null;
-                    setCoverFile(file);
-                    setCoverHint(file?.name ?? 'Chưa chọn ảnh bìa');
-                  }}
-                />
-              </label>
-              <span className="admin-cell-sub">{coverHint}</span>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Sản phẩm đề xuất</label>
+          <div className="field">
+            <span className="field-label">
+              Sản phẩm đề xuất
+              {selectedProductIds.length > 0 && (
+                <span className="editor-step-badge" style={{ marginLeft: 8 }}>
+                  {selectedProductIds.length}
+                </span>
+              )}
+            </span>
+            <span className="field-hint" style={{ marginBottom: 8 }}>
+              Hiện ở cuối bài viết. Chỉ chọn được sản phẩm đang bán.
+            </span>
             <input
               className="form-input"
-              placeholder="Tìm sản phẩm..."
-              style={{ maxWidth: 320, marginBottom: 10 }}
+              placeholder="Tìm sản phẩm…"
+              style={{ marginBottom: 10 }}
               value={productQuery}
               onChange={(e) => setProductQuery(e.target.value)}
             />
             {visibleProducts.length === 0 ? (
-              <div className="admin-empty-line">Không tìm thấy sản phẩm nào.</div>
+              <div className="panel-empty">Không tìm thấy sản phẩm nào.</div>
             ) : (
               <div className="blog-product-picker">
                 {visibleProducts.map((product) => {
@@ -318,7 +541,12 @@ export default function BlogAdmin() {
                         </div>
                         <div className="blog-product-meta">
                           {product.col} · {product.age}
-                          {unpublished ? ` · ${product.status}` : ''}
+                          {unpublished && (
+                            <>
+                              {' · '}
+                              <Pill tone="grey">{STATUS_LABEL[product.status] ?? product.status}</Pill>
+                            </>
+                          )}
                         </div>
                       </div>
                     </label>
@@ -328,108 +556,9 @@ export default function BlogAdmin() {
             )}
           </div>
 
-          <button className="btn btn-primary" disabled={saving} onClick={save}>
-            {saving ? 'Đang lưu...' : editor.id ? 'Lưu thay đổi' : '+ Lưu bài mới'}
-          </button>
-        </div>
-      </div>
-
-      <div className="admin-card">
-        <div className="admin-card-header">
-          <h3>Danh sách bài viết</h3>
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Ảnh bìa</th>
-                <th>Tiêu đề</th>
-                <th>Slug</th>
-                <th>Sản phẩm</th>
-                <th>Trạng thái</th>
-                <th>Cập nhật</th>
-                <th>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {state === 'loading' && (
-                <tr>
-                  <td colSpan={7} className="admin-cell-empty">
-                    Đang tải...
-                  </td>
-                </tr>
-              )}
-              {state === 'error' && (
-                <tr>
-                  <td colSpan={7} className="admin-cell-error">
-                    {error}
-                  </td>
-                </tr>
-              )}
-              {state === 'ready' && posts.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="admin-cell-empty">
-                    Chưa có bài.
-                  </td>
-                </tr>
-              )}
-
-              {posts.map((post) => (
-                <tr key={post.id}>
-                  <td>
-                    <label className="blog-cover-cell" title="Thay ảnh bìa">
-                      {post.coverAsset?.url ? (
-                        <img src={post.coverAsset.url} alt="" />
-                      ) : (
-                        <span className="act-btn">＋ Ảnh bìa</span>
-                      )}
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        hidden
-                        onChange={(e) => uploadCover(post.id, e.target)}
-                      />
-                    </label>
-                  </td>
-                  <td style={{ fontWeight: 700 }}>{post.title}</td>
-                  <td style={{ fontSize: '.78rem' }}>{post.slug}</td>
-                  <td style={{ fontSize: '.78rem', color: 'var(--ink-3)' }}>
-                    {post.recommendedProductIds?.length
-                      ? `${post.recommendedProductIds.length} sản phẩm`
-                      : '—'}
-                  </td>
-                  <td>
-                    <select
-                      className="admin-mini-select"
-                      defaultValue={post.status}
-                      onChange={(e) => changeStatus(post.id, e.target.value)}
-                    >
-                      {STATUSES.map((s) => (
-                        <option value={s} key={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="admin-cell-sub">
-                    {new Date(post.updatedAt).toLocaleDateString('vi-VN')}
-                  </td>
-                  <td style={{ whiteSpace: 'nowrap' }}>
-                    <div className="admin-inline-actions">
-                      <button className="act-btn" onClick={() => startEdit(post)}>
-                        Sửa
-                      </button>
-                      <button className="act-btn act-del" onClick={() => archive(post.id)}>
-                        Lưu trữ
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+          {formError && <div className="form-error">{formError}</div>}
+        </Modal>
+      )}
     </>
   );
 }

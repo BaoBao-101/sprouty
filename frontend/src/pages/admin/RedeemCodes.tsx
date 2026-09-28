@@ -1,4 +1,20 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  BlockStates,
+  FilterPills,
+  MeterBar,
+  Modal,
+  PageHeader,
+  Panel,
+  Pill,
+  SearchBox,
+  StatCard,
+  StatGrid,
+  TableStates,
+  Toolbar,
+  type FilterOption,
+  type LoadState,
+} from '@/components/admin/ui';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 
@@ -25,26 +41,61 @@ interface KitOption {
 }
 
 const FEATURES = [
-  { value: 'ai_assistant', label: 'Trợ lý AI' },
-  { value: 'instruction_videos', label: 'Video hướng dẫn' },
-  { value: 'image_uploads', label: 'Upload ảnh' },
+  { value: 'ai_assistant', label: 'Trợ lý AI', icon: '🤖', hint: 'Hỏi đáp chăm cây trong app' },
+  { value: 'instruction_videos', label: 'Video hướng dẫn', icon: '🎬', hint: 'Xem video từng bước' },
+  { value: 'image_uploads', label: 'Upload ảnh', icon: '🖼', hint: 'Đăng ảnh lên Cây Kỷ Niệm' },
 ];
+
+const FEATURE_LABEL: Record<string, string> = Object.fromEntries(
+  FEATURES.map((f) => [f.value, f.label]),
+);
+
+const STATUS_LABEL: Record<string, string> = {
+  active: 'Đang hoạt động',
+  disabled: 'Đã tắt',
+  used_up: 'Đã dùng hết',
+};
+
+const STATUS_TONE: Record<string, string> = {
+  active: 'green',
+  disabled: 'grey',
+  used_up: 'amber',
+};
+
+type Filter = '' | 'active' | 'disabled';
+
+async function copyText(text: string, message: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast(message, 'success');
+  } catch {
+    // Clipboard access is blocked outside a secure context (plain http on a LAN
+    // IP, for instance), so say so rather than failing silently.
+    showToast('Trình duyệt chặn sao chép — hãy bôi đen và copy thủ công.', 'error');
+  }
+}
 
 export default function RedeemCodes() {
   const [codes, setCodes] = useState<Code[]>([]);
-  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState('');
+  const [filter, setFilter] = useState<Filter>('');
+  const [search, setSearch] = useState('');
 
   const [kits, setKits] = useState<KitOption[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [formError, setFormError] = useState('');
   const [label, setLabel] = useState('');
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>(['ai_assistant']);
-  const [createdCodes, setCreatedCodes] = useState<string[]>([]);
+  const [createdCodes, setCreatedCodes] = useState<string[] | null>(null);
 
   const [viewing, setViewing] = useState<Code | null>(null);
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
-  const [redemptionsMsg, setRedemptionsMsg] = useState('');
+  const [redemptionState, setRedemptionState] = useState<LoadState>('loading');
+  const [redemptionError, setRedemptionError] = useState('');
 
   const load = useCallback(() => {
     setState('loading');
@@ -77,24 +128,46 @@ export default function RedeemCodes() {
     };
   }, []);
 
+  function openCreate() {
+    setLabel('');
+    setProductId('');
+    setQuantity('1');
+    setSelectedFeatures(['ai_assistant']);
+    setFormError('');
+    setCreating(true);
+  }
+
   async function create() {
+    setFormError('');
+    if (selectedFeatures.length === 0) {
+      return setFormError('Chọn ít nhất một quyền lợi cho mã.');
+    }
+    const count = parseInt(quantity, 10);
+    if (!count || count < 1 || count > 500) {
+      return setFormError('Số lượng mã phải từ 1 đến 500.');
+    }
+
+    setBusy(true);
     try {
       const { codes: made } = await API.admin.redeemCodes.create({
         label: label.trim() || 'Mã Sprouty',
         features: selectedFeatures,
         productId: parseInt(productId, 10) || null,
-        quantity: parseInt(quantity, 10) || 1,
+        quantity: count,
         perUserLimit: 1,
       });
+      setCreating(false);
       setCreatedCodes(made.map((c: any) => c.code));
       load();
     } catch (err: any) {
-      showToast(err?.message || 'Không tạo được mã', 'error');
+      setFormError(err?.message || 'Không tạo được mã');
+    } finally {
+      setBusy(false);
     }
   }
 
   async function disable(code: Code) {
-    if (!confirm('Tắt mã này?')) return;
+    if (!confirm(`Tắt mã “${code.label}”?\n\nMã đã tắt không thể kích hoạt được nữa.`)) return;
     try {
       await API.admin.redeemCodes.remove(code.id);
       showToast('Đã tắt mã', 'success');
@@ -106,15 +179,18 @@ export default function RedeemCodes() {
 
   const openRedemptions = useCallback((code: Code) => {
     setViewing(code);
-    setRedemptionsMsg('Đang tải...');
+    setRedemptionState('loading');
     setRedemptions([]);
     API.admin.redeemCodes
       .redemptions(code.id)
       .then((data: any) => {
         setRedemptions(data.redemptions || []);
-        setRedemptionsMsg(data.redemptions?.length ? '' : 'Chưa có ai kích hoạt.');
+        setRedemptionState('ready');
       })
-      .catch((err: any) => setRedemptionsMsg(err?.message || 'Không tải được.'));
+      .catch((err: any) => {
+        setRedemptionError(err?.message || 'Không tải được.');
+        setRedemptionState('error');
+      });
   }, []);
 
   async function revoke(codeId: string, redemptionId: string) {
@@ -140,200 +216,315 @@ export default function RedeemCodes() {
     );
   }
 
+  const activeCount = codes.filter((c) => c.status === 'active').length;
+  const usedTotal = codes.reduce((sum, c) => sum + (c.usedCount || 0), 0);
+
+  const visible = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return codes.filter((code) => {
+      if (filter === 'active' && code.status !== 'active') return false;
+      if (filter === 'disabled' && code.status === 'active') return false;
+      if (!term) return true;
+      return (
+        code.label.toLowerCase().includes(term) ||
+        (code.product?.name || '').toLowerCase().includes(term)
+      );
+    });
+  }, [codes, filter, search]);
+
+  const filters: Array<FilterOption<Filter>> = [
+    { value: '', label: 'Tất cả', count: codes.length },
+    { value: 'active', label: 'Đang hoạt động', count: activeCount },
+    { value: 'disabled', label: 'Đã tắt', count: codes.length - activeCount },
+  ];
+
   return (
     <>
-      <div className="page-head" style={{ marginBottom: 22 }}>
-        <h1>Mã kích hoạt</h1>
-        <p>Tạo và quản lý mã mở quyền cho khách hàng</p>
-      </div>
+      <PageHeader
+        title="Mã kích hoạt"
+        subtitle="Tạo và quản lý mã mở quyền cho khách hàng"
+        actions={
+          <button className="btn btn-primary" onClick={openCreate}>
+            + Tạo mã mới
+          </button>
+        }
+      />
 
-      <div className="admin-card">
-        <div className="admin-card-header">
-          <h3>Tạo mã mới</h3>
-        </div>
-        <div style={{ padding: 16 }}>
-          <div className="form-grid-2">
-            <div className="form-group">
-              <label className="form-label">Nhãn</label>
+      <StatGrid>
+        <StatCard
+          icon="🎟"
+          tone="orange"
+          loading={state === 'loading'}
+          value={codes.length}
+          label="Tổng số mã"
+        />
+        <StatCard
+          icon="✅"
+          tone="green"
+          loading={state === 'loading'}
+          value={activeCount}
+          label="Đang hoạt động"
+        />
+        <StatCard
+          icon="👤"
+          tone="blue"
+          loading={state === 'loading'}
+          value={usedTotal}
+          label="Lượt đã kích hoạt"
+        />
+      </StatGrid>
+
+      <Toolbar>
+        <FilterPills options={filters} value={filter} onChange={(next) => setFilter(next)} />
+        <SearchBox value={search} placeholder="Tìm theo nhãn hoặc cây…" onChange={setSearch} />
+      </Toolbar>
+
+      <Panel flush>
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Nhãn</th>
+              <th>Quyền lợi</th>
+              <th style={{ minWidth: 140 }}>Đã dùng</th>
+              <th>Trạng thái</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            <TableStates
+              state={state}
+              error={error}
+              isEmpty={visible.length === 0}
+              columns={5}
+              emptyIcon="🎟"
+              emptyTitle={
+                search || filter ? 'Không tìm thấy mã nào' : 'Chưa có mã kích hoạt nào'
+              }
+              emptyHint={
+                search || filter
+                  ? 'Thử bỏ bộ lọc hoặc đổi từ khoá.'
+                  : 'Bấm “Tạo mã mới” để phát hành lô mã đầu tiên.'
+              }
+              onRetry={load}
+            />
+            {state === 'ready' &&
+              visible.map((code) => (
+                <tr key={code.id}>
+                  <td>
+                    <div className="ad-cell-main">{code.label}</div>
+                    <div className="ad-cell-sub">{code.product?.name || 'Toàn bộ sản phẩm'}</div>
+                  </td>
+                  <td>
+                    <div className="rc-feature-tags">
+                      {(code.features || []).map((f) => (
+                        <Pill tone="blue" key={f}>
+                          {FEATURE_LABEL[f] ?? f}
+                        </Pill>
+                      ))}
+                    </div>
+                  </td>
+                  <td>
+                    <div className="ad-cell-main">
+                      {code.usedCount}
+                      {code.maxUses ? ` / ${code.maxUses}` : ''}
+                    </div>
+                    {code.maxUses ? (
+                      <MeterBar value={code.usedCount} max={code.maxUses} tone="orange" />
+                    ) : (
+                      <div className="ad-cell-sub">Không giới hạn</div>
+                    )}
+                  </td>
+                  <td>
+                    <Pill tone={STATUS_TONE[code.status] ?? 'grey'}>
+                      {STATUS_LABEL[code.status] ?? code.status}
+                    </Pill>
+                  </td>
+                  <td>
+                    <div className="admin-inline-actions">
+                      <button className="act-btn act-edit" onClick={() => openRedemptions(code)}>
+                        Lượt kích hoạt
+                      </button>
+                      {code.status === 'active' && (
+                        <button className="act-btn act-del" onClick={() => disable(code)}>
+                          Tắt
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </Panel>
+
+      {creating && (
+        <Modal
+          title="Tạo mã kích hoạt"
+          subtitle="Mã chỉ hiển thị một lần duy nhất sau khi tạo"
+          onClose={() => setCreating(false)}
+          footer={
+            <>
+              <button className="btn btn-ghost" onClick={() => setCreating(false)}>
+                Hủy
+              </button>
+              <button className="btn btn-primary" disabled={busy} onClick={create}>
+                {busy ? 'Đang tạo…' : `Tạo ${parseInt(quantity, 10) || 1} mã`}
+              </button>
+            </>
+          }
+        >
+          <div className="field-grid">
+            <label className="field">
+              <span className="field-label">Nhãn</span>
               <input
                 className="form-input"
                 placeholder="VD: Mã tặng kèm Bean"
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Áp dụng cho cây</label>
-              <select
-                className="form-input"
-                value={productId}
-                onChange={(e) => setProductId(e.target.value)}
-              >
-                <option value="">Toàn bộ sản phẩm</option>
-                {kits.map((kit) => (
-                  <option value={kit.id} key={kit.id}>
-                    {kit.emoji || '🌱'} {kit.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Số lượng mã</label>
+              <span className="field-hint">Chỉ nhân viên thấy, để phân biệt các lô mã</span>
+            </label>
+
+            <label className="field">
+              <span className="field-label">Số lượng mã</span>
               <input
                 className="form-input"
                 type="number"
                 min={1}
+                max={500}
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
               />
+              <span className="field-hint">Mỗi mã dùng được 1 lần</span>
+            </label>
+          </div>
+
+          <label className="field">
+            <span className="field-label">Áp dụng cho cây</span>
+            <select
+              className="form-input"
+              value={productId}
+              onChange={(e) => setProductId(e.target.value)}
+            >
+              <option value="">Toàn bộ sản phẩm</option>
+              {kits.map((kit) => (
+                <option value={kit.id} key={kit.id}>
+                  {kit.emoji || '🌱'} {kit.name}
+                </option>
+              ))}
+            </select>
+            <span className="field-hint">
+              Chọn một cây để mã chỉ mở quyền cho đúng sản phẩm đó
+            </span>
+          </label>
+
+          <div className="field">
+            <span className="field-label">
+              Quyền lợi <span className="req">*</span>
+            </span>
+            <div className="status-choices">
+              {FEATURES.map((feature) => {
+                const checked = selectedFeatures.includes(feature.value);
+                return (
+                  <label
+                    key={feature.value}
+                    className={`status-choice${checked ? ' active' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => toggleFeature(feature.value, e.target.checked)}
+                    />
+                    <div>
+                      <strong>
+                        {feature.icon} {feature.label}
+                      </strong>
+                      <div className="status-choice-hint">{feature.hint}</div>
+                    </div>
+                  </label>
+                );
+              })}
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Quyền lợi</label>
-            <div className="rc-features">
-              {FEATURES.map((feature) => (
-                <label key={feature.value}>
-                  <input
-                    type="checkbox"
-                    className="rc-feature"
-                    value={feature.value}
-                    checked={selectedFeatures.includes(feature.value)}
-                    onChange={(e) => toggleFeature(feature.value, e.target.checked)}
-                  />
-                  {feature.label}
-                </label>
-              ))}
-            </div>
+          {formError && <div className="form-error">{formError}</div>}
+        </Modal>
+      )}
+
+      {createdCodes && (
+        <Modal
+          title={`Đã tạo ${createdCodes.length} mã`}
+          subtitle="Lưu lại ngay — sau khi đóng cửa sổ này mã sẽ không hiển thị lại"
+          onClose={() => setCreatedCodes(null)}
+          footer={
+            <>
+              <button
+                className="btn btn-ghost"
+                onClick={() => copyText(createdCodes.join('\n'), 'Đã sao chép toàn bộ mã')}
+              >
+                Sao chép tất cả
+              </button>
+              <button className="btn btn-primary" onClick={() => setCreatedCodes(null)}>
+                Tôi đã lưu lại
+              </button>
+            </>
+          }
+        >
+          <div className="panel-note">
+            Mã được sinh ngẫu nhiên và không lưu dạng đọc được trên hệ thống. Nếu đóng mà chưa
+            lưu, bạn phải tạo lô mới.
           </div>
-
-          <button className="btn btn-primary" onClick={create}>
-            Tạo mã
-          </button>
-
-          {createdCodes.length > 0 && (
-            <div style={{ marginTop: 14 }}>
-              <div className="rc-created-title">Mã mới, chỉ hiển thị lần này — hãy lưu lại:</div>
-              <pre className="rc-created-list">{createdCodes.join('\n')}</pre>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="admin-card">
-        <div className="admin-card-header">
-          <h3>Danh sách mã</h3>
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Nhãn</th>
-                <th>Quyền lợi</th>
-                <th>Đã dùng</th>
-                <th>Trạng thái</th>
-                <th>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {state === 'loading' && (
-                <tr>
-                  <td colSpan={5} className="admin-cell-empty">
-                    Đang tải...
-                  </td>
-                </tr>
-              )}
-              {state === 'error' && (
-                <tr>
-                  <td colSpan={5} className="admin-cell-error">
-                    {error}
-                  </td>
-                </tr>
-              )}
-              {state === 'ready' && codes.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="admin-cell-empty">
-                    Chưa có mã.
-                  </td>
-                </tr>
-              )}
-
-              {codes.map((code) => (
-                <tr key={code.id}>
-                  <td>
-                    <div style={{ fontWeight: 700 }}>{code.label}</div>
-                    <div className="admin-cell-sub">
-                      {code.product?.name || 'Toàn bộ sản phẩm'}
-                    </div>
-                  </td>
-                  <td style={{ fontSize: '.78rem' }}>{(code.features || []).join(', ')}</td>
-                  <td>
-                    {code.usedCount}
-                    {code.maxUses ? `/${code.maxUses}` : ''}
-                  </td>
-                  <td>{code.status}</td>
-                  <td>
-                    <div className="admin-inline-actions">
-                      <button className="act-btn" onClick={() => openRedemptions(code)}>
-                        Lượt kích hoạt
-                      </button>
-                      <button className="act-btn act-del" onClick={() => disable(code)}>
-                        Tắt
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+          <div className="rc-codes">
+            {createdCodes.map((code) => (
+              <button
+                key={code}
+                className="rc-code"
+                title="Bấm để sao chép"
+                onClick={() => copyText(code, 'Đã sao chép mã')}
+              >
+                <code>{code}</code>
+                <span aria-hidden="true">📋</span>
+              </button>
+            ))}
+          </div>
+        </Modal>
+      )}
 
       {viewing && (
-        <div className="admin-card">
-          <div className="admin-card-header">
-            <h3>Lượt kích hoạt — {viewing.label}</h3>
-            <button className="act-btn" onClick={() => setViewing(null)}>
+        <Modal
+          title="Lượt kích hoạt"
+          subtitle={viewing.label}
+          onClose={() => setViewing(null)}
+          footer={
+            <button className="btn btn-ghost" onClick={() => setViewing(null)}>
               Đóng
             </button>
-          </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Người dùng</th>
-                  <th>Thời điểm</th>
-                  <th>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {redemptionsMsg && (
-                  <tr>
-                    <td colSpan={3} className="admin-cell-empty">
-                      {redemptionsMsg}
-                    </td>
-                  </tr>
-                )}
-                {redemptions.map((r) => (
-                  <tr key={r.id}>
-                    <td>
-                      <div style={{ fontWeight: 700 }}>{r.user?.name}</div>
-                      <div className="admin-cell-sub">{r.user?.email}</div>
-                    </td>
-                    <td style={{ fontSize: '.82rem' }}>
-                      {new Date(r.redeemedAt).toLocaleString('vi-VN')}
-                    </td>
-                    <td>
-                      <button className="act-btn act-del" onClick={() => revoke(viewing.id, r.id)}>
-                        Thu hồi
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+          }
+        >
+          <BlockStates
+            state={redemptionState}
+            error={redemptionError}
+            isEmpty={redemptions.length === 0}
+            emptyIcon="🫥"
+            emptyTitle="Chưa có ai kích hoạt"
+            emptyHint="Khi khách nhập mã, lượt kích hoạt sẽ hiện ở đây."
+          />
+          {redemptionState === 'ready' &&
+            redemptions.map((r) => (
+              <div className="rc-redemption" key={r.id}>
+                <div>
+                  <div className="ad-cell-main">{r.user?.name || '—'}</div>
+                  <div className="ad-cell-sub">{r.user?.email}</div>
+                  <div className="ad-cell-sub">
+                    {new Date(r.redeemedAt).toLocaleString('vi-VN')}
+                  </div>
+                </div>
+                <button className="act-btn act-del" onClick={() => revoke(viewing.id, r.id)}>
+                  Thu hồi
+                </button>
+              </div>
+            ))}
+        </Modal>
       )}
     </>
   );

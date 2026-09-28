@@ -1,6 +1,11 @@
 import { useState, type ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+// Both staff areas render this shell, so it is where their stylesheets belong.
+// They used to be imported by AdminLayout alone, even though the employee pages
+// reuse the same tables, panels and modals.
+import './admin.css';
+import './admin-ui.css';
 
 export interface SidebarItem {
   to: string;

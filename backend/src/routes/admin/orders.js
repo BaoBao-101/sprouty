@@ -42,6 +42,22 @@ export default async function adminOrderRoutes(fastify) {
     return { orders, total, page: pageNum, limit: pageSize, pages: Math.ceil(total / pageSize) };
   });
 
+  // GET /api/v1/admin/orders/counts — how many orders sit in each status, so the
+  // filter tabs can show the size of each queue without one request per tab.
+  fastify.get('/orders/counts', { preHandler: [requireEmployee] }, async () => {
+    const rows = await fastify.prisma.order.groupBy({
+      by: ['status'],
+      _count: { _all: true },
+    });
+    const counts = { pending: 0, processing: 0, shipped: 0, delivered: 0, cancelled: 0 };
+    let total = 0;
+    for (const row of rows) {
+      counts[row.status] = row._count._all;
+      total += row._count._all;
+    }
+    return { counts, total };
+  });
+
   // PATCH /api/v1/admin/orders/:id/status
   fastify.patch('/orders/:id/status', { preHandler: [requireEmployee, requireCsrf] }, async (req, reply) => {
     const parsed = updateStatusSchema.safeParse(req.body);

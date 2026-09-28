@@ -1,6 +1,5 @@
 import { Outlet } from 'react-router-dom';
 import { StaffSidebar, type SidebarGroup } from './StaffSidebar';
-import './admin.css';
 
 const icon = (file: string) => <img src={`/assets/images/sprouty-icons/${file}`} alt="" />;
 
@@ -29,6 +28,12 @@ const GROUPS: SidebarGroup[] = [
   {
     title: 'Người dùng',
     items: [{ to: '/admin/users', label: 'Người dùng', icon: '👥' }],
+  },
+  {
+    // Not "Hệ thống": StaffSidebar already renders a group by that name for the
+    // back-to-site link, and two identical headings read as a rendering bug.
+    title: 'Giám sát',
+    items: [{ to: '/admin/audit', label: 'Nhật ký hoạt động', icon: '🗒' }],
   },
 ];
 
