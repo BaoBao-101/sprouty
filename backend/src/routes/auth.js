@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { AppError } from '../utils/errors.js';
 import { requireAuth, requireCsrf } from '../middleware/rbac.js';
 import { passwordSchema } from '../utils/password.js';
+import { auditLog } from '../services/audit.js';
 
 // Per-account brute-force lockout, independent of the per-IP rate limit — this
 // is what blunts a distributed (many-IP) guessing attack against one account.
@@ -23,6 +24,11 @@ async function registerFailedLogin(prisma, user) {
 const loginSchema = z.object({
   email: z.string().email('Email không hợp lệ.'),
   password: z.string().min(1, 'Mật khẩu không được để trống.'),
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Nhập mật khẩu hiện tại.'),
+  newPassword: passwordSchema,
 });
 
 const registerSchema = z.object({
@@ -121,5 +127,48 @@ export default async function authRoutes(fastify) {
   fastify.post('/logout', { preHandler: [requireAuth, requireCsrf] }, async (req, reply) => {
     await fastify.clearSession(req, reply);
     return { message: 'Đã đăng xuất.' };
+  });
+
+  // POST /api/v1/auth/change-password — rotate your own password.
+  //
+  // There was no way to change a password anywhere in the product: customers
+  // were stuck with whatever they first chose, and staff accounts created by an
+  // admin were stuck on the temporary password they were handed.
+  fastify.post('/change-password', {
+    preHandler: [requireAuth, requireCsrf],
+    // Verifying the current password is a guessing oracle, so rate-limit it the
+    // way login is rather than leaving it on the global default.
+    config: { rateLimit: { max: 10, timeWindow: '15 minutes' } },
+  }, async (req) => {
+    const parsed = changePasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new AppError(parsed.error.errors[0]?.message || 'Dữ liệu không hợp lệ.', 400);
+    }
+
+    const { currentPassword, newPassword } = parsed.data;
+    if (currentPassword === newPassword) {
+      throw new AppError('Mật khẩu mới phải khác mật khẩu hiện tại.', 400);
+    }
+
+    const user = await fastify.prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) throw new AppError('Không tìm thấy tài khoản.', 404);
+
+    const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!ok) throw new AppError('Mật khẩu hiện tại không đúng.', 400);
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await fastify.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, failedLoginAttempts: 0, lockedUntil: null },
+    });
+
+    // Anyone else holding a session for this account — the reason people change
+    // a password in the first place — is signed out. The caller keeps theirs.
+    await fastify.prisma.session.deleteMany({
+      where: { userId: user.id, id: { not: req.session?.id } },
+    });
+
+    await auditLog(fastify.prisma, user.id, 'user.password.change', 'User', user.id, {});
+    return { message: 'Đã đổi mật khẩu. Các phiên đăng nhập khác đã bị đăng xuất.' };
   });
 }

@@ -49,3 +49,45 @@
 .profile-cell { background: var(--cream-2); border-radius: var(--r-md); padding: 16px }
 .profile-label { font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--orange); margin-bottom: 6px }
 .profile-value { font-size: 1rem; font-weight: 600 }
+
+/* Password section on the profile tab. Collapsed to a single row until needed,
+   so the tab still reads as "your details" rather than a form. */
+.account-security {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--parchment-2);
+  border-radius: var(--r-lg);
+}
+.account-security.open { display: block }
+.account-security-title {
+  font-family: var(--font-h);
+  font-weight: 700;
+  font-size: .95rem;
+  color: var(--ink);
+}
+.account-security-hint {
+  font-size: .82rem;
+  color: var(--ink-4);
+  margin-top: 3px;
+  line-height: 1.6;
+}
+.account-security-show {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: .82rem;
+  color: var(--ink-3);
+  margin-bottom: 14px;
+  cursor: pointer;
+}
+.account-security-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
