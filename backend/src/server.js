@@ -29,7 +29,9 @@ import adminVideoRoutes from './routes/admin/videos.js';
 import adminUserImageRoutes from './routes/admin/user-images.js';
 import adminRedeemCodeRoutes from './routes/admin/redeem-codes.js';
 import adminBlogRoutes from './routes/admin/blog.js';
+import adminAuditRoutes from './routes/admin/audit.js';
 import sepayWebhookRoutes from './routes/webhooks/sepay.js';
+import { assetAccessGuard } from './middleware/assetGuard.js';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -80,13 +82,15 @@ await app.register(fastifyHelmet, {
 // CORS — same-origin in Docker (nginx handles it), explicit origins for local dev
 const allowedOrigins = (process.env.ALLOWED_ORIGIN || 'http://localhost').split(',').map(s => s.trim());
 await app.register(fastifyCors, {
+  // Finding F-10: rejecting by passing an Error made @fastify/cors surface it as
+  // a 500, which reads like the server fell over and invites someone to keep
+  // poking. Refuse by simply not allowing the origin — the browser still blocks
+  // the response for lack of the header, and the status stays honest.
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
     let parsed;
-    try { parsed = new URL(origin); } catch { return cb(new Error('Not allowed by CORS'), false); }
-    const requestOrigin = parsed.origin;
-    if (allowedOrigins.some(o => o === requestOrigin)) return cb(null, true);
-    cb(new Error('Not allowed by CORS'), false);
+    try { parsed = new URL(origin); } catch { return cb(null, false); }
+    cb(null, allowedOrigins.some(o => o === parsed.origin));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -111,20 +115,33 @@ await app.register(fastifyMultipart, {
   },
 });
 
-if ((process.env.ASSET_STORAGE_PROVIDER || 'local') === 'local') {
-  await fs.mkdir(localUploadRoot(), { recursive: true });
-  await app.register(fastifyStatic, {
-    root: localUploadRoot(),
-    prefix: (process.env.PUBLIC_ASSET_BASE_URL || '/uploads').replace(/\/?$/, '/'),
-    decorateReply: false,
-  });
-}
-
 // Database via Prisma
 await app.register(prismaPlugin);
 
 // Postgres-backed session layer
 await app.register(sessionPlugin);
+
+// Local uploaded assets. Registered *after* the session plugin on purpose:
+// Fastify freezes a route's hook chain when the route is registered, so a static
+// mount added earlier would never see the session preHandler and `req.user`
+// would always be null inside assetAccessGuard.
+if ((process.env.ASSET_STORAGE_PROVIDER || 'local') === 'local') {
+  await fs.mkdir(localUploadRoot(), { recursive: true });
+  // Wrapped in its own scope so the guard hook applies to the static route and
+  // nothing else. @fastify/static takes no preHandler option of its own — it
+  // would be accepted and silently ignored — and its `allowedPath` callback is
+  // synchronous, so it cannot do the ownership lookup this needs.
+  await app.register(async (scope) => {
+    // F-02: private media (leaf photos, instruction videos) used to be readable
+    // by anyone holding the URL. See middleware/assetGuard.js.
+    scope.addHook('preHandler', assetAccessGuard);
+    await scope.register(fastifyStatic, {
+      root: localUploadRoot(),
+      prefix: (process.env.PUBLIC_ASSET_BASE_URL || '/uploads').replace(/\/?$/, '/'),
+      decorateReply: false,
+    });
+  });
+}
 
 // Rate limiting (global defaults, routes can override)
 await app.register(fastifyRateLimit, {
@@ -168,6 +185,7 @@ await app.register(adminVideoRoutes,   { prefix: '/api/v1/admin' });
 await app.register(adminUserImageRoutes,{ prefix: '/api/v1/admin' });
 await app.register(adminRedeemCodeRoutes,{ prefix: '/api/v1/admin' });
 await app.register(adminBlogRoutes,    { prefix: '/api/v1/admin' });
+await app.register(adminAuditRoutes,   { prefix: '/api/v1/admin' });
 await app.register(sepayWebhookRoutes, { prefix: '/api/v1/webhooks' });
 
 app.setErrorHandler(errorHandler);

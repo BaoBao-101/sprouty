@@ -243,6 +243,8 @@ model Asset {
   @@index([ownerUserId])
   @@index([productId])
   @@index([kind])
+  // Looked up on every /uploads/* request by the access guard (finding F-02).
+  @@index([key])
 }
 
 model InstructionVideo {
