@@ -39,6 +39,7 @@ const AdminWorkshops = lazy(() => import('@/pages/admin/Workshops'));
 const AdminRedeemCodes = lazy(() => import('@/pages/admin/RedeemCodes'));
 const AdminBlog = lazy(() => import('@/pages/admin/BlogAdmin'));
 const AdminUserImages = lazy(() => import('@/pages/admin/UserImages'));
+const AdminAuditLog = lazy(() => import('@/pages/admin/AuditLog'));
 const AdminProducts = lazy(() => import('@/pages/admin/Products'));
 
 // Employee
@@ -149,6 +150,7 @@ export function App() {
               <Route path="redeem" element={<AdminRedeemCodes />} />
               <Route path="blog" element={<AdminBlog />} />
               <Route path="user-images" element={<AdminUserImages />} />
+              <Route path="audit" element={<AdminAuditLog />} />
               <Route path="products" element={<AdminProducts />} />
             </Route>
           </Route>
