@@ -2,6 +2,10 @@ export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | '
 
 export interface OrderItem {
   qty: number;
+  /** Price paid per unit, captured at checkout. */
+  unitPrice: number;
+  /** 'standard' | 'smart' — which variant was bought, when one was offered. */
+  variant?: string | null;
   product?: { name?: string; emoji?: string };
 }
 

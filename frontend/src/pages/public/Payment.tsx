@@ -187,13 +187,39 @@ export default function PaymentPage() {
               ) : isPending ? (
                 payment ? (
                   <>
-                    <h2>Quét mã để thanh toán</h2>
-                    <img src={payment.qrUrl} alt="Mã QR thanh toán" className="pay-qr" />
+                    <h2>Chuyển khoản để thanh toán</h2>
+
+                    {/* The amount and the reference are what a customer has to
+                        get right; the QR is a shortcut for those whose banking
+                        app can scan. It used to dominate the page while the two
+                        numbers that matter sat underneath in small rows. */}
+                    <div className="pay-figures">
+                      <div className="pay-figure">
+                        <span className="pay-figure-label">Số tiền cần chuyển</span>
+                        <strong className="pay-figure-amount">{formatPrice(payment.amount)}</strong>
+                      </div>
+                      <div className="pay-figure">
+                        <span className="pay-figure-label">Nội dung chuyển khoản</span>
+                        <div className="pay-figure-memo">
+                          <code>{payment.memo}</code>
+                          <button
+                            className="copy-btn"
+                            type="button"
+                            onClick={() => copy(payment.memo)}
+                          >
+                            📋 Copy
+                          </button>
+                        </div>
+                        <span className="pay-figure-hint">
+                          Giữ nguyên nội dung này — hệ thống dựa vào đó để nhận đúng đơn của bạn.
+                        </span>
+                      </div>
+                    </div>
+
                     <Row label="Ngân hàng" value={payment.bankCode} />
                     <Row label="Số tài khoản" value={payment.accountNumber} copyable />
                     <Row label="Chủ tài khoản" value={payment.accountName} />
-                    <Row label="Nội dung" value={payment.memo} copyable />
-                    <Row label="Số tiền" value={formatPrice(payment.amount)} />
+
                     <div className="pay-warn">
                       <span className="spinner" /> Trang sẽ tự cập nhật khi nhận được thanh toán.
                       {hint && <> {hint}</>}
@@ -265,6 +291,16 @@ export default function PaymentPage() {
             </div>
 
             <div className="pay-summary">
+              {/* The QR lives here rather than beside the bank details: it is a
+                  shortcut, not an instruction, and this column is where someone
+                  checks what they are paying for. */}
+              {payment && isPending && (
+                <div className="sum-qr">
+                  <img src={payment.qrUrl} alt="Mã QR thanh toán" />
+                  <span>Quét để điền sẵn số tiền và nội dung</span>
+                </div>
+              )}
+
               <h3>Tóm tắt</h3>
               <div className="sum-row">
                 <span>Mã đơn</span>
@@ -274,6 +310,32 @@ export default function PaymentPage() {
                 <span>Trạng thái</span>
                 <strong>{ORDER_STATUS_VN[order.status] ?? order.status}</strong>
               </div>
+
+              {/* The page asked for money without ever saying what for. */}
+              {order.items?.length > 0 && (
+                <>
+                  <div className="sum-divider" />
+                  <div className="sum-items-head">Sản phẩm trong đơn</div>
+                  {order.items.map((item, i) => (
+                    <div className="sum-item" key={i}>
+                      <span className="sum-item-emoji">{item.product?.emoji || '📦'}</span>
+                      <span className="sum-item-main">
+                        <span className="sum-item-name">
+                          {item.product?.name || 'Sản phẩm'}
+                        </span>
+                        <span className="sum-item-sub">
+                          {item.variant === 'smart' && 'Bản Smart · '}
+                          {formatPrice(item.unitPrice)} × {item.qty}
+                        </span>
+                      </span>
+                      <span className="sum-item-line">
+                        {formatPrice(item.unitPrice * item.qty)}
+                      </span>
+                    </div>
+                  ))}
+                </>
+              )}
+
               <div className="sum-divider" />
               <div className="sum-total">
                 <span className="sum-total-lbl">Tổng tiền</span>
