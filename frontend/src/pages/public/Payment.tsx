@@ -185,55 +185,56 @@ export default function PaymentPage() {
                   </button>
                 </>
               ) : isPending ? (
-                payment ? (
-                  <>
-                    <h2>Chuyển khoản để thanh toán</h2>
+                // What the order contains. The money side lives in the right
+                // column — a customer checks what they bought before they check
+                // where to send the payment.
+                <>
+                  <h2>Đơn hàng của bạn</h2>
+                  <div className="ord-head">
+                    <span>
+                      Mã đơn <strong title={order.id}>{shortOrderId(order.id)}</strong>
+                    </span>
+                    <span>
+                      Trạng thái <strong>{ORDER_STATUS_VN[order.status] ?? order.status}</strong>
+                    </span>
+                  </div>
 
-                    {/* The amount and the reference are what a customer has to
-                        get right; the QR is a shortcut for those whose banking
-                        app can scan. It used to dominate the page while the two
-                        numbers that matter sat underneath in small rows. */}
-                    <div className="pay-figures">
-                      <div className="pay-figure">
-                        <span className="pay-figure-label">Số tiền cần chuyển</span>
-                        <strong className="pay-figure-amount">{formatPrice(payment.amount)}</strong>
-                      </div>
-                      <div className="pay-figure">
-                        <span className="pay-figure-label">Nội dung chuyển khoản</span>
-                        <div className="pay-figure-memo">
-                          <code>{payment.memo}</code>
-                          <button
-                            className="copy-btn"
-                            type="button"
-                            onClick={() => copy(payment.memo)}
-                          >
-                            📋 Copy
-                          </button>
-                        </div>
-                        <span className="pay-figure-hint">
-                          Giữ nguyên nội dung này — hệ thống dựa vào đó để nhận đúng đơn của bạn.
+                  <div className="ord-items">
+                    {order.items?.map((item, i) => (
+                      <div className="ord-item" key={i}>
+                        <span className="ord-item-emoji">{item.product?.emoji || '📦'}</span>
+                        <span className="ord-item-main">
+                          <span className="ord-item-name">{item.product?.name || 'Sản phẩm'}</span>
+                          <span className="ord-item-sub">
+                            {item.variant === 'smart' && 'Bản Smart · '}
+                            {formatPrice(item.unitPrice)} × {item.qty}
+                          </span>
+                        </span>
+                        <span className="ord-item-line">
+                          {formatPrice(item.unitPrice * item.qty)}
                         </span>
                       </div>
-                    </div>
+                    ))}
+                  </div>
 
-                    <Row label="Ngân hàng" value={payment.bankCode} />
-                    <Row label="Số tài khoản" value={payment.accountNumber} copyable />
-                    <Row label="Chủ tài khoản" value={payment.accountName} />
+                  <div className="ord-total">
+                    <span>Tổng cộng</span>
+                    <strong>{formatPrice(order.total)}</strong>
+                  </div>
 
-                    <div className="pay-warn">
-                      <span className="spinner" /> Trang sẽ tự cập nhật khi nhận được thanh toán.
-                      {hint && <> {hint}</>}
+                  {(order.shippingName || order.shippingAddress) && (
+                    <div className="ord-ship">
+                      <span className="ord-ship-label">Giao đến</span>
+                      <div>
+                        {order.shippingName}
+                        {order.shippingPhone && ` · ${order.shippingPhone}`}
+                      </div>
+                      {order.shippingAddress && (
+                        <div className="ord-ship-addr">{order.shippingAddress}</div>
+                      )}
                     </div>
-                  </>
-                ) : (
-                  <>
-                    <h2>Chưa cấu hình cổng thanh toán</h2>
-                    <p style={{ color: 'var(--ink-4)' }}>
-                      Vui lòng liên hệ Sprouty để được hướng dẫn thanh toán cho đơn{' '}
-                      {shortOrderId(order.id)}.
-                    </p>
-                  </>
-                )
+                  )}
+                </>
               ) : (
                 <div style={{ textAlign: 'center' }}>
                   <div className="pay-result-emoji">
@@ -290,58 +291,61 @@ export default function PaymentPage() {
               )}
             </div>
 
-            <div className="pay-summary">
-              {/* The QR lives here rather than beside the bank details: it is a
-                  shortcut, not an instruction, and this column is where someone
-                  checks what they are paying for. */}
-              {payment && isPending && (
-                <div className="sum-qr">
-                  <img src={payment.qrUrl} alt="Mã QR thanh toán" />
-                  <span>Quét để điền sẵn số tiền và nội dung</span>
-                </div>
-              )}
+            {/* Everything to do with paying, in one column. Only while the order
+                is unpaid — once it is settled these instructions are noise. */}
+            {isPending && (
+              <div className="pay-summary">
+                {payment ? (
+                  <>
+                    <h3>Chuyển khoản</h3>
 
-              <h3>Tóm tắt</h3>
-              <div className="sum-row">
-                <span>Mã đơn</span>
-                <strong title={order.id}>{shortOrderId(order.id)}</strong>
-              </div>
-              <div className="sum-row">
-                <span>Trạng thái</span>
-                <strong>{ORDER_STATUS_VN[order.status] ?? order.status}</strong>
-              </div>
+                    <div className="pay-figure">
+                      <span className="pay-figure-label">Số tiền cần chuyển</span>
+                      <strong className="pay-figure-amount">{formatPrice(payment.amount)}</strong>
+                    </div>
 
-              {/* The page asked for money without ever saying what for. */}
-              {order.items?.length > 0 && (
-                <>
-                  <div className="sum-divider" />
-                  <div className="sum-items-head">Sản phẩm trong đơn</div>
-                  {order.items.map((item, i) => (
-                    <div className="sum-item" key={i}>
-                      <span className="sum-item-emoji">{item.product?.emoji || '📦'}</span>
-                      <span className="sum-item-main">
-                        <span className="sum-item-name">
-                          {item.product?.name || 'Sản phẩm'}
-                        </span>
-                        <span className="sum-item-sub">
-                          {item.variant === 'smart' && 'Bản Smart · '}
-                          {formatPrice(item.unitPrice)} × {item.qty}
-                        </span>
-                      </span>
-                      <span className="sum-item-line">
-                        {formatPrice(item.unitPrice * item.qty)}
+                    <div className="pay-figure">
+                      <span className="pay-figure-label">Nội dung chuyển khoản</span>
+                      <div className="pay-figure-memo">
+                        <code>{payment.memo}</code>
+                        <button
+                          className="copy-btn"
+                          type="button"
+                          onClick={() => copy(payment.memo)}
+                        >
+                          📋
+                        </button>
+                      </div>
+                      <span className="pay-figure-hint">
+                        Giữ nguyên nội dung này — hệ thống dựa vào đó để nhận đúng đơn của bạn.
                       </span>
                     </div>
-                  ))}
-                </>
-              )}
 
-              <div className="sum-divider" />
-              <div className="sum-total">
-                <span className="sum-total-lbl">Tổng tiền</span>
-                <span className="sum-total-val">{formatPrice(order.total)}</span>
+                    <div className="sum-qr">
+                      <img src={payment.qrUrl} alt="Mã QR thanh toán" />
+                      <span>Quét để điền sẵn số tiền và nội dung</span>
+                    </div>
+
+                    <Row label="Ngân hàng" value={payment.bankCode} />
+                    <Row label="Số tài khoản" value={payment.accountNumber} copyable />
+                    <Row label="Chủ tài khoản" value={payment.accountName} />
+
+                    <div className="pay-warn">
+                      <span className="spinner" /> Trang sẽ tự cập nhật khi nhận được thanh toán.
+                      {hint && <> {hint}</>}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h3>Chưa cấu hình cổng thanh toán</h3>
+                    <p style={{ color: 'var(--ink-4)', fontSize: '.88rem', lineHeight: 1.7 }}>
+                      Vui lòng liên hệ Sprouty để được hướng dẫn thanh toán cho đơn{' '}
+                      {shortOrderId(order.id)}.
+                    </p>
+                  </>
+                )}
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>

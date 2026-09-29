@@ -1,7 +1,8 @@
 /* Page styles for Payment. Lifted out of the <style> block that used to sit
    in the <head> of payment.html. */
 
-.pay-layout { display:grid; grid-template-columns:1fr 360px; gap:28px; padding:36px 0 72px; align-items:start }
+/* Order on the left, everything about paying on the right. */
+.pay-layout { display:grid; grid-template-columns:1fr 380px; gap:28px; padding:36px 0 72px; align-items:start }
 .pay-card { background:var(--surface); border:1.5px solid var(--parchment-2); border-radius:var(--r-2xl); padding:28px; box-shadow:var(--sh-md) }
 .pay-summary { background:var(--surface); border:1.5px solid var(--parchment-2); border-radius:var(--r-2xl); padding:24px; position:sticky; top:108px; box-shadow:var(--sh-md) }
 .sum-row { display:flex; justify-content:space-between; align-items:center; font-size:.9rem; color:var(--ink-3); margin-bottom:10px; gap:12px }
@@ -35,7 +36,7 @@
 
 /* The two numbers a customer must get right, given the weight they deserve.
    They used to be small rows under a QR that filled the page. */
-.pay-figures { display:grid; gap:14px; margin:20px 0 22px }
+.pay-figure + .pay-figure { margin-top:12px }
 .pay-figure {
   padding:16px 18px; background:var(--cream-2);
   border:1.5px solid var(--parchment-2); border-radius:var(--r-lg);
@@ -57,28 +58,51 @@
 }
 .pay-figure-hint { display:block; margin-top:8px; font-size:.8rem; color:var(--ink-3); line-height:1.6 }
 
-/* QR in the summary column — a shortcut, next to what is being bought. */
-.sum-qr { text-align:center; padding-bottom:18px; margin-bottom:6px; border-bottom:1px solid var(--parchment) }
-.sum-qr img { width:170px; height:170px; border-radius:var(--r-md); display:block; margin:0 auto }
+.sum-qr { text-align:center; margin:16px 0 18px }
+.sum-qr img { width:100%; max-width:210px; border-radius:var(--r-md); display:block; margin:0 auto }
 .sum-qr span { display:block; margin-top:8px; font-size:.76rem; color:var(--ink-4); line-height:1.5 }
 
-/* Line items: the page asked for money without saying what for. */
-.sum-items-head {
-  font-size:.72rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
-  color:var(--ink-4); margin-bottom:10px;
+/* ── Left column: what the order contains ─────────────────────
+   The page used to ask for money without ever saying what for. */
+.ord-head {
+  display:flex; gap:22px; flex-wrap:wrap; padding:14px 0 16px;
+  border-bottom:1px solid var(--parchment); font-size:.85rem; color:var(--ink-4);
 }
-.sum-item { display:flex; align-items:flex-start; gap:10px; padding:7px 0 }
-.sum-item-emoji { font-size:1.15rem; flex-shrink:0; line-height:1.3 }
-.sum-item-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px }
-.sum-item-name { font-size:.87rem; font-weight:600; color:var(--ink); line-height:1.4 }
-.sum-item-sub { font-size:.76rem; color:var(--ink-4) }
-.sum-item-line {
+.ord-head strong { color:var(--ink); font-family:var(--font-h); margin-left:5px }
+
+.ord-items { padding:6px 0 }
+.ord-item { display:flex; align-items:center; gap:14px; padding:13px 0; border-bottom:1px solid var(--cream-2) }
+.ord-item:last-child { border-bottom:none }
+.ord-item-emoji {
+  font-size:1.5rem; flex-shrink:0; width:46px; height:46px;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--cream-2); border-radius:var(--r-md);
+}
+.ord-item-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px }
+.ord-item-name { font-size:1rem; font-weight:600; color:var(--ink); line-height:1.35 }
+.ord-item-sub { font-size:.83rem; color:var(--ink-4) }
+.ord-item-line {
   flex-shrink:0; font-family:var(--font-h); font-weight:700;
-  font-size:.86rem; color:var(--ink-2); white-space:nowrap;
+  font-size:1rem; color:var(--ink); white-space:nowrap;
 }
+
+.ord-total {
+  display:flex; justify-content:space-between; align-items:center;
+  padding-top:16px; margin-top:6px; border-top:2px solid var(--parchment);
+}
+.ord-total span { font-family:var(--font-h); font-weight:700; color:var(--ink-2) }
+.ord-total strong { font-family:var(--font-display); font-size:1.5rem; color:var(--orange) }
+
+.ord-ship { margin-top:22px; padding:14px 16px; background:var(--cream-2); border-radius:var(--r-lg); font-size:.88rem; color:var(--ink-2) }
+.ord-ship-label {
+  display:block; font-size:.7rem; font-weight:800; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--ink-4); margin-bottom:5px;
+}
+.ord-ship-addr { color:var(--ink-4); font-size:.84rem; margin-top:2px; line-height:1.55 }
 
 @media(max-width:600px) {
   .pay-figure-amount { font-size:1.8rem }
+  .ord-item-emoji { width:38px; height:38px; font-size:1.2rem }
 }
 .pay-result-emoji { font-size: 3.4rem; margin-bottom: 10px }
 
