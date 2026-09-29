@@ -11,14 +11,28 @@
    y=48.6% — so we only overlay each circle's icon, then the title/desc
    row below at matching x-offsets (8.5% side padding + 4 equal columns
    lands column centers within ~1% of those measured circle centers). */
-.user-flow-track { margin-top:52px }
-.uflow-img-wrap { position:relative }
-.uflow-img { display:block; width:100%; height:auto }
-.uflow-icon { position:absolute; top:48.6%; font-size:2.1rem; line-height:1; transform:translate(-50%,-50%); filter:drop-shadow(0 2px 3px rgba(0,0,0,.15)) }
-.uflow-labels { display:grid; grid-template-columns:repeat(4,1fr); padding:0 8.5%; margin-top:18px }
-.uflow-text { text-align:center; padding:0 6px }
-.uflow-title { font-family:var(--font-h); font-size:.9rem; font-weight:800; color:var(--ink); margin-bottom:6px }
-.uflow-desc { font-size:.78rem; color:var(--ink-4); line-height:1.6; margin:0 }
+/* Four real steps in a row, joined by a connector. The circles used to be
+   painted into progress-banner.png, so nothing could sit inside them — the
+   icons floated above the image and the captions sat in a row far below the
+   step each one described. */
+.user-flow-track { margin-top:52px; display:grid; grid-template-columns:repeat(4,1fr); gap:18px; align-items:stretch }
+.uflow-step { position:relative; text-align:center; padding:26px 18px 22px; background:var(--surface); border:1px solid var(--parchment-2); border-radius:var(--r-xl); box-shadow:var(--sh-sm); transition:transform .18s, box-shadow .18s }
+.uflow-step:hover { transform:translateY(-4px); box-shadow:var(--sh-lg) }
+/* The line joining a card to the next one, drawn from the card on its left. */
+.uflow-step:not(:last-child)::after { content:""; position:absolute; top:64px; right:-18px; width:18px; height:2px; background:var(--parchment-2) }
+.uflow-badge { position:relative; width:76px; height:76px; margin:0 auto 16px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(0,0,0,.14) }
+.uflow-badge-icon { font-size:2.1rem; line-height:1; filter:drop-shadow(0 2px 3px rgba(0,0,0,.18)) }
+.uflow-badge-num { position:absolute; right:-6px; bottom:-2px; min-width:28px; height:28px; padding:0 6px; border-radius:var(--r-full); background:var(--surface); display:flex; align-items:center; justify-content:center; font-family:var(--font-h); font-size:.74rem; font-weight:800; box-shadow:0 2px 6px rgba(0,0,0,.14) }
+.uflow-step.c1 .uflow-badge { background:linear-gradient(135deg,#8DDFF7,var(--accent-sky)) }
+.uflow-step.c2 .uflow-badge { background:linear-gradient(135deg,#FFA9B1,var(--accent-coral)) }
+.uflow-step.c3 .uflow-badge { background:linear-gradient(135deg,#FFDB7A,var(--accent-yellow)) }
+.uflow-step.c4 .uflow-badge { background:linear-gradient(135deg,var(--primary-300),var(--primary-500)) }
+.uflow-step.c1 .uflow-badge-num { color:#1CA6D9; border:2px solid var(--accent-sky) }
+.uflow-step.c2 .uflow-badge-num { color:#E8566A; border:2px solid var(--accent-coral) }
+.uflow-step.c3 .uflow-badge-num { color:#C08A00; border:2px solid var(--accent-yellow) }
+.uflow-step.c4 .uflow-badge-num { color:var(--primary-600); border:2px solid var(--primary-500) }
+.uflow-title { font-family:var(--font-h); font-size:.95rem; font-weight:800; color:var(--ink); margin-bottom:8px }
+.uflow-desc { font-size:.8rem; color:var(--ink-3); line-height:1.65; margin:0 }
 .user-flow-mobile { display:none; padding:4px 0 }
 .uflow-m-item { display:flex; gap:16px; align-items:flex-start; margin-bottom:8px }
 .uflow-m-dot { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#fff; font-family:var(--font-h); font-size:.78rem; font-weight:800; box-shadow:0 4px 14px rgba(0,0,0,.15) }

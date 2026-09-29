@@ -77,32 +77,27 @@ export default function Home() {
             <h2>Hành trình của bé với Sprouty</h2>
             <p className="lead" style={{ maxWidth: "520px", margin: "12px auto 0" }}>Từ một bộ kit ngoài đời đến khu vườn kỷ niệm số — chỉ 4 bước gia đình có thể làm cùng nhau.</p>
           </div>
+          {/* The circles used to be painted into progress-banner.png, so nothing
+              could be placed inside them: the icons floated above the image and
+              the captions sat in a separate row underneath, far from the step
+              they described. Each step is real markup now — number and icon in
+              the same circle, wording attached to it. */}
           <div className="user-flow-track">
-            <div className="uflow-img-wrap">
-              <img src="/assets/images/banner/progress-banner.png" alt="" className="uflow-img" />
-              <span className="uflow-icon" style={{ left: "19.75%" }}>🎁</span>
-              <span className="uflow-icon" style={{ left: "40.1%" }}>📲</span>
-              <span className="uflow-icon" style={{ left: "61.2%" }}>🪴</span>
-              <span className="uflow-icon" style={{ left: "82%" }}>🌟</span>
-            </div>
-            <div className="uflow-labels">
-              <div className="uflow-text">
-                <h4 className="uflow-title">Nhận Sprouty Kit</h4>
-                <p className="uflow-desc">Hộp gồm chậu, màu acrylic, hạt giống, đất trồng, hướng dẫn và quyền truy cập app Sprouty.</p>
+            {[
+              { n: '01', icon: '🎁', title: 'Nhận Sprouty Kit', desc: 'Hộp gồm chậu, màu acrylic, hạt giống, đất trồng, hướng dẫn và quyền truy cập app Sprouty.' },
+              { n: '02', icon: '📲', title: 'Kích hoạt Plant Buddy', desc: 'Quét QR hoặc nhập mã PIN để đánh thức Bạn Cây và mở Cây Kỷ Niệm của bé.' },
+              { n: '03', icon: '🪴', title: 'Vẽ chậu & gieo hạt', desc: 'Bé trang trí chậu, gieo hạt thật và bắt đầu chăm sóc cây mỗi ngày.' },
+              { n: '04', icon: '🌟', title: 'Lưu kỷ niệm nở hoa', desc: 'Upload ảnh, video hoặc nhật ký; mỗi kỷ niệm trở thành một chiếc lá trên cây số.' },
+            ].map((step, i) => (
+              <div className={`uflow-step c${i + 1}`} key={step.n}>
+                <div className="uflow-badge">
+                  <span className="uflow-badge-icon">{step.icon}</span>
+                  <span className="uflow-badge-num">{step.n}</span>
+                </div>
+                <h4 className="uflow-title">{step.title}</h4>
+                <p className="uflow-desc">{step.desc}</p>
               </div>
-              <div className="uflow-text">
-                <h4 className="uflow-title">Kích hoạt Plant Buddy</h4>
-                <p className="uflow-desc">Quét QR hoặc nhập mã PIN để đánh thức Bạn Cây và mở Cây Kỷ Niệm của bé.</p>
-              </div>
-              <div className="uflow-text">
-                <h4 className="uflow-title">Vẽ chậu & gieo hạt</h4>
-                <p className="uflow-desc">Bé trang trí chậu, gieo hạt thật và bắt đầu chăm sóc cây mỗi ngày.</p>
-              </div>
-              <div className="uflow-text">
-                <h4 className="uflow-title">Lưu kỷ niệm nở hoa</h4>
-                <p className="uflow-desc">Upload ảnh, video hoặc nhật ký; mỗi kỷ niệm trở thành một chiếc lá trên cây số.</p>
-              </div>
-            </div>
+            ))}
           </div>
           {/* Mobile linear flow */}
           <div className="user-flow-mobile">
