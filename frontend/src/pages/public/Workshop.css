@@ -59,7 +59,52 @@
 .schedule-photo-empty { width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:var(--cream-2); font-size:2.6rem }
 
 /* ── Pick a session (replaces the old standalone form) ───────── */
-.ws-pick-list { display:grid; gap:10px }
+/* Capped and scrollable: with a dozen sessions this column grew taller than
+   the panel beside it and stretched the whole section. */
+.ws-pick-list { display:grid; gap:10px; max-height:420px; overflow-y:auto; padding-right:4px }
+.ws-pick-list::-webkit-scrollbar { width:6px }
+.ws-pick-list::-webkit-scrollbar-thumb { background:var(--parchment-2); border-radius:3px }
+
+/* "Show more" under the card grid. */
+.ws-more { display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:32px }
+.ws-more-count { font-size:.82rem; color:var(--ink-4) }
+
+/* ── Payment choice ──────────────────────────────────────────── */
+.ws-pay-choices { display:grid; gap:9px }
+.ws-pay-choice {
+  display:flex; gap:10px; align-items:flex-start; padding:12px 14px; cursor:pointer;
+  border:1.5px solid var(--parchment-2); border-radius:var(--r-lg); transition:border-color .15s, background .15s;
+}
+.ws-pay-choice:hover { background:var(--cream-2) }
+.ws-pay-choice.active { border-color:var(--orange); background:var(--orange-pale) }
+.ws-pay-choice input { margin-top:3px; accent-color:var(--orange); flex-shrink:0 }
+.ws-pay-choice strong { font-size:.9rem; color:var(--ink) }
+.ws-pay-choice-hint { font-size:.78rem; line-height:1.55; margin-top:3px }
+.ws-pay-choice-hint.ok { color:var(--primary-600) }
+.ws-pay-choice-hint.warn { color:#B45309 }
+
+/* ── QR + transfer details ───────────────────────────────────── */
+.ws-pay {
+  display:flex; gap:18px; align-items:flex-start; text-align:left;
+  padding:16px; margin-bottom:18px;
+  background:var(--cream-2); border:1px solid var(--parchment-2); border-radius:var(--r-lg);
+}
+.ws-pay-qr { width:168px; height:168px; flex-shrink:0; border-radius:var(--r-md); background:#fff }
+.ws-pay-info { display:grid; gap:9px; flex:1; min-width:0 }
+.ws-pay-info > div { display:flex; flex-direction:column; gap:1px; min-width:0 }
+.ws-pay-info span { font-size:.7rem; color:var(--ink-4); font-weight:700; text-transform:uppercase; letter-spacing:.05em }
+.ws-pay-info strong { font-size:.92rem; color:var(--ink); word-break:break-all }
+.ws-pay-amount { color:var(--orange); font-size:1.1rem !important }
+.ws-pay-memo strong {
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.06em;
+  background:var(--orange-pale); color:var(--orange); padding:4px 9px; border-radius:var(--r-sm);
+  display:inline-block;
+}
+.ws-pay-note { font-size:.8rem; color:var(--ink-3); line-height:1.65; margin:0 0 16px }
+@media(max-width:560px) {
+  .ws-pay { flex-direction:column; align-items:center }
+  .ws-pay-info { width:100% }
+}
 .ws-pick {
   display:flex; align-items:center; gap:12px; width:100%; text-align:left;
   padding:13px 15px; border:1.5px solid var(--parchment-2); border-radius:var(--r-lg);

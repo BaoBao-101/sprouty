@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import { requireAdmin, requireCsrf } from '../../middleware/rbac.js';
 import { AppError } from '../../utils/errors.js';
-import { noHtml, parseOrThrow } from '../../utils/validation.js';
+import { multipartFields, noHtml, parseOrThrow } from '../../utils/validation.js';
 import { auditLog } from '../../services/audit.js';
+import { createAsset } from '../../services/storage/index.js';
 
 const workshopSchema = z.object({
   title: noHtml('Tên workshop').and(
@@ -32,7 +33,6 @@ const workshopSchema = z.object({
   description: noHtml('Mô tả').and(
     z.string().max(2000, 'Mô tả tối đa 2000 ký tự.'),
   ).optional().nullable().or(z.literal('')),
-  emoji: z.string().max(8, 'Emoji tối đa 8 ký tự.').optional().nullable().or(z.literal('')),
   imageUrl: z.string()
     .max(2048, 'Đường dẫn ảnh tối đa 2048 ký tự.')
     .regex(
@@ -60,7 +60,7 @@ const updateWorkshopSchema = workshopSchema.partial();
 /** Turns the optional text fields' "" into null so the column stays empty. */
 function normalise(data) {
   const out = { ...data };
-  for (const key of ['description', 'emoji', 'imageUrl', 'ageRange']) {
+  for (const key of ['description', 'imageUrl', 'ageRange']) {
     if (out[key] === '') out[key] = null;
   }
   return out;
@@ -103,7 +103,7 @@ export default async function adminWorkshopRoutes(fastify) {
           // Seats, not rows — a parent can book several children on one row.
           registrations: {
             where: { status: { not: 'cancelled' } },
-            select: { childCount: true },
+            select: { childCount: true, paidAt: true, amount: true },
           },
         },
       }),
@@ -137,7 +137,6 @@ export default async function adminWorkshopRoutes(fastify) {
         id: w.id,
         title: w.title,
         description: w.description,
-        emoji: w.emoji,
         imageUrl: w.imageUrl,
         dateTime: w.dateTime,
         endTime: w.endTime,
@@ -148,8 +147,15 @@ export default async function adminWorkshopRoutes(fastify) {
         status: w.status,
         registrations: taken,
         bookingCount: w.registrations.length,
+        // Seats actually paid for, and money in the bank for this session —
+        // an onsite booking is only a promise until someone turns up.
+        paidSeats: w.registrations.reduce((sum, r) => sum + (r.paidAt ? r.childCount : 0), 0),
+        paidAmount: w.registrations.reduce((sum, r) => sum + (r.paidAt ? r.amount : 0), 0),
         pctFull: w.capacity > 0 ? Math.round((taken / w.capacity) * 100) : 0,
-        upcoming: w.dateTime > now,
+        // Measured against the end time where one is known, matching the public
+        // route — otherwise a session in progress reads as "đã diễn ra" here
+        // while it is still listed for customers.
+        upcoming: (w.endTime ?? w.dateTime) > now,
       };
     });
 
@@ -172,6 +178,27 @@ export default async function adminWorkshopRoutes(fastify) {
       orderBy: { createdAt: 'asc' },
     });
     return { workshop, registrations };
+  });
+
+  // POST /api/v1/admin/workshop-images — upload a cover and get its URL back.
+  //
+  // Separate from the workshop record on purpose: an admin picks the photo
+  // while filling in a session that does not exist yet, so there is no id to
+  // attach it to. The URL returned goes into the form and is saved with the
+  // rest of the fields. Mirrors /admin/blog-images.
+  fastify.post('/workshop-images', { preHandler: writeAuth }, async (req, reply) => {
+    const { file } = await multipartFields(req);
+    const asset = await createAsset(fastify.prisma, {
+      ownerUserId: req.user.id,
+      kind: 'workshop_cover',
+      file,
+      category: 'image',
+    });
+    await auditLog(fastify.prisma, req.user.id, 'workshop.cover.upload', 'Asset', asset.id, {
+      originalName: asset.originalName,
+    });
+    reply.code(201);
+    return { url: asset.url, originalName: asset.originalName, sizeBytes: asset.sizeBytes };
   });
 
   // POST /api/v1/admin/workshops

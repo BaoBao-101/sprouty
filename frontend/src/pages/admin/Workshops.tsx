@@ -22,7 +22,6 @@ interface WorkshopRow {
   id: string;
   title: string;
   description?: string | null;
-  emoji?: string | null;
   imageUrl?: string | null;
   dateTime: string;
   endTime?: string | null;
@@ -54,6 +53,9 @@ interface Registration {
   childCount: number;
   note?: string | null;
   status: 'pending' | 'confirmed' | 'cancelled';
+  paymentMethod: 'online' | 'onsite';
+  amount: number;
+  paidAt?: string | null;
   user?: { name?: string; email?: string } | null;
 }
 
@@ -88,7 +90,6 @@ function fromLocalInput(value: string) {
 const EMPTY_FORM = {
   title: '',
   description: '',
-  emoji: '🎪',
   imageUrl: '',
   dateTime: '',
   endTime: '',
@@ -117,17 +118,20 @@ const WS_STATUS_CHOICES = [
   { value: 'cancelled', label: 'Đã huỷ', hint: 'Ngừng nhận đăng ký, giữ lại lịch sử' },
 ];
 
-const REG_STATUS_LABEL: Record<string, string> = {
-  pending: 'Chờ xác nhận',
-  confirmed: 'Đã xác nhận',
-  cancelled: 'Đã huỷ',
-};
-
-const REG_STATUS_TONE: Record<string, string> = {
-  pending: 'amber',
-  confirmed: 'green',
-  cancelled: 'rose',
-};
+/**
+ * A booking's state is its payment state.
+ *
+ * There used to be a separate pending/confirmed flag with a ✓ button for staff
+ * to press. It said nothing payment did not already say: an online booking is
+ * confirmed the moment the transfer lands, and ticking an unpaid one guarantees
+ * nothing. Two flags for one fact only creates rows that disagree.
+ */
+function bookingState(r: { status: string; paidAt?: string | null; amount: number }) {
+  if (r.status === 'cancelled') return { label: 'Đã huỷ', tone: 'grey' };
+  if (r.paidAt) return { label: 'Đã thanh toán', tone: 'green' };
+  if (r.amount === 0) return { label: 'Miễn phí', tone: 'blue' };
+  return { label: 'Chưa thanh toán', tone: 'amber' };
+}
 
 type Filter = '' | 'upcoming' | 'past';
 
@@ -142,6 +146,7 @@ export default function Workshops() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const [viewing, setViewing] = useState<WorkshopRow | null>(null);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
@@ -173,7 +178,6 @@ export default function Workshops() {
       setForm({
         title: workshop.title,
         description: workshop.description ?? '',
-        emoji: workshop.emoji ?? '',
         imageUrl: workshop.imageUrl ?? '',
         dateTime: toLocalInput(workshop.dateTime),
         endTime: workshop.endTime ? toLocalInput(workshop.endTime) : '',
@@ -197,6 +201,43 @@ export default function Workshops() {
     setEditorOpen(true);
   }
 
+  /**
+   * Uploads straight away and keeps the returned URL in the form, rather than
+   * holding the file until save: the cover then shows in the live preview, and
+   * a session that is never saved leaves only an orphan asset behind.
+   */
+  async function uploadCover(file: File) {
+    setFormError('');
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const { url } = await API.admin.workshops.uploadCover(form);
+      set('imageUrl')(url);
+      showToast('Đã tải ảnh bìa lên', 'success');
+    } catch (err: any) {
+      setFormError(err?.message || 'Không tải được ảnh lên.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  /** Header tally, so staff see the shape of the list without reading it. */
+  const regCounts = registrations.reduce(
+    (acc, r) => {
+      if (r.status === 'cancelled') acc.cancelled++;
+      else if (r.paidAt || r.amount === 0) acc.paid++;
+      else acc.unpaid++;
+      return acc;
+    },
+    { paid: 0, unpaid: 0, cancelled: 0 },
+  );
+
+  // The end time is what actually decides visibility, so a session already
+  // under way does not count as past.
+  const startsInPast =
+    !!form.dateTime && new Date(form.endTime || form.dateTime).getTime() < Date.now();
+
   async function save() {
     setFormError('');
     if (form.title.trim().length < 3) return setFormError('Tên workshop phải có ít nhất 3 ký tự.');
@@ -214,7 +255,6 @@ export default function Workshops() {
     const payload = {
       title: form.title.trim(),
       description: form.description.trim(),
-      emoji: form.emoji.trim(),
       imageUrl: form.imageUrl.trim(),
       dateTime: fromLocalInput(form.dateTime),
       endTime: form.endTime ? fromLocalInput(form.endTime) : null,
@@ -269,14 +309,13 @@ export default function Workshops() {
       });
   }, []);
 
-  async function setRegistrationStatus(
-    registrationId: string,
-    status: 'pending' | 'confirmed' | 'cancelled',
-  ) {
+  // Only cancel and re-open: there is no "confirm" any more, because paying is
+  // the confirmation and ticking an unpaid booking guaranteed nothing.
+  async function setRegistrationStatus(registrationId: string, status: 'pending' | 'cancelled') {
     if (!viewing) return;
     try {
       await API.admin.workshops.setRegistrationStatus(viewing.id, registrationId, status);
-      showToast(`Đã chuyển sang “${REG_STATUS_LABEL[status]}”`, 'success');
+      showToast(status === 'cancelled' ? 'Đã huỷ chỗ' : 'Đã mở lại chỗ', 'success');
       openRegistrations(viewing);
       // The seat count on the card changes when a booking is cancelled or
       // re-opened, so the list behind the dialog has to catch up too.
@@ -402,7 +441,7 @@ export default function Workshops() {
                   <td>
                     <div className="ws-row">
                       <div className="ws-row-thumb">
-                        {w.imageUrl ? <img src={w.imageUrl} alt="" /> : <span>{w.emoji || '🎪'}</span>}
+                        {w.imageUrl ? <img src={w.imageUrl} alt="" /> : <span>🎪</span>}
                       </div>
                       <div style={{ minWidth: 0 }}>
                         <div className="ad-cell-main">{w.title}</div>
@@ -418,6 +457,15 @@ export default function Workshops() {
                             {w.upcoming ? 'Sắp tới' : 'Đã diễn ra'}
                           </Pill>
                         </div>
+                        {/* "Đang mở đăng ký" on a session that has already been
+                            and gone reads as if customers can see it. They
+                            cannot — the public page lists upcoming ones only. */}
+                        {w.status === 'published' && !w.upcoming && (
+                          <div className="ws-row-warn">
+                            ⚠️ Đã qua giờ diễn ra nên không hiện trên trang khách. Sửa lại thời
+                            gian nếu muốn mở đăng ký.
+                          </div>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -525,14 +573,12 @@ export default function Workshops() {
               {form.imageUrl ? (
                 <img src={form.imageUrl} alt="" onError={(e) => (e.currentTarget.style.opacity = '0.2')} />
               ) : (
-                <span>{form.emoji || '🎪'}</span>
+                <span>🎪</span>
               )}
             </div>
             <div className="ws-preview-main">
               <div className="ws-preview-label">Khách sẽ thấy</div>
-              <div className="ws-preview-title">
-                {form.emoji} {form.title || 'Tên workshop'}
-              </div>
+              <div className="ws-preview-title">{form.title || 'Tên workshop'}</div>
               <div className="ws-preview-meta">
                 📅{' '}
                 {form.dateTime
@@ -590,7 +636,14 @@ export default function Workshops() {
                 value={form.dateTime}
                 onChange={(e) => set('dateTime')(e.target.value)}
               />
-              <span className="field-hint">Theo giờ máy của bạn</span>
+              {/* Saving a time that has already passed is accepted, but the
+                  session then never appears on the public page. Say so while
+                  the admin can still change it. */}
+              <span className={`field-hint${startsInPast ? ' warn' : ''}`}>
+                {startsInPast
+                  ? '⚠️ Thời gian này đã qua — buổi sẽ không hiện cho khách.'
+                  : 'Theo giờ máy của bạn'}
+              </span>
             </label>
 
             <label className="field">
@@ -658,31 +711,51 @@ export default function Workshops() {
               />
             </label>
 
-            <label className="field">
-              <span className="field-label">Emoji</span>
-              <input
-                className="form-input"
-                placeholder="🎪"
-                maxLength={8}
-                value={form.emoji}
-                onChange={(e) => set('emoji')(e.target.value)}
-              />
-              <span className="field-hint">Huy hiệu góc ảnh, hiện khi chưa có ảnh</span>
-            </label>
           </div>
 
-          <label className="field">
+          {/* A real upload. This was a text box for a URL, which meant an admin
+              had to get the file onto the server some other way first and then
+              type its path — there was no other way. */}
+          <div className="field">
             <span className="field-label">Ảnh bìa</span>
-            <input
-              className="form-input"
-              placeholder="/assets/images/workshop/register/register-basic.png"
-              value={form.imageUrl}
-              onChange={(e) => set('imageUrl')(e.target.value)}
-            />
-            <span className="field-hint">
-              Đường dẫn bắt đầu bằng / hoặc http(s)://. Để trống sẽ hiện emoji thay ảnh.
-            </span>
-          </label>
+            <div className="ws-cover-pick">
+              <div className="ws-cover-preview">
+                {form.imageUrl ? (
+                  <img src={form.imageUrl} alt="" />
+                ) : (
+                  <span>🖼</span>
+                )}
+              </div>
+              <div className="ws-cover-actions">
+                <label className={`btn btn-ghost btn-sm${uploading ? ' disabled' : ''}`}>
+                  {uploading ? 'Đang tải lên…' : form.imageUrl ? 'Đổi ảnh' : 'Chọn ảnh từ máy'}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    hidden
+                    disabled={uploading}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) uploadCover(file);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+                {form.imageUrl && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => set('imageUrl')('')}
+                  >
+                    Gỡ ảnh
+                  </button>
+                )}
+                <span className="field-hint">
+                  JPG, PNG hoặc WEBP · tối đa 10MB. Ảnh ngang đẹp nhất (tỷ lệ 4:3).
+                </span>
+              </div>
+            </div>
+          </div>
 
           <div className="field">
             <span className="field-label">Trạng thái</span>
@@ -731,78 +804,87 @@ export default function Workshops() {
             emptyTitle="Chưa có ai đăng ký"
             emptyHint="Khách đăng ký từ trang Workshop sẽ hiện ở đây."
           />
-          {/* Everything the parent typed. The public form asked for the child's
-              age, headcount and any notes, then discarded all three — staff had
-              a name and a phone number and nothing else to prepare with. */}
+          {/* Two dense lines per person. The first pass gave each registration a
+              2×2 labelled grid and a row of wide buttons — one booking filled
+              the dialog, and a full session would have run for pages. */}
+          {regState === 'ready' && registrations.length > 0 && (
+            <div className="ws-reg-summary">
+              {regCounts.paid > 0 && (
+                <span className="ok">✓ {regCounts.paid} đã thanh toán</span>
+              )}
+              {regCounts.unpaid > 0 && (
+                <span className="wait">◷ {regCounts.unpaid} chưa thanh toán</span>
+              )}
+              {regCounts.cancelled > 0 && (
+                <span className="off">✕ {regCounts.cancelled} đã huỷ</span>
+              )}
+            </div>
+          )}
           {regState === 'ready' &&
             registrations.map((r, i) => (
               <div className={`ws-reg${r.status === 'cancelled' ? ' cancelled' : ''}`} key={r.id}>
-                <div className="ws-reg-top">
-                  <div>
-                    <div className="ad-cell-main">
-                      {i + 1}. {r.guestName || r.user?.name || 'Khách vãng lai'}
-                      {r.childCount > 1 && <span className="ws-reg-count">{r.childCount} bé</span>}
-                    </div>
-                    <div className="ad-cell-sub">
-                      Đăng ký {new Date(r.createdAt).toLocaleString('vi-VN')}
-                    </div>
-                  </div>
-                  <Pill tone={REG_STATUS_TONE[r.status] ?? 'grey'}>
-                    {REG_STATUS_LABEL[r.status] ?? r.status}
-                  </Pill>
+                <div className="ws-reg-line">
+                  <span className="ws-reg-no">{i + 1}</span>
+                  <span className="ws-reg-name">
+                    {r.guestName || r.user?.name || 'Khách vãng lai'}
+                  </span>
+                  <Pill tone={bookingState(r).tone}>{bookingState(r).label}</Pill>
+                  {r.paymentMethod === 'onsite' && !r.paidAt && r.status !== 'cancelled' && (
+                    <span className="ws-reg-onsite">trả tại buổi học</span>
+                  )}
+                  <span className="ws-reg-spacer" />
+                  <span className="ws-reg-btns">
+                    {r.status !== 'cancelled' ? (
+                      <button
+                        className="act-btn act-del"
+                        title="Huỷ chỗ (giữ lại bản ghi)"
+                        onClick={() => setRegistrationStatus(r.id, 'cancelled')}
+                      >
+                        ✕
+                      </button>
+                    ) : (
+                      <button
+                        className="act-btn act-edit"
+                        title="Mở lại chỗ"
+                        onClick={() => setRegistrationStatus(r.id, 'pending')}
+                      >
+                        ↺
+                      </button>
+                    )}
+                    <button
+                      className="act-btn act-del"
+                      title="Xoá hẳn khỏi danh sách"
+                      onClick={() => cancelRegistration(r.id)}
+                    >
+                      🗑
+                    </button>
+                  </span>
                 </div>
 
-                <div className="ws-reg-grid">
-                  <div>
-                    <span>Điện thoại</span>
-                    {/* Tappable: staff call these from a phone at the door. */}
-                    {r.guestPhone ? <a href={`tel:${r.guestPhone}`}>{r.guestPhone}</a> : <b>—</b>}
-                  </div>
-                  <div>
-                    <span>Email</span>
-                    <b>{r.guestEmail || r.user?.email || '—'}</b>
-                  </div>
-                  <div>
-                    <span>Tuổi của bé</span>
-                    <b>{r.childAge || '—'}</b>
-                  </div>
-                  <div>
-                    <span>Số bé</span>
-                    <b>{r.childCount}</b>
-                  </div>
+                <div className="ws-reg-meta">
+                  {/* Tappable: staff call these from a phone at the door. */}
+                  {r.guestPhone ? (
+                    <a href={`tel:${r.guestPhone}`}>📞 {r.guestPhone}</a>
+                  ) : (
+                    <span>📞 —</span>
+                  )}
+                  {(r.guestEmail || r.user?.email) && (
+                    <span className="ws-reg-email">✉ {r.guestEmail || r.user?.email}</span>
+                  )}
+                  <span>👶 {r.childAge || 'chưa rõ tuổi'}</span>
+                  <span>{r.childCount} bé</span>
+                  {r.amount > 0 && <span>💰 {r.amount.toLocaleString('vi-VN')}đ</span>}
+                  <span className="ws-reg-when">
+                    {new Date(r.createdAt).toLocaleString('vi-VN', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
                 </div>
 
                 {r.note && <div className="ws-reg-note">📝 {r.note}</div>}
-
-                <div className="ws-reg-actions">
-                  {r.status !== 'confirmed' && (
-                    <button
-                      className="act-btn act-edit"
-                      onClick={() => setRegistrationStatus(r.id, 'confirmed')}
-                    >
-                      ✓ Xác nhận
-                    </button>
-                  )}
-                  {r.status !== 'cancelled' && (
-                    <button
-                      className="act-btn act-del"
-                      onClick={() => setRegistrationStatus(r.id, 'cancelled')}
-                    >
-                      Huỷ chỗ
-                    </button>
-                  )}
-                  {r.status === 'cancelled' && (
-                    <button
-                      className="act-btn act-edit"
-                      onClick={() => setRegistrationStatus(r.id, 'pending')}
-                    >
-                      Mở lại
-                    </button>
-                  )}
-                  <button className="act-btn act-del" onClick={() => cancelRegistration(r.id)}>
-                    Xoá hẳn
-                  </button>
-                </div>
               </div>
             ))}
         </Modal>

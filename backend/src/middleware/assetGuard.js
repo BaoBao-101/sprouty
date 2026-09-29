@@ -16,7 +16,7 @@ import { canAccessProductFeature } from '../services/access.js';
  */
 
 /** Kinds anyone may fetch — these are already shown on public pages. */
-const PUBLIC_KINDS = new Set(['blog_cover', 'blog_inline']);
+const PUBLIC_KINDS = new Set(['blog_cover', 'blog_inline', 'workshop_cover']);
 
 /** Kinds gated by the same entitlement as their metadata endpoint. */
 const FEATURE_BY_KIND = {

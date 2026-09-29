@@ -56,6 +56,7 @@ function UserMenu({ onClose }: { onClose: () => void }) {
       onClick: () => go('/redeem'),
     },
     { label: '📦 Đơn hàng của tôi', onClick: () => go('/account') },
+    { label: '🎪 Workshop của tôi', onClick: () => go('/my-workshops') },
     ...(isEmployee ? [{ label: '👷 Cổng nhân viên', onClick: () => go('/employee/orders') }] : []),
     ...(isAdmin ? [{ label: '⚙️ Quản trị', onClick: () => go('/admin') }] : []),
     {

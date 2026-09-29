@@ -163,6 +163,12 @@ export const API = {
     list()       { return _fetch('/workshops'); },
     get(id)      { return _fetch(`/workshops/${id}`); },
     register(d)  { return _fetch('/workshops/register', { method: 'POST', body: JSON.stringify(d) }); },
+    /** What the signed-in customer has booked. */
+    mine()       { return _fetch('/me/workshops'); },
+    payment(id)  { return _fetch(`/me/workshops/${id}/payment`); },
+    cancelMine(id) {
+      return _fetch(`/me/workshops/${id}/cancel`, { method: 'PATCH' });
+    },
   },
 
   orders: {
@@ -234,6 +240,7 @@ export const API = {
       update(id, data)   { return _fetch(`/admin/workshops/${id}`, { method: 'PUT', body: JSON.stringify(data) }); },
       remove(id)         { return _fetch(`/admin/workshops/${id}`, { method: 'DELETE' }); },
       registrations(id)  { return _fetch(`/admin/workshops/${id}/registrations`); },
+      uploadCover(form)  { return _fetch('/admin/workshop-images', { method: 'POST', body: form }); },
       setRegistrationStatus(id, registrationId, status) {
         return _fetch(`/admin/workshops/${id}/registrations/${registrationId}`, {
           method: 'PATCH', body: JSON.stringify({ status }),

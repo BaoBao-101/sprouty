@@ -52,7 +52,6 @@ const WORKSHOPS = [
   {
     title: 'Vẽ Chậu & Gieo Hạt Đầu Tiên',
     description: 'Bé trang trí chậu, gieo hạt thật và tạo chiếc lá kỷ niệm đầu tiên trên Sprouty.',
-    emoji: '🦋',
     imageUrl: '/assets/images/workshop/register/register-basic.png',
     dateTime: new Date('2026-11-21T09:00:00+07:00'),
     endTime: new Date('2026-11-21T11:30:00+07:00'),
@@ -61,7 +60,6 @@ const WORKSHOPS = [
   {
     title: 'Smart Kit Cảm Biến Cây',
     description: 'Lắp cảm biến độ ẩm đất, OLED và LED để bé hiểu cây đang cần gì qua tín hiệu đơn giản.',
-    emoji: '🏮',
     imageUrl: '/assets/images/workshop/register/register-smartkit.png',
     dateTime: new Date('2026-11-28T09:00:00+07:00'),
     endTime: new Date('2026-11-28T11:30:00+07:00'),
@@ -70,7 +68,6 @@ const WORKSHOPS = [
   {
     title: 'Family Memory Tree Day',
     description: 'Workshop gia đình: cùng chăm cây, chụp ảnh, viết nhật ký và lưu lại hành trình trên Cây Kỷ Niệm.',
-    emoji: '🐉',
     imageUrl: '/assets/images/workshop/register/register-familytree.png',
     dateTime: new Date('2026-12-05T09:00:00+07:00'),
     endTime: new Date('2026-12-05T12:00:00+07:00'),
@@ -79,7 +76,6 @@ const WORKSHOPS = [
   {
     title: 'Hệ Mặt Trời Mini',
     description: 'Tạo mô hình hệ mặt trời mini — vẽ màu 8 hành tinh, lắp ráp giá đỡ và học về thiên văn học qua đôi bàn tay.',
-    emoji: '🚀',
     imageUrl: '/assets/images/workshop/register/register-solarsystem.png',
     dateTime: new Date('2026-12-12T09:00:00+07:00'),
     endTime: new Date('2026-12-12T12:00:00+07:00'),
@@ -88,7 +84,6 @@ const WORKSHOPS = [
   {
     title: 'Plant Buddy Story Lab',
     description: 'Bé đặt tên Plant Buddy, tạo câu chuyện cho cây và học cách ghi lại mốc phát triển mỗi tuần.',
-    emoji: '🌊',
     imageUrl: '/assets/images/workshop/register/register-storylab.png',
     dateTime: new Date('2026-12-19T09:00:00+07:00'),
     endTime: new Date('2026-12-19T11:30:00+07:00'),
@@ -97,7 +92,6 @@ const WORKSHOPS = [
   {
     title: 'Chậu Cây Tự Thiết Kế',
     description: 'Bé tự tay vẽ và trang trí chậu cây theo phong cách riêng, rồi gieo hạt vào chính chậu mình vừa thiết kế. Phát triển óc sáng tạo và sự khéo léo.',
-    emoji: '🪴',
     imageUrl: '/assets/images/workshop/register/register-potdesign.png',
     dateTime: new Date('2026-12-26T09:00:00+07:00'),
     endTime: new Date('2026-12-26T12:00:00+07:00'),

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AppError } from '../utils/errors.js';
+import { requireAuth, requireCsrf } from '../middleware/rbac.js';
 
 const regSchema = z.object({
   workshopId: z.string().min(1, 'Chưa chọn buổi workshop.').max(64),
@@ -23,7 +24,34 @@ const regSchema = z.object({
   note: z.string().max(1000, 'Ghi chú tối đa 1000 ký tự.')
     .refine(s => !/[<>]/.test(s), { message: 'Ghi chú không được chứa ký tự < hoặc >.' })
     .optional().or(z.literal('')),
+  paymentMethod: z.enum(['online', 'onsite'], {
+    errorMap: () => ({ message: 'Hình thức thanh toán không hợp lệ.' }),
+  }).optional().default('onsite'),
 });
+
+/**
+ * Bank-transfer instructions for one registration, mirroring the order flow.
+ * Returns null when SePay is unconfigured, so booking still works in dev.
+ *
+ * The memo carries a "WS" marker before the id suffix: the webhook matches
+ * orders by the same pattern, and without it a workshop payment could be
+ * credited against an order whose id happened to end the same way.
+ */
+function buildWorkshopPayment(registration) {
+  const acc = process.env.SEPAY_ACCOUNT_NUMBER;
+  const bank = process.env.SEPAY_BANK_CODE;
+  const name = process.env.SEPAY_ACCOUNT_NAME;
+  if (!acc || !bank) return null;
+  const memo = 'SPROUTYWS' + registration.id.slice(-8).toUpperCase();
+  return {
+    qrUrl: `https://qr.sepay.vn/img?acc=${encodeURIComponent(acc)}&bank=${encodeURIComponent(bank)}&amount=${registration.amount}&des=${encodeURIComponent(memo)}`,
+    bankCode: bank,
+    accountNumber: acc,
+    accountName: name || '',
+    memo,
+    amount: registration.amount,
+  };
+}
 
 /**
  * Seats are counted in children, not rows: one parent can book three places.
@@ -43,7 +71,6 @@ function publicWorkshop(workshop, taken) {
     id: workshop.id,
     title: workshop.title,
     description: workshop.description,
-    emoji: workshop.emoji,
     imageUrl: workshop.imageUrl,
     dateTime: workshop.dateTime,
     endTime: workshop.endTime,
@@ -54,8 +81,17 @@ function publicWorkshop(workshop, taken) {
     seatsTaken: taken,
     seatsLeft: Math.max(0, workshop.capacity - taken),
     isFull: taken >= workshop.capacity,
-    upcoming: workshop.dateTime > new Date(),
+    upcoming: isUpcoming(workshop),
   };
+}
+
+/**
+ * Still worth listing. Measured against the end time where one is known, so a
+ * session running 9:00–11:30 does not vanish from the page at 9:01 while it is
+ * actually going on.
+ */
+function isUpcoming(workshop) {
+  return (workshop.endTime ?? workshop.dateTime) > new Date();
 }
 
 export default async function workshopRoutes(fastify) {
@@ -89,6 +125,77 @@ export default async function workshopRoutes(fastify) {
     return { workshop: publicWorkshop(workshop, await seatsTaken(fastify.prisma, workshop.id)) };
   });
 
+  // GET /api/v1/me/workshops — what this customer has signed up for.
+  //
+  // Registering gave no receipt anywhere in the account: once the confirmation
+  // dialog closed there was no way to check when the session was, where it was,
+  // or whether staff had confirmed the seat.
+  fastify.get('/me/workshops', { preHandler: [requireAuth] }, async (req) => {
+    const rows = await fastify.prisma.workshopRegistration.findMany({
+      where: { userId: req.user.id },
+      include: { workshop: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const now = new Date();
+    return {
+      registrations: rows.map(r => ({
+        id: r.id,
+        status: r.status,
+        childAge: r.childAge,
+        childCount: r.childCount,
+        note: r.note,
+        guestName: r.guestName,
+        guestPhone: r.guestPhone,
+        paymentMethod: r.paymentMethod,
+        amount: r.amount,
+        paidAt: r.paidAt,
+        createdAt: r.createdAt,
+        upcoming: (r.workshop.endTime ?? r.workshop.dateTime) > now,
+        workshop: {
+          id: r.workshop.id,
+          title: r.workshop.title,
+          description: r.workshop.description,
+          imageUrl: r.workshop.imageUrl,
+          dateTime: r.workshop.dateTime,
+          endTime: r.workshop.endTime,
+          location: r.workshop.location,
+          ageRange: r.workshop.ageRange,
+          price: r.workshop.price,
+          status: r.workshop.status,
+        },
+      })),
+    };
+  });
+
+  // PATCH /api/v1/me/workshops/:registrationId/cancel — let a customer give the
+  // seat back themselves rather than having to phone in.
+  fastify.patch('/me/workshops/:registrationId/cancel', {
+    preHandler: [requireAuth, requireCsrf],
+  }, async (req, reply) => {
+    const registration = await fastify.prisma.workshopRegistration.findUnique({
+      where: { id: req.params.registrationId },
+      include: { workshop: true },
+    });
+    // Same 404 whether it does not exist or belongs to someone else, so this
+    // cannot be used to probe for other people's bookings.
+    if (!registration || registration.userId !== req.user.id) {
+      return reply.code(404).send({ message: 'Không tìm thấy lượt đăng ký.' });
+    }
+    if (registration.status === 'cancelled') {
+      return reply.code(409).send({ message: 'Lượt đăng ký này đã huỷ rồi.' });
+    }
+    if ((registration.workshop.endTime ?? registration.workshop.dateTime) < new Date()) {
+      return reply.code(409).send({ message: 'Buổi workshop này đã diễn ra, không thể huỷ.' });
+    }
+
+    const updated = await fastify.prisma.workshopRegistration.update({
+      where: { id: registration.id },
+      data: { status: 'cancelled' },
+    });
+    return { message: 'Đã huỷ đăng ký. Chỗ được mở lại cho người khác.', registration: updated };
+  });
+
   // POST /api/v1/workshops/register
   fastify.post('/workshops/register', {
     config: { rateLimit: { max: 5, timeWindow: '10 minutes' } },
@@ -109,7 +216,9 @@ export default async function workshopRoutes(fastify) {
       return reply.code(400).send({ message: parsed.error.errors[0]?.message || 'Dữ liệu không hợp lệ.' });
     }
 
-    const { workshopId, guestName, guestPhone, guestEmail, childAge, childCount, note } = parsed.data;
+    const {
+      workshopId, guestName, guestPhone, guestEmail, childAge, childCount, note, paymentMethod,
+    } = parsed.data;
 
     const workshop = await fastify.prisma.workshop.findUnique({ where: { id: workshopId } });
     if (!workshop) return reply.code(404).send({ message: 'Không tìm thấy workshop.' });
@@ -129,7 +238,16 @@ export default async function workshopRoutes(fastify) {
       });
     }
 
-    const data = { workshopId, childCount, childAge: childAge || null, note: note || null };
+    // Priced here, never from the client, and stored on the row so a later edit
+    // to the workshop's price cannot change what this customer owes.
+    const data = {
+      workshopId,
+      childCount,
+      childAge: childAge || null,
+      note: note || null,
+      paymentMethod,
+      amount: workshop.price * childCount,
+    };
     if (req.user) {
       data.userId = req.user.id;
       // Still record the contact details typed on the form: the parent booking
@@ -146,18 +264,62 @@ export default async function workshopRoutes(fastify) {
       data.guestEmail = guestEmail || null;
     }
 
-    // Dedup: same user or same guest phone cannot register twice for the same
-    // workshop. A cancelled registration does not block a fresh one.
-    const dupWhere = { workshopId, status: { not: 'cancelled' } };
-    if (data.userId) dupWhere.userId = data.userId;
-    else dupWhere.guestPhone = data.guestPhone;
-    const existingReg = await fastify.prisma.workshopRegistration.findFirst({ where: dupWhere });
-    if (existingReg) {
-      return reply.code(409).send({ message: 'Bạn đã đăng ký buổi workshop này rồi.' });
-    }
-
+    // Booking more than once for the same session is allowed: a parent may come
+    // back to add another child, or book for a friend's family. Capacity is
+    // what limits the room, and it is checked above against the seat total, so
+    // several bookings by one person cannot oversell it.
+    //
+    // The cost is that a mis-click makes a second booking. That is recoverable
+    // — both appear under "Workshop của tôi" and either can be cancelled.
     const registration = await fastify.prisma.workshopRegistration.create({ data });
     reply.code(201);
-    return { message: 'Đăng ký thành công!', registration };
+    return {
+      message: 'Đăng ký thành công!',
+      registration,
+      // Only when there is something to pay: a free session needs no QR.
+      payment:
+        paymentMethod === 'online' && registration.amount > 0
+          ? buildWorkshopPayment(registration)
+          : null,
+    };
+  });
+
+  // GET /api/v1/me/workshops/:registrationId/payment — the transfer details
+  // again, for someone who closed the dialog or picked onsite and changed their
+  // mind. Signed-in customers only; a guest booking has no account to prove
+  // ownership from, and these instructions name an amount and a reference.
+  fastify.get('/me/workshops/:registrationId/payment', {
+    preHandler: [requireAuth],
+  }, async (req, reply) => {
+    const registration = await fastify.prisma.workshopRegistration.findUnique({
+      where: { id: req.params.registrationId },
+      include: { workshop: true },
+    });
+    if (!registration || registration.userId !== req.user.id) {
+      return reply.code(404).send({ message: 'Không tìm thấy lượt đăng ký.' });
+    }
+    if (registration.paidAt) {
+      return reply.code(409).send({ message: 'Lượt đăng ký này đã thanh toán rồi.' });
+    }
+    if (registration.status === 'cancelled') {
+      return reply.code(409).send({ message: 'Lượt đăng ký này đã huỷ.' });
+    }
+    if (registration.amount <= 0) {
+      return reply.code(409).send({ message: 'Buổi workshop này miễn phí.' });
+    }
+
+    // Switching to online is the point of asking for the QR.
+    if (registration.paymentMethod !== 'online') {
+      await fastify.prisma.workshopRegistration.update({
+        where: { id: registration.id },
+        data: { paymentMethod: 'online' },
+      });
+    }
+
+    const payment = buildWorkshopPayment(registration);
+    if (!payment) {
+      return reply.code(503).send({ message: 'Thanh toán online tạm thời chưa khả dụng.' });
+    }
+    return { payment };
   });
 }

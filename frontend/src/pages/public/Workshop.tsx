@@ -34,6 +34,14 @@ export default function Workshop() {
   // Only sessions that have not happened yet can be booked.
   const upcoming = workshops.filter((w) => w.upcoming);
 
+  // A dozen sessions turned this section into a wall of cards several screens
+  // tall, pushing the rest of the page out of reach. Show a first batch and let
+  // people ask for the rest — everything is already loaded, so no extra request.
+  const PAGE = 6;
+  const [visibleCount, setVisibleCount] = useState(PAGE);
+  const shown = upcoming.slice(0, visibleCount);
+  const remaining = upcoming.length - shown.length;
+
   const navigate = (step: number) =>
     setLightbox((i) => (i === null ? i : (i + step + LB_IMAGES.length) % LB_IMAGES.length));
 
@@ -235,7 +243,7 @@ export default function Workshop() {
           )}
 
           <div className="ws-schedule">
-            {upcoming.map((w) => {
+            {shown.map((w) => {
               const pct = w.capacity > 0 ? Math.round((w.seatsTaken / w.capacity) * 100) : 0;
               return (
                 <div className="schedule-card" key={w.id}>
@@ -243,9 +251,8 @@ export default function Workshop() {
                     {w.imageUrl ? (
                       <img src={w.imageUrl} alt={w.title} loading="lazy" />
                     ) : (
-                      <div className="schedule-photo-empty">{w.emoji || '🎪'}</div>
+                      <div className="schedule-photo-empty">🎪</div>
                     )}
-                    {w.emoji && <span className="schedule-emoji-badge">{w.emoji}</span>}
                   </div>
                   <div className="schedule-header">
                     <div className="schedule-date">📅 {formatWorkshopWhen(w)}</div>
@@ -292,6 +299,32 @@ export default function Workshop() {
               );
             })}
           </div>
+
+          {state === 'ready' && upcoming.length > PAGE && (
+            <div className="ws-more">
+              <span className="ws-more-count">
+                Đang xem {shown.length}/{upcoming.length} buổi
+              </span>
+              {remaining > 0 ? (
+                <button
+                  className="btn btn-outline"
+                  onClick={() => setVisibleCount((n) => n + PAGE)}
+                >
+                  Xem thêm {Math.min(PAGE, remaining)} buổi ↓
+                </button>
+              ) : (
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => {
+                    setVisibleCount(PAGE);
+                    document.getElementById('lich')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
+                  Thu gọn ↑
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
@@ -350,7 +383,7 @@ export default function Workshop() {
                     disabled={w.isFull}
                     onClick={() => setBooking(w)}
                   >
-                    <span className="ws-pick-emoji">{w.emoji || '🎪'}</span>
+                    <span className="ws-pick-emoji">🎪</span>
                     <span className="ws-pick-main">
                       <span className="ws-pick-title">{w.title}</span>
                       <span className="ws-pick-when">{formatWorkshopWhen(w)}</span>

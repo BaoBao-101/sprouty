@@ -3,7 +3,6 @@ export interface PublicWorkshop {
   id: string;
   title: string;
   description?: string | null;
-  emoji?: string | null;
   imageUrl?: string | null;
   dateTime: string;
   endTime?: string | null;
@@ -15,6 +14,34 @@ export interface PublicWorkshop {
   seatsLeft: number;
   isFull: boolean;
   upcoming: boolean;
+}
+
+/** Bank-transfer instructions for one booking. */
+export interface WorkshopPayment {
+  qrUrl: string;
+  bankCode: string;
+  accountNumber: string;
+  accountName: string;
+  /** The reference that ties the transfer back to the booking. */
+  memo: string;
+  amount: number;
+}
+
+/** One of the signed-in customer's own bookings. */
+export interface MyWorkshopRegistration {
+  id: string;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  childAge?: string | null;
+  childCount: number;
+  note?: string | null;
+  guestName?: string | null;
+  guestPhone?: string | null;
+  paymentMethod: 'online' | 'onsite';
+  amount: number;
+  paidAt?: string | null;
+  createdAt: string;
+  upcoming: boolean;
+  workshop: PublicWorkshop & { status: string };
 }
 
 const WEEKDAY = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];

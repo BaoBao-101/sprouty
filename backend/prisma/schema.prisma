@@ -39,6 +39,7 @@ enum AssetKind {
   user_image
   blog_cover
   blog_inline
+  workshop_cover
 }
 
 enum AssetStorageProvider {
@@ -183,6 +184,11 @@ enum WorkshopRegistrationStatus {
   cancelled
 }
 
+enum WorkshopPaymentMethod {
+  online
+  onsite
+}
+
 // The public workshop page used to render a hardcoded array that carried a
 // description, photo, age range and price — none of which existed here, so an
 // admin could not produce a session that looked like the ones on the site.
@@ -191,7 +197,6 @@ model Workshop {
   id          String         @id @default(cuid())
   title       String
   description String?
-  emoji       String?
   imageUrl    String?
   dateTime    DateTime
   // Optional: the page shows "9:00 – 11:30" when an end time is known.
@@ -221,6 +226,17 @@ model WorkshopRegistration {
   childCount Int                        @default(1)
   note       String?
   status     WorkshopRegistrationStatus @default(pending)
+
+  // Paying up front is what secures a seat. An onsite booking is provisional:
+  // the page says so, and staff see at a glance who has actually paid.
+  paymentMethod       WorkshopPaymentMethod @default(onsite)
+  // Captured when the booking is made, so a later change to Workshop.price
+  // cannot break the amount the customer was quoted and the webhook checks.
+  amount              Int                   @default(0)
+  paidAt              DateTime?
+  // Int, matching Order.sepayTransactionId — SePay's transaction id is numeric.
+  sepayTransactionId  Int?                  @unique
+
   createdAt  DateTime                   @default(now())
 
   workshop Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)

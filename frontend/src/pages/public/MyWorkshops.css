@@ -1,0 +1,116 @@
+/* The customer's own workshop bookings. Reuses the booking dialog's QR styles
+   from Workshop.css, which is imported by the workshop page. */
+@import './Workshop.css';
+
+.myws-lead { color: var(--ink-3); font-size: .95rem; margin: 6px 0 26px }
+
+.myws-section {
+  font-family: var(--font-h);
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--ink-2);
+  margin: 30px 0 14px;
+}
+.myws-section:first-of-type { margin-top: 8px }
+
+.myws-list { display: grid; gap: 14px }
+
+.myws-card {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--parchment-2);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-sm);
+}
+.myws-card.cancelled { opacity: .6 }
+
+.myws-photo {
+  width: 132px;
+  height: 99px;
+  flex-shrink: 0;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--cream-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+.myws-photo img { width: 100%; height: 100%; object-fit: cover }
+
+.myws-main { flex: 1; min-width: 0 }
+.myws-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px }
+.myws-head h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.myws-status {
+  flex-shrink: 0;
+  padding: 3px 11px;
+  border-radius: var(--r-full);
+  font-size: .73rem;
+  font-weight: 800;
+  font-family: var(--font-h);
+  white-space: nowrap;
+}
+.myws-status.s-unpaid { background: #FEF3C7; color: #B45309 }
+.myws-status.s-paid { background: var(--primary-100); color: var(--primary-600) }
+.myws-status.s-cancelled { background: var(--parchment); color: var(--ink-4) }
+
+.myws-meta {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  font-size: .83rem;
+  color: var(--ink-3);
+}
+
+.myws-note {
+  margin-top: 9px;
+  padding: 7px 11px;
+  background: var(--cream-2);
+  border-left: 3px solid var(--orange);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  font-size: .82rem;
+  color: var(--ink-3);
+  line-height: 1.55;
+}
+
+.myws-pay { margin-top: 10px; font-size: .85rem; font-weight: 700 }
+.myws-paid { color: var(--primary-600) }
+.myws-unpaid { color: #B45309 }
+
+.myws-warn {
+  margin-top: 9px;
+  padding: 9px 12px;
+  background: #FEF3C7;
+  border-radius: var(--r-md);
+  font-size: .8rem;
+  color: #92400E;
+  line-height: 1.6;
+}
+
+.myws-actions { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 13px }
+
+.myws-empty {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--ink-4);
+  background: var(--surface);
+  border: 1px solid var(--parchment-2);
+  border-radius: var(--r-xl);
+}
+.myws-empty-icon { font-size: 2.6rem; margin-bottom: 10px }
+.myws-empty p { margin: 0; font-size: .92rem }
+
+@media (max-width: 640px) {
+  .myws-card { flex-direction: column }
+  .myws-photo { width: 100%; height: 150px }
+}

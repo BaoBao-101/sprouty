@@ -27,6 +27,7 @@ const Vip = lazy(() => import('@/pages/public/Vip'));
 // Signed-in customer
 const Account = lazy(() => import('@/pages/public/Account'));
 const MyProducts = lazy(() => import('@/pages/public/MyProducts'));
+const MyWorkshops = lazy(() => import('@/pages/public/MyWorkshops'));
 const Tree = lazy(() => import('@/pages/public/Tree'));
 const Redeem = lazy(() => import('@/pages/public/Redeem'));
 
@@ -133,6 +134,7 @@ export function App() {
               <Route path="/payment" element={<Payment />} />
               <Route path="/account" element={<Account />} />
               <Route path="/my-products" element={<MyProducts />} />
+              <Route path="/my-workshops" element={<MyWorkshops />} />
               <Route path="/tree" element={<Tree />} />
               <Route path="/redeem" element={<Redeem />} />
             </Route>

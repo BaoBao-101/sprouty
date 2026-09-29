@@ -640,25 +640,68 @@
 }
 .ws-preview-tags .tag.green { background:var(--primary-100); color:var(--primary-600) }
 
-/* One registration, with everything the parent told us. */
-.ws-reg { padding:14px 0; border-bottom:1px solid var(--cream-2) }
+/* One registration in two dense lines. A labelled 2x2 grid plus a row of wide
+   buttons made a single booking fill the dialog; a full session ran for pages. */
+.ws-reg-summary {
+  display:flex; gap:14px; flex-wrap:wrap; padding:0 0 12px; margin-bottom:6px;
+  border-bottom:1px solid var(--parchment); font-size:.8rem; font-weight:700;
+}
+.ws-reg-summary .ok { color:var(--primary-600) }
+.ws-reg-summary .wait { color:#B45309 }
+.ws-reg-summary .off { color:var(--ink-4) }
+
+.ws-reg { padding:11px 0; border-bottom:1px solid var(--cream-2) }
 .ws-reg:last-child { border-bottom:none }
-.ws-reg.cancelled { opacity:.55 }
-.ws-reg-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px }
-.ws-reg-count {
-  margin-left:8px; padding:1px 8px; border-radius:var(--r-full);
-  background:var(--orange-pale); color:var(--orange); font-size:.7rem; font-weight:800;
+.ws-reg.cancelled { opacity:.5 }
+
+.ws-reg-line { display:flex; align-items:center; gap:9px; flex-wrap:wrap }
+.ws-reg-no {
+  width:22px; height:22px; flex-shrink:0; border-radius:50%;
+  background:var(--parchment); color:var(--ink-3);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-h); font-size:.7rem; font-weight:800;
 }
-.ws-reg-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px 16px; margin-top:10px }
-.ws-reg-grid > div { display:flex; flex-direction:column; gap:1px; min-width:0 }
-.ws-reg-grid span { font-size:.7rem; color:var(--ink-4); font-weight:700; text-transform:uppercase; letter-spacing:.05em }
-.ws-reg-grid b, .ws-reg-grid a { font-size:.85rem; color:var(--ink); font-weight:600; word-break:break-word }
-.ws-reg-grid a { color:var(--orange); text-decoration:none }
-.ws-reg-grid a:hover { text-decoration:underline }
+.ws-reg-name { font-weight:700; font-size:.9rem; color:var(--ink) }
+.ws-reg-onsite { font-size:.72rem; color:#B45309; font-weight:600 }
+.ws-reg-spacer { flex:1 }
+.ws-reg-btns { display:flex; gap:5px; flex-shrink:0 }
+.ws-reg-btns .act-btn { min-width:30px; padding:3px 8px; text-align:center }
+
+.ws-reg-meta {
+  display:flex; gap:12px; flex-wrap:wrap; align-items:center;
+  margin:5px 0 0 31px; font-size:.78rem; color:var(--ink-3);
+}
+.ws-reg-meta a { color:var(--orange); text-decoration:none; font-weight:600 }
+.ws-reg-meta a:hover { text-decoration:underline }
+.ws-reg-email { overflow:hidden; text-overflow:ellipsis; max-width:260px; white-space:nowrap }
+.ws-reg-when { color:var(--ink-5); margin-left:auto }
+
 .ws-reg-note {
-  margin-top:10px; padding:9px 12px; background:var(--cream-2);
+  margin:7px 0 0 31px; padding:7px 11px; background:var(--cream-2);
   border-left:3px solid var(--orange); border-radius:0 var(--r-sm) var(--r-sm) 0;
-  font-size:.82rem; color:var(--ink-3); line-height:1.6;
+  font-size:.8rem; color:var(--ink-3); line-height:1.55;
 }
-.ws-reg-actions { display:flex; gap:7px; flex-wrap:wrap; margin-top:11px }
-@media(max-width:560px) { .ws-reg-grid { grid-template-columns:1fr } }
+@media(max-width:560px) {
+  .ws-reg-meta { margin-left:0; gap:8px }
+  .ws-reg-when { margin-left:0 }
+  .ws-reg-note { margin-left:0 }
+}
+
+.ws-row-warn {
+  margin-top:6px; font-size:.75rem; line-height:1.5; color:#B45309;
+  background:#FEF3C7; border-radius:var(--r-sm); padding:5px 9px; max-width:340px;
+}
+.field-hint.warn { color:#B45309; font-weight:600 }
+
+/* Cover upload inside the workshop editor. */
+.ws-cover-pick { display:flex; gap:14px; align-items:flex-start }
+.ws-cover-preview {
+  width:148px; height:111px; flex-shrink:0; border-radius:var(--r-md); overflow:hidden;
+  background:var(--cream-2); border:1.5px dashed var(--parchment-2);
+  display:flex; align-items:center; justify-content:center; font-size:1.8rem; color:var(--ink-4);
+}
+.ws-cover-preview img { width:100%; height:100%; object-fit:cover }
+.ws-cover-actions { display:flex; flex-direction:column; gap:8px; align-items:flex-start; min-width:0 }
+.ws-cover-actions .btn { cursor:pointer }
+.ws-cover-actions .btn.disabled { opacity:.6; cursor:wait }
+@media(max-width:560px) { .ws-cover-pick { flex-direction:column } .ws-cover-preview { width:100% } }
