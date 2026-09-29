@@ -43,10 +43,66 @@ const PRODUCTS = [
     images: ["/assets/images/sprouty-icons/VIPGardenAnnual.png"], status: "published" },
 ];
 
+// These are the sessions the public workshop page used to hardcode in
+// frontend/src/data/workshop.ts. That page reads the API now, so they live here
+// — otherwise switching it over would have replaced six illustrated sessions
+// with three bare rows.
+const VENUE = 'Sprouty Studio – TP.HCM';
 const WORKSHOPS = [
-  { title: 'Basic Workshop — Vẽ chậu & gieo hạt', dateTime: new Date('2026-07-18T10:00:00+07:00'), capacity: 12, location: 'Sprouty Studio – TP.HCM' },
-  { title: 'Smart Kit Workshop — IoT cho cây', dateTime: new Date('2026-07-26T14:00:00+07:00'), capacity: 10, location: 'Sprouty Studio – TP.HCM' },
-  { title: 'Family Memory Tree Day', dateTime: new Date('2026-08-02T09:00:00+07:00'), capacity: 16, location: 'Sprouty Studio – TP.HCM' },
+  {
+    title: 'Vẽ Chậu & Gieo Hạt Đầu Tiên',
+    description: 'Bé trang trí chậu, gieo hạt thật và tạo chiếc lá kỷ niệm đầu tiên trên Sprouty.',
+    emoji: '🦋',
+    imageUrl: '/assets/images/workshop/register/register-basic.png',
+    dateTime: new Date('2026-11-21T09:00:00+07:00'),
+    endTime: new Date('2026-11-21T11:30:00+07:00'),
+    capacity: 12, location: VENUE, ageRange: '4–8 tuổi', price: 150000,
+  },
+  {
+    title: 'Smart Kit Cảm Biến Cây',
+    description: 'Lắp cảm biến độ ẩm đất, OLED và LED để bé hiểu cây đang cần gì qua tín hiệu đơn giản.',
+    emoji: '🏮',
+    imageUrl: '/assets/images/workshop/register/register-smartkit.png',
+    dateTime: new Date('2026-11-28T09:00:00+07:00'),
+    endTime: new Date('2026-11-28T11:30:00+07:00'),
+    capacity: 12, location: VENUE, ageRange: '5–10 tuổi', price: 180000,
+  },
+  {
+    title: 'Family Memory Tree Day',
+    description: 'Workshop gia đình: cùng chăm cây, chụp ảnh, viết nhật ký và lưu lại hành trình trên Cây Kỷ Niệm.',
+    emoji: '🐉',
+    imageUrl: '/assets/images/workshop/register/register-familytree.png',
+    dateTime: new Date('2026-12-05T09:00:00+07:00'),
+    endTime: new Date('2026-12-05T12:00:00+07:00'),
+    capacity: 12, location: VENUE, ageRange: '6–12 tuổi', price: 200000,
+  },
+  {
+    title: 'Hệ Mặt Trời Mini',
+    description: 'Tạo mô hình hệ mặt trời mini — vẽ màu 8 hành tinh, lắp ráp giá đỡ và học về thiên văn học qua đôi bàn tay.',
+    emoji: '🚀',
+    imageUrl: '/assets/images/workshop/register/register-solarsystem.png',
+    dateTime: new Date('2026-12-12T09:00:00+07:00'),
+    endTime: new Date('2026-12-12T12:00:00+07:00'),
+    capacity: 10, location: VENUE, ageRange: '7–12 tuổi', price: 220000,
+  },
+  {
+    title: 'Plant Buddy Story Lab',
+    description: 'Bé đặt tên Plant Buddy, tạo câu chuyện cho cây và học cách ghi lại mốc phát triển mỗi tuần.',
+    emoji: '🌊',
+    imageUrl: '/assets/images/workshop/register/register-storylab.png',
+    dateTime: new Date('2026-12-19T09:00:00+07:00'),
+    endTime: new Date('2026-12-19T11:30:00+07:00'),
+    capacity: 12, location: VENUE, ageRange: '4–9 tuổi', price: 160000,
+  },
+  {
+    title: 'Chậu Cây Tự Thiết Kế',
+    description: 'Bé tự tay vẽ và trang trí chậu cây theo phong cách riêng, rồi gieo hạt vào chính chậu mình vừa thiết kế. Phát triển óc sáng tạo và sự khéo léo.',
+    emoji: '🪴',
+    imageUrl: '/assets/images/workshop/register/register-potdesign.png',
+    dateTime: new Date('2026-12-26T09:00:00+07:00'),
+    endTime: new Date('2026-12-26T12:00:00+07:00'),
+    capacity: 12, location: VENUE, ageRange: '5–9 tuổi', price: 180000,
+  },
 ];
 
 const BLOG_POSTS = [
@@ -127,6 +183,32 @@ async function main() {
 
   // Reset the auto-increment sequence so new products get IDs after the seeded ones
   await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"Product"', 'id'), COALESCE((SELECT MAX(id) FROM "Product"), 0))`;
+
+  // One-time cleanup: the three placeholder workshops seeded before Workshop
+  // carried a description, photo, age range and price. They render as blank
+  // cards on the public page now, and one of them ("Family Memory Tree Day")
+  // shares a title with a real session below, which would make the loop skip
+  // creating it. Only rows that never got filled in and have nobody booked are
+  // removed, so an admin's own bare draft survives.
+  const retired = await prisma.workshop.findMany({
+    where: {
+      description: null,
+      imageUrl: null,
+      title: {
+        in: [
+          'Basic Workshop — Vẽ chậu & gieo hạt',
+          'Smart Kit Workshop — IoT cho cây',
+          'Family Memory Tree Day',
+        ],
+      },
+      registrations: { none: {} },
+    },
+    select: { id: true, title: true },
+  });
+  for (const ws of retired) {
+    await prisma.workshop.delete({ where: { id: ws.id } });
+    console.log(`✅ Removed placeholder workshop "${ws.title}"`);
+  }
 
   // Seed workshops
   for (const ws of WORKSHOPS) {

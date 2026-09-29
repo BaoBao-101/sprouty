@@ -234,6 +234,11 @@ export const API = {
       update(id, data)   { return _fetch(`/admin/workshops/${id}`, { method: 'PUT', body: JSON.stringify(data) }); },
       remove(id)         { return _fetch(`/admin/workshops/${id}`, { method: 'DELETE' }); },
       registrations(id)  { return _fetch(`/admin/workshops/${id}/registrations`); },
+      setRegistrationStatus(id, registrationId, status) {
+        return _fetch(`/admin/workshops/${id}/registrations/${registrationId}`, {
+          method: 'PATCH', body: JSON.stringify({ status }),
+        });
+      },
       cancelRegistration(id, registrationId) {
         return _fetch(`/admin/workshops/${id}/registrations/${registrationId}`, { method: 'DELETE' });
       },

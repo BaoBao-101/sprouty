@@ -171,27 +171,62 @@ model OrderItem {
   product Product @relation(fields: [productId], references: [id])
 }
 
+enum WorkshopStatus {
+  draft
+  published
+  cancelled
+}
+
+enum WorkshopRegistrationStatus {
+  pending
+  confirmed
+  cancelled
+}
+
+// The public workshop page used to render a hardcoded array that carried a
+// description, photo, age range and price — none of which existed here, so an
+// admin could not produce a session that looked like the ones on the site.
+// These columns are what that page actually displays.
 model Workshop {
-  id        String   @id @default(cuid())
-  title     String
-  dateTime  DateTime
-  capacity  Int
-  location  String
-  createdAt DateTime @default(now())
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  emoji       String?
+  imageUrl    String?
+  dateTime    DateTime
+  // Optional: the page shows "9:00 – 11:30" when an end time is known.
+  endTime     DateTime?
+  capacity    Int
+  location    String
+  ageRange    String?
+  price       Int            @default(0)
+  status      WorkshopStatus @default(published)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   registrations WorkshopRegistration[]
+
+  @@index([status, dateTime])
 }
 
 model WorkshopRegistration {
-  id         String   @id @default(cuid())
+  id         String                     @id @default(cuid())
   workshopId String
   userId     String?
   guestName  String?
   guestPhone String?
-  createdAt  DateTime @default(now())
+  guestEmail String?
+  // The public form always asked for these three and then discarded them.
+  childAge   String?
+  childCount Int                        @default(1)
+  note       String?
+  status     WorkshopRegistrationStatus @default(pending)
+  createdAt  DateTime                   @default(now())
 
-  workshop Workshop @relation(fields: [workshopId], references: [id])
+  workshop Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
   user     User?    @relation(fields: [userId], references: [id])
+
+  @@index([workshopId, status])
 }
 
 model AuditLog {

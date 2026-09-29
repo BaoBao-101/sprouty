@@ -1,13 +1,38 @@
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Lightbox } from '@/components/Lightbox';
-import { WorkshopRegisterForm } from '@/components/WorkshopRegisterForm';
-import { FAQS, LB_IMAGES, WORKSHOPS } from '@/data/workshop';
+import { WorkshopRegisterModal } from '@/components/WorkshopRegisterModal';
+import { FAQS, LB_IMAGES } from '@/data/workshop';
+import { API } from '@/services/api';
+import { formatPrice } from '@/types/product';
+import { formatWorkshopWhen, type PublicWorkshop } from '@/types/workshop';
 import './Workshop.css';
 
 export default function Workshop() {
   const [lightbox, setLightbox] = useState<number | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  // The schedule used to be a hardcoded array in data/workshop.ts, so nothing
+  // an admin created ever reached this page and the seat counts were fiction.
+  const [workshops, setWorkshops] = useState<PublicWorkshop[]>([]);
+  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [booking, setBooking] = useState<PublicWorkshop | null>(null);
+
+  const load = useCallback(() => {
+    setState('loading');
+    API.workshops
+      .list()
+      .then((data: any) => {
+        setWorkshops(data.workshops || []);
+        setState('ready');
+      })
+      .catch(() => setState('error'));
+  }, []);
+
+  useEffect(load, [load]);
+
+  // Only sessions that have not happened yet can be booked.
+  const upcoming = workshops.filter((w) => w.upcoming);
 
   const navigate = (step: number) =>
     setLightbox((i) => (i === null ? i : (i + step + LB_IMAGES.length) % LB_IMAGES.length));
@@ -194,28 +219,45 @@ export default function Workshop() {
             <h2>Workshop đang mở đăng ký</h2>
             <p className="lead" style={{ maxWidth: "480px", margin: "10px auto 0" }}>Số chỗ có hạn — đặt trước để đảm bảo suất cho bé.</p>
           </div>
+          {state === 'loading' && <div className="ws-schedule-msg">Đang tải lịch workshop…</div>}
+          {state === 'error' && (
+            <div className="ws-schedule-msg error">
+              Không tải được lịch workshop.{' '}
+              <button className="link-btn" onClick={load}>
+                Thử lại
+              </button>
+            </div>
+          )}
+          {state === 'ready' && upcoming.length === 0 && (
+            <div className="ws-schedule-msg">
+              Hiện chưa có buổi nào mở đăng ký. Theo dõi trang này để biết lịch mới nhé!
+            </div>
+          )}
+
           <div className="ws-schedule">
-            {WORKSHOPS.slice(0, 6).map((w) => {
-              const taken = w.maxSlots - w.slots;
-              const pct = Math.round((taken / w.maxSlots) * 100);
-              const isFull = w.slots === 0;
+            {upcoming.map((w) => {
+              const pct = w.capacity > 0 ? Math.round((w.seatsTaken / w.capacity) * 100) : 0;
               return (
                 <div className="schedule-card" key={w.id}>
                   <div className="schedule-photo">
-                    <img src={w.img} alt={w.title} loading="lazy" />
-                    <span className="schedule-emoji-badge">{w.emoji}</span>
+                    {w.imageUrl ? (
+                      <img src={w.imageUrl} alt={w.title} loading="lazy" />
+                    ) : (
+                      <div className="schedule-photo-empty">{w.emoji || '🎪'}</div>
+                    )}
+                    {w.emoji && <span className="schedule-emoji-badge">{w.emoji}</span>}
                   </div>
                   <div className="schedule-header">
-                    <div className="schedule-date">📅 {w.date} · {w.time}</div>
+                    <div className="schedule-date">📅 {formatWorkshopWhen(w)}</div>
                     <div className="schedule-title">{w.title}</div>
                   </div>
                   <div className="schedule-body">
-                    <p className="schedule-detail">{w.desc}</p>
+                    {w.description && <p className="schedule-detail">{w.description}</p>}
                     <div className="schedule-tags">
-                      <span className="tag">{w.age}</span>
-                      <span className="tag green">{w.price.toLocaleString('vi-VN')}đ</span>
-                      <span className={`tag${isFull ? ' rose' : ''}`}>
-                        {isFull ? 'Hết chỗ' : `${w.slots} chỗ còn`}
+                      {w.ageRange && <span className="tag">{w.ageRange}</span>}
+                      <span className="tag green">{formatPrice(w.price)}</span>
+                      <span className={`tag${w.isFull ? ' rose' : ''}`}>
+                        {w.isFull ? 'Hết chỗ' : `${w.seatsLeft} chỗ còn`}
                       </span>
                     </div>
                     <div style={{ marginBottom: 14 }}>
@@ -230,17 +272,19 @@ export default function Workshop() {
                           }}
                         />
                       </div>
-                      <div className="schedule-taken">{taken}/{w.maxSlots} đã đăng ký</div>
+                      <div className="schedule-taken">
+                        {w.seatsTaken}/{w.capacity} đã đăng ký · 📍 {w.location}
+                      </div>
                     </div>
                     <div className="schedule-footer">
-                      <span className="workshop-price">{w.price.toLocaleString('vi-VN')}đ</span>
+                      <span className="workshop-price">{formatPrice(w.price)}</span>
                       <button
                         className="btn btn-primary btn-sm"
-                        disabled={isFull}
-                        style={isFull ? { opacity: 0.5 } : undefined}
-                        onClick={() => document.getElementById('dang-ky')?.scrollIntoView({ behavior: 'smooth' })}
+                        disabled={w.isFull}
+                        style={w.isFull ? { opacity: 0.5 } : undefined}
+                        onClick={() => setBooking(w)}
                       >
-                        {isFull ? 'Hết chỗ' : 'Đăng ký →'}
+                        {w.isFull ? 'Hết chỗ' : 'Đăng ký →'}
                       </button>
                     </div>
                   </div>
@@ -283,7 +327,44 @@ export default function Workshop() {
                 </ul>
               </div>
             </div>
-            <WorkshopRegisterForm />
+            {/* This used to be a standalone form with a hardcoded dropdown that
+                sent the session's *label* as its id, so the server never found
+                the workshop — and the form reported success anyway. Booking now
+                starts from a real session. */}
+            <div className="ws-register-form">
+              <h3 style={{ marginBottom: 6, fontSize: '1.25rem' }}>Chọn buổi để đăng ký</h3>
+              <p style={{ fontSize: '.84rem', color: 'var(--ink-4)', marginBottom: 20 }}>
+                Bấm vào buổi phù hợp, điền thông tin và chúng tôi sẽ gọi xác nhận suất.
+              </p>
+
+              {state === 'loading' && <div className="ws-schedule-msg">Đang tải…</div>}
+              {state === 'ready' && upcoming.length === 0 && (
+                <div className="ws-schedule-msg">Chưa có buổi nào mở đăng ký.</div>
+              )}
+
+              <div className="ws-pick-list">
+                {upcoming.map((w) => (
+                  <button
+                    className="ws-pick"
+                    key={w.id}
+                    disabled={w.isFull}
+                    onClick={() => setBooking(w)}
+                  >
+                    <span className="ws-pick-emoji">{w.emoji || '🎪'}</span>
+                    <span className="ws-pick-main">
+                      <span className="ws-pick-title">{w.title}</span>
+                      <span className="ws-pick-when">{formatWorkshopWhen(w)}</span>
+                    </span>
+                    <span className="ws-pick-right">
+                      <span className="ws-pick-price">{formatPrice(w.price)}</span>
+                      <span className={`ws-pick-seats${w.isFull ? ' full' : ''}`}>
+                        {w.isFull ? 'Hết chỗ' : `${w.seatsLeft} chỗ`}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -308,6 +389,15 @@ export default function Workshop() {
           </div>
         </div>
       </section>
+
+      {booking && (
+        <WorkshopRegisterModal
+          workshop={booking}
+          onClose={() => setBooking(null)}
+          // Reload so the seat counts on the cards reflect the booking just made.
+          onRegistered={load}
+        />
+      )}
     </>
   );
 }

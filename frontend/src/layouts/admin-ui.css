@@ -608,3 +608,57 @@
   word-break: break-word;
   overflow-x: auto;
 }
+
+/* ── Workshop admin ──────────────────────────────────────────── */
+.ws-row { display:flex; gap:11px; align-items:flex-start; min-width:0 }
+.ws-row-thumb {
+  width:58px; height:42px; flex-shrink:0; border-radius:var(--r-sm);
+  background:var(--cream-2); border:1px solid var(--parchment-2);
+  display:flex; align-items:center; justify-content:center; overflow:hidden; font-size:1.2rem;
+}
+.ws-row-thumb img { width:100%; height:100%; object-fit:cover }
+.ws-row-pills { display:flex; gap:5px; flex-wrap:wrap; margin-top:5px }
+
+/* Live preview of the card a customer will see, inside the editor. */
+.ws-preview {
+  display:flex; gap:14px; padding:14px; margin-bottom:18px;
+  background:var(--cream-2); border:1px solid var(--parchment-2); border-radius:var(--r-lg);
+}
+.ws-preview-photo {
+  width:104px; height:78px; flex-shrink:0; border-radius:var(--r-md); overflow:hidden;
+  background:var(--parchment); display:flex; align-items:center; justify-content:center; font-size:1.9rem;
+}
+.ws-preview-photo img { width:100%; height:100%; object-fit:cover }
+.ws-preview-main { min-width:0; flex:1 }
+.ws-preview-label { font-size:.68rem; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-4) }
+.ws-preview-title { font-family:var(--font-h); font-weight:800; font-size:.95rem; color:var(--ink); margin:3px 0 5px }
+.ws-preview-meta { font-size:.76rem; color:var(--ink-3); line-height:1.6 }
+.ws-preview-tags { display:flex; gap:5px; flex-wrap:wrap; margin-top:7px }
+.ws-preview-tags .tag {
+  font-size:.7rem; padding:2px 8px; border-radius:var(--r-full);
+  background:var(--parchment); color:var(--ink-3); font-weight:700;
+}
+.ws-preview-tags .tag.green { background:var(--primary-100); color:var(--primary-600) }
+
+/* One registration, with everything the parent told us. */
+.ws-reg { padding:14px 0; border-bottom:1px solid var(--cream-2) }
+.ws-reg:last-child { border-bottom:none }
+.ws-reg.cancelled { opacity:.55 }
+.ws-reg-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px }
+.ws-reg-count {
+  margin-left:8px; padding:1px 8px; border-radius:var(--r-full);
+  background:var(--orange-pale); color:var(--orange); font-size:.7rem; font-weight:800;
+}
+.ws-reg-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px 16px; margin-top:10px }
+.ws-reg-grid > div { display:flex; flex-direction:column; gap:1px; min-width:0 }
+.ws-reg-grid span { font-size:.7rem; color:var(--ink-4); font-weight:700; text-transform:uppercase; letter-spacing:.05em }
+.ws-reg-grid b, .ws-reg-grid a { font-size:.85rem; color:var(--ink); font-weight:600; word-break:break-word }
+.ws-reg-grid a { color:var(--orange); text-decoration:none }
+.ws-reg-grid a:hover { text-decoration:underline }
+.ws-reg-note {
+  margin-top:10px; padding:9px 12px; background:var(--cream-2);
+  border-left:3px solid var(--orange); border-radius:0 var(--r-sm) var(--r-sm) 0;
+  font-size:.82rem; color:var(--ink-3); line-height:1.6;
+}
+.ws-reg-actions { display:flex; gap:7px; flex-wrap:wrap; margin-top:11px }
+@media(max-width:560px) { .ws-reg-grid { grid-template-columns:1fr } }
