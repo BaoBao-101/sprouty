@@ -309,6 +309,38 @@ export default async function adminWorkshopRoutes(fastify) {
     return { registration: updated };
   });
 
+  // POST /api/v1/admin/workshops/:id/registrations/:registrationId/mark-paid
+  //
+  // The counterpart to the order route: someone paid at the door, or
+  // transferred without the reference, and the webhook never saw it. Without
+  // this the booking reads as unpaid forever.
+  fastify.post('/workshops/:id/registrations/:registrationId/mark-paid', { preHandler: writeAuth }, async (req, reply) => {
+    const registration = await fastify.prisma.workshopRegistration.findUnique({
+      where: { id: req.params.registrationId },
+    });
+    if (!registration || registration.workshopId !== req.params.id) {
+      return reply.code(404).send({ message: 'Không tìm thấy lượt đăng ký.' });
+    }
+    if (registration.paidAt) {
+      return reply.code(409).send({ message: 'Lượt này đã ghi nhận thanh toán rồi.' });
+    }
+    if (registration.status === 'cancelled') {
+      return reply.code(409).send({ message: 'Lượt đăng ký này đã huỷ.' });
+    }
+
+    const updated = await fastify.prisma.workshopRegistration.update({
+      where: { id: registration.id },
+      // sepayTransactionId stays null: no bank transaction backs this, and the
+      // audit row records who vouched for it instead.
+      data: { paidAt: new Date() },
+    });
+    await auditLog(fastify.prisma, req.user.id, 'workshop.registration.marked_paid', 'WorkshopRegistration', registration.id, {
+      workshopId: registration.workshopId,
+      amount: registration.amount,
+    });
+    return { registration: updated, message: 'Đã ghi nhận thanh toán.' };
+  });
+
   // DELETE /api/v1/admin/workshops/:id/registrations/:registrationId — free a
   // seat when someone cancels by phone or does not show up.
   fastify.delete('/workshops/:id/registrations/:registrationId', { preHandler: writeAuth }, async (req, reply) => {

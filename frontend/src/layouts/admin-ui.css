@@ -705,3 +705,7 @@
 .ws-cover-actions .btn { cursor:pointer }
 .ws-cover-actions .btn.disabled { opacity:.6; cursor:wait }
 @media(max-width:560px) { .ws-cover-pick { flex-direction:column } .ws-cover-preview { width:100% } }
+
+/* Recording a payment by hand — distinct from the shipping-stage buttons. */
+.act-btn.act-paid { border-color:var(--primary-500); color:var(--primary-600) }
+.act-btn.act-paid:hover:not(:disabled) { background:var(--primary-100) }

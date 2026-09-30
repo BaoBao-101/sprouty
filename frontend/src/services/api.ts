@@ -176,6 +176,9 @@ export const API = {
     list()       { return _fetch('/orders'); },
     get(id)      { return _fetch(`/orders/${id}`); },
     cancel(id)   { return _fetch(`/orders/${id}/cancel`, { method: 'PATCH' }); },
+    updateShipping(id, data) {
+      return _fetch(`/orders/${id}/shipping`, { method: 'PATCH', body: JSON.stringify(data) });
+    },
   },
 
   admin: {
@@ -206,6 +209,7 @@ export const API = {
     orders: {
       list(params = {})        { return _fetch('/admin/orders?' + new URLSearchParams(params)); },
       counts()                 { return _fetch('/admin/orders/counts'); },
+      markPaid(id)             { return _fetch(`/admin/orders/${id}/mark-paid`, { method: 'POST' }); },
       updateStatus(id, status) { return _fetch(`/admin/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }); },
     },
     redeemCodes: {
@@ -241,6 +245,9 @@ export const API = {
       remove(id)         { return _fetch(`/admin/workshops/${id}`, { method: 'DELETE' }); },
       registrations(id)  { return _fetch(`/admin/workshops/${id}/registrations`); },
       uploadCover(form)  { return _fetch('/admin/workshop-images', { method: 'POST', body: form }); },
+      markRegistrationPaid(id, registrationId) {
+        return _fetch(`/admin/workshops/${id}/registrations/${registrationId}/mark-paid`, { method: 'POST' });
+      },
       setRegistrationStatus(id, registrationId, status) {
         return _fetch(`/admin/workshops/${id}/registrations/${registrationId}`, {
           method: 'PATCH', body: JSON.stringify({ status }),

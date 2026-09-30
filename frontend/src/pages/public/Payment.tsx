@@ -55,6 +55,136 @@ function Row({ label, value, copyable }: { label: string; value?: string; copyab
   );
 }
 
+/**
+ * Delivery details, correctable while the order is unpaid.
+ *
+ * They were captured once at checkout and then frozen. The payment page is the
+ * one screen where a customer actually reads them back, and until now spotting
+ * a typo there meant phoning support — the parcel was already addressed wrong.
+ */
+function ShippingBlock({ order, onSaved }: { order: Order; onSaved: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(order.shippingName || '');
+  const [phone, setPhone] = useState(order.shippingPhone || '');
+  const [address, setAddress] = useState(order.shippingAddress || '');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  function open() {
+    setName(order.shippingName || '');
+    setPhone(order.shippingPhone || '');
+    setAddress(order.shippingAddress || '');
+    setError('');
+    setEditing(true);
+  }
+
+  async function save() {
+    setError('');
+    if (name.trim().length < 2) return setError('Nhập tên người nhận.');
+    if (!/^[0-9]{9,11}$/.test(phone.trim())) {
+      return setError('Số điện thoại không hợp lệ (9–11 chữ số).');
+    }
+    if (address.trim().length < 10) return setError('Địa chỉ quá ngắn, vui lòng nhập đầy đủ.');
+
+    setBusy(true);
+    try {
+      const { message } = await API.orders.updateShipping(order.id, {
+        shippingName: name.trim(),
+        shippingPhone: phone.trim(),
+        shippingAddress: address.trim(),
+      });
+      showToast(message || 'Đã cập nhật địa chỉ', 'success');
+      setEditing(false);
+      onSaved();
+    } catch (err: any) {
+      setError(err?.message || 'Không cập nhật được.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!editing) {
+    return (
+      <div className="ord-ship">
+        <div className="ord-ship-top">
+          <span className="ord-ship-label">Thông tin giao hàng</span>
+          <button className="ord-ship-edit" type="button" onClick={open}>
+            ✎ Sửa
+          </button>
+        </div>
+
+        {/* One labelled line each. Name and phone used to run together on a
+            single line with the address unlabelled underneath, so nothing said
+            which value was which. */}
+        <dl className="ord-ship-list">
+          <div>
+            <dt>👤 Người nhận</dt>
+            <dd>{order.shippingName || '—'}</dd>
+          </div>
+          <div>
+            <dt>📞 Điện thoại</dt>
+            <dd>{order.shippingPhone || '—'}</dd>
+          </div>
+          <div>
+            <dt>📍 Địa chỉ</dt>
+            <dd>{order.shippingAddress || '—'}</dd>
+          </div>
+        </dl>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ord-ship editing">
+      <span className="ord-ship-label">Sửa thông tin giao hàng</span>
+
+      <div className="ord-ship-grid">
+        <label className="form-group" style={{ marginBottom: 0 }}>
+          <span className="form-label">Người nhận</span>
+          <input
+            className="form-input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Nguyễn Văn A"
+          />
+        </label>
+        <label className="form-group" style={{ marginBottom: 0 }}>
+          <span className="form-label">Số điện thoại</span>
+          <input
+            className="form-input"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="0909000000"
+          />
+        </label>
+      </div>
+
+      <label className="form-group" style={{ marginTop: 12, marginBottom: 0 }}>
+        <span className="form-label">Địa chỉ giao hàng</span>
+        <textarea
+          className="form-input"
+          rows={2}
+          style={{ resize: 'vertical' }}
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
+        />
+      </label>
+
+      {error && <div className="form-error mb-12" style={{ marginTop: 10 }}>{error}</div>}
+
+      <div className="ord-ship-actions">
+        <button className="btn btn-ghost btn-sm" onClick={() => setEditing(false)} disabled={busy}>
+          Hủy
+        </button>
+        <button className="btn btn-primary btn-sm" onClick={save} disabled={busy}>
+          {busy ? 'Đang lưu…' : 'Lưu địa chỉ'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function PaymentPage() {
   const [searchParams] = useSearchParams();
   const orderId = (searchParams.get('orderId') || '').trim();
@@ -222,18 +352,7 @@ export default function PaymentPage() {
                     <strong>{formatPrice(order.total)}</strong>
                   </div>
 
-                  {(order.shippingName || order.shippingAddress) && (
-                    <div className="ord-ship">
-                      <span className="ord-ship-label">Giao đến</span>
-                      <div>
-                        {order.shippingName}
-                        {order.shippingPhone && ` · ${order.shippingPhone}`}
-                      </div>
-                      {order.shippingAddress && (
-                        <div className="ord-ship-addr">{order.shippingAddress}</div>
-                      )}
-                    </div>
-                  )}
+                  <ShippingBlock order={order} onSaved={refresh} />
                 </>
               ) : (
                 <div style={{ textAlign: 'center' }}>

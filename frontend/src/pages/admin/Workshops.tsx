@@ -309,6 +309,25 @@ export default function Workshops() {
       });
   }, []);
 
+  async function markRegistrationPaid(registrationId: string, amount: number) {
+    if (!viewing) return;
+    if (
+      !confirm(
+        `Ghi nhận đã thu ${amount.toLocaleString('vi-VN')}đ cho lượt đăng ký này?\n\n` +
+          'Chỉ dùng khi bạn đã cầm tiền hoặc kiểm tra tiền về tài khoản.',
+      )
+    )
+      return;
+    try {
+      await API.admin.workshops.markRegistrationPaid(viewing.id, registrationId);
+      showToast('Đã ghi nhận thanh toán', 'success');
+      openRegistrations(viewing);
+      load();
+    } catch (err: any) {
+      showToast(err?.message || 'Không ghi nhận được', 'error');
+    }
+  }
+
   // Only cancel and re-open: there is no "confirm" any more, because paying is
   // the confirmation and ticking an unpaid booking guaranteed nothing.
   async function setRegistrationStatus(registrationId: string, status: 'pending' | 'cancelled') {
@@ -834,6 +853,17 @@ export default function Workshops() {
                   )}
                   <span className="ws-reg-spacer" />
                   <span className="ws-reg-btns">
+                    {/* Paid at the door, or transferred without the reference —
+                        either way the webhook never saw it. */}
+                    {!r.paidAt && r.amount > 0 && r.status !== 'cancelled' && (
+                      <button
+                        className="act-btn act-paid"
+                        title="Ghi nhận đã thu tiền"
+                        onClick={() => markRegistrationPaid(r.id, r.amount)}
+                      >
+                        💰
+                      </button>
+                    )}
                     {r.status !== 'cancelled' ? (
                       <button
                         className="act-btn act-del"

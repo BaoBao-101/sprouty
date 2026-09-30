@@ -49,6 +49,17 @@ const createOrderSchema = z.object({
 
 const NO_SHIPPING_PLACEHOLDER = 'Không áp dụng — sản phẩm không cần giao hàng.';
 
+/** Delivery details, for correcting them after checkout. */
+const shippingSchema = z.object({
+  shippingName: noHtml('Tên người nhận').and(
+    z.string().min(2, 'Tên người nhận không hợp lệ.').max(100, 'Tên người nhận tối đa 100 ký tự.'),
+  ),
+  shippingPhone: z.string().regex(/^[0-9]{9,11}$/, 'Số điện thoại không hợp lệ (9–11 chữ số).'),
+  shippingAddress: noHtml('Địa chỉ').and(
+    z.string().max(500, 'Địa chỉ tối đa 500 ký tự.'),
+  ).optional(),
+});
+
 function normalizePurchaseCode(code) {
   return String(code || '').trim().toUpperCase().replace(/\s+/g, '');
 }
@@ -220,6 +231,54 @@ export default async function orderRoutes(fastify) {
     const payment = order.status === 'pending' ? buildPaymentInfo(order) : null;
     const redeemCodes = await ensurePurchaseRedeemCodes(fastify.prisma, order);
     return { order: { ...order, redeemCodes }, payment };
+  });
+
+  // PATCH /api/v1/orders/:id/shipping — fix the delivery details.
+  //
+  // The address was collected once at checkout and then frozen. A customer who
+  // spotted a typo on the payment page — the one screen where they actually
+  // read it back — had no way to correct it, and neither did they have one
+  // afterwards. Restricted to unpaid orders: once we are packing, a silent
+  // address change would send the parcel somewhere nobody is expecting it.
+  fastify.patch('/orders/:id/shipping', { preHandler: [requireAuth, requireCsrf] }, async (req, reply) => {
+    const parsed = shippingSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new AppError(parsed.error.errors[0]?.message || 'Dữ liệu không hợp lệ.', 400);
+    }
+
+    const order = await fastify.prisma.order.findFirst({
+      where: { id: req.params.id, userId: req.user.id },
+      include: { items: { include: { product: { select: { category: true } } } } },
+    });
+    if (!order) return reply.code(404).send({ message: 'Không tìm thấy đơn hàng.' });
+    if (order.status !== 'pending' || order.paidAt) {
+      return reply.code(409).send({
+        message: 'Đơn đã được xử lý — vui lòng liên hệ Sprouty để đổi địa chỉ giao hàng.',
+      });
+    }
+
+    // Same rule as checkout: only a physical product needs a real address.
+    const needsShipping = order.items.some(i => i.product.category !== 'membership');
+    let shippingAddress = parsed.data.shippingAddress?.trim() || '';
+    if (needsShipping) {
+      if (shippingAddress.length < 10) {
+        throw new AppError('Địa chỉ quá ngắn, vui lòng nhập đầy đủ.', 400);
+      }
+    } else {
+      shippingAddress = shippingAddress || NO_SHIPPING_PLACEHOLDER;
+    }
+
+    const updated = await fastify.prisma.order.update({
+      where: { id: order.id },
+      data: {
+        shippingName: parsed.data.shippingName.trim(),
+        shippingPhone: parsed.data.shippingPhone.trim(),
+        shippingAddress,
+      },
+      include: { items: { include: { product: { select: { id: true, name: true, emoji: true, images: true } } } } },
+    });
+
+    return { order: updated, message: 'Đã cập nhật thông tin giao hàng.' };
   });
 
   // PATCH /api/v1/orders/:id/cancel — customer cancels their own order before payment

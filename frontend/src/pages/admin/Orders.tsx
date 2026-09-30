@@ -110,6 +110,29 @@ export default function Orders() {
   useEffect(load, [load]);
   useEffect(loadCounts, [loadCounts]);
 
+  async function markPaid(order: Order) {
+    if (
+      !confirm(
+        `Ghi nhận đã thu ${formatPrice(order.total)} cho đơn #${shortOrderId(order.id)}?\n\n` +
+          'Chỉ dùng khi bạn đã kiểm tra tiền thực sự về tài khoản. ' +
+          'Đơn sẽ chuyển sang Đang xử lý và mã kích hoạt được phát cho khách.',
+      )
+    )
+      return;
+
+    setBusyId(order.id);
+    try {
+      const { message } = await API.admin.orders.markPaid(order.id);
+      showToast(message || 'Đã ghi nhận thanh toán', 'success');
+      load();
+      loadCounts();
+    } catch (err: any) {
+      showToast(err?.message || 'Không ghi nhận được', 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function changeStatus(orderId: string, next: OrderStatus) {
     setBusyId(orderId);
     try {
@@ -211,9 +234,30 @@ export default function Orders() {
                     </td>
                     <td>
                       <Pill tone={STATUS_TONE[order.status]}>{ORDER_STATUS_VN[order.status]}</Pill>
+                      {/* Whether the money actually arrived is a separate fact
+                          from where the parcel is, and staff need both. */}
+                      <div style={{ marginTop: 4 }}>
+                        <Pill tone={order.paidAt ? 'green' : 'amber'}>
+                          {order.paidAt ? '✓ Đã thu tiền' : 'Chưa thu tiền'}
+                        </Pill>
+                      </div>
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div className="admin-inline-actions">
+                        {/* Recording a payment that did not come through the
+                            webhook — a mistyped reference, cash, a transfer from
+                            an account SePay does not watch. Without it such an
+                            order stays unpaid forever and never issues its
+                            post-purchase redeem codes. */}
+                        {!order.paidAt && order.status !== 'cancelled' && (
+                          <button
+                            className="act-btn act-paid"
+                            disabled={busyId === order.id}
+                            onClick={() => markPaid(order)}
+                          >
+                            💰 Đã thu tiền
+                          </button>
+                        )}
                         {/* One click for the usual next step; the select stays
                             for the exceptions (cancelling, correcting a slip). */}
                         {next && (

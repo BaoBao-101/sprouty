@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { AppError } from '../../utils/errors.js';
 import { requireEmployee, requireCsrf } from '../../middleware/rbac.js';
+import { auditLog } from '../../services/audit.js';
 
 const updateStatusSchema = z.object({
   status: z.enum(['pending', 'processing', 'shipped', 'delivered', 'cancelled']),
@@ -74,5 +75,46 @@ export default async function adminOrderRoutes(fastify) {
     });
 
     return { order: updated };
+  });
+
+  // POST /api/v1/admin/orders/:id/mark-paid
+  //
+  // Recording a payment that did not arrive through the webhook. Changing the
+  // status alone never set `paidAt`, so an order moved to "processing" by hand
+  // still read as unpaid everywhere it mattered: the payment page span forever,
+  // and the post-purchase redeem codes — which are generated from a paid order
+  // — were never issued.
+  //
+  // This is not an edge case. A customer who mistypes the transfer reference,
+  // pays in cash, or transfers from an account SePay does not watch, all end up
+  // here, and until now there was no way to record any of them.
+  fastify.post('/orders/:id/mark-paid', { preHandler: [requireEmployee, requireCsrf] }, async (req, reply) => {
+    const order = await fastify.prisma.order.findUnique({ where: { id: req.params.id } });
+    if (!order) return reply.code(404).send({ message: 'Không tìm thấy đơn hàng.' });
+    if (order.paidAt) {
+      return reply.code(409).send({ message: 'Đơn này đã được ghi nhận thanh toán rồi.' });
+    }
+    if (order.status === 'cancelled') {
+      return reply.code(409).send({ message: 'Không thể ghi nhận thanh toán cho đơn đã huỷ.' });
+    }
+
+    const updated = await fastify.prisma.order.update({
+      where: { id: order.id },
+      data: {
+        paidAt: new Date(),
+        // Only nudge a pending order forward; an order already further along
+        // keeps whatever stage it had reached.
+        ...(order.status === 'pending' ? { status: 'processing' } : {}),
+      },
+    });
+
+    // sepayTransactionId stays null on purpose — no bank transaction backs this,
+    // and the audit row records who vouched for it instead.
+    await auditLog(fastify.prisma, req.user.id, 'order.marked_paid', 'Order', order.id, {
+      total: order.total,
+      previousStatus: order.status,
+    });
+
+    return { order: updated, message: 'Đã ghi nhận thanh toán.' };
   });
 }
