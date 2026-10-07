@@ -1,9 +1,20 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ProductCard } from '@/components/ProductCard';
 import { ProductListItem } from '@/components/ProductListItem';
 import { useProducts } from '@/hooks/useProducts';
+import { fetchSpeciesFilters } from '@/services/products';
+import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
 import type { Product } from '@/types/product';
+
+interface SpeciesFilter {
+  key: string;
+  label: string;
+  icon: string;
+  count: number;
+  harvest: string;
+}
+import { PromoBanner } from '@/components/PromoBanner';
 import './Shop.css';
 
 type Category = 'all' | 'kit' | 'book';
@@ -67,6 +78,11 @@ export default function Shop() {
   const initialAge = (searchParams.get('age') as AgeBand) || 'all';
 
   const [category, setCategory] = useState<Category>('all');
+  // Which plant the kit grows. Fetched rather than hardcoded: the catalogue
+  // lives in the simulation, and a species added there should appear here
+  // without a second edit.
+  const [species, setSpecies] = useState<string>('all');
+  const [speciesOptions, setSpeciesOptions] = useState<SpeciesFilter[]>([]);
   const [age, setAge] = useState<AgeBand>(AGE_BANDS.some((a) => a.value === initialAge) ? initialAge : 'all');
   const [badge, setBadge] = useState<Badge>('all');
   const [pricePreset, setPricePreset] = useState<PricePreset>('all');
@@ -77,6 +93,20 @@ export default function Shop() {
   const [view, setView] = useState<View>('grid');
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetchSpeciesFilters()
+      .then((list) => {
+        if (!cancelled) setSpeciesOptions(list);
+      })
+      .catch(() => {
+        /* The section simply does not render; every other filter still works. */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   function applyPricePreset(preset: PricePreset) {
     const chosen = PRICE_PRESETS.find((p) => p.value === preset)!;
     setPricePreset(preset);
@@ -86,6 +116,7 @@ export default function Shop() {
 
   function resetFilters() {
     setCategory('all');
+    setSpecies('all');
     setAge('all');
     setBadge('all');
     applyPricePreset('all');
@@ -101,6 +132,7 @@ export default function Shop() {
 
     const list = products.filter((p) => {
       if (category !== 'all' && p.cat !== category) return false;
+      if (species !== 'all' && p.species?.key !== species) return false;
       if (badge !== 'all' && p.badge !== badge) return false;
       if (!matchesAge(p, age)) return false;
       if (max !== Infinity && p.price > max) return false;
@@ -118,7 +150,7 @@ export default function Shop() {
     else if (sort === 'pop') list.sort((a, b) => Number(b.badge === 'hot') - Number(a.badge === 'hot'));
 
     return list;
-  }, [products, category, age, badge, priceMin, priceMax, query, sort]);
+  }, [products, category, species, age, badge, priceMin, priceMax, query, sort]);
 
   const countByCategory = useMemo(
     () => ({
@@ -131,6 +163,10 @@ export default function Shop() {
 
   const activeTags = [
     category !== 'all' && { label: CATEGORY_TAG[category] ?? category, clear: () => setCategory('all') },
+    species !== 'all' && {
+      label: speciesOptions.find((o) => o.key === species)?.label ?? species,
+      clear: () => setSpecies('all'),
+    },
     badge !== 'all' && {
       label: BADGES.find((b) => b.value === badge)!.label,
       clear: () => setBadge('all'),
@@ -163,6 +199,48 @@ export default function Shop() {
           ))}
         </div>
       </div>
+
+      {/* Which plant the kit grows — the question a parent actually asks after
+          "is this a kit?", and the one thing the sidebar had no answer for. */}
+      {speciesOptions.length > 0 && (
+        <div className="filter-section">
+          <div className="filter-section-label">Giống cây</div>
+          <div className="species-filter">
+            <button
+              className={`species-pick${species === 'all' ? ' active' : ''}`}
+              onClick={() => setSpecies('all')}
+            >
+              <span className="species-pick-icon">
+                <SproutyIcon name="leaf" size={19} />
+              </span>
+              <span className="species-pick-body">
+                <strong>Tất cả giống</strong>
+              </span>
+              <span className="species-pick-count">
+                {speciesOptions.reduce((n, o) => n + o.count, 0)}
+              </span>
+            </button>
+
+            {speciesOptions.map((option) => (
+              <button
+                key={option.key}
+                className={`species-pick${species === option.key ? ' active' : ''}`}
+                onClick={() => setSpecies(option.key)}
+                title={`Thu hoạch ${option.harvest}`}
+              >
+                <span className="species-pick-icon">
+                  <SproutyIcon name={option.icon as IconName} size={19} />
+                </span>
+                <span className="species-pick-body">
+                  <strong>{option.label}</strong>
+                  <em>thu hoạch {option.harvest}</em>
+                </span>
+                <span className="species-pick-count">{option.count}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="filter-section">
         <div className="filter-section-label">Độ tuổi</div>
@@ -252,11 +330,12 @@ export default function Shop() {
             <Link to="/">Trang chủ</Link> › Cửa hàng
           </div>
           <h1>Cửa hàng Sprouty</h1>
-          <p>Bộ kit trồng cây, vẽ chậu, IoT/STEM và gói VIP Garden cho gia đình.</p>
+          <p>Cây mô phỏng, thiết bị IoT ảo và gói VIP Garden cho cả gia đình.</p>
         </div>
       </div>
 
       <div className="container">
+        <PromoBanner className="shop-promo" />
         <div className="shop-wrap">
           <aside className="filter-sidebar">
             <div className="filter-head">

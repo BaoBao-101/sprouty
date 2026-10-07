@@ -228,6 +228,9 @@ export default function ProductDetail() {
           <div className="pdp-info">
             <div className="pdp-tags">
               <span className="pdp-tag blue">{CATEGORY_LABEL[product.cat] ?? product.cat}</span>
+              {product.species && (
+                <span className="pdp-tag green">Giống {product.species.label}</span>
+              )}
               <span className="pdp-tag gray">{product.age}</span>
               <span className="pdp-tag gray">{product.col}</span>
               {product.badge && (
@@ -278,6 +281,9 @@ export default function ProductDetail() {
                     <div>
                       <strong>Standard</strong>
                       <div className="pdp-variant-price">{formatPrice(product.price)}</div>
+                      <div className="pdp-variant-note">
+                        Thiết bị IoT mở dần theo từng giai đoạn cây lớn.
+                      </div>
                     </div>
                   </label>
 
@@ -295,9 +301,16 @@ export default function ProductDetail() {
                       onChange={() => setVariant('smart')}
                     />
                     <div>
-                      <strong>Smart · IoT 🤖</strong>
+                      <strong>Smart · IoT</strong>
                       <div className="pdp-variant-price">
                         {formatPrice(product.price + product.smartDelta)}
+                      </div>
+                      {/* The Smart upgrade used to be hardware in the box.
+                          Nothing ships now, so say what it actually unlocks —
+                          see createPlantForProduct in services/plants.js. */}
+                      <div className="pdp-variant-note">
+                        Mở sẵn <strong>cả 8 thiết bị IoT</strong> ngay từ ngày đầu — không phải chờ
+                        cây lớn mới có bơm tưới, đèn và quạt tự động.
                       </div>
                     </div>
                   </label>
@@ -327,7 +340,7 @@ export default function ProductDetail() {
                   +
                 </button>
               </div>
-              <div className="pdp-stock">Còn hàng · Giao 2–3 ngày làm việc</div>
+              <div className="pdp-stock">Kích hoạt ngay · Không cần giao hàng</div>
             </div>
 
             <div className="pdp-cta">
@@ -400,6 +413,18 @@ export default function ProductDetail() {
                     <span className="spec-label">Bộ sưu tập</span>
                     <span className="spec-val">{product.col}</span>
                   </div>
+                  {product.species && (
+                    <>
+                      <div className="spec-row">
+                        <span className="spec-label">Giống cây mô phỏng</span>
+                        <span className="spec-val">{product.species.label}</span>
+                      </div>
+                      <div className="spec-row">
+                        <span className="spec-label">Thu hoạch</span>
+                        <span className="spec-val">{product.species.harvest}</span>
+                      </div>
+                    </>
+                  )}
                   <div className="spec-row">
                     <span className="spec-label">Loại sản phẩm</span>
                     <span className="spec-val">{CATEGORY_LABEL[product.cat] ?? product.cat}</span>

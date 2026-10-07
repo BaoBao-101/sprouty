@@ -84,10 +84,10 @@ export default function Home() {
               the same circle, wording attached to it. */}
           <div className="user-flow-track">
             {[
-              { n: '01', icon: '🎁', title: 'Nhận Sprouty Kit', desc: 'Hộp gồm chậu, màu acrylic, hạt giống, đất trồng, hướng dẫn và quyền truy cập app Sprouty.' },
-              { n: '02', icon: '📲', title: 'Kích hoạt Plant Buddy', desc: 'Quét QR hoặc nhập mã PIN để đánh thức Bạn Cây và mở Cây Kỷ Niệm của bé.' },
-              { n: '03', icon: '🪴', title: 'Vẽ chậu & gieo hạt', desc: 'Bé trang trí chậu, gieo hạt thật và bắt đầu chăm sóc cây mỗi ngày.' },
-              { n: '04', icon: '🌟', title: 'Lưu kỷ niệm nở hoa', desc: 'Upload ảnh, video hoặc nhật ký; mỗi kỷ niệm trở thành một chiếc lá trên cây số.' },
+              { n: '01', icon: '🎁', title: 'Chọn bộ kit', desc: 'Mua trên web và nhận ngay mã kích hoạt — không chờ giao hàng, không mất phí vận chuyển.' },
+              { n: '02', icon: '🌱', title: 'Nhập mã, gieo hạt', desc: 'Vào "Cây của tôi", nhập mã và đặt tên. Hạt nảy mầm ngay cùng bộ cảm biến IoT đầu tiên.' },
+              { n: '03', icon: '💧', title: 'Chăm cây mỗi ngày', desc: 'Đọc cảm biến độ ẩm, nhiệt độ, ánh sáng rồi tưới, bón, tỉa đúng lúc. Mỗi việc có thời gian hồi riêng.' },
+              { n: '04', icon: '🏆', title: 'Nuôi tới ngày thu hoạch', desc: 'Qua 8 giai đoạn từ hạt tới quả chín, Plant Buddy AI đi cùng bé từng bước và mở dần 8 thiết bị IoT.' },
             ].map((step, i) => (
               <div className={`uflow-step c${i + 1}`} key={step.n}>
                 <div className="uflow-badge">
@@ -154,7 +154,7 @@ export default function Home() {
             <div className="feat-list-item">
               <div className="feat-icon green">🎨</div>
               <div><div className="feat-title">Học mà chơi</div>
-              <p className="feat-desc">Bé tự trang trí chậu, gieo hạt thật và kết hợp kiến thức khoa học, kỹ năng sống vào từng buổi chăm cây.</p></div>
+              <p className="feat-desc">Bé đọc cảm biến, suy luận cây đang thiếu gì rồi tự quyết định chăm thế nào — kiến thức khoa học và kỹ năng sống qua từng buổi chăm cây.</p></div>
             </div>
             <div className="feat-list-item">
               <div className="feat-icon green">🛡️</div>
@@ -192,7 +192,7 @@ export default function Home() {
             <div className="age-card" onClick={() => navigate('/shop?age=6-8')}>
               <div className="age-icon-wrap green"><span className="age-em" style={{ margin: "0" }}>🌿</span></div>
               <span className="age-range">10–18 tuổi</span>
-              <p className="age-sub">Smart Kit với Arduino, cảm biến độ ẩm, OLED và LED giúp học sinh học STEM qua cây thật.</p>
+              <p className="age-sub">Bản Smart mở sẵn cả 8 thiết bị IoT mô phỏng — cảm biến độ ẩm, EC, ánh sáng, bơm tưới và đèn — để học sinh học STEM qua số liệu thật.</p>
             </div>
             <div className="age-card" onClick={() => navigate('/shop?age=8-10')}>
               <div className="age-icon-wrap orange"><span className="age-em" style={{ margin: "0" }}>🌳</span></div>
@@ -254,7 +254,7 @@ export default function Home() {
               <p style={{ color: "rgba(255,255,255,.75)", fontSize: ".97rem", lineHeight: "1.75", marginBottom: "28px" }}>Tạo lời nhắn từ Bạn Cây, caption cho ảnh mới, hoặc gợi ý cách ghi lại một ngày chăm cây thành kỷ niệm đáng nhớ.</p>
               <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
                 <Link to="/ai" className="btn btn-white btn-lg">Thử ngay miễn phí →</Link>
-                <Link to="/my-products" className="btn btn-white-ol btn-lg">Vườn của tôi</Link>
+                <Link to="/my-plants" className="btn btn-white-ol btn-lg">Vườn của tôi</Link>
               </div>
             </div>
           </div>

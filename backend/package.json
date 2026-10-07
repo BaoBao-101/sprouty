@@ -10,7 +10,8 @@
     "db:seed": "node prisma/seed.js",
     "db:studio": "node node_modules/prisma/build/index.js studio",
     "assets:migrate-s3": "node scripts/migrate-assets-to-s3.js",
-    "videos:migrate": "node scripts/migrate-product-videos.js"
+    "videos:migrate": "node scripts/migrate-product-videos.js",
+    "demo:plants": "node scripts/seed-demo-plants.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1069.0",

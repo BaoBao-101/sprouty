@@ -1,6 +1,21 @@
 import { Link } from 'react-router-dom';
 import './Returns.css';
 
+/**
+ * Refund policy for a digital product.
+ *
+ * The previous version was written for a shipped box: seven days from delivery,
+ * return the goods in their packaging, damage in transit, COD refunds. None of
+ * that exists now — nothing is posted, and what the customer buys is an
+ * activation code.
+ *
+ * So the line that decides everything here is whether the code has been
+ * redeemed. An unused code is a product that was never delivered in any
+ * meaningful sense and is refunded without argument; a redeemed one has been
+ * consumed, the same way an opened seed packet used to be. Refunds for our own
+ * faults are not time-limited, because a fault that stops the customer using
+ * what they paid for is our problem whenever they find it.
+ */
 export default function Returns() {
   return (
     <>
@@ -8,11 +23,14 @@ export default function Returns() {
       <div className="policy-hero">
         <div className="container">
           <div className="breadcrumb" style={{ color: "rgba(255,255,255,.45)", justifyContent: "center", display: "flex", gap: "6px", marginBottom: "16px" }}>
-            <Link to="/" style={{ color: "rgba(255,255,255,.45)" }}>Trang chủ</Link> › <span>Chính sách đổi trả</span>
+            <Link to="/" style={{ color: "rgba(255,255,255,.45)" }}>Trang chủ</Link> › <span>Chính sách hoàn tiền</span>
           </div>
           <span style={{ fontFamily: "var(--font-h)", fontSize: ".78rem", fontWeight: "700", letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(255,255,255,.6)", display: "block", marginBottom: "12px" }}>Minh bạch & Rõ ràng</span>
-          <h1>Chính sách đổi trả & Hoàn tiền</h1>
-          <p className="lead" style={{ maxWidth: "520px", margin: "12px auto 0" }}>Sprouty cam kết bảo vệ quyền lợi khách hàng. Nếu không hài lòng, chúng tôi sẽ giải quyết thỏa đáng.</p>
+          <h1>Chính sách hoàn tiền</h1>
+          <p className="lead" style={{ maxWidth: "560px", margin: "12px auto 0" }}>
+            Sprouty bán sản phẩm số — không giao hàng, không đổi trả hàng hoá. Điều quyết định là
+            bạn đã dùng mã kích hoạt hay chưa.
+          </p>
         </div>
       </div>
 
@@ -23,107 +41,216 @@ export default function Returns() {
             {/* TOC */}
             <aside className="policy-toc">
               <h4>Nội dung</h4>
-              <a href="#tong-quan" className="toc-link active">1. Tổng quan</a>
-              <a href="#dieu-kien" className="toc-link">2. Điều kiện đổi trả</a>
-              <a href="#quy-trinh" className="toc-link">3. Quy trình đổi trả</a>
-              <a href="#hoan-tien" className="toc-link">4. Hoàn tiền</a>
-              <a href="#khong-chap-nhan" className="toc-link">5. Trường hợp không chấp nhận</a>
-              <a href="#san-pham-loi" className="toc-link">6. Sản phẩm lỗi / Sai hàng</a>
-              <a href="#lien-he" className="toc-link">7. Liên hệ hỗ trợ</a>
+              <a href="#tong-quan" className="toc-link active">1. Bạn đang mua gì</a>
+              <a href="#dieu-kien" className="toc-link">2. Khi nào được hoàn tiền</a>
+              <a href="#khong-chap-nhan" className="toc-link">3. Khi nào không hoàn tiền</a>
+              <a href="#quy-trinh" className="toc-link">4. Quy trình yêu cầu</a>
+              <a href="#hoan-tien" className="toc-link">5. Thời gian hoàn tiền</a>
+              <a href="#loi-he-thong" className="toc-link">6. Lỗi từ phía Sprouty</a>
+              <a href="#workshop" className="toc-link">7. Workshop & gói VIP</a>
+              <a href="#lien-he" className="toc-link">8. Liên hệ hỗ trợ</a>
             </aside>
 
             {/* Content */}
             <div className="policy-content">
-              <div className="last-updated">📅 Cập nhật lần cuối: 01/03/2026</div>
+              <div className="last-updated">📅 Cập nhật lần cuối: 07/10/2026</div>
 
               <div className="policy-card green" style={{ marginBottom: "32px" }}>
                 <h4>✅ Cam kết của Sprouty</h4>
-                <p>Nếu sản phẩm không đúng mô tả, bị hư hỏng khi giao hoặc bạn không hài lòng vì lý do chính đáng, Sprouty cam kết xử lý đổi trả hoặc hoàn tiền đầy đủ — không rắc rối, không phán xét.</p>
+                <p>
+                  <strong>Mã chưa kích hoạt — hoàn tiền 100%, không hỏi lý do</strong>, trong vòng 7
+                  ngày kể từ khi thanh toán. Nếu lỗi thuộc về hệ thống của chúng tôi, bạn được hoàn
+                  tiền bất kể đã dùng hay chưa và không giới hạn thời gian.
+                </p>
               </div>
 
-              <h2 id="tong-quan">1. Tổng quan về chính sách</h2>
-              <p>Sprouty áp dụng chính sách đổi trả trong vòng <strong>7 ngày</strong> kể từ ngày nhận hàng. Chính sách này áp dụng cho tất cả sản phẩm được mua trực tiếp trên website sprouty.id.vn.</p>
+              <h2 id="tong-quan">1. Bạn đang mua gì</h2>
+              <p>
+                Sprouty <strong>không giao sản phẩm vật lý</strong>. Khi bạn thanh toán, hệ thống
+                phát ra một <strong>mã kích hoạt</strong>. Nhập mã đó ở mục{' '}
+                <Link to="/my-plants">Cây của tôi</Link> là bạn bắt đầu nuôi một cây mô phỏng cùng
+                bộ thiết bị IoT ảo trên web.
+              </p>
+              <p>
+                Vì vậy ở đây không có khái niệm "gửi hàng về", "hư hỏng khi vận chuyển" hay "còn
+                nguyên hộp". Thay vào đó, ranh giới duy nhất là: <strong>mã đã được kích hoạt hay
+                chưa</strong>.
+              </p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", margin: "20px 0" }}>
-                <div className="policy-card green"><h4>✅ Trong 7 ngày</h4><p>Đổi trả tự do với điều kiện hàng nguyên vẹn, chưa sử dụng</p></div>
-                <div className="policy-card orange"><h4>⚠️ Sau 7 ngày</h4><p>Chỉ chấp nhận đổi trả với sản phẩm lỗi kỹ thuật từ nhà sản xuất</p></div>
+                <div className="policy-card green">
+                  <h4>✅ Mã chưa kích hoạt</h4>
+                  <p>Xem như chưa nhận sản phẩm. Hoàn tiền 100% trong 7 ngày, không cần nêu lý do.</p>
+                </div>
+                <div className="policy-card orange">
+                  <h4>⚠️ Mã đã kích hoạt</h4>
+                  <p>Sản phẩm đã được sử dụng. Chỉ hoàn tiền nếu lỗi thuộc về Sprouty (xem mục 6).</p>
+                </div>
+              </div>
+              <p style={{ fontSize: ".9rem", color: "var(--ink-4)" }}>
+                <em>
+                  Bạn luôn kiểm tra được mã của mình đã dùng hay chưa trong{' '}
+                  <Link to="/account">Đơn hàng của tôi</Link>.
+                </em>
+              </p>
+
+              <h2 id="dieu-kien">2. Khi nào được hoàn tiền</h2>
+              <h3>Hoàn tiền tự do (không cần lý do):</h3>
+              <ul>
+                <li>Trong vòng <strong>7 ngày</strong> kể từ khi thanh toán thành công</li>
+                <li>Mã kích hoạt <strong>chưa được sử dụng</strong></li>
+                <li>Đơn hàng mua trực tiếp trên sprouty.id.vn</li>
+              </ul>
+
+              <h3>Hoàn tiền không giới hạn thời gian (lỗi từ chúng tôi):</h3>
+              <ul>
+                <li><strong>Thanh toán trùng</strong> — bị trừ tiền hai lần cho cùng một đơn</li>
+                <li><strong>Đã trừ tiền nhưng không nhận được mã</strong> kích hoạt</li>
+                <li><strong>Mã không kích hoạt được</strong> dù đã nhập đúng</li>
+                <li><strong>Sai sản phẩm</strong> — mã mở ra giống cây khác với mô tả bạn đã mua</li>
+                <li><strong>Lỗi hệ thống kéo dài</strong> khiến bạn không chăm cây được (xem mục 6)</li>
+              </ul>
+
+              <h2 id="khong-chap-nhan">3. Khi nào không hoàn tiền</h2>
+              <div className="policy-card red">
+                <h4>❌ Các trường hợp không được hoàn tiền</h4>
+                <p>Nêu rõ từ đầu để không ai mất thời gian tranh luận về sau:</p>
+              </div>
+              <ul>
+                <li>
+                  <strong>Mã đã được kích hoạt</strong> và hệ thống hoạt động bình thường — đổi ý
+                  sau khi đã trồng cây không thuộc diện hoàn tiền
+                </li>
+                <li>Quá <strong>7 ngày</strong> kể từ khi thanh toán, với mã chưa dùng và không có lỗi hệ thống</li>
+                <li>Cây phát triển chậm hoặc héo <strong>do không chăm sóc</strong> — đây là cơ chế của trò chơi, không phải lỗi sản phẩm</li>
+                <li>Không hài lòng vì <strong>chưa đọc kỹ mô tả</strong> giống cây hoặc bản Standard/Smart trước khi mua</li>
+                <li>Tài khoản bị <strong>khoá do vi phạm</strong> điều khoản sử dụng</li>
+                <li>Mã nhận được từ <strong>bên thứ ba</strong> hoặc tặng lại, không mua trực tiếp từ sprouty.id.vn</li>
+                <li>Mã đã dùng để nhận <strong>ưu đãi workshop miễn phí</strong> và suất đó đã diễn ra</li>
+              </ul>
+              <div className="policy-card blue">
+                <h4>💡 Chưa chắc có hợp không?</h4>
+                <p>
+                  Cứ <Link to="/contact" style={{ fontWeight: 700 }}>liên hệ</Link> và kể rõ chuyện
+                  gì đã xảy ra. Chúng tôi xử lý theo tinh thần thiện chí — nếu bạn mất tiền mà không
+                  nhận được thứ mình mua, chúng tôi sẽ tìm cách giải quyết.
+                </p>
               </div>
 
-              <h2 id="dieu-kien">2. Điều kiện đổi trả</h2>
-              <h3>Sản phẩm đủ điều kiện đổi trả khi:</h3>
-              <ul>
-                <li>Còn trong thời hạn <strong>7 ngày</strong> kể từ ngày nhận hàng (theo dấu bưu điện)</li>
-                <li>Sản phẩm <strong>chưa mở hộp</strong> hoặc mới mở nhưng chưa sử dụng nguyên liệu</li>
-                <li>Còn đầy đủ <strong>hộp, bao bì, thẻ hướng dẫn và tất cả phụ kiện</strong></li>
-                <li>Có <strong>hóa đơn mua hàng</strong> hoặc email xác nhận đơn hàng</li>
-                <li>Không có dấu hiệu bị hư hỏng do người dùng</li>
-              </ul>
-
-              <h3>Trường hợp được đổi trả ngay:</h3>
-              <ul>
-                <li>Giao <strong>sai sản phẩm</strong> (sai kit, sai màu sắc, sai số lượng)</li>
-                <li>Sản phẩm <strong>bị hư hỏng</strong> trong quá trình vận chuyển</li>
-                <li>Thiếu nguyên liệu so với danh sách trong hộp</li>
-                <li>Lỗi kỹ thuật từ nhà sản xuất (kéo gãy ngay khi mở, màu vẽ bị khô cứng, v.v.)</li>
-              </ul>
-
-              <h2 id="quy-trinh">3. Quy trình đổi trả</h2>
+              <h2 id="quy-trinh">4. Quy trình yêu cầu hoàn tiền</h2>
+              <p>Không có bước gửi hàng về — toàn bộ xử lý trực tuyến.</p>
               <div className="timeline-steps">
-                <div className="tstep"><div className="tstep-num">1</div><div className="tstep-body"><div className="tstep-title">Liên hệ Sprouty</div><div className="tstep-desc">Gửi yêu cầu qua trang Liên hệ với tiêu đề "Yêu cầu đổi trả — [Mã đơn hàng]"</div></div></div>
-                <div className="tstep"><div className="tstep-num">2</div><div className="tstep-body"><div className="tstep-title">Cung cấp thông tin</div><div className="tstep-desc">Gửi kèm: mã đơn hàng, lý do đổi trả và ảnh sản phẩm (nếu hàng lỗi/hư hỏng). Chúng tôi xác nhận trong vòng 4 giờ (trong giờ làm việc)</div></div></div>
-                <div className="tstep"><div className="tstep-num">3</div><div className="tstep-body"><div className="tstep-title">Gửi hàng về</div><div className="tstep-desc">Sau khi được xác nhận, đóng gói sản phẩm cẩn thận và gửi về địa chỉ được đội ngũ Sprouty xác nhận. Sprouty hỗ trợ chi phí gửi hàng nếu lỗi từ phía chúng tôi</div></div></div>
-                <div className="tstep"><div className="tstep-num">4</div><div className="tstep-body"><div className="tstep-title">Kiểm tra & Xử lý</div><div className="tstep-desc">Sau khi nhận hàng, chúng tôi kiểm tra trong 1–2 ngày làm việc. Nếu đủ điều kiện, tiến hành gửi hàng đổi hoặc hoàn tiền ngay</div></div></div>
-                <div className="tstep"><div className="tstep-num">5</div><div className="tstep-body"><div className="tstep-title">Nhận hàng mới / Hoàn tiền</div><div className="tstep-desc">Hàng đổi sẽ được giao trong 2–3 ngày làm việc. Hoàn tiền xử lý trong 3–5 ngày làm việc</div></div></div>
+                <div className="tstep">
+                  <div className="tstep-num">1</div>
+                  <div className="tstep-body">
+                    <div className="tstep-title">Gửi yêu cầu</div>
+                    <div className="tstep-desc">Qua trang Liên hệ, tiêu đề "Yêu cầu hoàn tiền — [Mã đơn hàng]"</div>
+                  </div>
+                </div>
+                <div className="tstep">
+                  <div className="tstep-num">2</div>
+                  <div className="tstep-body">
+                    <div className="tstep-title">Cung cấp thông tin</div>
+                    <div className="tstep-desc">Mã đơn hàng, lý do, và ảnh chụp màn hình nếu gặp lỗi. Chúng tôi phản hồi trong 4 giờ làm việc</div>
+                  </div>
+                </div>
+                <div className="tstep">
+                  <div className="tstep-num">3</div>
+                  <div className="tstep-body">
+                    <div className="tstep-title">Kiểm tra trạng thái mã</div>
+                    <div className="tstep-desc">Hệ thống ghi lại chính xác thời điểm mã được kích hoạt, nên bước này chỉ mất vài phút — không cần bạn chứng minh gì thêm</div>
+                  </div>
+                </div>
+                <div className="tstep">
+                  <div className="tstep-num">4</div>
+                  <div className="tstep-body">
+                    <div className="tstep-title">Vô hiệu hoá mã</div>
+                    <div className="tstep-desc">Mã chưa dùng sẽ bị thu hồi để tránh dùng lại sau khi đã hoàn tiền</div>
+                  </div>
+                </div>
+                <div className="tstep">
+                  <div className="tstep-num">5</div>
+                  <div className="tstep-body">
+                    <div className="tstep-title">Chuyển tiền lại</div>
+                    <div className="tstep-desc">Hoàn về đúng tài khoản bạn đã chuyển khoản, trong 1–3 ngày làm việc</div>
+                  </div>
+                </div>
               </div>
 
-              <h2 id="hoan-tien">4. Chính sách hoàn tiền</h2>
+              <h2 id="hoan-tien">5. Thời gian hoàn tiền</h2>
               <div style={{ overflowX: "auto", margin: "16px 0" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".9rem" }}>
                   <thead>
                     <tr style={{ background: "var(--parchment)" }}>
-                      <th style={{ padding: "12px 16px", textAlign: "left", fontFamily: "var(--font-h)", fontSize: ".78rem", fontWeight: "700", color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: ".05em", borderBottom: "2px solid var(--parchment-2)" }}>Phương thức thanh toán</th>
-                      <th style={{ padding: "12px 16px", textAlign: "left", fontFamily: "var(--font-h)", fontSize: ".78rem", fontWeight: "700", color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: ".05em", borderBottom: "2px solid var(--parchment-2)" }}>Thời gian hoàn tiền</th>
+                      <th style={{ padding: "12px 16px", textAlign: "left", fontFamily: "var(--font-h)", fontSize: ".78rem", fontWeight: "700", color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: ".05em", borderBottom: "2px solid var(--parchment-2)" }}>Trường hợp</th>
+                      <th style={{ padding: "12px 16px", textAlign: "left", fontFamily: "var(--font-h)", fontSize: ".78rem", fontWeight: "700", color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: ".05em", borderBottom: "2px solid var(--parchment-2)" }}>Thời gian</th>
                       <th style={{ padding: "12px 16px", textAlign: "left", fontFamily: "var(--font-h)", fontSize: ".78rem", fontWeight: "700", color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: ".05em", borderBottom: "2px solid var(--parchment-2)" }}>Ghi chú</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr style={{ borderBottom: "1px solid var(--parchment-2)" }}><td style={{ padding: "12px 16px", color: "var(--ink-2)", fontWeight: "600" }}>Chuyển khoản ngân hàng</td><td style={{ padding: "12px 16px", color: "var(--ink-3)" }}>1–3 ngày làm việc</td><td style={{ padding: "12px 16px", color: "var(--ink-3)" }}>Hoàn vào số TK đã dùng</td></tr>
-                    <tr style={{ borderBottom: "1px solid var(--parchment-2)" }}><td style={{ padding: "12px 16px", color: "var(--ink-2)", fontWeight: "600" }}>Ví MoMo / ZaloPay</td><td style={{ padding: "12px 16px", color: "var(--ink-3)" }}>1–2 ngày làm việc</td><td style={{ padding: "12px 16px", color: "var(--ink-3)" }}>Hoàn về ví điện tử</td></tr>
-                    <tr style={{ borderBottom: "1px solid var(--parchment-2)" }}><td style={{ padding: "12px 16px", color: "var(--ink-2)", fontWeight: "600" }}>VNPay</td><td style={{ padding: "12px 16px", color: "var(--ink-3)" }}>3–5 ngày làm việc</td><td style={{ padding: "12px 16px", color: "var(--ink-3)" }}>Hoàn qua cổng VNPay</td></tr>
-                    <tr><td style={{ padding: "12px 16px", color: "var(--ink-2)", fontWeight: "600" }}>COD (tiền mặt)</td><td style={{ padding: "12px 16px", color: "var(--ink-3)" }}>2–5 ngày làm việc</td><td style={{ padding: "12px 16px", color: "var(--ink-3)" }}>Chuyển khoản theo thông tin khách cung cấp</td></tr>
+                    <tr style={{ borderBottom: "1px solid var(--parchment-2)" }}>
+                      <td style={{ padding: "12px 16px", color: "var(--ink-2)", fontWeight: "600" }}>Mã chưa kích hoạt</td>
+                      <td style={{ padding: "12px 16px", color: "var(--ink-3)" }}>1–3 ngày làm việc</td>
+                      <td style={{ padding: "12px 16px", color: "var(--ink-3)" }}>Hoàn 100% về tài khoản đã chuyển</td>
+                    </tr>
+                    <tr style={{ borderBottom: "1px solid var(--parchment-2)" }}>
+                      <td style={{ padding: "12px 16px", color: "var(--ink-2)", fontWeight: "600" }}>Thanh toán trùng</td>
+                      <td style={{ padding: "12px 16px", color: "var(--ink-3)" }}>1–2 ngày làm việc</td>
+                      <td style={{ padding: "12px 16px", color: "var(--ink-3)" }}>Ưu tiên xử lý, hoàn phần dư</td>
+                    </tr>
+                    <tr style={{ borderBottom: "1px solid var(--parchment-2)" }}>
+                      <td style={{ padding: "12px 16px", color: "var(--ink-2)", fontWeight: "600" }}>Lỗi hệ thống</td>
+                      <td style={{ padding: "12px 16px", color: "var(--ink-3)" }}>1–3 ngày làm việc</td>
+                      <td style={{ padding: "12px 16px", color: "var(--ink-3)" }}>Hoàn 100%, không trừ khoản nào</td>
+                    </tr>
+                    <tr>
+                      <td style={{ padding: "12px 16px", color: "var(--ink-2)", fontWeight: "600" }}>Huỷ workshop trước 24h</td>
+                      <td style={{ padding: "12px 16px", color: "var(--ink-3)" }}>2–5 ngày làm việc</td>
+                      <td style={{ padding: "12px 16px", color: "var(--ink-3)" }}>Suất miễn phí được trả lại ngay vào tài khoản</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
-              <p><em>Lưu ý: Thời gian trên tính từ ngày Sprouty xác nhận hoàn tiền, không phải ngày yêu cầu.</em></p>
+              <p><em>Thời gian tính từ lúc Sprouty xác nhận hoàn tiền, không phải lúc bạn gửi yêu cầu.</em></p>
 
-              <h2 id="khong-chap-nhan">5. Trường hợp không được đổi trả</h2>
-              <div className="policy-card red">
-                <h4>❌ Không chấp nhận đổi trả trong các trường hợp sau:</h4>
-                <p>Các trường hợp này đã được nêu rõ để tránh tranh cãi không đáng có:</p>
-              </div>
+              <h2 id="loi-he-thong">6. Lỗi từ phía Sprouty</h2>
+              <p>
+                Nếu hệ thống của chúng tôi khiến bạn không dùng được thứ đã mua — mã không kích hoạt
+                được, cây không lưu tiến độ, mất dữ liệu chăm cây — thì đó là lỗi của chúng tôi, và
+                xử lý theo hướng có lợi cho bạn:
+              </p>
               <ul>
-                <li>Sản phẩm đã <strong>được sử dụng</strong> (hạt giống, đất trồng hoặc phụ kiện đã mở và dùng)</li>
-                <li>Vượt quá thời hạn <strong>7 ngày</strong> kể từ khi nhận hàng</li>
-                <li>Hộp/bao bì bị hư hỏng do người dùng không phải do vận chuyển</li>
-                <li>Thiếu bộ phận do người dùng làm mất (không phải từ nhà sản xuất)</li>
-                <li>Thay đổi ý kiến sau khi đã sử dụng thử</li>
-                <li>Sản phẩm là <strong>gói thành viên kỹ thuật số</strong> hoặc quyền truy cập video đã được kích hoạt</li>
-                <li>Sản phẩm mua từ đại lý hoặc bên thứ ba (chỉ áp dụng cho đơn mua trực tiếp từ sprouty.id.vn)</li>
-              </ul>
-
-              <h2 id="san-pham-loi">6. Sản phẩm lỗi / Giao sai hàng</h2>
-              <p>Trong trường hợp nhận được <strong>sản phẩm lỗi từ nhà sản xuất</strong> hoặc <strong>giao sai hàng</strong>, chính sách ưu tiên áp dụng:</p>
-              <ul>
-                <li>Thời hạn khiếu nại: <strong>48 giờ</strong> kể từ khi nhận hàng</li>
-                <li>Sprouty chịu toàn bộ chi phí gửi lại hàng</li>
+                <li>Không giới hạn thời gian khiếu nại — lúc nào phát hiện cũng được</li>
                 <li>Ưu tiên xử lý trong <strong>24 giờ làm việc</strong></li>
-                <li>Khách hàng được chọn: nhận hàng đổi, hoặc hoàn tiền 100% bao gồm cả phí ship</li>
+                <li>Chúng tôi sửa lỗi và khôi phục tiến độ cây trước; nếu không khôi phục được, <strong>hoàn tiền 100%</strong></li>
+                <li>Bạn được chọn: nhận mã kích hoạt mới, hoặc hoàn tiền</li>
               </ul>
               <div className="policy-card blue">
-                <h4>📸 Ghi nhớ quan trọng</h4>
-                <p>Luôn chụp ảnh/quay video sản phẩm ngay khi mở hộp. Đây là bằng chứng quan trọng nhất để chúng tôi xử lý nhanh nhất cho bạn trong trường hợp có vấn đề.</p>
+                <h4>📸 Giúp chúng tôi xử lý nhanh hơn</h4>
+                <p>
+                  Chụp màn hình thông báo lỗi kèm mã đơn hàng. Hệ thống có lưu nhật ký, nhưng ảnh
+                  của bạn giúp chúng tôi tìm đúng chỗ ngay thay vì dò tìm.
+                </p>
               </div>
 
-              <h2 id="lien-he">7. Liên hệ hỗ trợ đổi trả</h2>
+              <h2 id="workshop">7. Workshop & gói VIP</h2>
+              <h3>Workshop</h3>
+              <ul>
+                <li>Huỷ <strong>trước 24 giờ</strong> so với giờ bắt đầu: hoàn tiền 100%</li>
+                <li>Huỷ <strong>trong vòng 24 giờ</strong> hoặc vắng mặt: không hoàn tiền, nhưng có thể chuyển suất cho buổi khác nếu báo trước</li>
+                <li>Sprouty huỷ buổi học: hoàn tiền 100% hoặc chuyển sang buổi bạn chọn</li>
+                <li>
+                  Suất miễn phí từ ưu đãi <strong>mua 3 tặng 1</strong>: huỷ trước 24 giờ thì suất
+                  được trả lại tài khoản để dùng cho buổi khác
+                </li>
+              </ul>
+              <h3>Gói VIP Garden</h3>
+              <ul>
+                <li>Chưa kích hoạt quyền lợi VIP nào: hoàn tiền 100% trong 7 ngày</li>
+                <li>Đã sử dụng quyền lợi VIP: không hoàn tiền cho kỳ đang dùng</li>
+                <li>Bạn có thể ngừng gia hạn bất cứ lúc nào; quyền lợi giữ đến hết kỳ đã trả</li>
+              </ul>
+
+              <h2 id="lien-he">8. Liên hệ hỗ trợ</h2>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", margin: "20px 0" }}>
                 <div className="policy-card orange">
                   <h4>📧 Email hỗ trợ</h4>

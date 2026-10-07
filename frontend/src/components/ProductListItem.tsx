@@ -29,7 +29,7 @@ export function ProductListItem({ product }: { product: Product }) {
 
       <div className="list-body">
         <div className="list-meta">
-          {product.col} · {product.age}
+          {product.species?.label || product.col} · {product.age}
         </div>
         <div className="list-name">{product.name}</div>
         <div className="list-desc">{product.desc}</div>

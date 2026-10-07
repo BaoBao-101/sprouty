@@ -1,0 +1,181 @@
+/* "Mua 3 tặng 1" — playful enough for a children's brand, calm enough not to
+   compete with the page it sits on. */
+
+.promo {
+  --icon-accent: var(--accent-orange);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  border-radius: var(--r-xl);
+  border: 2px dashed var(--accent-orange-soft);
+  background:
+    radial-gradient(120% 140% at 0% 0%, #FFF8EC 0%, #FFFDF8 55%),
+    var(--cream);
+  box-shadow: var(--sh-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.promo::after {
+  /* A soft blob behind the CTA so the banner reads as one object rather than a
+     row of three. Decorative, so it never takes pointer events. */
+  content: '';
+  position: absolute;
+  inset: auto -40px -60px auto;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: var(--accent-orange);
+  opacity: 0.07;
+  pointer-events: none;
+}
+
+.promo-slim {
+  padding: 12px 14px;
+  gap: 12px;
+  border-radius: var(--r-lg);
+}
+
+.promo-badge {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  color: var(--terracotta);
+  background: #FFF1DC;
+  border: 2.5px solid var(--accent-orange-soft);
+  /* Hand-drawn feel: the badge sits very slightly off-square. */
+  transform: rotate(-3deg);
+}
+
+.promo-slim .promo-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+}
+
+.promo-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.promo-copy strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.04rem;
+  line-height: 1.35;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.promo-copy p {
+  margin: 3px 0 0;
+  font-size: 0.89rem;
+  color: var(--ink-3);
+  line-height: 1.5;
+}
+
+.promo-copy b {
+  color: var(--terracotta);
+  font-weight: 700;
+}
+
+.promo-pips {
+  display: flex;
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.promo-pip {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  border: 2px solid var(--parchment-2);
+  color: var(--ink-5);
+  --icon-accent: var(--ink-5);
+  transition: transform 0.25s var(--ease), background 0.25s, border-color 0.25s;
+}
+
+.promo-pip.filled {
+  background: var(--sage-lt);
+  border-color: var(--primary-300);
+  color: var(--primary-600);
+  --icon-accent: var(--primary-500);
+  transform: scale(1.06);
+}
+
+.promo-cta {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 18px;
+  border-radius: var(--r-full);
+  background: var(--orange);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.92rem;
+  white-space: nowrap;
+  border: 2px solid var(--orange);
+  transition: transform 0.2s var(--ease), background 0.2s, box-shadow 0.2s;
+  position: relative;
+  z-index: 1;
+}
+
+.promo-cta:hover {
+  background: var(--terracotta);
+  border-color: var(--terracotta);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(232, 93, 4, 0.28);
+}
+
+/* The "you already have a free seat" state goes green — it is good news, not
+   another thing to buy. */
+.promo-won {
+  --icon-accent: var(--primary-500);
+  border-style: solid;
+  border-color: var(--primary-300);
+  background:
+    radial-gradient(120% 140% at 0% 0%, #EFFBEA 0%, #FFFDF8 55%),
+    var(--cream);
+}
+
+.promo-won::after { background: var(--primary-500) }
+
+.promo-won .promo-badge {
+  color: var(--primary-600);
+  background: var(--sage-lt);
+  border-color: var(--primary-300);
+}
+
+.promo-won .promo-cta {
+  background: var(--primary-500);
+  border-color: var(--primary-500);
+}
+
+.promo-won .promo-cta:hover {
+  background: var(--primary-600);
+  border-color: var(--primary-600);
+  box-shadow: 0 6px 16px rgba(46, 132, 71, 0.3);
+}
+
+@media (max-width: 640px) {
+  .promo {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .promo-copy { flex-basis: calc(100% - 68px) }
+
+  .promo-cta {
+    width: 100%;
+    justify-content: center;
+  }
+}

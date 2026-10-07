@@ -15,6 +15,11 @@ export interface RedeemCode {
   productName?: string;
   /** Entitlements the code unlocks; the payment page lists them. */
   features?: string[];
+  /** True once this code has produced a plant — the code is then spent. */
+  redeemed?: boolean;
+  plantId?: string | null;
+  plantNickname?: string | null;
+  activatedAt?: string | null;
 }
 
 export interface Order {

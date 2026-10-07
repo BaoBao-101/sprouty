@@ -187,7 +187,7 @@ export function AiChat() {
         {locked && (
           <div className="ai-sb-login">
             <p>Trợ lý AI cần mã kích hoạt.</p>
-            <Link className="btn btn-primary btn-block btn-sm" to="/redeem">
+            <Link className="btn btn-primary btn-block btn-sm" to="/my-plants">
               Nhập mã
             </Link>
           </div>

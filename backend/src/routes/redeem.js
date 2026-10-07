@@ -1,97 +1,40 @@
-import { createHash } from 'crypto';
 import { z } from 'zod';
 import { requireAuth, requireCsrf } from '../middleware/rbac.js';
-import { AppError } from '../utils/errors.js';
 import { activeEntitlements, isVipUser } from '../services/access.js';
+import { hashRedeemCode, normalizeCode, redeemCode } from '../services/redeem.js';
 import { noHtml, parseOrThrow } from '../utils/validation.js';
-import { auditLog } from '../services/audit.js';
+import { plantCardDto } from '../services/plants.js';
+
+// Re-exported for admin/redeem-codes.js, which hashes a code it is minting.
+// The implementation lives in services/redeem.js now that the plant activation
+// form shares it.
+export { hashRedeemCode, normalizeCode };
 
 const redeemSchema = z.object({
   code: z.string().min(4).max(128),
+  // Optional: the activation form on the plant page lets a child name their
+  // plant as they activate it.
+  nickname: noHtml('Tên cây').and(z.string().min(1).max(40)).optional(),
 });
-
-export function normalizeCode(code) {
-  return String(code || '').trim().toUpperCase().replace(/\s+/g, '');
-}
-
-export function hashRedeemCode(code) {
-  return createHash('sha256').update(normalizeCode(code)).digest('hex');
-}
-
-function assertCodeUsable(code, redemptionsForUser) {
-  const now = new Date();
-  if (code.status !== 'active') throw new AppError('Mã này không còn hoạt động.', 400);
-  if (code.startsAt && code.startsAt > now) throw new AppError('Mã này chưa bắt đầu hiệu lực.', 400);
-  if (code.expiresAt && code.expiresAt <= now) throw new AppError('Mã này đã hết hạn.', 400);
-  if (code.maxUses !== null && code.usedCount >= code.maxUses) throw new AppError('Mã này đã hết lượt sử dụng.', 409);
-  if (redemptionsForUser >= code.perUserLimit) throw new AppError('Bạn đã sử dụng hết lượt cho mã này.', 409);
-}
 
 export default async function redeemRoutes(fastify) {
   fastify.post('/redeem', { preHandler: [requireAuth, requireCsrf] }, async (req) => {
-    const { code } = parseOrThrow(redeemSchema, req.body);
-    const codeHash = hashRedeemCode(code);
-    let result;
-    try {
-      result = await fastify.prisma.$transaction(async (tx) => {
-        const redeemCode = await tx.redeemCode.findUnique({ where: { codeHash } });
-        if (!redeemCode) throw new AppError('Mã không hợp lệ.', 404);
-        const userUses = await tx.redeemCodeRedemption.count({
-          where: { redeemCodeId: redeemCode.id, userId: req.user.id },
-        });
-        assertCodeUsable(redeemCode, userUses);
-        if (redeemCode.maxUses !== null) {
-          const updated = await tx.redeemCode.updateMany({
-            where: { id: redeemCode.id, usedCount: { lt: redeemCode.maxUses } },
-            data: { usedCount: { increment: 1 } },
-          });
-          if (updated.count !== 1) throw new AppError('Mã này đã hết lượt sử dụng.', 409);
-        } else {
-          await tx.redeemCode.update({ where: { id: redeemCode.id }, data: { usedCount: { increment: 1 } } });
-        }
-        const redemption = await tx.redeemCodeRedemption.create({
-          data: { redeemCodeId: redeemCode.id, userId: req.user.id },
-        });
-        const entitlements = [];
-        for (const feature of redeemCode.features) {
-          entitlements.push(await tx.userEntitlement.create({
-            data: {
-              userId: req.user.id,
-              feature,
-              productId: redeemCode.productId,
-              source: 'redeem_code',
-              sourceId: redemption.id,
-              startsAt: redeemCode.startsAt,
-              expiresAt: redeemCode.expiresAt,
-            },
-          }));
-        }
-        return { redeemCode, redemption, entitlements };
-      });
-    } catch (err) {
-      // 409 here means the code was already claimed by someone (possibly this
-      // same user hitting perUserLimit, or a different account racing a kit
-      // that's already been activated). Either way, leave a trail so admin can
-      // investigate who the legitimate buyer is via order/shipping records —
-      // without this, a fraudulent second activation attempt left no trace.
-      if (err instanceof AppError && err.statusCode === 409) {
-        const redeemCode = await fastify.prisma.redeemCode.findUnique({ where: { codeHash } });
-        await auditLog(fastify.prisma, req.user.id, 'redeem_code.duplicate_attempt', 'RedeemCode', redeemCode?.id || codeHash, {
-          ip: req.ip,
-        });
-      }
-      throw err;
-    }
-    await auditLog(fastify.prisma, req.user.id, 'redeem_code.redeem', 'RedeemCode', result.redeemCode.id, {
-      redemptionId: result.redemption.id,
-      features: result.redeemCode.features,
-      productId: result.redeemCode.productId,
+    const { code, nickname } = parseOrThrow(redeemSchema, req.body);
+    const result = await redeemCode(fastify.prisma, req.user.id, code, {
+      ip: req.ip,
+      nickname: nickname || null,
     });
+
     return {
-      message: 'Đã kích hoạt mã.',
-      features: result.redeemCode.features,
-      productId: result.redeemCode.productId,
+      message: result.plantCreated
+        ? 'Đã kích hoạt mã — cây của bạn đã được gieo hạt!'
+        : 'Đã kích hoạt mã.',
+      features: result.features,
+      productId: result.productId,
       entitlements: result.entitlements,
+      // The caller redirects straight to the plant when one was planted.
+      plant: result.plant ? plantCardDto(result.plant) : null,
+      plantCreated: result.plantCreated,
     };
   });
 

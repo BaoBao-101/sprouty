@@ -154,7 +154,7 @@
 .ws-modal-box .ws-form-note { padding:0 24px 18px; margin:10px 0 0 }
 
 .ws-done { padding:36px 28px 28px; text-align:center }
-.ws-done-icon { font-size:3.4rem; margin-bottom:12px }
+.ws-done-icon { --icon-accent:var(--primary-500); display:grid; place-items:center; width:84px; height:84px; margin:0 auto 14px; border-radius:30px; background:var(--sage-lt); border:3px solid var(--primary-300); color:var(--primary-600); transform:rotate(-4deg) }
 .ws-done h3 { margin:0 0 10px; color:var(--green); font-size:1.25rem }
 .ws-done p { color:var(--ink-3); font-size:.9rem; line-height:1.7; margin:0 0 18px }
 .ws-done-recap { display:grid; gap:9px; text-align:left; background:var(--cream-2); border:1px solid var(--parchment-2); border-radius:var(--r-lg); padding:14px 16px; margin-bottom:20px }
@@ -172,3 +172,117 @@
 /* admin-ui.css is not loaded on public pages, so the retry button needs its
    own rule here. */
 .ws-schedule-msg .link-btn { border:none; background:none; padding:0; cursor:pointer; color:var(--orange); font:inherit; text-decoration:underline }
+
+/* ── Free workshop seat ("mua 3 tặng 1") ─────────────────────────────────────
+   A reward the customer already earned, so it reads as good news rather than
+   as another upsell — and it is a real checkbox, so the keyboard and a screen
+   reader get it for free. */
+
+.ws-reward {
+  --icon-accent: var(--accent-orange);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  border-radius: var(--r-lg);
+  border: 2.5px dashed var(--accent-orange-soft);
+  background: #FFFBF4;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+
+.ws-reward.active {
+  --icon-accent: var(--primary-500);
+  border-style: solid;
+  border-color: var(--primary-300);
+  background: #F3FCEF;
+}
+
+.ws-reward input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.ws-reward-icon {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: #fff;
+  border: 2.5px solid var(--accent-orange-soft);
+  color: var(--terracotta);
+  transform: rotate(-3deg);
+  position: relative;
+}
+
+.ws-reward.active .ws-reward-icon {
+  border-color: var(--primary-300);
+  color: var(--primary-600);
+}
+
+/* The tick that shows the reward is being spent. */
+.ws-reward.active .ws-reward-icon::after {
+  content: '✓';
+  position: absolute;
+  right: -7px;
+  top: -7px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--primary-500);
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  border: 2px solid #fff;
+}
+
+.ws-reward-copy { flex: 1; min-width: 0 }
+
+.ws-reward-copy strong {
+  display: block;
+  font-size: .92rem;
+  color: var(--ink);
+  line-height: 1.35;
+}
+
+.ws-reward-copy em {
+  display: block;
+  font-style: normal;
+  font-size: .79rem;
+  color: var(--ink-4);
+  line-height: 1.5;
+  margin-top: 2px;
+}
+
+.ws-reward-save {
+  flex: none;
+  font-weight: 800;
+  font-size: .92rem;
+  color: var(--primary-600);
+  background: var(--sage-lt);
+  border-radius: var(--r-full);
+  padding: 5px 12px;
+  opacity: .4;
+}
+
+.ws-reward.active .ws-reward-save { opacity: 1 }
+
+.ws-reward input:focus-visible ~ .ws-reward-icon {
+  outline: 3px solid var(--terracotta);
+  outline-offset: 3px;
+}
+
+.ws-modal-total strong s {
+  display: block;
+  font-size: .82rem;
+  color: var(--ink-5);
+  font-weight: 500;
+}
+
+.ws-total-saved { color: var(--primary-600) !important; font-weight: 700 }

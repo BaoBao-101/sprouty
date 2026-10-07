@@ -26,10 +26,10 @@ const Vip = lazy(() => import('@/pages/public/Vip'));
 
 // Signed-in customer
 const Account = lazy(() => import('@/pages/public/Account'));
-const MyProducts = lazy(() => import('@/pages/public/MyProducts'));
+const MyPlants = lazy(() => import('@/pages/public/MyPlants'));
+const PlantDetail = lazy(() => import('@/pages/public/PlantDetail'));
 const MyWorkshops = lazy(() => import('@/pages/public/MyWorkshops'));
 const Tree = lazy(() => import('@/pages/public/Tree'));
-const Redeem = lazy(() => import('@/pages/public/Redeem'));
 
 // Admin
 const AdminDashboard = lazy(() => import('@/pages/admin/Dashboard'));
@@ -65,9 +65,9 @@ const LEGACY_REDIRECTS: Record<string, string> = {
   '/pages/privacy.html': '/privacy',
   '/pages/vip.html': '/vip',
   '/pages/account.html': '/account',
-  '/pages/my-products.html': '/my-products',
+  '/pages/my-products.html': '/my-plants',
   '/pages/tree.html': '/tree',
-  '/pages/redeem.html': '/redeem',
+  '/pages/redeem.html': '/my-plants',
   '/pages/admin/index.html': '/admin',
   '/pages/employee/orders.html': '/employee/orders',
   '/pages/employee/products.html': '/employee/products',
@@ -133,10 +133,18 @@ export function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/payment" element={<Payment />} />
               <Route path="/account" element={<Account />} />
-              <Route path="/my-products" element={<MyProducts />} />
+              <Route path="/my-plants" element={<MyPlants />} />
+              <Route path="/plant/:plantId" element={<PlantDetail />} />
+              {/* The kit used to be a physical thing you owned, so the page was
+                  called "Sản phẩm của tôi". It is a garden now; keep the old
+                  URL working for anyone who bookmarked it. */}
+              <Route path="/my-products" element={<Navigate to="/my-plants" replace />} />
               <Route path="/my-workshops" element={<MyWorkshops />} />
               <Route path="/tree" element={<Tree />} />
-              <Route path="/redeem" element={<Redeem />} />
+              {/* Activation lives on "Cây của tôi" now — the code and the
+                  plant it produces belong on the same screen, and two separate
+                  places to type the same code was one too many. */}
+              <Route path="/redeem" element={<Navigate to="/my-plants" replace />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

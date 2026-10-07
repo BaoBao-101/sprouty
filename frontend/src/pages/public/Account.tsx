@@ -3,84 +3,131 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
+import { SproutyIcon } from '@/components/icons/SproutyIcon';
 import {
   formatOrderDate,
   ORDER_STATUS_CLASS,
   ORDER_STATUS_VN,
   shortOrderId,
   type Order,
-  type OrderStatus,
   type RedeemCode,
 } from '@/types/order';
 import { formatPrice } from '@/types/product';
 import './Account.css';
 
-const TRACK_STEPS: Array<{ key: OrderStatus; label: string; icon: string }> = [
-  { key: 'pending', label: 'Chờ thanh toán', icon: '💳' },
-  { key: 'processing', label: 'Đang xử lý', icon: '📋' },
-  { key: 'shipped', label: 'Đang giao', icon: '🚚' },
-  { key: 'delivered', label: 'Đã giao', icon: '✅' },
+/**
+ * What happens to an order, now that nothing is posted.
+ *
+ * The old tracker ran "Chờ thanh toán → Đang xử lý → Đang giao → Đã giao",
+ * which promised a courier for a product that is a code on a screen. These are
+ * the three things that actually happen, and the last one is a link rather than
+ * a milestone we wait to observe — activating is the customer's move to make.
+ */
+const TRACK_STEPS = [
+  { key: 'placed', label: 'Đặt hàng', icon: 'cart' as const },
+  { key: 'paid', label: 'Thanh toán', icon: 'ticket' as const },
+  { key: 'activate', label: 'Kích hoạt cây', icon: 'sprout' as const },
 ];
 
-function OrderTrack({ status }: { status: OrderStatus }) {
-  if (status === 'cancelled') {
+function OrderTrack({ order }: { order: Order }) {
+  if (order.status === 'cancelled') {
     return (
-      <div className="order-track">
-        <div className="track-cancelled">🚫 Đơn hàng đã bị hủy</div>
+      <div className="otrack cancelled">
+        <SproutyIcon name="warning" size={18} />
+        Đơn hàng đã bị huỷ
       </div>
     );
   }
 
-  const current = Math.max(0, TRACK_STEPS.findIndex((s) => s.key === status));
+  const paid = Boolean(order.paidAt);
+  // Step 0 is always behind us; paying lights step 1 and opens step 2.
+  const reached = paid ? 2 : 1;
 
   return (
-    <div className="order-track">
-      <div className="track-steps">
-        {TRACK_STEPS.map((step, i) => (
-          <div style={{ display: 'contents' }} key={step.key}>
-            <div className={`track-step ${i < current ? 'done' : i === current ? 'current' : ''}`}>
-              <div className="track-dot">{step.icon}</div>
-              <div className="track-label">{step.label}</div>
-            </div>
-            {i < TRACK_STEPS.length - 1 && <div className={`track-line ${i < current ? 'done' : ''}`} />}
-          </div>
-        ))}
-      </div>
+    <div className="otrack">
+      {TRACK_STEPS.map((step, i) => (
+        <div className="otrack-step" key={step.key}>
+          {i > 0 && <span className={`otrack-line${i <= reached ? ' done' : ''}`} />}
+          <span className={`otrack-dot${i < reached ? ' done' : i === reached ? ' current' : ''}`}>
+            <SproutyIcon name={i < reached ? 'check' : step.icon} size={16} />
+          </span>
+          <span className="otrack-label">{step.label}</span>
+        </div>
+      ))}
     </div>
   );
 }
 
+function copyCode(code: string) {
+  navigator.clipboard?.writeText(code).then(
+    () => showToast('Đã sao chép mã', 'success'),
+    () => showToast('Không sao chép được mã', 'error'),
+  );
+}
+
+/**
+ * The activation codes a paid order issued.
+ *
+ * This is the thing the customer actually bought, so on this screen it is the
+ * most prominent block in the card rather than a note below the receipt — and
+ * it carries the button that turns it into a plant.
+ */
 function RedeemCodeList({ codes }: { codes: RedeemCode[] }) {
   if (!codes.length) return null;
 
-  function copy(code: string) {
-    navigator.clipboard?.writeText(code).then(
-      () => showToast('Đã sao chép mã', 'success'),
-      () => showToast('Không sao chép được mã', 'error'),
-    );
-  }
-
   return (
-    <div className="track-note" style={{ alignItems: 'flex-start' }}>
-      <div style={{ width: '100%' }}>
-        <div className="redeem-codes-title">
-          <img src="/assets/images/sprouty-icons/RedeemCode.png" alt="" />
-          Mã kích hoạt
-        </div>
-        {codes.map((code, i) => (
-          <div className="redeem-code-row" style={{ marginTop: i ? 8 : 0 }} key={code.code}>
-            <div>
-              <div className="redeem-code-product">
-                {code.productName || `Sản phẩm #${code.productId}`}
-              </div>
-              <div className="redeem-code-value">{code.code}</div>
-            </div>
-            <button className="btn btn-ghost btn-sm" onClick={() => copy(code.code)}>
-              Copy
-            </button>
-          </div>
-        ))}
+    <div className="ocodes">
+      <div className="ocodes-head">
+        <SproutyIcon name="seed" size={17} />
+        {(() => {
+          const left = codes.filter((c) => !c.redeemed).length;
+          if (left === 0) return `${codes.length} mã · đã kích hoạt hết`;
+          if (codes.length === 1) return 'Mã kích hoạt';
+          return `${codes.length} mã kích hoạt · còn ${left} chưa dùng`;
+        })()}
       </div>
+
+      {codes.map((code) => (
+        // A spent code is shown as spent. Offering "Kích hoạt" on a code that
+        // has already produced a plant sends the customer to a form that can
+        // only refuse them, and hides the thing they actually want — the plant.
+        <div className={`ocode${code.redeemed ? ' used' : ''}`} key={code.code}>
+          <div className="ocode-main">
+            <span className="ocode-product">
+              {code.productName || `Sản phẩm #${code.productId}`}
+            </span>
+            <code className="ocode-value">{code.code}</code>
+            {code.redeemed && (
+              <span className="ocode-used-note">
+                <SproutyIcon name="check" size={14} />
+                Đã kích hoạt
+                {code.plantNickname && <> thành “{code.plantNickname}”</>}
+                {code.activatedAt && (
+                  <> · {new Date(code.activatedAt).toLocaleDateString('vi-VN')}</>
+                )}
+              </span>
+            )}
+          </div>
+          <div className="ocode-actions">
+            {code.redeemed ? (
+              <Link className="ocode-go" to={code.plantId ? `/plant/${code.plantId}` : '/my-plants'}>
+                Xem cây
+                <SproutyIcon name="arrow-right" size={16} />
+              </Link>
+            ) : (
+              <>
+                <button className="ocode-copy" type="button" onClick={() => copyCode(code.code)}>
+                  Sao chép
+                </button>
+                <Link className="ocode-go" to="/my-plants">
+                  Kích hoạt
+                  <SproutyIcon name="arrow-right" size={16} />
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -88,6 +135,7 @@ function RedeemCodeList({ codes }: { codes: RedeemCode[] }) {
 function OrderCard({ order, onCancelled }: { order: Order; onCancelled: () => void }) {
   const [cancelling, setCancelling] = useState(false);
   const canAct = order.status === 'pending';
+  const codes = order.redeemCodes || [];
 
   async function cancel() {
     if (!confirm('Bạn chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác.')) return;
@@ -102,58 +150,69 @@ function OrderCard({ order, onCancelled }: { order: Order; onCancelled: () => vo
   }
 
   return (
-    <div className="order-card">
-      <div className="order-header">
-        <div>
-          <div className="order-id">Đơn #{shortOrderId(order.id)}</div>
-          <div className="order-sub">Đặt lúc: {formatOrderDate(order.createdAt)}</div>
-          {order.paidAt && (
-            <div className="order-sub">Thanh toán: {new Date(order.paidAt).toLocaleString('vi-VN')}</div>
-          )}
+    <article className={`ocard${canAct ? ' is-pending' : ''}`}>
+      <header className="ocard-top">
+        <div className="ocard-id">
+          <strong>#{shortOrderId(order.id)}</strong>
+          <span>{formatOrderDate(order.createdAt)}</span>
         </div>
-        <span className={`status-badge ${ORDER_STATUS_CLASS[order.status]}`}>
+        <span className={`ocard-status ${ORDER_STATUS_CLASS[order.status]}`}>
           {ORDER_STATUS_VN[order.status]}
         </span>
-      </div>
+      </header>
 
-      <div className="order-items">
+      <div className="ocard-items">
         {order.items.map((item, i) => (
-          <span className="order-item-chip" key={i}>
-            {item.product?.emoji || '📦'} {item.product?.name || 'Sản phẩm'} ×{item.qty}
-          </span>
+          <div className="oitem" key={i}>
+            <span className="oitem-thumb">
+              <SproutyIcon name="pot" size={20} />
+            </span>
+            <span className="oitem-name">
+              {item.product?.name || 'Sản phẩm'}
+              {item.variant === 'smart' && <em className="oitem-variant">Smart</em>}
+            </span>
+            <span className="oitem-qty">×{item.qty}</span>
+            <span className="oitem-price">{formatPrice(item.unitPrice * item.qty)}</span>
+          </div>
         ))}
       </div>
 
-      <div className="order-footer">
-        <div>
-          <div className="order-sub">
-            Giao đến: {order.shippingName} · {order.shippingPhone}
-          </div>
-          <div className="order-sub-dim">{order.shippingAddress}</div>
+      <div className="ocard-sum">
+        <div className="ocard-buyer">
+          <span>{order.shippingName}</span>
+          <em>{order.shippingPhone}</em>
         </div>
-        <div className="order-total">{formatPrice(order.total)}</div>
+        <div className="ocard-total">
+          <span>Tổng cộng</span>
+          <strong>{formatPrice(order.total)}</strong>
+        </div>
       </div>
 
       {order.note && (
-        <div className="track-note">
-          <span>📝 Ghi chú: {order.note}</span>
-        </div>
+        <p className="ocard-note">
+          <SproutyIcon name="pencil" size={15} />
+          {order.note}
+        </p>
       )}
 
-      <RedeemCodeList codes={order.redeemCodes || []} />
-      <OrderTrack status={order.status} />
+      <RedeemCodeList codes={codes} />
+      <OrderTrack order={order} />
 
       {canAct && (
-        <div className="order-actions">
-          <Link className="btn btn-primary btn-sm" to={`/payment?orderId=${encodeURIComponent(order.id)}`}>
-            💳 Thanh toán
+        <div className="ocard-actions">
+          <Link
+            className="ocard-pay"
+            to={`/payment?orderId=${encodeURIComponent(order.id)}`}
+          >
+            Thanh toán ngay
+            <SproutyIcon name="arrow-right" size={17} />
           </Link>
-          <button className="btn btn-ghost btn-sm" onClick={cancel} disabled={cancelling}>
-            {cancelling ? 'Đang hủy...' : '🚫 Hủy đơn'}
+          <button className="ocard-cancel" onClick={cancel} disabled={cancelling}>
+            {cancelling ? 'Đang huỷ…' : 'Huỷ đơn'}
           </button>
         </div>
       )}
-    </div>
+    </article>
   );
 }
 
@@ -299,45 +358,83 @@ export default function Account() {
 
   useEffect(loadOrders, [loadOrders]);
 
-  return (
-    <main>
-      <div className="container section-sm">
-        <h1>Tài khoản của tôi</h1>
+  const orderCount = orders.length;
+  const pendingCount = orders.filter((o) => o.status === 'pending').length;
+  const codeCount = orders.reduce((n, o) => n + (o.redeemCodes?.length || 0), 0);
 
-        <nav className="account-nav">
-          <a
-            href="#orders"
+  return (
+    <>
+      <div className="acc-hero">
+        <div className="container">
+          <div className="breadcrumb acc-hero-crumb">
+            <Link to="/">Trang chủ</Link> › Tài khoản
+          </div>
+          <div className="acc-hero-row">
+            <div className="acc-hero-id">
+              <span className="acc-avatar">{(user?.name || '?').trim().slice(0, 1).toUpperCase()}</span>
+              <div>
+                <h1>{user?.name || 'Tài khoản của tôi'}</h1>
+                <p>{user?.email}</p>
+              </div>
+            </div>
+            <div className="acc-hero-stats">
+              <div className="acc-stat">
+                <strong>{orderCount}</strong>
+                <span>đơn hàng</span>
+              </div>
+              <div className="acc-stat">
+                <strong>{codeCount}</strong>
+                <span>mã kích hoạt</span>
+              </div>
+              <div className="acc-stat">
+                <strong>{pendingCount}</strong>
+                <span>chờ thanh toán</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="container acc-body">
+        {/* A segmented control. These used to be two stacked links that read as
+            list rows, so nothing about them said "pick one of these". */}
+        <nav className="acc-tabs" role="tablist">
+          <button
+            role="tab"
+            aria-selected={tab === 'orders'}
             className={tab === 'orders' ? 'active' : ''}
-            onClick={(e) => {
-              e.preventDefault();
-              setTab('orders');
-            }}
+            onClick={() => setTab('orders')}
           >
-            📦 Đơn hàng
-          </a>
-          <a
-            href="#profile"
+            <SproutyIcon name="cart" size={18} />
+            Đơn hàng
+            {orderCount > 0 && <em>{orderCount}</em>}
+          </button>
+          <button
+            role="tab"
+            aria-selected={tab === 'profile'}
             className={tab === 'profile' ? 'active' : ''}
-            onClick={(e) => {
-              e.preventDefault();
-              setTab('profile');
-            }}
+            onClick={() => setTab('profile')}
           >
-            👤 Thông tin
-          </a>
+            <SproutyIcon name="heart" size={18} />
+            Thông tin
+          </button>
         </nav>
 
         {tab === 'orders' && (
-          <div>
-            {loading && <p style={{ color: 'var(--ink-4)' }}>Đang tải đơn hàng…</p>}
-            {error && <div style={{ color: 'var(--rose)', padding: '20px 0' }}>{error}</div>}
+          <div className="acc-orders">
+            {loading && <p className="acc-muted">Đang tải đơn hàng…</p>}
+            {error && <div className="acc-error">{error}</div>}
 
             {!loading && !error && orders.length === 0 && (
-              <div className="account-empty">
-                <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>📭</div>
-                <p>Bạn chưa có đơn hàng nào.</p>
-                <Link to="/shop" className="btn btn-primary" style={{ marginTop: 12, display: 'inline-block' }}>
-                  Mua sắm ngay
+              <div className="acc-empty">
+                <span className="acc-empty-icon">
+                  <SproutyIcon name="cart" size={38} />
+                </span>
+                <h3>Bạn chưa có đơn hàng nào</h3>
+                <p>Chọn một bộ kit, thanh toán xong là có mã kích hoạt để gieo hạt ngay.</p>
+                <Link to="/shop" className="btn btn-primary btn-lg">
+                  Khám phá sản phẩm
+                  <SproutyIcon name="arrow-right" size={18} />
                 </Link>
               </div>
             )}
@@ -349,7 +446,7 @@ export default function Account() {
         )}
 
         {tab === 'profile' && user && (
-          <>
+          <div className="acc-profile">
             <div className="profile-grid">
               <div className="profile-cell">
                 <div className="profile-label">Họ tên</div>
@@ -368,9 +465,9 @@ export default function Account() {
             </div>
 
             <ChangePassword />
-          </>
+          </div>
         )}
       </div>
-    </main>
+    </>
   );
 }

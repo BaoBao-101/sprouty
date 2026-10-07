@@ -1,19 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
+import { SproutyIcon } from '@/components/icons/SproutyIcon';
+import { refreshRewards } from '@/components/PromoBanner';
 import { ORDER_STATUS_VN, shortOrderId, type Order } from '@/types/order';
 import { formatPrice } from '@/types/product';
 import './Payment.css';
 
-const POLL_MS = 4000;
+// The bank webhook can land at any moment, so the first stretch is polled
+// tightly — the customer is sitting there watching the screen with their
+// banking app still open, and four seconds of nothing reads as "it didn't
+// work". It backs off once the likely window has passed, because by then the
+// page is a background tab and the server should not be asked every second.
+const POLL_FAST_MS = 1500;
+const POLL_SLOW_MS = 5000;
+const FAST_WINDOW_MS = 90 * 1000;
 const MAX_WAIT_MS = 10 * 60 * 1000;
-
-const FEATURE_LABEL: Record<string, string> = {
-  instruction_videos: 'Video hướng dẫn',
-  image_uploads: 'Upload ảnh',
-  ai_assistant: 'Trợ lý AI',
-};
 
 interface Payment {
   qrUrl: string;
@@ -29,6 +32,10 @@ interface PurchaseCode {
   productId?: number;
   productName?: string;
   features?: string[];
+  /** True once the code has produced a plant; it cannot be used again. */
+  redeemed?: boolean;
+  plantId?: string | null;
+  plantNickname?: string | null;
 }
 
 type Phase = 'loading' | 'ready' | 'notfound' | 'timeout';
@@ -56,44 +63,44 @@ function Row({ label, value, copyable }: { label: string; value?: string; copyab
 }
 
 /**
- * Delivery details, correctable while the order is unpaid.
+ * Who to contact about this order, correctable while it is unpaid.
  *
- * They were captured once at checkout and then frozen. The payment page is the
- * one screen where a customer actually reads them back, and until now spotting
- * a typo there meant phoning support — the parcel was already addressed wrong.
+ * There is no address here any more: nothing is delivered, so the only things
+ * that matter are the name and the number staff ring if a payment cannot be
+ * matched. The name and phone were captured once at checkout and then frozen,
+ * and this is the one screen where a customer reads them back — so a typo
+ * spotted here has to be fixable without phoning support.
  */
-function ShippingBlock({ order, onSaved }: { order: Order; onSaved: () => void }) {
+function ContactBlock({ order, onSaved }: { order: Order; onSaved: () => void }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(order.shippingName || '');
   const [phone, setPhone] = useState(order.shippingPhone || '');
-  const [address, setAddress] = useState(order.shippingAddress || '');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
   function open() {
     setName(order.shippingName || '');
     setPhone(order.shippingPhone || '');
-    setAddress(order.shippingAddress || '');
     setError('');
     setEditing(true);
   }
 
   async function save() {
     setError('');
-    if (name.trim().length < 2) return setError('Nhập tên người nhận.');
+    if (name.trim().length < 2) return setError('Nhập tên của bạn.');
     if (!/^[0-9]{9,11}$/.test(phone.trim())) {
       return setError('Số điện thoại không hợp lệ (9–11 chữ số).');
     }
-    if (address.trim().length < 10) return setError('Địa chỉ quá ngắn, vui lòng nhập đầy đủ.');
 
     setBusy(true);
     try {
+      // No address is sent: the server fills in its own "digital product"
+      // placeholder for orders that need no delivery.
       const { message } = await API.orders.updateShipping(order.id, {
         shippingName: name.trim(),
         shippingPhone: phone.trim(),
-        shippingAddress: address.trim(),
       });
-      showToast(message || 'Đã cập nhật địa chỉ', 'success');
+      showToast(message || 'Đã cập nhật thông tin liên hệ', 'success');
       setEditing(false);
       onSaved();
     } catch (err: any) {
@@ -107,27 +114,24 @@ function ShippingBlock({ order, onSaved }: { order: Order; onSaved: () => void }
     return (
       <div className="ord-ship">
         <div className="ord-ship-top">
-          <span className="ord-ship-label">Thông tin giao hàng</span>
+          <span className="ord-ship-label">Thông tin liên hệ</span>
           <button className="ord-ship-edit" type="button" onClick={open}>
             ✎ Sửa
           </button>
         </div>
 
-        {/* One labelled line each. Name and phone used to run together on a
-            single line with the address unlabelled underneath, so nothing said
-            which value was which. */}
         <dl className="ord-ship-list">
           <div>
-            <dt>👤 Người nhận</dt>
+            <dt>Người mua</dt>
             <dd>{order.shippingName || '—'}</dd>
           </div>
           <div>
-            <dt>📞 Điện thoại</dt>
+            <dt>Điện thoại</dt>
             <dd>{order.shippingPhone || '—'}</dd>
           </div>
           <div>
-            <dt>📍 Địa chỉ</dt>
-            <dd>{order.shippingAddress || '—'}</dd>
+            <dt>Nhận hàng</dt>
+            <dd>Mã kích hoạt hiện ngay sau khi thanh toán — không cần giao hàng.</dd>
           </div>
         </dl>
       </div>
@@ -136,11 +140,11 @@ function ShippingBlock({ order, onSaved }: { order: Order; onSaved: () => void }
 
   return (
     <div className="ord-ship editing">
-      <span className="ord-ship-label">Sửa thông tin giao hàng</span>
+      <span className="ord-ship-label">Sửa thông tin liên hệ</span>
 
       <div className="ord-ship-grid">
         <label className="form-group" style={{ marginBottom: 0 }}>
-          <span className="form-label">Người nhận</span>
+          <span className="form-label">Người mua</span>
           <input
             className="form-input"
             value={name}
@@ -159,18 +163,6 @@ function ShippingBlock({ order, onSaved }: { order: Order; onSaved: () => void }
         </label>
       </div>
 
-      <label className="form-group" style={{ marginTop: 12, marginBottom: 0 }}>
-        <span className="form-label">Địa chỉ giao hàng</span>
-        <textarea
-          className="form-input"
-          rows={2}
-          style={{ resize: 'vertical' }}
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
-        />
-      </label>
-
       {error && <div className="form-error mb-12" style={{ marginTop: 10 }}>{error}</div>}
 
       <div className="ord-ship-actions">
@@ -187,13 +179,21 @@ function ShippingBlock({ order, onSaved }: { order: Order; onSaved: () => void }
 
 export default function PaymentPage() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const orderId = (searchParams.get('orderId') || '').trim();
 
   const [order, setOrder] = useState<Order & { redeemCodes?: PurchaseCode[] } | null>(null);
   const [payment, setPayment] = useState<Payment | null>(null);
   const [phase, setPhase] = useState<Phase>('loading');
   const [hint, setHint] = useState('');
+  /** Server-decided: this deployment will credit a payment nobody made. */
+  const [canSimulate, setCanSimulate] = useState(false);
+  const [simulating, setSimulating] = useState(false);
+  /** Which code is mid-activation, so only that button shows a spinner. */
+  const [activating, setActivating] = useState('');
   const startedAt = useRef(Date.now());
+  /** Fires the celebration once, not on every poll after payment lands. */
+  const celebrated = useRef(false);
 
   const refresh = useCallback(async () => {
     if (!orderId) {
@@ -201,15 +201,26 @@ export default function PaymentPage() {
       return 'stop' as const;
     }
     try {
-      const { order: fetched, payment: fetchedPayment } = await API.orders.get(orderId);
+      const { order: fetched, payment: fetchedPayment, canSimulatePayment } =
+        await API.orders.get(orderId);
       if (!fetched) {
         setPhase('notfound');
         return 'stop' as const;
       }
       setOrder(fetched);
       setPayment(fetchedPayment || null);
+      setCanSimulate(Boolean(canSimulatePayment));
       setPhase('ready');
       setHint('');
+
+      // The moment the money lands: say so, and make sure the "mua 3 tặng 1"
+      // progress shown elsewhere is not a purchase behind.
+      if (fetched.paidAt && !celebrated.current) {
+        celebrated.current = true;
+        showToast('Thanh toán thành công! Mã kích hoạt đã sẵn sàng.', 'success');
+        refreshRewards();
+      }
+
       return fetched.status === 'pending' ? ('continue' as const) : ('stop' as const);
     } catch (err: any) {
       if (err?.status === 401 || err?.status === 403 || err?.status === 404) {
@@ -222,33 +233,78 @@ export default function PaymentPage() {
     }
   }, [orderId]);
 
+  // Self-rescheduling rather than a fixed interval, so the gap can widen once
+  // the customer has plainly stopped watching, and so a slow response can never
+  // stack a second request on top of the first.
   useEffect(() => {
     let stopped = false;
-    let timer: ReturnType<typeof setInterval> | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
-    const tick = async () => {
-      const outcome = await refresh();
+    const loop = async () => {
       if (stopped) return;
-      if (outcome === 'stop' && timer) clearInterval(timer);
-    };
+      const outcome = await refresh();
+      if (stopped || outcome === 'stop') return;
 
-    startedAt.current = Date.now();
-    void tick();
-
-    timer = setInterval(() => {
-      if (Date.now() - startedAt.current > MAX_WAIT_MS) {
-        clearInterval(timer);
+      const waited = Date.now() - startedAt.current;
+      if (waited > MAX_WAIT_MS) {
         setPhase((p) => (p === 'ready' ? 'timeout' : p));
         return;
       }
-      void tick();
-    }, POLL_MS);
+      timer = setTimeout(loop, waited < FAST_WINDOW_MS ? POLL_FAST_MS : POLL_SLOW_MS);
+    };
+
+    startedAt.current = Date.now();
+    void loop();
+
+    // Coming back to the tab is the other moment the answer may have changed.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void refresh();
+    };
+    document.addEventListener('visibilitychange', onVisible);
 
     return () => {
       stopped = true;
-      if (timer) clearInterval(timer);
+      if (timer) clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [refresh]);
+
+  /**
+   * Credits the order with no bank transaction behind it. Only offered when the
+   * server said it would accept one; the button is never the thing that decides.
+   */
+  async function simulatePayment() {
+    setSimulating(true);
+    try {
+      await API.orders.simulatePayment(orderId);
+      // Re-read rather than trusting the response, so the screen is built from
+      // the same source every other path uses.
+      await refresh();
+    } catch (err: any) {
+      showToast(err?.message || 'Không ghi nhận được thanh toán thử.', 'error');
+    } finally {
+      setSimulating(false);
+    }
+  }
+
+  /**
+   * Sows the plant straight from this screen.
+   *
+   * The code is already on the page and the next thing the customer wants is
+   * their plant, so making them copy it, find "Cây của tôi" and paste it back
+   * would be three steps of busywork between paying and the thing they bought.
+   */
+  async function activateNow(code: string) {
+    setActivating(code);
+    try {
+      const data = await API.plants.activate(code);
+      showToast(data.created ? 'Hạt đã được gieo!' : 'Cây này đã được kích hoạt trước đó.', 'success');
+      navigate(`/plant/${data.plant.id}`);
+    } catch (err: any) {
+      showToast(err?.message || 'Không kích hoạt được mã này.', 'error');
+      setActivating('');
+    }
+  }
 
   const isPending = order?.status === 'pending';
   const codes = order?.redeemCodes || [];
@@ -352,57 +408,84 @@ export default function PaymentPage() {
                     <strong>{formatPrice(order.total)}</strong>
                   </div>
 
-                  <ShippingBlock order={order} onSaved={refresh} />
+                  <ContactBlock order={order} onSaved={refresh} />
                 </>
               ) : (
-                <div style={{ textAlign: 'center' }}>
-                  <div className="pay-result-emoji">
-                    {order.status === 'cancelled' ? '⚠️' : '🎉'}
+                <div className="pay-result">
+                  <div className={`pay-result-badge${order.status === 'cancelled' ? ' bad' : ''}`}>
+                    <SproutyIcon name={order.status === 'cancelled' ? 'warning' : 'check'} size={44} />
                   </div>
-                  <h2 style={{ color: order.status === 'cancelled' ? 'var(--rose)' : 'var(--green)' }}>
-                    {order.status === 'cancelled' ? 'Đơn hàng đã bị hủy' : 'Đã nhận thanh toán'}
+                  <h2 className={order.status === 'cancelled' ? 'is-bad' : 'is-good'}>
+                    {order.status === 'cancelled' ? 'Đơn hàng đã bị hủy' : 'Thanh toán thành công!'}
                   </h2>
-                  <p style={{ color: 'var(--ink-3)' }}>
+                  <p className="pay-result-sub">
                     {order.status === 'cancelled'
                       ? `Đơn hàng ${shortOrderId(order.id)} đã bị hủy. Vui lòng liên hệ Sprouty nếu bạn cần hỗ trợ.`
-                      : `Đơn hàng ${shortOrderId(order.id)} đã được ghi nhận và đang được xử lý.`}
+                      : codes.length > 0
+                        ? 'Mã kích hoạt của bạn đã sẵn sàng ngay bên dưới — bấm một nút là hạt được gieo.'
+                        : `Đơn hàng ${shortOrderId(order.id)} đã được ghi nhận.`}
                   </p>
-                  {order.status !== 'cancelled' && (
-                    <p style={{ color: 'var(--ink-4)', fontSize: '.86rem' }}>
-                      Chúng tôi sẽ giao hàng trong 2–3 ngày làm việc.
-                    </p>
-                  )}
 
+                  {/* The code is the product now, so it is the biggest thing on
+                      the screen rather than a footnote under the receipt. */}
                   {codes.length > 0 && (
                     <div className="purchase-codes">
-                      <div className="purchase-codes-title">Mã kích hoạt sau mua hàng</div>
-                      <p className="purchase-codes-note">
-                        Dùng mã này để kích hoạt quyền xem video và upload ảnh cho sản phẩm đã mua.
-                      </p>
-                      {codes.map((code, i) => (
-                        <div className="purchase-code-row" key={code.code} data-first={i === 0}>
-                          <div>
-                            <div className="purchase-code-product">
-                              {code.productName || `Sản phẩm #${code.productId}`}
-                            </div>
-                            <div className="purchase-code-value">{code.code}</div>
-                            <div className="purchase-code-features">
-                              {(code.features || []).map((f) => FEATURE_LABEL[f] ?? f).join(', ')}
-                            </div>
+                      {codes.map((code) => (
+                        <div className="code-card" key={code.code}>
+                          <span className="code-card-kicker">Mã kích hoạt</span>
+                          <div className="code-card-product">
+                            {code.productName || `Sản phẩm #${code.productId}`}
                           </div>
-                          <button className="copy-btn" type="button" onClick={() => copy(code.code)}>
-                            📋 Copy
-                          </button>
+
+                          <div className="code-card-value">
+                            <code>{code.code}</code>
+                            <button
+                              className="code-card-copy"
+                              type="button"
+                              aria-label="Sao chép mã"
+                              onClick={() => copy(code.code)}
+                            >
+                              Sao chép
+                            </button>
+                          </div>
+
+                          {/* Coming back to this page after activating must not
+                              offer the same code again — it can only fail. */}
+                          {code.redeemed ? (
+                            <Link
+                              className="code-card-cta is-done"
+                              to={code.plantId ? `/plant/${code.plantId}` : '/my-plants'}
+                            >
+                              Xem cây
+                              {code.plantNickname ? ` “${code.plantNickname}”` : ''}
+                              <SproutyIcon name="arrow-right" size={19} />
+                            </Link>
+                          ) : (
+                            <button
+                              className="code-card-cta"
+                              disabled={Boolean(activating)}
+                              onClick={() => activateNow(code.code)}
+                            >
+                              {activating === code.code ? 'Đang gieo hạt…' : 'Kích hoạt & gieo hạt ngay'}
+                              {activating !== code.code && <SproutyIcon name="arrow-right" size={19} />}
+                            </button>
+                          )}
+
+                          <p className="code-card-note">
+                            {code.redeemed
+                              ? 'Mã này đã được dùng để gieo cây.'
+                              : <>Mã cũng luôn xem lại được trong <Link to="/account">Đơn hàng của tôi</Link>.</>}
+                          </p>
                         </div>
                       ))}
                     </div>
                   )}
 
                   <div className="pay-actions">
-                    <Link to="/account" className="btn btn-primary btn-lg">
-                      Xem đơn hàng
+                    <Link to="/my-plants" className="btn btn-outline btn-lg">
+                      Tới vườn của tôi
                     </Link>
-                    <Link to="/shop" className="btn btn-outline btn-lg">
+                    <Link to="/shop" className="btn btn-ghost btn-lg">
                       Tiếp tục mua sắm
                     </Link>
                   </div>
@@ -462,6 +545,28 @@ export default function PaymentPage() {
                       {shortOrderId(order.id)}.
                     </p>
                   </>
+                )}
+
+                {/* Shown only when the server said it would accept a payment
+                    with no money behind it. It is styled as the test tool it is
+                    rather than as a second way to buy, so nobody mistakes it for
+                    part of the real checkout. */}
+                {canSimulate && (
+                  <div className="pay-devbox">
+                    <span className="pay-devbox-tag">Chế độ thử nghiệm</span>
+                    <p>
+                      Máy chủ này đang bật <code>ALLOW_FAKE_PAYMENTS</code>. Bấm nút dưới để ghi
+                      nhận đơn là đã thanh toán mà không cần chuyển khoản thật, rồi nhận mã kích
+                      hoạt ngay.
+                    </p>
+                    <button
+                      className="pay-devbox-btn"
+                      disabled={simulating}
+                      onClick={simulatePayment}
+                    >
+                      {simulating ? 'Đang ghi nhận…' : 'Thanh toán thử & lấy mã ngay'}
+                    </button>
+                  </div>
                 )}
               </div>
             )}

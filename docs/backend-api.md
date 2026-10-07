@@ -3,6 +3,7 @@
 Base URL: `/api/v1` (proxied by nginx from `/api/`)
 
 See `docs/assets-entitlements-blog.md` for the asset upload, instruction video, redeem code, entitlement, and blog endpoints.
+See `docs/virtual-plants.md` for the simulated plant (`/me/plants/*`), the AI coach, and the "mua 3 tặng 1 workshop" reward (`/me/rewards`).
 
 ## Authentication
 

@@ -1,7 +1,8 @@
-import fetch from 'node-fetch';
 import { z } from 'zod';
 import { requireAuth, requireCsrf } from '../middleware/rbac.js';
 import { hasEntitlement } from '../services/access.js';
+import { callAi, SPROUTY_SYSTEM, missingProviderKey, supportsImages } from '../services/ai.js';
+import { advance, plantDetailDto, plantPromptContext } from '../services/plants.js';
 
 const chatSchema = z.object({
   messages: z.array(z.object({
@@ -10,174 +11,20 @@ const chatSchema = z.object({
   })).min(1).max(30),
   // No systemPrompt field on purpose (finding F-07). The client used to supply
   // the entire system prompt, so anyone could POST here with instructions of
-  // their own — overriding the guardrails below and turning our API key into a
-  // free general-purpose model. The server now builds the prompt itself, from
-  // the signed-in user and a real product lookup rather than the caller's claim.
+  // their own — overriding the guardrails and turning our API key into a free
+  // general-purpose model. The server builds the prompt itself, from the
+  // signed-in user and real database lookups rather than the caller's claim.
+  //
   // Data URL (data:image/...;base64,...) of a single image attached to the
   // LAST user message — used by the pre-submit "AI gợi ý caption" flow.
   // Client resizes the image before sending, so 2MB comfortably covers it.
   imageDataUrl: z.string().max(2_800_000).regex(/^data:image\/(png|jpe?g|webp);base64,/).optional(),
+  // Which of the caller's own plants the conversation is about, so the general
+  // assistant can answer "cây của mình sao rồi?" with real numbers. An id
+  // belonging to someone else simply finds nothing — ownership is part of the
+  // lookup, not a separate check that could be forgotten.
+  plantId: z.string().max(64).optional(),
 });
-
-const PROVIDER = process.env.AI_PROVIDER || 'openai';
-const OPENAI_KEY = process.env.OPENAI_API_KEY || process.env.AI_API_KEY || '';
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
-const GEMINI_KEY = process.env.GEMINI_API_KEY || '';
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-const AI_ENDPOINT = process.env.AI_ENDPOINT || 'https://api.openai.com/v1/chat/completions';
-
-// Each provider has its own model naming scheme — an unset AI_MODEL must
-// default per-provider, not to a single OpenAI model name that would be
-// sent (and rejected) by whichever provider is actually selected.
-// Gemini uses the 'gemini-flash-latest' rolling alias (rather than a dated
-// version like 'gemini-2.5-flash') so Google retiring a specific model
-// version for new API keys doesn't silently break chat again.
-const DEFAULT_MODEL_BY_PROVIDER = {
-  openai: 'gpt-4.1-mini',
-  anthropic: 'claude-haiku-4-5-20251001',
-  gemini: 'gemini-flash-latest',
-  ollama: 'llama3.2',
-};
-const AI_MODEL = process.env.AI_MODEL || DEFAULT_MODEL_BY_PROVIDER[PROVIDER] || 'gpt-4.1-mini';
-
-const DEFAULT_SYSTEM = `Bạn là trợ lý AI của Sprouty — thương hiệu bộ kit trồng cây, Cây Kỷ Niệm số và workshop gia đình cho trẻ em Việt Nam.
-Phong cách: thân thiện, vui vẻ, phù hợp với phụ huynh và trẻ em.
-Nhiệm vụ: Giúp khách hàng tìm hiểu sản phẩm, giải đáp câu hỏi về Sprouty Kit, chăm cây, Plant Buddy, workshop, IoT/STEM và chính sách.
-Giới hạn: Không thu thập thông tin thanh toán. Không tiết lộ thông tin nội bộ. Không thực hiện các thao tác quản trị.
-Luôn trả lời bằng tiếng Việt, ngắn gọn và hữu ích.`;
-
-/**
- * A missing provider key is our problem, not the caller's (finding F-10).
- * Naming the variable told an anonymous visitor which AI vendor we use and that
- * the deployment is half-configured; the operator needs that detail, so it goes
- * to the log instead of the response.
- */
-function aiUnavailable(reply, missingVar) {
-  reply.log.error({ missingVar }, 'AI provider is not configured');
-  return reply.code(503).send({
-    message: 'Trợ lý AI tạm thời không khả dụng. Vui lòng thử lại sau.',
-  });
-}
-
-// Splits a "data:image/png;base64,AAAA..." URL into its MIME type and raw
-// base64 payload, as needed by Anthropic/Gemini's separate-field image blocks.
-function splitDataUrl(dataUrl) {
-  const match = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(dataUrl);
-  if (!match) return null;
-  return { mimeType: match[1], base64: match[2] };
-}
-
-async function callOpenAI(messages, systemPrompt, imageDataUrl) {
-  const built = attachImageToLastUserMessage(messages, imageDataUrl, (text, url) => ({
-    role: 'user',
-    content: [{ type: 'text', text }, { type: 'image_url', image_url: { url } }],
-  }));
-  const response = await fetch(AI_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENAI_KEY}`,
-    },
-    body: JSON.stringify({
-      model: AI_MODEL,
-      max_tokens: 1024,
-      messages: [
-        { role: 'system', content: systemPrompt || DEFAULT_SYSTEM },
-        ...built,
-      ],
-    }),
-  });
-
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message || 'AI provider error');
-  return data.choices?.[0]?.message?.content?.trim() || 'Xin lỗi, không nhận được phản hồi.';
-}
-
-async function callAnthropic(messages, systemPrompt, imageDataUrl) {
-  const split = imageDataUrl ? splitDataUrl(imageDataUrl) : null;
-  const built = attachImageToLastUserMessage(messages, split ? imageDataUrl : null, (text) => ({
-    role: 'user',
-    content: [
-      { type: 'text', text },
-      { type: 'image', source: { type: 'base64', media_type: split.mimeType, data: split.base64 } },
-    ],
-  }));
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: AI_MODEL,
-      max_tokens: 1024,
-      system: systemPrompt || DEFAULT_SYSTEM,
-      messages: built,
-    }),
-  });
-
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message || 'Anthropic error');
-  return data.content?.[0]?.text?.trim() || 'Xin lỗi, không nhận được phản hồi.';
-}
-
-async function callGemini(messages, systemPrompt, imageDataUrl) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${AI_MODEL}:generateContent?key=${GEMINI_KEY}`;
-  const split = imageDataUrl ? splitDataUrl(imageDataUrl) : null;
-  // Gemini has no 'assistant' role — prior AI turns are 'model'.
-  const contents = messages.map((m, i) => {
-    const role = m.role === 'assistant' ? 'model' : 'user';
-    if (split && i === messages.length - 1 && m.role === 'user') {
-      return { role, parts: [{ text: m.content }, { inlineData: { mimeType: split.mimeType, data: split.base64 } }] };
-    }
-    return { role, parts: [{ text: m.content }] };
-  });
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents,
-      systemInstruction: { parts: [{ text: systemPrompt || DEFAULT_SYSTEM }] },
-      // Newer Gemini models spend part of this budget on internal "thinking"
-      // before the visible answer, so 1024 was truncating replies mid-sentence.
-      generationConfig: { maxOutputTokens: 4096 },
-    }),
-  });
-
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message || 'Gemini error');
-  return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || 'Xin lỗi, không nhận được phản hồi.';
-}
-
-// Shared helper for OpenAI/Anthropic: replaces the last user message with
-// one built by `buildFn(text, imageDataUrl)` when an image is attached.
-function attachImageToLastUserMessage(messages, imageDataUrl, buildFn) {
-  if (!imageDataUrl) return messages;
-  const lastIdx = messages.length - 1;
-  if (messages[lastIdx]?.role !== 'user') return messages;
-  return messages.map((m, i) => (i === lastIdx ? buildFn(m.content, imageDataUrl) : m));
-}
-
-async function callOllama(messages, systemPrompt) {
-  const response = await fetch(`${OLLAMA_URL}/api/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: AI_MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt || DEFAULT_SYSTEM },
-        ...messages,
-      ],
-      stream: false,
-    }),
-  });
-
-  const data = await response.json();
-  if (!response.ok) throw new Error('Ollama error');
-  return data.message?.content?.trim() || 'Xin lỗi, không nhận được phản hồi.';
-}
 
 export default async function chatRoute(fastify) {
   fastify.post('/chat', {
@@ -196,9 +43,25 @@ export default async function chatRoute(fastify) {
       return reply.code(400).send({ message: parsed.error.errors[0]?.message || 'Dữ liệu không hợp lệ.' });
     }
 
-    const { messages, imageDataUrl } = parsed.data;
+    const { messages, imageDataUrl, plantId } = parsed.data;
 
-    // Retrieve relevant products for grounding
+    if (imageDataUrl && !supportsImages()) {
+      return reply.code(422).send({ message: 'Nhà cung cấp AI hiện tại không hỗ trợ nhận diện ảnh.' });
+    }
+
+    const missing = missingProviderKey();
+    if (missing) {
+      // A missing provider key is our problem, not the caller's (finding F-10).
+      // Naming the variable told an anonymous visitor which AI vendor we use
+      // and that the deployment is half-configured; the operator needs that
+      // detail, so it goes to the log instead of the response.
+      req.log.error({ missingVar: missing }, 'AI provider is not configured');
+      return reply.code(503).send({
+        message: 'Trợ lý AI tạm thời không khả dụng. Vui lòng thử lại sau.',
+      });
+    }
+
+    // Retrieve relevant products for grounding.
     const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.content || '';
     let contextText = '';
     if (lastUserMsg.length > 3) {
@@ -220,30 +83,31 @@ export default async function chatRoute(fastify) {
     }
 
     // Identify the user from the session, not from anything the client sent.
-    const whoLine = req.user
-      ? `\n\nNgười dùng hiện tại: ${req.user.name} (vai trò: ${req.user.role}).`
-      : '\n\nNgười dùng chưa đăng nhập.';
+    const whoLine = `\n\nNgười dùng hiện tại: ${req.user.name} (vai trò: ${req.user.role}).`;
 
-    const enrichedSystem = DEFAULT_SYSTEM + whoLine + contextText;
+    // What the customer is growing right now. Scoped to this user, so a
+    // guessed id reveals nothing.
+    let plantText = '';
+    if (plantId) {
+      const row = await fastify.prisma.virtualPlant.findFirst({
+        where: { id: plantId, userId: req.user.id },
+        include: {
+          devices: true,
+          product: { select: { id: true, name: true, emoji: true, bgColor: true, images: true, speciesKey: true } },
+        },
+      });
+      if (row) {
+        const now = new Date();
+        const { plant } = await advance(fastify.prisma, row, now);
+        const detail = await plantDetailDto(fastify.prisma, plant, { now });
+        plantText = `\n\nCÂY MÔ PHỎNG CỦA NGƯỜI DÙNG:\n${plantPromptContext(detail)}`;
+      }
+    }
+
+    const enrichedSystem = SPROUTY_SYSTEM + whoLine + contextText + plantText;
 
     try {
-      if (imageDataUrl && PROVIDER === 'ollama') {
-        return reply.code(422).send({ message: 'Nhà cung cấp AI hiện tại không hỗ trợ nhận diện ảnh.' });
-      }
-      let reply_text;
-      if (PROVIDER === 'anthropic') {
-        if (!ANTHROPIC_KEY) return aiUnavailable(reply, 'ANTHROPIC_API_KEY');
-        reply_text = await callAnthropic(messages, enrichedSystem, imageDataUrl);
-      } else if (PROVIDER === 'gemini') {
-        if (!GEMINI_KEY) return aiUnavailable(reply, 'GEMINI_API_KEY');
-        reply_text = await callGemini(messages, enrichedSystem, imageDataUrl);
-      } else if (PROVIDER === 'ollama') {
-        reply_text = await callOllama(messages, enrichedSystem);
-      } else {
-        if (!OPENAI_KEY) return aiUnavailable(reply, 'OPENAI_API_KEY');
-        reply_text = await callOpenAI(messages, enrichedSystem, imageDataUrl);
-      }
-
+      const reply_text = await callAi({ messages, system: enrichedSystem, imageDataUrl });
       return { reply: reply_text };
     } catch (err) {
       fastify.log.error({ err }, 'Chat error');

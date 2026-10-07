@@ -1,4 +1,5 @@
 import { timingSafeEqual } from 'crypto';
+import { syncWorkshopRewards } from '../../services/rewards.js';
 
 // Memo we instruct customers to use looks like: SPROUTYPXYZ12345
 // where the suffix is the last 8 chars of the cuid Order.id (uppercased).
@@ -198,6 +199,15 @@ export default async function sepayWebhookRoutes(fastify) {
           metadata: { txId, amount, gateway: body.gateway, referenceCode: body.referenceCode },
         },
       }).catch(() => {});
+
+      // "Mua 3 tặng 1 workshop" is earned the moment the money lands. Failure
+      // is logged and swallowed, and the sync runs again whenever the customer
+      // opens their rewards page: a reward we could not mint must not turn a
+      // successfully credited payment into an error SePay keeps retrying.
+      await syncWorkshopRewards(fastify.prisma, candidate.userId).catch((err) => {
+        fastify.log.error({ err, orderId: updated.id }, 'Reward sync after payment failed');
+      });
+
       return { ok: true, orderId: updated.id };
     } catch (err) {
       // P2002 = unique constraint — concurrent webhook delivery already booked it.

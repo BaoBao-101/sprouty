@@ -45,15 +45,7 @@ function UserMenu({ onClose }: { onClose: () => void }) {
           <img src="/assets/images/sprouty-icons/MyTree.png" alt="Cây" className="menu-item-icon" /> Cây của tôi
         </>
       ),
-      onClick: () => go('/my-products'),
-    },
-    {
-      label: (
-        <>
-          <img src="/assets/images/sprouty-icons/RedeemCode.png" alt="Mã" className="menu-item-icon" /> Nhập mã kích hoạt
-        </>
-      ),
-      onClick: () => go('/redeem'),
+      onClick: () => go('/my-plants'),
     },
     { label: '📦 Đơn hàng của tôi', onClick: () => go('/account') },
     { label: '🎪 Workshop của tôi', onClick: () => go('/my-workshops') },

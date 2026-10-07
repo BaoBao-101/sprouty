@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { AppError } from '../../utils/errors.js';
 import { requireEmployee, requireCsrf, requireAdmin } from '../../middleware/rbac.js';
+import { isSpeciesKey, speciesCatalog } from '../../services/plant-sim.js';
 
 // Reject any string containing HTML angle brackets — defense-in-depth against stored XSS.
 const noHtml = (label) => z.string().refine(
@@ -37,6 +38,13 @@ const productSchema = z.object({
   category: z.enum(['kit', 'book'], {
     errorMap: () => ({ message: 'Danh mục phải là "kit" hoặc "book".' }),
   }),
+  // Which plant a kit grows in the simulation. Validated against the catalogue
+  // rather than accepted as free text: an unknown key would not fail here, it
+  // would fail weeks later as a customer's plant quietly growing the generic
+  // species with the wrong harvest and the wrong stage names.
+  speciesKey: z.string()
+    .refine(isSpeciesKey, { message: 'Giống cây không hợp lệ.' })
+    .nullable().optional(),
   ageRange: noHtml('Độ tuổi').and(
     z.string()
       .min(2, 'Độ tuổi phải có ít nhất 2 ký tự.')
@@ -139,6 +147,24 @@ export default async function adminProductRoutes(fastify) {
     return { products: rows };
   });
 
+  /**
+   * A species only means something for a kit — it decides what the simulated
+   * plant grows into. Carrying one on a book would be a field that reads as
+   * configured but is never consulted, so it is cleared rather than stored.
+   */
+  function withSpeciesForCategory(data, effectiveCategory) {
+    const category = effectiveCategory ?? data.category;
+    if (category && category !== 'kit') return { ...data, speciesKey: null };
+    return data;
+  }
+
+  // GET /api/v1/admin/products/species — what the product editor offers in its
+  // species picker, including how each one's journey reads, so an admin can see
+  // that a carrot says "Phình củ" where a tomato says "Ra nụ" before committing.
+  fastify.get('/products/species', { preHandler: [requireEmployee] }, async () => ({
+    species: speciesCatalog(),
+  }));
+
   // POST /api/v1/admin/products
   fastify.post('/products', { preHandler: writeAuth }, async (req, reply) => {
     const parsed = productSchema.safeParse(req.body);
@@ -148,7 +174,9 @@ export default async function adminProductRoutes(fastify) {
 
     assertPriceOrder(parsed.data);
 
-    const product = await fastify.prisma.product.create({ data: parsed.data });
+    const product = await fastify.prisma.product.create({
+      data: withSpeciesForCategory(parsed.data),
+    });
     reply.code(201);
     return { product };
   });
@@ -177,7 +205,12 @@ export default async function adminProductRoutes(fastify) {
       assertPriceOrder({ ...existing, ...parsed.data });
     }
 
-    const product = await fastify.prisma.product.update({ where: { id }, data: parsed.data });
+    const product = await fastify.prisma.product.update({
+      where: { id },
+      // The category may not be in this payload, so the existing one decides
+      // whether a species still applies.
+      data: withSpeciesForCategory(parsed.data, parsed.data.category ?? existing.category),
+    });
     return { product };
   });
 

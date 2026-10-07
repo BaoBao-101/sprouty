@@ -5,6 +5,8 @@ import { showToast } from '@/services/toast';
 import { formatPrice } from '@/types/product';
 import type { PublicWorkshop, WorkshopPayment } from '@/types/workshop';
 import { formatWorkshopWhen } from '@/types/workshop';
+import { refreshRewards, useRewards } from '@/components/PromoBanner';
+import { SproutyIcon } from '@/components/icons/SproutyIcon';
 
 /**
  * Booking one specific session.
@@ -41,11 +43,20 @@ export function WorkshopRegisterModal({
 
   const [payMethod, setPayMethod] = useState<'online' | 'onsite'>('online');
 
+  /** "Mua 3 tặng 1": an unspent free seat this customer has earned. */
+  const rewards = useRewards();
+  const freeSeats = rewards?.availableCount ?? 0;
+  // Ticked by default when they have one — they earned it, and a parent who
+  // paid again without noticing would have a fair complaint.
+  const [useReward, setUseReward] = useState(true);
+
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   /** Transfer instructions, when the customer chose to pay now. */
   const [payment, setPayment] = useState<WorkshopPayment | null>(null);
+  /** Whether the server actually spent a reward on this booking. */
+  const [rewardUsed, setRewardUsed] = useState(false);
 
   // Escape closes, and the page behind must not scroll under the dialog.
   useEffect(() => {
@@ -62,7 +73,11 @@ export function WorkshopRegisterModal({
   }, [onClose]);
 
   const seats = parseInt(childCount, 10) || 1;
-  const total = workshop.price * seats;
+  const fullTotal = workshop.price * seats;
+  // A reward covers one child's seat, which is what the promotion offers.
+  const rewardApplies = isLoggedIn && freeSeats > 0 && useReward && workshop.price > 0;
+  const discount = rewardApplies ? Math.min(fullTotal, workshop.price) : 0;
+  const total = fullTotal - discount;
 
   async function submit() {
     setError('');
@@ -87,12 +102,16 @@ export function WorkshopRegisterModal({
         childCount: seats,
         note: note.trim(),
         paymentMethod: payMethod,
+        useReward: rewardApplies,
       });
       // Null when the session is free, or when SePay is not configured — the
       // booking still stands, the customer just pays at the venue.
       setPayment(res.payment ?? null);
+      setRewardUsed(Boolean(res.rewardApplied));
       setDone(true);
       onRegistered();
+      // The reward is spent now; the banners elsewhere must stop offering it.
+      if (res.rewardApplied) refreshRewards();
     } catch (err: any) {
       // Surfaced, not swallowed: a full session or a duplicate booking is
       // exactly what the parent needs to be told.
@@ -118,14 +137,33 @@ export function WorkshopRegisterModal({
 
         {done ? (
           <div className="ws-done">
-            <div className="ws-done-icon">{payment ? '🏦' : '🎉'}</div>
-            <h3>{payment ? 'Quét mã để giữ chỗ' : 'Đã ghi nhận đăng ký!'}</h3>
+            <div className="ws-done-icon">
+              <SproutyIcon
+                name={payment ? 'ticket' : rewardUsed ? 'gift' : 'check'}
+                size={48}
+              />
+            </div>
+            <h3>
+              {payment
+                ? 'Quét mã để giữ chỗ'
+                : rewardUsed && total === 0
+                  ? 'Chỗ của bé đã được giữ!'
+                  : 'Đã ghi nhận đăng ký!'}
+            </h3>
             <p>
               {payment ? (
                 <>
                   Đã giữ chỗ tạm cho <strong>{seats} bé</strong> ở{' '}
                   <strong>{workshop.title}</strong>. Chuyển khoản xong là suất được xác nhận tự
                   động.
+                </>
+              ) : rewardUsed && total === 0 ? (
+                // A reward covered the whole booking, so the seat is secured
+                // outright — no transfer, no phone call to wait for.
+                <>
+                  Đã dùng <strong>suất workshop miễn phí</strong> của bạn cho{' '}
+                  <strong>{workshop.title}</strong>. Chỗ được giữ chắc chắn, bạn không cần thanh
+                  toán gì thêm — hẹn gặp bé ở buổi học!
                 </>
               ) : payMethod === 'online' && total > 0 ? (
                 // Asked to pay now but no transfer details came back — the
@@ -303,10 +341,37 @@ export function WorkshopRegisterModal({
                 </div>
               </div>
 
+              {/* The earned free seat, offered before the payment choice:
+                  whether there is anything left to pay depends on it. */}
+              {isLoggedIn && freeSeats > 0 && workshop.price > 0 && (
+                <div className="form-group">
+                  <label className={`ws-reward${useReward ? ' active' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={useReward}
+                      onChange={(e) => setUseReward(e.target.checked)}
+                    />
+                    <span className="ws-reward-icon">
+                      <SproutyIcon name="ticket" size={24} />
+                    </span>
+                    <span className="ws-reward-copy">
+                      <strong>
+                        Dùng suất workshop miễn phí {freeSeats > 1 && `(bạn còn ${freeSeats} suất)`}
+                      </strong>
+                      <em>
+                        Phần thưởng từ ưu đãi mua {rewards?.threshold ?? 3} sản phẩm trồng cây — miễn
+                        phí 1 bé{seats > 1 ? `, ${seats - 1} bé còn lại vẫn tính phí` : ''}.
+                      </em>
+                    </span>
+                    <span className="ws-reward-save">−{formatPrice(discount)}</span>
+                  </label>
+                </div>
+              )}
+
               {/* Only when there is something to pay. Paying up front is what
                   actually holds the seat, so the trade-off is spelled out
                   rather than left for the customer to discover at the door. */}
-              {workshop.price > 0 && (
+              {total > 0 && (
                 <div className="form-group">
                   <label className="form-label">Hình thức thanh toán</label>
                   <div className="ws-pay-choices">
@@ -362,8 +427,12 @@ export function WorkshopRegisterModal({
             <div className="ws-modal-foot">
               <div className="ws-modal-total">
                 <span>Tạm tính</span>
-                <strong>{formatPrice(total)}</strong>
+                <strong>
+                  {discount > 0 && <s>{formatPrice(fullTotal)}</s>}
+                  {total === 0 ? 'Miễn phí' : formatPrice(total)}
+                </strong>
                 {seats > 1 && <em>{formatPrice(workshop.price)} × {seats} bé</em>}
+                {discount > 0 && <em className="ws-total-saved">Đã dùng suất tặng</em>}
               </div>
               <button className="btn btn-primary btn-lg" disabled={busy} onClick={submit}>
                 {busy

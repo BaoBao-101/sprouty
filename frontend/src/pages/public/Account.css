@@ -1,93 +1,597 @@
-/* Page styles for Account. Lifted out of the <style> block that used to sit
-   in the <head> of account.html. */
+/* "Đơn hàng của tôi".
+   Quieter and denser than the old version: one card per order, a tight receipt
+   line per item, and the activation code — the thing actually bought — given
+   the weight the delivery tracker used to take up. */
 
-.account-layout{display:grid;grid-template-columns:220px 1fr;gap:32px;margin-top:32px}
-.account-nav{background:var(--surface);border:1px solid var(--parchment);border-radius:var(--r-lg);padding:16px;height:fit-content}
-.account-nav a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-md);font-family:var(--font-h);font-size:.87rem;font-weight:600;color:var(--ink-3);text-decoration:none;transition:all .15s;margin-bottom:4px}
-.account-nav a:hover,.account-nav a.active{background:var(--orange-pale);color:var(--orange)}
-.account-panel{background:var(--surface);border:1px solid var(--parchment);border-radius:var(--r-lg);padding:28px}
-.order-card{border:1px solid var(--parchment);border-radius:var(--r-md);padding:16px 20px;margin-bottom:16px;transition:box-shadow .2s}
-.order-card:hover{box-shadow:var(--sh-md)}
-.order-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
-.order-id{font-family:var(--font-h);font-size:.8rem;font-weight:700;color:var(--ink-3)}
-.status-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:var(--r-full);font-size:.72rem;font-weight:700;font-family:var(--font-h);text-transform:uppercase;letter-spacing:.05em}
-.status-pending{background:#FEF9C3;color:#854D0E}.status-processing{background:#DBEAFE;color:#1D4ED8}
-.status-shipped{background:#D1FAE5;color:#065F46}.status-delivered{background:#D1FAE5;color:#065F46}
-.status-cancelled{background:#FEE2E2;color:#991B1B}
-.order-items{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
-.order-item-chip{background:var(--parchment);border-radius:var(--r-sm);padding:4px 10px;font-size:.78rem;font-family:var(--font-h);font-weight:600}
-.order-footer{display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid var(--parchment)}
-.order-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-/* Order tracking timeline */
-.order-track{margin-top:14px;padding:18px 8px 8px;border-top:1px dashed var(--parchment-2)}
-.track-steps{display:flex;align-items:flex-start;justify-content:space-between;position:relative}
-.track-step{display:flex;flex-direction:column;align-items:center;gap:7px;flex:1;text-align:center;position:relative;z-index:1}
-.track-dot{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.05rem;background:var(--parchment);border:2px solid var(--parchment-2);color:var(--ink-4);transition:all .2s}
-.track-step.done .track-dot{background:var(--orange-pale);border-color:var(--orange);color:var(--orange)}
-.track-step.current .track-dot{background:var(--orange);border-color:var(--orange);color:#fff;box-shadow:0 0 0 4px var(--orange-pale)}
-.track-label{font-size:.72rem;font-family:var(--font-h);font-weight:600;color:var(--ink-4);max-width:80px;line-height:1.3}
-.track-step.done .track-label,.track-step.current .track-label{color:var(--ink-2)}
-.track-line{flex:1;height:2px;background:var(--parchment-2);margin-top:18px}
-.track-line.done{background:var(--orange)}
-.track-cancelled{display:flex;align-items:center;gap:10px;padding:14px 16px;background:#FEE2E2;color:#991B1B;border-radius:var(--r-md);font-size:.85rem;font-family:var(--font-h);font-weight:600}
-.track-note{margin-top:14px;padding:12px 14px;background:var(--cream-2);border-radius:var(--r-md);font-size:.82rem;color:var(--ink-3);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-@media(max-width:720px){.account-layout{grid-template-columns:1fr}.account-nav{display:flex;flex-wrap:wrap;gap:8px;padding:12px}}
+/* ── Hero ──────────────────────────────────────────────────────────────────── */
 
-/* ── Added during the React rewrite ─────────────────────────── */
-.order-sub { font-size: .78rem; color: var(--ink-4); margin-top: 2px }
-.order-sub-dim { font-size: .75rem; color: var(--ink-5); margin-top: 2px }
-.order-total { font-weight: 700; color: var(--orange); font-family: var(--font-h) }
+.acc-hero {
+  background:
+    radial-gradient(85% 130% at 90% 0%, rgba(255, 255, 255, .16) 0%, transparent 60%),
+    linear-gradient(135deg, var(--primary-700) 0%, var(--primary-500) 62%, #4FB86A 100%);
+  color: #fff;
+  padding: 28px 0 34px;
+  position: relative;
+  overflow: hidden;
+}
 
-.redeem-codes-title { font-weight: 800; margin-bottom: 6px; color: var(--ink); display: flex; align-items: center; gap: 6px }
-.redeem-codes-title img { width: 16px; height: 16px; object-fit: contain }
-.redeem-code-row { display: flex; justify-content: space-between; gap: 10px; align-items: center }
-.redeem-code-product { font-size: .76rem; color: var(--ink-4) }
-.redeem-code-value { font-family: var(--font-h); font-weight: 800; color: var(--orange); letter-spacing: .04em }
+.acc-hero::before {
+  content: '';
+  position: absolute;
+  inset: -90px -70px auto auto;
+  width: 300px;
+  height: 300px;
+  border-radius: 48% 52% 44% 56%;
+  background: #fff;
+  opacity: .07;
+}
 
-.account-empty { text-align: center; padding: 40px 0; color: var(--ink-4) }
-.profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px }
-.profile-cell { background: var(--cream-2); border-radius: var(--r-md); padding: 16px }
-.profile-label { font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--orange); margin-bottom: 6px }
-.profile-value { font-size: 1rem; font-weight: 600 }
+.acc-hero-crumb,
+.acc-hero-crumb a { color: rgba(255, 255, 255, .84); font-size: .85rem }
+.acc-hero-crumb a:hover { color: #fff; text-decoration: underline }
 
-/* Password section on the profile tab. Collapsed to a single row until needed,
-   so the tab still reads as "your details" rather than a form. */
+.acc-hero-row {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.acc-hero-id { display: flex; align-items: center; gap: 15px; min-width: 0 }
+
+.acc-avatar {
+  flex: none;
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .2);
+  border: 2.5px solid rgba(255, 255, 255, .4);
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  color: #fff;
+  transform: rotate(-4deg);
+}
+
+.acc-hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3.2vw, 2.1rem);
+  color: #fff;
+  margin: 0;
+  letter-spacing: -.02em;
+  line-height: 1.2;
+}
+
+.acc-hero p { margin: 2px 0 0; color: rgba(255, 255, 255, .86); font-size: .9rem }
+
+.acc-hero-stats { display: flex; gap: 10px }
+
+.acc-stat {
+  background: rgba(255, 255, 255, .16);
+  border: 2px solid rgba(255, 255, 255, .28);
+  border-radius: var(--r-lg);
+  padding: 9px 16px;
+  text-align: center;
+  min-width: 88px;
+}
+
+.acc-stat strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  line-height: 1.1;
+  color: #fff;
+}
+
+.acc-stat span {
+  font-size: .72rem;
+  color: rgba(255, 255, 255, .88);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+/* ── Tabs ──────────────────────────────────────────────────────────────────── */
+
+.acc-body { padding: 24px 0 72px }
+
+.acc-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 5px;
+  border-radius: var(--r-full);
+  background: var(--cream-2);
+  border: 2px solid var(--parchment-2);
+  margin-bottom: 22px;
+}
+
+.acc-tabs button {
+  --icon-accent: var(--ink-5);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--ink-3);
+  font-size: .93rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .2s, color .2s, box-shadow .2s;
+}
+
+.acc-tabs button:hover { color: var(--ink) }
+
+.acc-tabs button.active {
+  --icon-accent: var(--primary-300);
+  background: var(--surface);
+  color: var(--primary-700);
+  box-shadow: var(--sh-sm);
+}
+
+.acc-tabs em {
+  font-style: normal;
+  font-size: .74rem;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: var(--r-full);
+  background: var(--parchment-2);
+  color: var(--ink-3);
+}
+
+.acc-tabs button.active em { background: var(--sage-lt); color: var(--primary-700) }
+
+.acc-muted { color: var(--ink-4) }
+.acc-error { color: var(--rose); padding: 18px 0; font-weight: 600 }
+
+/* ── Order card ────────────────────────────────────────────────────────────── */
+
+.acc-orders { display: flex; flex-direction: column; gap: 16px }
+
+.ocard {
+  background: var(--surface);
+  border: 2px solid var(--parchment-2);
+  border-radius: var(--r-xl);
+  padding: 18px 20px;
+  box-shadow: var(--sh-sm);
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.ocard:hover { box-shadow: var(--sh-md) }
+
+/* An unpaid order is the one with something left to do, so it is the one that
+   stands out rather than every card competing equally. */
+.ocard.is-pending { border-color: var(--terra-3); background: linear-gradient(180deg, #FFFCF6, var(--surface) 90px) }
+
+.ocard-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 13px;
+  border-bottom: 1.5px solid var(--cream-2);
+}
+
+.ocard-id strong {
+  display: block;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: .03em;
+}
+
+.ocard-id span { font-size: .8rem; color: var(--ink-4) }
+
+.ocard-status {
+  flex: none;
+  padding: 5px 13px;
+  border-radius: var(--r-full);
+  font-size: .74rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  border: 1.5px solid transparent;
+}
+
+/* Reuses the status classes the order type already defines. */
+.ocard-status.status-pending    { background: #FFF7E6; color: #92610A; border-color: #FCE0A8 }
+.ocard-status.status-processing { background: var(--cobalt-bg); color: #0C6A95; border-color: #A5DEF8 }
+.ocard-status.status-shipped    { background: #EFE7FF; color: #5B3FA8; border-color: #D6C7F7 }
+.ocard-status.status-delivered  { background: var(--sage-lt); color: var(--primary-700); border-color: var(--primary-300) }
+.ocard-status.status-cancelled  { background: #FFF1F2; color: #B01435; border-color: var(--pink) }
+
+/* Items read as a receipt: aligned columns, one line each. */
+.ocard-items { padding: 12px 0; display: flex; flex-direction: column; gap: 9px }
+
+.oitem {
+  --icon-accent: var(--primary-500);
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 11px;
+}
+
+.oitem-thumb {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--sage-lt);
+  color: var(--primary-600);
+}
+
+.oitem-name {
+  min-width: 0;
+  font-size: .92rem;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oitem-variant {
+  font-style: normal;
+  font-size: .68rem;
+  font-weight: 800;
+  margin-left: 7px;
+  padding: 1px 7px;
+  border-radius: var(--r-full);
+  background: var(--orange-pale);
+  border: 1.5px solid var(--terra-3);
+  color: var(--terracotta);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.oitem-qty { font-size: .84rem; color: var(--ink-4); font-weight: 600 }
+.oitem-price { font-size: .9rem; font-weight: 700; color: var(--ink-2); font-variant-numeric: tabular-nums }
+
+.ocard-sum {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 12px;
+  border-top: 1.5px solid var(--cream-2);
+}
+
+.ocard-buyer { min-width: 0; font-size: .85rem }
+.ocard-buyer span { display: block; color: var(--ink-2); font-weight: 600 }
+.ocard-buyer em { font-style: normal; color: var(--ink-4); font-size: .82rem }
+
+.ocard-total { text-align: right }
+.ocard-total span { display: block; font-size: .72rem; color: var(--ink-4); text-transform: uppercase; letter-spacing: .06em }
+
+.ocard-total strong {
+  font-family: var(--font-display);
+  font-size: 1.32rem;
+  color: var(--terracotta);
+  line-height: 1.2;
+}
+
+.ocard-note {
+  --icon-accent: var(--ink-5);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 12px 0 0;
+  padding: 9px 12px;
+  border-radius: var(--r-md);
+  background: var(--cream-2);
+  font-size: .84rem;
+  color: var(--ink-3);
+}
+
+/* ── Activation codes ──────────────────────────────────────────────────────── */
+
+.ocodes {
+  --icon-accent: var(--accent-orange);
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: var(--r-lg);
+  background: linear-gradient(135deg, #FFF8EC, var(--cream));
+  border: 2px dashed var(--accent-orange-soft);
+}
+
+.ocodes-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: .76rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--terracotta);
+  margin-bottom: 10px;
+}
+
+.ocode {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: #fff;
+  border: 1.5px solid var(--terra-3);
+}
+
+.ocode + .ocode { margin-top: 8px }
+
+.ocode-main { min-width: 0; flex: 1 }
+.ocode-product { display: block; font-size: .76rem; color: var(--ink-4); margin-bottom: 1px }
+
+.ocode-value {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: .97rem;
+  font-weight: 700;
+  letter-spacing: .07em;
+  color: var(--terracotta);
+  word-break: break-all;
+}
+
+.ocode-actions { display: flex; gap: 8px; flex: none }
+
+.ocode-copy,
+.ocode-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 14px;
+  border-radius: var(--r-full);
+  font-size: .82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .2s, transform .2s var(--ease);
+}
+
+.ocode-copy {
+  border: 2px solid var(--terra-3);
+  background: var(--orange-pale);
+  color: var(--terracotta);
+}
+
+.ocode-copy:hover { background: var(--terra-3); transform: translateY(-1px) }
+
+.ocode-go {
+  --icon-accent: #fff;
+  border: 2px solid var(--primary-500);
+  background: var(--primary-500);
+  color: #fff;
+}
+
+.ocode-go:hover {
+  background: var(--primary-600);
+  border-color: var(--primary-600);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* ── Tracker ───────────────────────────────────────────────────────────────── */
+
+.otrack {
+  display: flex;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1.5px solid var(--cream-2);
+}
+
+.otrack.cancelled {
+  --icon-accent: var(--rose);
+  align-items: center;
+  gap: 8px;
+  color: #B01435;
+  font-size: .87rem;
+  font-weight: 600;
+  border-top: 1.5px solid var(--cream-2);
+}
+
+.otrack-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  text-align: center;
+}
+
+.otrack-line {
+  position: absolute;
+  top: 15px;
+  right: 50%;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--parchment-2);
+}
+
+.otrack-line.done { background: var(--primary-300) }
+
+.otrack-dot {
+  --icon-accent: var(--ink-5);
+  position: relative;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--cream-2);
+  border: 2.5px solid var(--parchment-2);
+  color: var(--ink-4);
+}
+
+.otrack-dot.done {
+  --icon-accent: var(--primary-300);
+  background: var(--sage-lt);
+  border-color: var(--primary-300);
+  color: var(--primary-600);
+}
+
+.otrack-dot.current {
+  --icon-accent: #fff;
+  background: var(--orange);
+  border-color: var(--orange);
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(255, 159, 28, .2);
+}
+
+.otrack-label { margin-top: 6px; font-size: .76rem; font-weight: 600; color: var(--ink-4) }
+.otrack-step:has(.otrack-dot.current) .otrack-label { color: var(--terracotta); font-weight: 700 }
+.otrack-step:has(.otrack-dot.done) .otrack-label { color: var(--ink-2) }
+
+/* ── Actions ───────────────────────────────────────────────────────────────── */
+
+.ocard-actions { display: flex; gap: 9px; margin-top: 16px; flex-wrap: wrap }
+
+.ocard-pay {
+  --icon-accent: #fff;
+  flex: 1;
+  min-width: 170px;
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: var(--r-full);
+  border: 2.5px solid var(--orange);
+  background: var(--orange);
+  color: #fff;
+  font-weight: 700;
+  font-size: .94rem;
+  transition: background .2s, transform .2s var(--ease), box-shadow .2s;
+}
+
+.ocard-pay:hover {
+  background: var(--terracotta);
+  border-color: var(--terracotta);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 7px 18px rgba(232, 93, 4, .28);
+}
+
+.ocard-cancel {
+  min-height: 46px;
+  padding: 0 20px;
+  border-radius: var(--r-full);
+  border: 2px solid var(--parchment-2);
+  background: #fff;
+  color: var(--ink-4);
+  font-weight: 700;
+  font-size: .9rem;
+  cursor: pointer;
+  transition: border-color .2s, color .2s;
+}
+
+.ocard-cancel:hover:not(:disabled) { border-color: var(--pink); color: var(--rose) }
+.ocard-cancel:disabled { opacity: .6; cursor: not-allowed }
+
+/* ── Empty state & profile ─────────────────────────────────────────────────── */
+
+.acc-empty {
+  --icon-accent: var(--primary-300);
+  text-align: center;
+  padding: 44px 20px;
+  background: var(--cream-2);
+  border: 2.5px dashed var(--parchment-2);
+  border-radius: var(--r-2xl);
+}
+
+.acc-empty-icon {
+  width: 78px;
+  height: 78px;
+  margin: 0 auto 14px;
+  display: grid;
+  place-items: center;
+  border-radius: 28px;
+  background: #fff;
+  border: 2.5px solid var(--parchment-2);
+  color: var(--ink-4);
+  transform: rotate(-4deg);
+}
+
+.acc-empty h3 { font-family: var(--font-display); font-size: 1.2rem; color: var(--ink); margin-bottom: 7px }
+.acc-empty p { color: var(--ink-3); max-width: 42ch; margin: 0 auto 20px; line-height: 1.65 }
+.acc-empty .btn { display: inline-flex; align-items: center; gap: 8px }
+
+.acc-profile { max-width: 640px }
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.profile-cell {
+  padding: 14px 16px;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 2px solid var(--parchment-2);
+}
+
+.profile-label { font-size: .72rem; color: var(--ink-4); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px }
+.profile-value { font-weight: 700; color: var(--ink); font-size: .96rem; word-break: break-word }
+
 .account-security {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 14px;
   flex-wrap: wrap;
-  margin-top: 22px;
-  padding: 18px 20px;
-  background: var(--surface);
-  border: 1px solid var(--parchment-2);
+  padding: 16px 18px;
   border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 2px solid var(--parchment-2);
 }
+
 .account-security.open { display: block }
-.account-security-title {
-  font-family: var(--font-h);
-  font-weight: 700;
-  font-size: .95rem;
-  color: var(--ink);
+.account-security-title { font-family: var(--font-display); font-size: 1.02rem; color: var(--ink) }
+.account-security-hint { font-size: .83rem; color: var(--ink-4); line-height: 1.55 }
+.account-security-show { display: flex; align-items: center; gap: 7px; font-size: .85rem; color: var(--ink-3); margin-bottom: 12px }
+.account-security-actions { display: flex; gap: 9px; justify-content: flex-end }
+
+@media (max-width: 640px) {
+  .acc-hero-stats { width: 100% }
+  .acc-stat { flex: 1; min-width: 0 }
+  .acc-tabs { display: flex; width: 100% }
+  .acc-tabs button { flex: 1; justify-content: center; padding: 10px 12px }
+  .oitem { grid-template-columns: 30px minmax(0, 1fr) auto; row-gap: 2px }
+  .oitem-price { grid-column: 2 / -1; text-align: right }
+  .ocode-actions { width: 100% }
+  .ocode-copy, .ocode-go { flex: 1; justify-content: center }
 }
-.account-security-hint {
-  font-size: .82rem;
-  color: var(--ink-4);
-  margin-top: 3px;
-  line-height: 1.6;
+
+/* A code that has already become a plant. Muted rather than hidden: the
+   customer may still want to see what they bought and when. */
+.ocode.used {
+  background: var(--cream-2);
+  border-color: var(--parchment-2);
+  border-style: dashed;
 }
-.account-security-show {
-  display: flex;
+
+.ocode.used .ocode-value {
+  color: var(--ink-5);
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+
+.ocode-used-note {
+  --icon-accent: var(--primary-500);
+  display: inline-flex;
   align-items: center;
-  gap: 7px;
-  font-size: .82rem;
-  color: var(--ink-3);
-  margin-bottom: 14px;
-  cursor: pointer;
-}
-.account-security-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
+  gap: 5px;
+  margin-top: 4px;
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--primary-600);
 }

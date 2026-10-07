@@ -2,6 +2,21 @@ import { z } from 'zod';
 import { createHash, createHmac } from 'crypto';
 import { AppError } from '../utils/errors.js';
 import { requireAuth, requireCsrf } from '../middleware/rbac.js';
+import { auditLog } from '../services/audit.js';
+import { syncWorkshopRewards } from '../services/rewards.js';
+
+/**
+ * Whether this deployment will credit a payment nobody made.
+ *
+ * Two independent conditions, both required. `NODE_ENV === 'production'` alone
+ * would be enough if it were always set correctly, and `ALLOW_FAKE_PAYMENTS`
+ * alone would be enough if nobody ever copied a .env to the server — so the
+ * endpoint demands both, because either mistake on its own gives away the shop.
+ */
+export function fakePaymentsAllowed() {
+  return process.env.NODE_ENV !== 'production'
+    && process.env.ALLOW_FAKE_PAYMENTS === 'true';
+}
 
 // Build the payment-instruction payload for an order. Returns null in dev when
 // SePay isn't configured, so the existing flow still works without payments.
@@ -36,9 +51,11 @@ const noHtml = (label) => z.string().refine(
   { message: `${label} không được chứa ký tự < hoặc >.` }
 );
 
-// shippingAddress is validated conditionally in the route handler, not here —
-// it's only required when the cart contains a physical (non-membership)
-// product. VIP is a digital-only purchase, nothing is ever shipped for it.
+// shippingAddress is optional, and no longer asked for at checkout: Sprouty
+// sells simulated plants now, so there is no parcel for any product in the
+// catalogue. The column and this field stay because historic orders carry real
+// addresses, and because `requiresShipping` below is the one place to change
+// if a physical product is ever introduced again.
 const createOrderSchema = z.object({
   items: z.array(orderItemSchema).min(1, 'Giỏ hàng trống.').max(50, 'Giỏ hàng không được vượt quá 50 sản phẩm.'),
   shippingName: noHtml('Tên người nhận').and(z.string().min(2, 'Tên người nhận không hợp lệ.').max(100)),
@@ -47,7 +64,25 @@ const createOrderSchema = z.object({
   note: noHtml('Ghi chú').and(z.string().max(500)).optional(),
 });
 
-const NO_SHIPPING_PLACEHOLDER = 'Không áp dụng — sản phẩm không cần giao hàng.';
+const NO_SHIPPING_PLACEHOLDER = 'Không áp dụng — sản phẩm số, kích hoạt ngay trên web.';
+
+/**
+ * Whether anything in this basket has to be delivered.
+ *
+ * Nothing does. Every product is digital: a kit unlocks a simulated plant that
+ * is activated with a code and lived with on the site, and a membership was
+ * always digital. This is a function rather than an inlined `false` so that
+ * reintroducing a physical product is one edit in one place, instead of a hunt
+ * through the checkout, the address form and the post-purchase emails.
+ */
+function requiresShipping(products) {
+  const physical = (process.env.PHYSICAL_CATEGORIES || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (physical.length === 0) return false;
+  return products.some((p) => physical.includes(p.category));
+}
 
 /** Delivery details, for correcting them after checkout. */
 const shippingSchema = z.object({
@@ -94,6 +129,24 @@ function buildWithSecret(secret, orderId, userId, productId) {
 
 async function ensurePurchaseRedeemCodes(prisma, order) {
   if (!order?.paidAt || order.status === 'cancelled') return [];
+
+  // Which of this order's kits the customer has already activated. Looked up
+  // once for the whole order rather than per code: the orders list renders
+  // every order a customer has, and a query per code turned one page load into
+  // dozens of round trips.
+  //
+  // Keyed on the plant, not on the redeem code's usedCount, because the plant
+  // is the thing the customer is being offered a link to — and a code redeemed
+  // and then somehow left without a plant should still read as "activate".
+  const productIds = [...new Set((order.items || []).map((i) => i.productId))];
+  const plants = productIds.length
+    ? await prisma.virtualPlant.findMany({
+        where: { userId: order.userId, productId: { in: productIds } },
+        select: { id: true, productId: true, nickname: true, stage: true, activatedAt: true },
+      })
+    : [];
+  const plantByProduct = new Map(plants.map((p) => [p.productId, p]));
+
   const seen = new Set();
   const codes = [];
   for (const item of order.items || []) {
@@ -114,6 +167,7 @@ async function ensurePurchaseRedeemCodes(prisma, order) {
         createdByUserId: order.userId,
       },
     });
+    const plant = plantByProduct.get(item.productId) || null;
     codes.push({
       code: plaintext,
       productId: item.productId,
@@ -122,6 +176,12 @@ async function ensurePurchaseRedeemCodes(prisma, order) {
       usedCount: redeemCode.usedCount,
       maxUses: redeemCode.maxUses,
       status: redeemCode.status,
+      // So the orders page can say "đã kích hoạt" and link to the plant,
+      // instead of offering an activate button for a code that is spent.
+      redeemed: Boolean(plant),
+      plantId: plant?.id || null,
+      plantNickname: plant?.nickname || null,
+      activatedAt: plant?.activatedAt || null,
     });
   }
   return codes;
@@ -167,10 +227,7 @@ export default async function orderRoutes(fastify) {
       return { productId: item.productId, qty: item.qty, unitPrice, variant: item.variant || null };
     });
 
-    // Only physical (non-membership) products need a real shipping address —
-    // VIP is digital-only, activates immediately on payment, nothing is ever
-    // shipped for it.
-    const needsShipping = products.some(p => p.category !== 'membership');
+    const needsShipping = requiresShipping(products);
     if (needsShipping) {
       if (!shippingAddress || shippingAddress.length < 10) {
         throw new AppError('Địa chỉ không hợp lệ.', 400);
@@ -230,7 +287,14 @@ export default async function orderRoutes(fastify) {
     // Show payment info while still pending; once paid the customer doesn't need it.
     const payment = order.status === 'pending' ? buildPaymentInfo(order) : null;
     const redeemCodes = await ensurePurchaseRedeemCodes(fastify.prisma, order);
-    return { order: { ...order, redeemCodes }, payment };
+    return {
+      order: { ...order, redeemCodes },
+      payment,
+      // Whether the payment page should offer the "pay without paying" button.
+      // Decided here rather than from a build-time flag on the client, so the
+      // button cannot appear against a server that would refuse it.
+      canSimulatePayment: fakePaymentsAllowed() && order.status === 'pending' && !order.paidAt,
+    };
   });
 
   // PATCH /api/v1/orders/:id/shipping — fix the delivery details.
@@ -257,15 +321,20 @@ export default async function orderRoutes(fastify) {
       });
     }
 
-    // Same rule as checkout: only a physical product needs a real address.
-    const needsShipping = order.items.some(i => i.product.category !== 'membership');
+    // Same rule as checkout.
+    const needsShipping = requiresShipping(order.items.map(i => i.product));
     let shippingAddress = parsed.data.shippingAddress?.trim() || '';
     if (needsShipping) {
       if (shippingAddress.length < 10) {
         throw new AppError('Địa chỉ quá ngắn, vui lòng nhập đầy đủ.', 400);
       }
     } else {
-      shippingAddress = shippingAddress || NO_SHIPPING_PLACEHOLDER;
+      // The payment page no longer has an address field, so a customer fixing
+      // a typo in their name sends none. Keep whatever the order already had —
+      // orders placed before Sprouty went digital carry a real address, and
+      // overwriting it with the placeholder would destroy a delivery record
+      // staff may still need.
+      shippingAddress = shippingAddress || order.shippingAddress || NO_SHIPPING_PLACEHOLDER;
     }
 
     const updated = await fastify.prisma.order.update({
@@ -300,5 +369,69 @@ export default async function orderRoutes(fastify) {
       },
     });
     return { order: updated };
+  });
+
+  // POST /api/v1/orders/:id/simulate-payment
+  //
+  // Credits an order as if the bank had paid it. This exists because the real
+  // flow cannot be exercised without a live SePay account: an order sits at
+  // "chờ thanh toán" forever, so nothing downstream — the activation code, the
+  // plant, the workshop reward — can be tested or demonstrated at all.
+  //
+  // It is refused unless BOTH NODE_ENV is non-production AND ALLOW_FAKE_PAYMENTS
+  // is explicitly "true" (see fakePaymentsAllowed). Every call writes an audit
+  // row naming it as fake, so a credited order can always be told apart from a
+  // real one. sepayTransactionId stays null — no bank transaction backs this.
+  fastify.post('/orders/:id/simulate-payment', {
+    preHandler: [requireAuth, requireCsrf],
+  }, async (req, reply) => {
+    if (!fakePaymentsAllowed()) {
+      // Deliberately a 404, not a 403: on a production host this route should
+      // look like it does not exist rather than like a locked door.
+      return reply.code(404).send({ message: 'Không tìm thấy.' });
+    }
+
+    const order = await fastify.prisma.order.findFirst({
+      where: { id: req.params.id, userId: req.user.id },
+    });
+    if (!order) return reply.code(404).send({ message: 'Không tìm thấy đơn hàng.' });
+    if (order.paidAt) {
+      return reply.code(409).send({ message: 'Đơn này đã được thanh toán rồi.' });
+    }
+    if (order.status === 'cancelled') {
+      return reply.code(409).send({ message: 'Không thể thanh toán cho đơn đã huỷ.' });
+    }
+
+    const updated = await fastify.prisma.order.update({
+      where: { id: order.id },
+      data: { paidAt: new Date(), status: 'processing' },
+      include: {
+        items: { include: { product: { select: { id: true, name: true, emoji: true, images: true } } } },
+      },
+    });
+
+    await auditLog(fastify.prisma, req.user.id, 'payment.simulated', 'Order', order.id, {
+      total: order.total,
+      fake: true,
+      ip: req.ip,
+    });
+
+    // Same downstream work the webhook does, so a simulated payment exercises
+    // the real path rather than a shortcut through it.
+    const [redeemCodes, rewards] = await Promise.all([
+      ensurePurchaseRedeemCodes(fastify.prisma, updated),
+      syncWorkshopRewards(fastify.prisma, order.userId).catch((err) => {
+        fastify.log.error({ err, orderId: order.id }, 'Reward sync after simulated payment failed');
+        return null;
+      }),
+    ]);
+
+    return {
+      message: 'Đã ghi nhận thanh toán (chế độ thử nghiệm).',
+      order: { ...updated, redeemCodes },
+      redeemCodes,
+      rewardsEarned: rewards?.newlyEarned ?? 0,
+      simulated: true,
+    };
   });
 }

@@ -7,10 +7,9 @@ import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import type { CartLine } from '@/services/cart';
 import { formatPrice } from '@/types/product';
+import { PromoBanner } from '@/components/PromoBanner';
 import './CartPage.css';
 
-const FREE_SHIP_MIN = 200_000;
-const SHIPPING_FEE = 30_000;
 
 const CATEGORY_BG: Record<string, string> = {
   kit: 'var(--terra-bg)',
@@ -139,7 +138,8 @@ function ShippingModal({
 
         {!needsAddress && (
           <p className="cart-modal-note">
-            Gói VIP kích hoạt ngay sau khi thanh toán — không cần giao hàng.
+            Không cần giao hàng. Thanh toán xong bạn nhận mã kích hoạt ngay, nhập ở mục{' '}
+            <strong>Cây của tôi</strong> là cây bắt đầu nảy mầm.
           </p>
         )}
 
@@ -205,10 +205,13 @@ export default function CartPage() {
   const { items, count, total, clear } = useCart();
   const [shippingOpen, setShippingOpen] = useState(false);
 
-  // VIP is digital: it activates on payment and is never shipped.
-  const hasPhysicalItem = items.some((i) => i.cat !== 'membership');
-  const freeShipLeft = hasPhysicalItem ? Math.max(0, FREE_SHIP_MIN - total) : 0;
-  const shipping = hasPhysicalItem && total < FREE_SHIP_MIN ? SHIPPING_FEE : 0;
+  // Nothing in the catalogue is shipped any more: a kit unlocks a simulated
+  // plant that is activated with a code on "Cây của tôi", and VIP was always
+  // digital. So there is no address to collect and no delivery to charge for.
+  // Named rather than inlined, because this and requiresShipping() in
+  // backend/src/routes/orders.js are the two places to change if a physical
+  // product is ever introduced again.
+  const needsAddress = false;
 
   function checkout() {
     if (!isLoggedIn) {
@@ -244,16 +247,10 @@ export default function CartPage() {
         ) : (
           <div className="cart-layout">
             <div>
-              {hasPhysicalItem &&
-                (freeShipLeft > 0 ? (
-                  <div className="notice">
-                    🚚 Thêm <strong>{formatPrice(freeShipLeft)}</strong> nữa để được miễn phí vận chuyển!
-                  </div>
-                ) : (
-                  <div className="notice green">
-                    🎉 Bạn đã được <strong>miễn phí vận chuyển</strong>!
-                  </div>
-                ))}
+              {/* Nothing ships, so the old free-delivery nudge is gone. The
+                  basket-side nudge that still applies is the workshop reward,
+                  and it tells the customer how close they are to it. */}
+              <PromoBanner className="cart-promo" />
 
               <div>
                 {items.map((item) => (
@@ -284,21 +281,15 @@ export default function CartPage() {
                 </div>
 
                 <div className="sum-row">
-                  <span>Vận chuyển</span>
-                  {hasPhysicalItem ? (
-                    <strong style={{ color: shipping ? 'var(--ink-2)' : 'var(--green)' }}>
-                      {shipping ? formatPrice(shipping) : 'Miễn phí'}
-                    </strong>
-                  ) : (
-                    <strong style={{ color: 'var(--ink-4)' }}>Không áp dụng</strong>
-                  )}
+                  <span>Giao hàng</span>
+                  <strong style={{ color: 'var(--green)' }}>Không cần — kích hoạt online</strong>
                 </div>
 
                 <div className="sum-divider" />
 
                 <div className="sum-total">
                   <span className="sum-total-lbl">Tổng cộng</span>
-                  <span className="sum-total-val">{formatPrice(total + shipping)}</span>
+                  <span className="sum-total-val">{formatPrice(total)}</span>
                 </div>
 
                 <button
@@ -328,7 +319,7 @@ export default function CartPage() {
 
       {shippingOpen && (
         <ShippingModal
-          needsAddress={hasPhysicalItem}
+          needsAddress={needsAddress}
           onClose={() => setShippingOpen(false)}
           onDone={(orderId) => {
             setShippingOpen(false);

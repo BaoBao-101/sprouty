@@ -14,11 +14,11 @@ export default function About() {
             <span className="eyebrow"
               style={{ background: "rgba(255,255,255,.1)", color: "rgba(255,255,255,.8)", borderColor: "rgba(255,255,255,.15)" }}>Về
               Sprouty</span>
-            <h1 style={{ color: "#fff", marginTop: "14px", maxWidth: "580px" }}>Gieo hạt thật, <em
-                style={{ fontStyle: "italic", color: "var(--terra-3)" }}>lưu kỷ niệm số</em></h1>
+            <h1 style={{ color: "#fff", marginTop: "14px", maxWidth: "580px" }}>Chăm cây mỗi ngày, <em
+                style={{ fontStyle: "italic", color: "var(--terra-3)" }}>lớn lên cùng bé</em></h1>
             <p style={{ color: "rgba(255,255,255,.6)", maxWidth: "500px", lineHeight: "1.78", marginTop: "16px", fontSize: ".97rem" }}>Sprouty
-              bắt đầu từ một ý tưởng đơn giản: gia đình cần nhiều khoảnh khắc chậm lại cùng nhau, chạm vào thiên nhiên thật và
-              lưu giữ hành trình lớn lên của bé theo cách ấm áp hơn.</p>
+              bắt đầu từ một ý tưởng đơn giản: gia đình cần nhiều khoảnh khắc chậm lại cùng nhau. Mỗi ngày bé ghé thăm cây
+              của mình, đọc cảm biến, quyết định hôm nay cây cần gì — một thói quen nhỏ kéo dài hàng tuần.</p>
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "28px" }}>
               <Link to="/shop" className="btn btn-white btn-lg">Xem sản phẩm →</Link>
               <Link to="/workshop" className="btn btn-white-ol btn-lg">Workshop</Link>
@@ -118,8 +118,9 @@ export default function About() {
                   <div className="timeline-item">
                     <div className="timeline-date">Tháng 1 / 2026</div>
                     <div className="timeline-title">Thí điểm 90 ngày</div>
-                    <div className="timeline-desc">Thử nghiệm những bộ kit vẽ chậu và gieo hạt đầu tiên với các gia đình tình
-                      nguyện. Bé tự trang trí chậu, gieo hạt và lưu lại chiếc lá kỷ niệm đầu tiên.</div>
+                    <div className="timeline-desc">Thử nghiệm những bộ kit trồng cây đầu tiên với các gia đình tình nguyện.
+                      Chính giai đoạn này cho chúng tôi thấy điều bé thích nhất không phải chiếc chậu, mà là việc
+                      mỗi ngày được quay lại xem cây đã lớn tới đâu.</div>
                   </div>
                   <div className="timeline-item">
                     <div className="timeline-date">Tháng 3 / 2026</div>
@@ -151,7 +152,7 @@ export default function About() {
                       <div>
                         <h3 style={{ fontSize: "1rem", marginBottom: "7px" }}>Gia đình trong từng chiếc lá</h3>
                         <p style={{ fontSize: ".85rem", color: "var(--ink-3)", lineHeight: "1.7" }}>Mỗi bộ kit mở ra một hoạt động chung:
-                          ba mẹ cùng bé vẽ chậu, đặt tên cho cây và lưu lại ảnh, video, nhật ký trên Cây Kỷ Niệm.</p>
+                          ba mẹ cùng bé đặt tên cho cây, đọc chỉ số cảm biến và lưu lại từng chặng trên Cây Kỷ Niệm.</p>
                       </div>
                     </div>
                   </div>

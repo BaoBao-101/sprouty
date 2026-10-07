@@ -4,34 +4,42 @@ import { readFile } from 'node:fs/promises';
 
 const prisma = new PrismaClient();
 
-// Every kit product is now named after the seed it grows — pages/tree.html
-// maps this exact name to assets/images/sprouty-icons/<name>.png for the
-// Cây Kỷ Niệm background. Each kit offers a Standard / Smart (IoT) variant
-// at checkout via smartPriceDelta (see backend/src/routes/orders.js).
+// Every kit product is named after the seed it grows — the virtual plant page
+// maps this exact name to a species profile (harvest type, stage labels, fruit
+// colour) in backend/src/services/plant-sim.js.
+//
+// Nothing here is shipped. A kit is a simulated plant: buying one issues an
+// activation code, and entering it on "Cây của tôi" sows a seed the child then
+// raises with simulated IoT sensors. So `includes` lists what the customer
+// actually receives — the plant, the devices, the AI coach — and not a clay pot.
+//
+// The Standard / Smart choice at checkout (smartPriceDelta) is what unlocks the
+// whole sensor set from day one instead of stage by stage; see
+// createPlantForProduct in backend/src/services/plants.js.
 const PRODUCTS = [
   { id: 1, name: "Bean", emoji: "🫘", collection: "Sprouty Starter", category: "kit", ageRange: "4–10 tuổi", price: 150000, oldPrice: 230000, smartPriceDelta: 230000, badge: "hot", bgColor: "#F0FDF4",
-    description: "Bộ khởi đầu hoàn hảo để bé vẽ chậu, gieo hạt đậu thật và mở Cây Kỷ Niệm số đầu tiên trên Sprouty.",
-    includes: ["Chậu đất nung", "6 màu acrylic", "Hạt giống đậu", "Đất trồng", "Sách hướng dẫn", "Quyền truy cập app Sprouty"],
+    description: "Gieo hạt đậu mô phỏng rồi nuôi cây từ mầm tới ngày ra quả, đọc cảm biến độ ẩm và nhiệt độ ngay trên web.",
+    includes: ["Cây đậu mô phỏng (8 giai đoạn)","Cảm biến độ ẩm đất & nhiệt độ","Mở dần 8 thiết bị IoT ảo","Plant Buddy AI hướng dẫn từng bước","Album Cây Kỷ Niệm","Chứng nhận khi thu hoạch"],
     images: ["/assets/images/products/bean/bean-standard.png", "/assets/images/products/bean/bean-smart.png"], status: "published" },
   { id: 2, name: "Carrot", emoji: "🥕", collection: "Sprouty Starter", category: "kit", ageRange: "4–10 tuổi", price: 150000, oldPrice: 220000, smartPriceDelta: 230000, badge: null, bgColor: "#FFF7ED",
-    description: "Gieo hạt cà rốt thật, theo dõi củ lớn dần và lưu lại từng khoảnh khắc trên Cây Kỷ Niệm số.",
-    includes: ["Chậu đất nung", "6 màu acrylic", "Hạt giống cà rốt", "Đất trồng", "Sách hướng dẫn", "Quyền truy cập app Sprouty"],
+    description: "Nuôi cây cà rốt mô phỏng, theo dõi củ phình lớn qua từng chặng và học cách đọc chỉ số đất mỗi ngày.",
+    includes: ["Cây cà rốt mô phỏng (8 giai đoạn)","Cảm biến độ ẩm đất & nhiệt độ","Mở dần 8 thiết bị IoT ảo","Plant Buddy AI hướng dẫn từng bước","Album Cây Kỷ Niệm","Chứng nhận khi thu hoạch"],
     images: ["/assets/images/products/carrot/carrot-standard.png", "/assets/images/products/carrot/carrot-smart.png"], status: "published" },
   { id: 7, name: "Corn", emoji: "🌽", collection: "Sprouty Starter", category: "kit", ageRange: "4–10 tuổi", price: 160000, oldPrice: null, smartPriceDelta: 230000, badge: null, bgColor: "#FEFCE8",
-    description: "Trồng bắp mini trong chậu, quan sát cây vươn cao mỗi ngày cùng Plant Buddy AI.",
-    includes: ["Chậu đất nung", "6 màu acrylic", "Hạt giống bắp", "Đất trồng", "Sách hướng dẫn", "Quyền truy cập app Sprouty"],
+    description: "Trồng bắp mô phỏng, quan sát cây vươn cao mỗi ngày và học đọc cảm biến cùng Plant Buddy AI.",
+    includes: ["Cây bắp mô phỏng (8 giai đoạn)","Cảm biến độ ẩm đất & nhiệt độ","Mở dần 8 thiết bị IoT ảo","Plant Buddy AI hướng dẫn từng bước","Album Cây Kỷ Niệm","Chứng nhận khi thu hoạch"],
     images: ["/assets/images/products/corn/corn-standard.png", "/assets/images/products/corn/corn-smart.png"], status: "published" },
   { id: 8, name: "FirePepper", emoji: "🌶️", collection: "Sprouty Starter", category: "kit", ageRange: "4–10 tuổi", price: 160000, oldPrice: null, smartPriceDelta: 230000, badge: null, bgColor: "#FEF2F2",
-    description: "Trồng ớt cay tại nhà, theo dõi hoa kết trái và lưu công thức chăm cây riêng của bé.",
-    includes: ["Chậu đất nung", "6 màu acrylic", "Hạt giống ớt", "Đất trồng", "Sách hướng dẫn", "Quyền truy cập app Sprouty"],
+    description: "Nuôi cây ớt mô phỏng từ hạt tới trái chín, tự tay thụ phấn và canh sâu bệnh qua cảm biến.",
+    includes: ["Cây ớt mô phỏng (8 giai đoạn)","Cảm biến độ ẩm đất & nhiệt độ","Mở dần 8 thiết bị IoT ảo","Plant Buddy AI hướng dẫn từng bước","Album Cây Kỷ Niệm","Chứng nhận khi thu hoạch"],
     images: ["/assets/images/products/firepepper/firepepper-standard.png", "/assets/images/products/firepepper/firepepper-smart.png"], status: "published" },
   { id: 9, name: "SunFlower", emoji: "🌻", collection: "Sprouty Starter", category: "kit", ageRange: "4–10 tuổi", price: 170000, oldPrice: 210000, smartPriceDelta: 230000, badge: "new", bgColor: "#FFFBEB",
-    description: "Gieo hạt hướng dương, dõi theo cây xoay mặt về phía mặt trời và ra hoa rực rỡ.",
-    includes: ["Chậu đất nung", "6 màu acrylic", "Hạt giống hướng dương", "Đất trồng", "Sách hướng dẫn", "Quyền truy cập app Sprouty"],
+    description: "Gieo hạt hướng dương mô phỏng, dõi theo cây đón nắng và nở hoa rực rỡ trên trang của bé.",
+    includes: ["Cây hướng dương mô phỏng (8 giai đoạn)","Cảm biến độ ẩm đất & nhiệt độ","Mở dần 8 thiết bị IoT ảo","Plant Buddy AI hướng dẫn từng bước","Album Cây Kỷ Niệm","Chứng nhận khi thu hoạch"],
     images: ["/assets/images/products/sunflower/sunflower-standard.png", "/assets/images/products/sunflower/sunflower-smart.png"], status: "published" },
   { id: 10, name: "Tomato", emoji: "🍅", collection: "Sprouty Starter", category: "kit", ageRange: "4–10 tuổi", price: 170000, oldPrice: null, smartPriceDelta: 230000, badge: null, bgColor: "#FEF2F2",
-    description: "Trồng cà chua bi, chăm sóc từ hạt đến quả chín đỏ và ghi lại cả hành trình trên Cây Kỷ Niệm.",
-    includes: ["Chậu đất nung", "6 màu acrylic", "Hạt giống cà chua", "Đất trồng", "Sách hướng dẫn", "Quyền truy cập app Sprouty"],
+    description: "Chăm cây cà chua mô phỏng từ hạt đến quả chín đỏ, với đầy đủ cảm biến và nhật ký từng chặng.",
+    includes: ["Cây cà chua mô phỏng (8 giai đoạn)","Cảm biến độ ẩm đất & nhiệt độ","Mở dần 8 thiết bị IoT ảo","Plant Buddy AI hướng dẫn từng bước","Album Cây Kỷ Niệm","Chứng nhận khi thu hoạch"],
     images: ["/assets/images/products/tomato/tomato-standard.png", "/assets/images/products/tomato/tomato-smart.png"], status: "published" },
   { id: 5, name: "VIP Garden Monthly", emoji: "🌙", collection: "Golden Garden", category: "membership", ageRange: "Gia đình", price: 20000, oldPrice: null, smartPriceDelta: null, badge: null, bgColor: "#FEFCE8",
     description: "Mở khóa chế độ ban đêm, hiệu ứng theo mùa, Plant Buddies hiếm và AI recap hàng tháng cho Cây Kỷ Niệm.",

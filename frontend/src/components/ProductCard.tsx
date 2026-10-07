@@ -45,7 +45,7 @@ export function ProductCard({ product }: { product: Product }) {
 
       <div className="product-card-body">
         <div className="product-age">
-          {product.col} · {product.age}
+          {product.species?.label || product.col} · {product.age}
         </div>
         <div className="product-name">{product.name}</div>
         <div className="product-desc">{product.desc}</div>

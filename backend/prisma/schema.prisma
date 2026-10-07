@@ -109,6 +109,8 @@ model User {
   redemptions RedeemCodeRedemption[]
   entitlements UserEntitlement[]
   blogPosts BlogPost[] @relation("BlogPostAuthor")
+  plants VirtualPlant[]
+  rewards Reward[]
 }
 
 model Product {
@@ -121,6 +123,11 @@ model Product {
   // product has no Smart variant — only Standard is offered.
   smartPriceDelta Int?
   category    String
+  // Which plant the simulated kit grows: a key from SPECIES in
+  // services/plant-sim.js, chosen by the admin when the product is created.
+  // Null falls back to matching the product name, which is how the kits that
+  // predate this column keep their species without a backfill.
+  speciesKey  String?
   ageRange    String
   collection  String
   emoji       String        @default("🎨")
@@ -139,6 +146,7 @@ model Product {
   productImages UserProductImage[]
   redeemCodes RedeemCode[]
   entitlements UserEntitlement[]
+  plants VirtualPlant[]
 }
 
 model Order {
@@ -345,6 +353,10 @@ model UserProductImage {
   assetId   String
   title     String?
   note      String?
+  // Which growth stage the plant was at when this was saved, captured at upload
+  // time. Null for anything uploaded before the album became a journey record,
+  // and for a photo saved against a product the owner never activated.
+  stage     PlantStage?
   status    UserImageStatus @default(active)
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
@@ -430,4 +442,189 @@ model BlogPost {
   author User @relation("BlogPostAuthor", fields: [authorUserId], references: [id])
 
   @@index([status, publishedAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Virtual plants
+//
+// Sprouty no longer ships a physical kit. Buying a kit now unlocks a simulated
+// plant that lives entirely on the site: the customer activates it with the
+// code their order issued, and raises it from seed to harvest through care
+// actions that each have a cooldown, reading simulated IoT sensors as they go.
+//
+// Nothing here is advanced by a scheduler. Every metric is a function of the
+// time elapsed since `lastTickAt`, recomputed whenever the plant is read or
+// cared for (see services/plant-sim.js). A cron job would be a second source
+// of truth for the same numbers, and would have to run in a container that
+// currently only serves requests.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum PlantStage {
+  seed
+  sprout
+  seedling
+  vegetative
+  budding
+  flowering
+  fruiting
+  mature
+}
+
+enum PlantCareAction {
+  water
+  mist
+  fertilize
+  prune
+  pest_check
+  sunlight
+  loosen_soil
+  pollinate
+  harvest
+}
+
+enum PlantDeviceType {
+  moisture_sensor
+  thermo_sensor
+  light_sensor
+  nutrient_sensor
+  water_pump
+  grow_light
+  fan
+  camera
+}
+
+model VirtualPlant {
+  id        String     @id @default(cuid())
+  userId    String
+  productId Int
+  // What the child named it. Defaults to the product name on activation.
+  nickname  String
+  stage     PlantStage @default(seed)
+  // 0–100 within the current stage. Float because a tick adds fractions of a
+  // percent, and rounding each one down would stall growth entirely.
+  stageProgress Float  @default(0)
+  // Lifetime growth points, kept across stage changes for the progress badge.
+  growthPoints  Float  @default(0)
+
+  // Simulated soil/plant state, all 0–100.
+  moisture  Float @default(45)
+  nutrient  Float @default(60)
+  health    Float @default(85)
+  pestRisk  Float @default(5)
+
+  // Consecutive days with at least one care action, and the day that streak
+  // was last extended (date-only, local time) so a second visit the same day
+  // does not count twice.
+  careStreak    Int      @default(0)
+  lastCareDate  String?
+  // Every metric above is only meaningful together with the moment it was
+  // computed for.
+  lastTickAt    DateTime @default(now())
+  harvestedAt   DateTime?
+  activatedAt   DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  devices PlantDevice[]
+  careLogs PlantCareLog[]
+  readings PlantSensorReading[]
+
+  // One plant per kit per account: the activation code is single-use and
+  // per-product, so a second plant for the same kit could only come from a
+  // double-submit.
+  @@unique([userId, productId])
+  @@index([userId])
+}
+
+model PlantDevice {
+  id       String          @id @default(cuid())
+  plantId  String
+  type     PlantDeviceType
+  // Sensors unlock as the plant grows, so the dashboard starts simple.
+  unlocked Boolean         @default(false)
+  // Actuators (pump, grow light, fan) can run themselves. Automation keeps a
+  // plant alive while nobody is looking but grants no growth — care the child
+  // actually performs is what moves the plant forward.
+  autoMode Boolean         @default(false)
+  // Solar-charged, drains with use. Flavour, and a reason the dashboard can
+  // teach that a real sensor needs power.
+  battery  Float           @default(100)
+
+  plant VirtualPlant @relation(fields: [plantId], references: [id], onDelete: Cascade)
+
+  @@unique([plantId, type])
+}
+
+model PlantCareLog {
+  id       String          @id @default(cuid())
+  plantId  String
+  action   PlantCareAction
+  stage    PlantStage
+  // Growth awarded, and the metric deltas, so the page can explain what the
+  // action actually did instead of just saying "done".
+  growth   Float           @default(0)
+  detail   Json?
+  createdAt DateTime       @default(now())
+
+  plant VirtualPlant @relation(fields: [plantId], references: [id], onDelete: Cascade)
+
+  // The cooldown for an action is derived from the newest row for it — no
+  // per-action timestamp column that could disagree with this log.
+  @@index([plantId, action, createdAt])
+  @@index([plantId, createdAt])
+}
+
+model PlantSensorReading {
+  id          String   @id @default(cuid())
+  plantId     String
+  moisture    Float
+  temperature Float
+  humidity    Float
+  light       Float
+  nutrient    Float
+  health      Float
+  recordedAt  DateTime @default(now())
+
+  plant VirtualPlant @relation(fields: [plantId], references: [id], onDelete: Cascade)
+
+  @@index([plantId, recordedAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Rewards
+//
+// "Buy 3 planting products, get one workshop of your choice free." Earned
+// rewards are rows rather than a computed count: a claimed one has to stay
+// claimed even after the customer buys more, and staff need to see which
+// booking a free seat was spent on.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum RewardType {
+  free_workshop
+}
+
+enum RewardStatus {
+  available
+  claimed
+}
+
+model Reward {
+  id       String       @id @default(cuid())
+  userId   String
+  type     RewardType   @default(free_workshop)
+  status   RewardStatus @default(available)
+  // Which purchase milestone minted it: the n-th completed set of three.
+  milestone Int
+  claimedRegistrationId String?
+  claimedAt DateTime?
+  createdAt DateTime    @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // What makes earning idempotent: syncing rewards after a payment can only
+  // ever insert the milestones that are missing.
+  @@unique([userId, type, milestone])
+  @@index([userId, status])
 }

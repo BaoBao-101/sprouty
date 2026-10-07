@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { AppError } from '../utils/errors.js';
 import { requireAuth, requireCsrf } from '../middleware/rbac.js';
+import {
+  assertRewardAvailable,
+  claimRewardTx,
+  releaseRewardForRegistration,
+  rewardThreshold,
+} from '../services/rewards.js';
 
 const regSchema = z.object({
   workshopId: z.string().min(1, 'Chưa chọn buổi workshop.').max(64),
@@ -27,6 +33,9 @@ const regSchema = z.object({
   paymentMethod: z.enum(['online', 'onsite'], {
     errorMap: () => ({ message: 'Hình thức thanh toán không hợp lệ.' }),
   }).optional().default('onsite'),
+  // Spend a "mua 3 tặng 1" reward on this booking. Signed-in customers only:
+  // a reward belongs to an account, and a guest has none to spend.
+  useReward: z.boolean().optional().default(false),
 });
 
 /**
@@ -113,6 +122,9 @@ export default async function workshopRoutes(fastify) {
       workshops: workshops.map(w =>
         publicWorkshop(w, w.registrations.reduce((sum, r) => sum + r.childCount, 0)),
       ),
+      // So the page can advertise "mua 3 tặng 1" to a visitor who is not
+      // signed in yet, without hardcoding the number in the markup.
+      promo: { freeWorkshopThreshold: rewardThreshold() },
     };
   });
 
@@ -193,7 +205,19 @@ export default async function workshopRoutes(fastify) {
       where: { id: registration.id },
       data: { status: 'cancelled' },
     });
-    return { message: 'Đã huỷ đăng ký. Chỗ được mở lại cho người khác.', registration: updated };
+
+    // Give the free seat back. Without this, cancelling a rewarded booking
+    // would quietly burn the reward — the customer bought three kits and would
+    // have nothing to show for it.
+    const released = await releaseRewardForRegistration(fastify.prisma, registration.id);
+
+    return {
+      message: released
+        ? 'Đã huỷ đăng ký. Suất workshop miễn phí đã được trả lại cho bạn.'
+        : 'Đã huỷ đăng ký. Chỗ được mở lại cho người khác.',
+      registration: updated,
+      rewardReturned: Boolean(released),
+    };
   });
 
   // POST /api/v1/workshops/register
@@ -218,7 +242,20 @@ export default async function workshopRoutes(fastify) {
 
     const {
       workshopId, guestName, guestPhone, guestEmail, childAge, childCount, note, paymentMethod,
+      useReward,
     } = parsed.data;
+
+    if (useReward) {
+      if (!req.user) {
+        return reply.code(401).send({
+          message: 'Đăng nhập để dùng suất workshop miễn phí của bạn.',
+        });
+      }
+      // Checked here for a clear message before any seat arithmetic; the claim
+      // itself is guarded again inside the transaction below, which is what
+      // actually stops two bookings spending one reward.
+      await assertRewardAvailable(fastify.prisma, req.user.id);
+    }
 
     const workshop = await fastify.prisma.workshop.findUnique({ where: { id: workshopId } });
     if (!workshop) return reply.code(404).send({ message: 'Không tìm thấy workshop.' });
@@ -240,13 +277,20 @@ export default async function workshopRoutes(fastify) {
 
     // Priced here, never from the client, and stored on the row so a later edit
     // to the workshop's price cannot change what this customer owes.
+    //
+    // A reward covers one child's seat, which is what the promotion offers —
+    // "tặng 1 buổi workshop". Booking three children with one reward still
+    // leaves two seats to pay for, and the response says so rather than
+    // letting the parent discover it at the door.
+    const fullAmount = workshop.price * childCount;
+    const discount = useReward ? Math.min(fullAmount, workshop.price) : 0;
     const data = {
       workshopId,
       childCount,
       childAge: childAge || null,
       note: note || null,
       paymentMethod,
-      amount: workshop.price * childCount,
+      amount: fullAmount - discount,
     };
     if (req.user) {
       data.userId = req.user.id;
@@ -271,11 +315,51 @@ export default async function workshopRoutes(fastify) {
     //
     // The cost is that a mis-click makes a second booking. That is recoverable
     // — both appear under "Workshop của tôi" and either can be cancelled.
-    const registration = await fastify.prisma.workshopRegistration.create({ data });
+    // Nothing left to pay means the seat is secured the moment it is booked —
+    // the same meaning `paidAt` carries everywhere else, so staff and the
+    // customer's own list read it the same way.
+    if (data.amount === 0) {
+      data.paidAt = new Date();
+      data.paymentMethod = 'online';
+    }
+
+    let registration;
+    let rewardSpent = false;
+    if (useReward) {
+      // The claim and the registration go in one transaction: a reward marked
+      // claimed against a booking that failed to insert would be gone for
+      // nothing, and a free booking with no reward claimed would be a free
+      // seat the customer never earned.
+      const result = await fastify.prisma.$transaction(async (tx) => {
+        const created = await tx.workshopRegistration.create({ data });
+        const rewardId = await claimRewardTx(tx, req.user.id, created.id);
+        if (!rewardId) {
+          // Lost the race, or the reward was spent in another tab. Rolling back
+          // is right: charging a customer who asked to use a reward, without
+          // telling them, would be worse than making them try again.
+          throw new AppError(
+            'Suất workshop miễn phí của bạn vừa được dùng ở một đăng ký khác. Vui lòng tải lại trang.',
+            409,
+          );
+        }
+        return created;
+      });
+      registration = result;
+      rewardSpent = true;
+    } else {
+      registration = await fastify.prisma.workshopRegistration.create({ data });
+    }
+
     reply.code(201);
     return {
-      message: 'Đăng ký thành công!',
+      message: rewardSpent
+        ? registration.amount === 0
+          ? 'Đã dùng suất workshop miễn phí — chỗ của bé đã được giữ!'
+          : 'Đã áp dụng suất miễn phí cho 1 bé. Phần còn lại vui lòng thanh toán để giữ chỗ.'
+        : 'Đăng ký thành công!',
       registration,
+      rewardApplied: rewardSpent,
+      rewardDiscount: discount,
       // Only when there is something to pay: a free session needs no QR.
       payment:
         paymentMethod === 'online' && registration.amount > 0

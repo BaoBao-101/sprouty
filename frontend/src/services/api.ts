@@ -157,6 +157,8 @@ export const API = {
   products: {
     list(params = {})  { return _fetch('/products?' + new URLSearchParams(params)); },
     get(id)            { return _fetch(`/products/${id}`); },
+    /** Species available to filter by, with kit counts. Public. */
+    species()          { return _fetch('/products/species'); },
   },
 
   workshops: {
@@ -176,6 +178,15 @@ export const API = {
     list()       { return _fetch('/orders'); },
     get(id)      { return _fetch(`/orders/${id}`); },
     cancel(id)   { return _fetch(`/orders/${id}/cancel`, { method: 'PATCH' }); },
+    /**
+     * Credits an order with no bank transaction behind it, for local testing
+     * and demos. The server refuses this outright unless it was started with
+     * ALLOW_FAKE_PAYMENTS=true and a non-production NODE_ENV — and the payment
+     * page only offers the button when the server said it would accept one.
+     */
+    simulatePayment(id) {
+      return _fetch(`/orders/${id}/simulate-payment`, { method: 'POST' });
+    },
     updateShipping(id, data) {
       return _fetch(`/orders/${id}/shipping`, { method: 'PATCH', body: JSON.stringify(data) });
     },
@@ -194,6 +205,8 @@ export const API = {
     },
     products: {
       list(params = {})   { return _fetch('/admin/products?' + new URLSearchParams(params)); },
+      /** The plant species an admin can put a kit on sale as. */
+      species()           { return _fetch('/admin/products/species'); },
       sales()             { return _fetch('/admin/products/sales'); },
       create(d)           { return _fetch('/admin/products', { method: 'POST', body: JSON.stringify(d) }); },
       update(id, d)       { return _fetch(`/admin/products/${id}`, { method: 'PUT', body: JSON.stringify(d) }); },
@@ -283,8 +296,49 @@ export const API = {
   },
 
   redeem: {
-    apply(code)       { return _fetch('/redeem', { method: 'POST', body: JSON.stringify({ code }) }); },
+    apply(code, nickname?) {
+      return _fetch('/redeem', { method: 'POST', body: JSON.stringify({ code, nickname }) });
+    },
     entitlements()    { return _fetch('/me/entitlements'); },
+  },
+
+  /** The simulated plant a kit unlocks. See backend/src/services/plant-sim.js. */
+  plants: {
+    /** Turns an activation code into a plant. */
+    activate(code: string, nickname?: string) {
+      return _fetch('/me/plants/activate', {
+        method: 'POST',
+        body: JSON.stringify({ code, nickname }),
+      });
+    },
+    list()        { return _fetch('/me/plants'); },
+    /** Note: this advances the simulation to now, so it is not a pure read. */
+    get(id: string) { return _fetch(`/me/plants/${id}`); },
+    care(id: string, action: string) {
+      return _fetch(`/me/plants/${id}/care`, { method: 'POST', body: JSON.stringify({ action }) });
+    },
+    setDevice(id: string, type: string, autoMode: boolean) {
+      return _fetch(`/me/plants/${id}/devices`, {
+        method: 'PATCH',
+        body: JSON.stringify({ type, autoMode }),
+      });
+    },
+    rename(id: string, nickname: string) {
+      return _fetch(`/me/plants/${id}`, { method: 'PATCH', body: JSON.stringify({ nickname }) });
+    },
+    /** Step-by-step help for one plant, grounded in its real numbers. */
+    coach(id: string, question?: string) {
+      return _fetch(`/me/plants/${id}/coach`, {
+        method: 'POST',
+        body: JSON.stringify({ question }),
+      });
+    },
+    guide()       { return _fetch('/plants/guide'); },
+  },
+
+  rewards: {
+    /** "Mua 3 tặng 1 workshop" progress; syncing happens server-side on read. */
+    mine()        { return _fetch('/me/rewards'); },
   },
 
   blog: {

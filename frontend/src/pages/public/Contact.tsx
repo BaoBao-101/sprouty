@@ -137,7 +137,7 @@ export default function Contact() {
                       <Link to="/workshop" className="social-btn">🌱 Workshop</Link>
                       <Link to="/shop" className="social-btn">🪴 Sprouty Kit</Link>
                       <Link to="/ai" className="social-btn">🤖 Plant Buddy AI</Link>
-                      <Link to="/my-products" className="social-btn"><img src="/assets/images/sprouty-icons/MyTree.png" alt="" style={{ width: "16px", height: "16px", objectFit: "contain", verticalAlign: "middle", marginRight: "4px" }} />Cây Kỷ Niệm</Link>
+                      <Link to="/my-plants" className="social-btn"><img src="/assets/images/sprouty-icons/MyTree.png" alt="" style={{ width: "16px", height: "16px", objectFit: "contain", verticalAlign: "middle", marginRight: "4px" }} />Cây Kỷ Niệm</Link>
                     </div>
                   </div>
                 </div>

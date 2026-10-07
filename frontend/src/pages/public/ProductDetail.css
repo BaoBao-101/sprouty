@@ -186,3 +186,22 @@
 
 .related-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px }
 .related-head h2 { margin-top: 6px }
+
+/* What each variant actually gives, now that nothing is shipped. Sits under the
+   price so the choice is made on substance rather than on the word "Smart". */
+.pdp-variant-note {
+  margin-top: 4px;
+  font-size: .78rem;
+  line-height: 1.45;
+  color: var(--ink-4);
+}
+
+.pdp-variant-note strong { color: var(--terracotta); font-weight: 700 }
+
+/* The species chip. Green, because it is the plant rather than a label about
+   the listing. */
+.pdp-tag.green {
+  background: var(--sage-lt);
+  color: var(--primary-700);
+  border-color: var(--primary-300);
+}

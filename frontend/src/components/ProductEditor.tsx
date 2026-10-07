@@ -1,4 +1,6 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { SproutyIcon } from '@/components/icons/SproutyIcon';
+import type { SpeciesOption } from '@/types/plant';
 import { VideoPanel } from './VideoPanel';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
@@ -12,6 +14,8 @@ export interface AdminProduct {
   oldPrice?: number | null;
   smartPriceDelta?: number | null;
   category: 'kit' | 'book';
+  /** Which plant a kit grows in the simulation; null on a non-kit. */
+  speciesKey?: string | null;
   ageRange: string;
   collection: string;
   emoji?: string;
@@ -48,6 +52,7 @@ const STATUSES = [
 const EMPTY: FormState = {
   name: '',
   category: 'kit',
+  speciesKey: 'bean',
   ageRange: '',
   collection: '',
   description: '',
@@ -64,6 +69,7 @@ const EMPTY: FormState = {
 interface FormState {
   name: string;
   category: string;
+  speciesKey: string;
   ageRange: string;
   collection: string;
   description: string;
@@ -81,6 +87,9 @@ function toForm(product: AdminProduct): FormState {
   return {
     name: product.name,
     category: product.category,
+    // Falls back to bean so the picker is never empty on an older product that
+    // predates the column; the admin still has to save for it to stick.
+    speciesKey: product.speciesKey || 'bean',
     ageRange: product.ageRange,
     collection: product.collection,
     description: product.description,
@@ -157,6 +166,28 @@ export function ProductEditor({
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
+  // The species catalogue comes from the server, not a list hardcoded here —
+  // the simulation decides what a carrot does, so it also decides what can be
+  // offered. Fetched once per editor open; failing leaves the picker empty and
+  // the rest of the form perfectly usable.
+  const [speciesOptions, setSpeciesOptions] = useState<SpeciesOption[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    API.admin.products
+      .species()
+      .then((data: { species: SpeciesOption[] }) => {
+        if (!cancelled) setSpeciesOptions(data.species || []);
+      })
+      .catch(() => {
+        /* The picker simply does not render; saving still works. */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const chosenSpecies = speciesOptions.find((s) => s.key === form.speciesKey) || null;
+
   const set = <K extends keyof FormState>(key: K) => (value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
@@ -193,6 +224,7 @@ export function ProductEditor({
     const payload = {
       name: form.name.trim(),
       category: form.category,
+      speciesKey: form.category === 'kit' ? form.speciesKey : null,
       ageRange: form.ageRange.trim(),
       collection: form.collection.trim(),
       description: form.description.trim(),
@@ -328,6 +360,65 @@ export function ProductEditor({
                     />
                   </label>
                 </div>
+
+                {/* Which plant this kit grows into. It is a visual choice, not a
+                    dropdown, because it decides what every customer who buys
+                    this product will spend three weeks raising — and because the
+                    stage names differ per species in a way a bare key hides. */}
+                {form.category === 'kit' && speciesOptions.length > 0 && (
+                  <div className="field species-field">
+                    <span className="field-label">
+                      Giống cây mô phỏng <span className="req">*</span>
+                    </span>
+                    <p className="species-hint">
+                      Khách mua sản phẩm này sẽ trồng ra cây đó. Tên sản phẩm đặt thế nào cũng được —
+                      giống cây do lựa chọn bên dưới quyết định.
+                    </p>
+
+                    <div className="species-grid">
+                      {speciesOptions.map((option) => (
+                        <button
+                          type="button"
+                          key={option.key}
+                          className={`species-opt${form.speciesKey === option.key ? ' active' : ''}`}
+                          onClick={() => set('speciesKey')(option.key)}
+                          aria-pressed={form.speciesKey === option.key}
+                        >
+                          <span
+                            className="species-opt-icon"
+                            style={{ ['--icon-accent' as string]: option.fruitColor }}
+                          >
+                            <SproutyIcon name={option.icon} size={24} />
+                          </span>
+                          <span className="species-opt-body">
+                            <strong>{option.label}</strong>
+                            <em>{option.blurb}</em>
+                          </span>
+                          <span
+                            className="species-opt-swatch"
+                            style={{ background: option.fruitColor, borderColor: option.flowerColor }}
+                            aria-hidden="true"
+                          />
+                        </button>
+                      ))}
+                    </div>
+
+                    {chosenSpecies && (
+                      <div className="species-preview">
+                        <span className="species-preview-title">
+                          Hành trình khách sẽ thấy · thu hoạch <b>{chosenSpecies.harvest}</b>
+                          {!chosenSpecies.pollinate && ' · không cần thụ phấn'}
+                        </span>
+                        <div className="species-preview-stages">
+                          {chosenSpecies.stageLabels.map((label, i) => (
+                            <span key={i}>{label}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
 
                 <label className="field">
                   <span className="field-label">

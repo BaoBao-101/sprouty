@@ -1,5 +1,18 @@
 export type ProductBadge = 'hot' | 'new' | 'sale' | null;
 
+/**
+ * The plant a kit grows, resolved server-side so the shop never has to keep
+ * its own copy of the species catalogue.
+ */
+export interface ProductSpecies {
+  key: string;
+  label: string;
+  icon: string;
+  harvest: string;
+  form: string;
+  pollinate: boolean;
+}
+
 /** Shape the UI works with. The API returns a wordier version; see normalizeProduct. */
 export interface Product {
   id: number;
@@ -10,6 +23,8 @@ export interface Product {
   col: string;
   /** Category: 'kit' | 'book' | 'membership'. */
   cat: string;
+  /** Which plant a kit grows. Null on anything that is not a kit. */
+  species: ProductSpecies | null;
   /** Age range label, e.g. "4–10 tuổi". */
   age: string;
   price: number;

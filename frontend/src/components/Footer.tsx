@@ -40,7 +40,7 @@ export function Footer() {
               <Link className="footer-social" title="Trợ lý AI Sprouty" aria-label="Trợ lý AI Sprouty" to="/ai">
                 🤖
               </Link>
-              <Link className="footer-social" title="Cây Kỷ Niệm" aria-label="Cây Kỷ Niệm" to="/my-products">
+              <Link className="footer-social" title="Cây Kỷ Niệm" aria-label="Cây Kỷ Niệm" to="/my-plants">
                 <img src="/assets/images/sprouty-icons/MyTree.png" alt="Cây Kỷ Niệm" className="footer-social-icon" />
               </Link>
             </div>

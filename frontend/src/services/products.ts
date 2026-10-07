@@ -23,6 +23,7 @@ export function normalizeProduct(p: any): Product {
     em: p.em || p.emoji || '🎨',
     col: p.col || p.collection || '',
     cat: p.cat || p.category || '',
+    species: p.species ?? null,
     age: p.age || p.ageRange || '',
     price,
     old: usableOldPrice(p.old ?? p.oldPrice, price),
@@ -49,6 +50,12 @@ export function productImage(p: Product) {
 
 export function productFallbackImage(p: Product) {
   return `/assets/images/products/kit-${p.id}.svg`;
+}
+
+/** The species the shop can filter by, with a count of kits for each. */
+export async function fetchSpeciesFilters() {
+  const { species } = await API.products.species();
+  return species as Array<{ key: string; label: string; icon: string; count: number; harvest: string }>;
 }
 
 export async function fetchProducts(params?: Record<string, unknown>): Promise<Product[]> {

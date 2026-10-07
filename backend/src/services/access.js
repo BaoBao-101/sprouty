@@ -54,10 +54,30 @@ export async function hasEntitlement(prisma, userId, feature, productId = null) 
   return Boolean(entitlement);
 }
 
+/**
+ * Whether this customer already grows this kit.
+ *
+ * A plant only exists because an activation code was redeemed, so it is the
+ * strongest proof of ownership there is — stronger than the order lookup,
+ * which misses a kit received as a gift, and stronger than the entitlement
+ * rows, which an admin grant or a revocation can leave out of step.
+ */
+export async function hasPlantForProduct(prisma, userId, productId) {
+  if (!userId || !productId) return false;
+  const plant = await prisma.virtualPlant.findUnique({
+    where: { userId_productId: { userId, productId: Number(productId) } },
+    select: { id: true },
+  });
+  return Boolean(plant);
+}
+
 export async function canAccessProductFeature(prisma, user, productId, feature) {
   if (!user) return false;
   if (['employee', 'admin'].includes(user.role)) return true;
   if (await hasPurchasedProduct(prisma, user.id, productId)) return true;
+  // Growing the plant is owning the kit. Without this a customer who activated
+  // a gifted code could raise a plant but not open its own photo album.
+  if (await hasPlantForProduct(prisma, user.id, productId)) return true;
   return hasEntitlement(prisma, user.id, feature, productId);
 }
 

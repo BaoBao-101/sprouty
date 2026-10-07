@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { AppError } from '../../utils/errors.js';
 import { requireEmployee, requireCsrf } from '../../middleware/rbac.js';
 import { auditLog } from '../../services/audit.js';
+import { syncWorkshopRewards } from '../../services/rewards.js';
 
 const updateStatusSchema = z.object({
   status: z.enum(['pending', 'processing', 'shipped', 'delivered', 'cancelled']),
@@ -115,6 +116,20 @@ export default async function adminOrderRoutes(fastify) {
       previousStatus: order.status,
     });
 
-    return { order: updated, message: 'Đã ghi nhận thanh toán.' };
+    // A payment recorded by hand earns the same "mua 3 tặng 1" reward as one
+    // that arrived through the webhook — a customer who paid in cash must not
+    // be worse off than one who transferred.
+    const rewards = await syncWorkshopRewards(fastify.prisma, order.userId).catch((err) => {
+      fastify.log.error({ err, orderId: order.id }, 'Reward sync after manual payment failed');
+      return null;
+    });
+
+    return {
+      order: updated,
+      message: rewards?.newlyEarned
+        ? `Đã ghi nhận thanh toán. Khách được tặng ${rewards.newlyEarned} suất workshop miễn phí.`
+        : 'Đã ghi nhận thanh toán.',
+      rewardsEarned: rewards?.newlyEarned ?? 0,
+    };
   });
 }

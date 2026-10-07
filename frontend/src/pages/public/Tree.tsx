@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { LEAF_POSITIONS } from '@/data/tree';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
+import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
+import { PlantArt, type PlantStageId } from '@/components/PlantArt';
+import type { FruitShape, PlantForm } from '@/components/PlantForms';
 import './Tree.css';
 
 interface Leaf {
@@ -10,7 +12,37 @@ interface Leaf {
   url: string;
   title?: string;
   note?: string;
+  createdAt?: string;
+  /** The growth stage the plant was at when this was saved. */
+  stage?: PlantStageId | null;
+  stageLabel?: string | null;
   asset?: { mimeType?: string };
+}
+
+/** What GET /my-products/:id/images returns, now that it describes a journey. */
+interface AlbumData {
+  images: Leaf[];
+  maxLeaves: number;
+  removalsUsed: number;
+  removalsMax: number;
+  product: { id: number; name: string } | null;
+  plant: {
+    id: string;
+    nickname: string;
+    stage: PlantStageId;
+    stageProgress: number;
+    health: number;
+  } | null;
+  species: {
+    key: string;
+    label: string;
+    harvest: string;
+    form: PlantForm;
+    fruitShape: FruitShape;
+    fruitColor: string;
+    flowerColor: string;
+  };
+  stages: Array<{ id: PlantStageId; label: string; icon: string }>;
 }
 
 const DEFAULT_MAX_LEAVES = 10;
@@ -292,143 +324,219 @@ export default function Tree() {
   const navigate = useNavigate();
   const productId = searchParams.get('id') || '';
 
-  const [productName, setProductName] = useState('');
+  const [album, setAlbum] = useState<AlbumData | null>(null);
   const [leaves, setLeaves] = useState<Leaf[]>([]);
   const [maxLeaves, setMaxLeaves] = useState(DEFAULT_MAX_LEAVES);
   const [removalsUsed, setRemovalsUsed] = useState(0);
   const [removalsMax, setRemovalsMax] = useState(5);
+  const [loading, setLoading] = useState(true);
 
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [openLeaf, setOpenLeaf] = useState<Leaf | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!productId) navigate('/my-products', { replace: true });
+    if (!productId) navigate('/my-plants', { replace: true });
   }, [productId, navigate]);
-
-  useEffect(() => {
-    if (!productId) return;
-    API.products
-      .get(productId)
-      .then((data: any) => setProductName(data.product?.name || ''))
-      .catch(() => setProductName(''));
-  }, [productId]);
 
   const loadLeaves = useCallback(() => {
     if (!productId) return;
     API.myImages
       .list(productId)
-      .then((data: any) => {
+      .then((data: AlbumData) => {
+        setAlbum(data);
         setLeaves(data.images || []);
-        if (data.maxLeaves) setMaxLeaves(Math.min(data.maxLeaves, LEAF_POSITIONS.length));
+        if (data.maxLeaves) setMaxLeaves(data.maxLeaves);
         if (typeof data.removalsUsed === 'number') setRemovalsUsed(data.removalsUsed);
         if (typeof data.removalsMax === 'number') setRemovalsMax(data.removalsMax);
       })
       .catch((err: any) => {
-        showToast(err?.message || 'Không tải được cây kỷ niệm', 'error');
+        showToast(err?.message || 'Không tải được album', 'error');
         setLeaves([]);
-      });
+      })
+      .finally(() => setLoading(false));
   }, [productId]);
 
   useEffect(loadLeaves, [loadLeaves]);
 
   const full = leaves.length >= maxLeaves;
+  const species = album?.species;
+  const plant = album?.plant;
+  const title = plant?.nickname || album?.product?.name || 'Album kỷ niệm';
+  const currentStageLabel = plant
+    ? album?.stages.find((st) => st.id === plant.stage)?.label ?? ''
+    : '';
 
-  // Leaves grow one at a time: filled slots, then exactly one "next" slot.
-  const slots = LEAF_POSITIONS.slice(0, full ? leaves.length : leaves.length + 1);
+  /**
+   * Photos grouped by the stage they were taken at, newest stage first, so the
+   * album reads as the plant's journey rather than as a pile of pictures.
+   * Anything uploaded before the plant existed carries no stage and collects at
+   * the end rather than being guessed into a group it may not belong to.
+   */
+  const groups = useMemo(() => {
+    const stages = album?.stages || [];
+    const byStage = new Map<string, Leaf[]>();
+    const undated: Leaf[] = [];
+
+    for (const leaf of leaves) {
+      if (!leaf.stage) {
+        undated.push(leaf);
+        continue;
+      }
+      const list = byStage.get(leaf.stage) || [];
+      list.push(leaf);
+      byStage.set(leaf.stage, list);
+    }
+
+    // Widened to a plain string: the trailing "unknown" group is not a growth
+    // stage, and typing the list as PlantStageId would make it a lie.
+    const ordered: Array<{ id: string; label: string; icon: IconName; items: Leaf[] }> = stages
+      .map((st, index) => ({ ...st, index }))
+      .filter((st) => byStage.has(st.id))
+      .sort((a, b) => b.index - a.index)
+      .map((st) => ({
+        id: st.id as string,
+        label: st.label,
+        icon: st.icon as IconName,
+        items: byStage.get(st.id) as Leaf[],
+      }));
+
+    if (undated.length) {
+      ordered.push({
+        id: 'unknown',
+        label: 'Chưa rõ chặng',
+        icon: 'album' as IconName,
+        items: undated,
+      });
+    }
+    return ordered;
+  }, [leaves, album]);
 
   return (
     <>
-      <div className="tree-hero">
+      <div className="album-hero">
         <div className="container">
-          <div className="tree-breadcrumb">
-            <Link to="/">Trang chủ</Link> › <Link to="/my-products">Cây của tôi</Link> ›{' '}
-            <span>{productName || 'Cây Kỷ Niệm'}</span>
-          </div>
-          <h1>{productName ? `Cây Kỷ Niệm — ${productName}` : 'Cây Kỷ Niệm'}</h1>
-          <p>
-            Mỗi tấm ảnh hoặc video bé chăm cây sẽ nở thành một chiếc lá trên cây. Bấm vào lá xanh
-            nhạt để thêm khoảnh khắc mới.
-          </p>
-        </div>
-      </div>
-
-      <section style={{ padding: '32px 0 72px' }}>
-        <div className="container">
-          <div className="tree-toolbar">
-            <span className="leaf-count-badge">
-              🍃 {leaves.length}/{maxLeaves} lá
-            </span>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Link className="btn btn-outline btn-sm" to={`/shop/${productId}?tab=videos`}>
-                🎬 Video hướng dẫn
-              </Link>
-              <Link className="btn btn-ghost btn-sm" to="/my-products">
-                ← Quay lại
-              </Link>
-            </div>
+          <div className="breadcrumb album-crumb">
+            <Link to="/">Trang chủ</Link> › <Link to="/my-plants">Cây của tôi</Link> ›{' '}
+            <span>Album</span>
           </div>
 
-          <div className="tree-stage">
-            <img
-              className="tree-bg-img"
-              src="/assets/images/tree/tree-trunk.png"
-              alt={productName || 'Cây Kỷ Niệm'}
-            />
-
-            {full && (
-              <div className="tree-full-msg">
-                <img src="/assets/images/sprouty-icons/MyTree.png" alt="" />
-                Cây đã đủ lá!
+          <div className="album-hero-row">
+            {/* The plant itself, drawn in its own species' form. This page used
+                to show one bare-branch tree for every product, so a carrot and a
+                sunflower shared an illustration that was neither of them. */}
+            {plant && species && (
+              <div className="album-plant">
+                <PlantArt
+                  stage={plant.stage}
+                  progress={plant.stageProgress}
+                  health={plant.health}
+                  form={species.form}
+                  fruitShape={species.fruitShape}
+                  fruitColor={species.fruitColor}
+                  flowerColor={species.flowerColor}
+                  size={170}
+                />
               </div>
             )}
 
-            {slots.map((pos, i) => {
-              const mask = `/assets/images/tree/leaves/${pos.file}`;
-              const style: React.CSSProperties = {
-                left: `${pos.left}%`,
-                top: `${pos.top}%`,
-                width: `${pos.width}%`,
-                height: `${pos.height}%`,
-                WebkitMaskImage: `url(${mask})`,
-                maskImage: `url(${mask})`,
-              };
-
-              const leaf = leaves[i];
-              if (leaf) {
-                return (
-                  <div
-                    className="leaf-slot filled"
-                    style={style}
-                    key={leaf.id}
-                    title={leaf.title || 'Kỷ niệm'}
-                    onClick={() => setOpenLeaf(leaf)}
-                  >
-                    {isVideo(leaf) ? (
-                      <>
-                        <video src={leaf.url} muted />
-                        <span className="leaf-play-badge">▶</span>
-                      </>
-                    ) : (
-                      <img src={leaf.url} alt="" />
-                    )}
-                  </div>
-                );
-              }
-
-              return (
-                <div
-                  className="leaf-slot next"
-                  style={style}
-                  key={`next-${i}`}
-                  title="Thêm khoảnh khắc mới"
-                  onClick={() => fileInput.current?.click()}
-                >
-                  <img src="/assets/images/sprouty-icons/AddPhoto.png" alt="" />
-                </div>
-              );
-            })}
+            <div className="album-hero-copy">
+              <h1>Album — {title}</h1>
+              <p>
+                {species
+                  ? `Lưu lại từng chặng của cây ${species.label.toLowerCase()}, từ hạt giống tới ngày thu hoạch ${species.harvest}.`
+                  : 'Lưu lại ảnh và video từng chặng lớn lên của cây.'}
+              </p>
+              <div className="album-hero-meta">
+                <span className="album-count">
+                  <SproutyIcon name="album" size={16} />
+                  {leaves.length}/{maxLeaves} khoảnh khắc
+                </span>
+                {plant && (
+                  <Link to={`/plant/${plant.id}`} className="album-back-plant">
+                    <SproutyIcon name="sprout" size={16} />
+                    Vào chăm cây
+                  </Link>
+                )}
+              </div>
+            </div>
           </div>
+        </div>
+      </div>
+
+      <section className="album-body">
+        <div className="container">
+          {/* Adding is one obvious button. It used to be a pale leaf-shaped slot
+              hidden somewhere on the tree illustration, which a child had to
+              find before they could add anything at all. */}
+          <button className="album-add" disabled={full} onClick={() => fileInput.current?.click()}>
+            <span className="album-add-icon">
+              <SproutyIcon name={full ? 'check' : 'camera'} size={26} />
+            </span>
+            <span className="album-add-copy">
+              <strong>{full ? 'Album đã đầy' : 'Thêm khoảnh khắc mới'}</strong>
+              <em>
+                {full
+                  ? `Đã lưu đủ ${maxLeaves} khoảnh khắc cho cây này.`
+                  : currentStageLabel
+                    ? `Ảnh sẽ được ghi vào chặng “${currentStageLabel}”`
+                    : 'Chọn ảnh hoặc video từ máy của bạn'}
+              </em>
+            </span>
+            {!full && <SproutyIcon name="plus" size={22} />}
+          </button>
+
+          {loading && <p className="album-muted">Đang mở album…</p>}
+
+          {!loading && leaves.length === 0 && (
+            <div className="album-empty">
+              <span className="album-empty-icon">
+                <SproutyIcon name="camera" size={36} />
+              </span>
+              <h3>Album còn trống</h3>
+              <p>
+                Mỗi lần cây đổi dáng, chụp một tấm. Cuối hành trình bạn sẽ có trọn bộ ảnh từ hạt
+                giống tới ngày thu hoạch.
+              </p>
+            </div>
+          )}
+
+          {groups.map((group) => (
+            <div className="album-group" key={group.id}>
+              <div className="album-group-head">
+                <span className="album-group-icon">
+                  <SproutyIcon name={group.icon} size={18} />
+                </span>
+                <h2>{group.label}</h2>
+                <span className="album-group-count">{group.items.length}</span>
+              </div>
+
+              <div className="album-grid">
+                {group.items.map((leaf) => (
+                  <button className="album-item" key={leaf.id} onClick={() => setOpenLeaf(leaf)}>
+                    <span className="album-item-media">
+                      {isVideo(leaf) ? (
+                        <>
+                          <video src={leaf.url} muted />
+                          <span className="album-item-play">
+                            <SproutyIcon name="camera" size={18} />
+                          </span>
+                        </>
+                      ) : (
+                        <img src={leaf.url} alt={leaf.title || 'Khoảnh khắc'} loading="lazy" />
+                      )}
+                    </span>
+                    <span className="album-item-cap">
+                      <strong>{leaf.title || 'Khoảnh khắc'}</strong>
+                      {leaf.createdAt && (
+                        <em>{new Date(leaf.createdAt).toLocaleDateString('vi-VN')}</em>
+                      )}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
 
           <input
             ref={fileInput}

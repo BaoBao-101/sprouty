@@ -5,7 +5,7 @@ import './Faq.css';
 
 const GROUPS: Array<{ key: FaqGroupKey; icon: string; title: string }> = [
   { key: 'orders', icon: '📦', title: 'Đặt hàng & Thanh toán' },
-  { key: 'shipping', icon: '🚚', title: 'Giao hàng' },
+  { key: 'activation', icon: '🌱', title: 'Kích hoạt & chăm cây' },
   { key: 'product', icon: '🎨', title: 'Sản phẩm & Kit' },
   { key: 'account', icon: '👤', title: 'Tài khoản & Video' },
   { key: 'ai', icon: '🤖', title: 'Trợ lý AI' },

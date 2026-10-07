@@ -13,19 +13,23 @@ export type FaqGroupKey = keyof typeof FAQ_DATA;
 export const FAQ_DATA = {
   orders: [
     { q:'Tôi có thể đặt hàng bằng những cách nào?', a:'Bạn có thể đặt hàng trực tiếp trên website Sprouty. Chọn sản phẩm yêu thích, thêm vào giỏ hàng và tiến hành thanh toán. Hiện tại chúng tôi nhận đặt hàng 24/7 qua website.' },
-    { q:'Các phương thức thanh toán nào được chấp nhận?', a:'Sprouty chấp nhận thanh toán qua: chuyển khoản ngân hàng, ví điện tử MoMo, ZaloPay, VNPay, và thanh toán khi nhận hàng (COD) cho đơn hàng trong nội thành TP.HCM.' },
+    { q:'Các phương thức thanh toán nào được chấp nhận?', a:'Sprouty chấp nhận thanh toán qua: chuyển khoản ngân hàng, ví điện tử MoMo, ZaloPay, VNPay, và và các ví điện tử. Vì sản phẩm là cây mô phỏng kích hoạt ngay trên web nên không có hình thức COD.' },
     { q:'Tôi có thể đặt hàng mà không cần tài khoản không?', a:'Có! Bạn có thể mua hàng mà không cần tạo tài khoản. Tuy nhiên, nếu có tài khoản, bạn sẽ được xem <strong>video hướng dẫn</strong>, theo dõi đơn hàng và nhận ưu đãi riêng.' },
     { q:'Đơn hàng của tôi có thể bị huỷ không?', a:'Bạn có thể huỷ đơn hàng trong vòng <strong>2 giờ</strong> sau khi đặt, trước khi chúng tôi xử lý. Sau khi đơn được xử lý, vui lòng liên hệ hotline để được hỗ trợ. Xem thêm <a href="/returns">chính sách đổi trả</a>.' },
-    { q:'Tôi có thể đặt nhiều sản phẩm trong một đơn không?', a:'Hoàn toàn được! Bạn có thể thêm bao nhiêu sản phẩm vào giỏ hàng tùy ý và thanh toán một lần. Đơn từ 200.000đ sẽ được <strong>miễn phí giao hàng</strong>.' },
-    { q:'Sprouty có xuất hóa đơn VAT không?', a:'Có. Nếu bạn cần hóa đơn VAT, vui lòng ghi rõ thông tin doanh nghiệp (MST, địa chỉ) trong phần ghi chú khi đặt hàng hoặc gửi yêu cầu qua trang <a href="/contact">Liên hệ</a> trong vòng 48 giờ sau khi nhận hàng.' },
+    { q:'Tôi có thể đặt nhiều sản phẩm trong một đơn không?', a:'Hoàn toàn được! Bạn có thể thêm bao nhiêu sản phẩm vào giỏ hàng tùy ý và thanh toán một lần. Mỗi bộ kit trong đơn sẽ có một mã kích hoạt riêng.' },
+    { q:'Sprouty có xuất hóa đơn VAT không?', a:'Có. Nếu bạn cần hóa đơn VAT, vui lòng ghi rõ thông tin doanh nghiệp (MST, địa chỉ) trong phần ghi chú khi đặt hàng hoặc gửi yêu cầu qua trang <a href="/contact">Liên hệ</a> trong vòng 48 giờ sau khi thanh toán.' },
   ],
-  shipping: [
-    { q:'Sprouty giao hàng đến những nơi nào?', a:'Sprouty giao hàng toàn quốc. Nội thành TP.HCM giao trong 1–2 ngày làm việc. Các tỉnh thành khác từ 3–5 ngày làm việc qua đối tác GHTK, GHN.' },
-    { q:'Phí giao hàng là bao nhiêu?', a:'Đơn hàng từ <strong>200.000đ trở lên</strong> được miễn phí giao hàng toàn quốc. Đơn dưới 200.000đ có phí giao hàng từ 25.000đ – 45.000đ tùy khu vực.' },
-    { q:'Tôi có thể theo dõi đơn hàng ở đâu?', a:'Sau khi đơn được xử lý, bạn sẽ nhận SMS/email chứa mã vận đơn. Dùng mã này để tra cứu trực tiếp trên website của đơn vị vận chuyển (GHTK/GHN). Bạn cũng có thể xem trạng thái đơn tại mục "Đơn hàng của tôi" sau khi đăng nhập.' },
-    { q:'Sản phẩm được đóng gói như thế nào để đảm bảo an toàn?', a:'Mỗi bộ kit được đóng gói trong hộp cứng, có lớp đệm xốp bảo vệ nguyên liệu bên trong. Các vật dụng sắc nhọn (kéo) được bọc riêng. Chúng tôi đảm bảo tất cả nguyên liệu đến tay bé nguyên vẹn.' },
-    { q:'Điều gì xảy ra nếu sản phẩm bị hư hỏng khi giao?', a:'Nếu sản phẩm bị hư hỏng trong quá trình vận chuyển, hãy chụp ảnh và liên hệ chúng tôi trong vòng <strong>48 giờ</strong> sau khi nhận. Sprouty sẽ gửi hàng thay thế miễn phí hoặc hoàn tiền 100%.' },
-    { q:'Có thể giao hàng vào ngày/giờ cụ thể không?', a:'Hiện tại chúng tôi chưa hỗ trợ đặt lịch giao hàng theo giờ. Nếu bạn cần giao vào dịp đặc biệt (sinh nhật, lễ...), hãy đặt trước ít nhất 3 ngày và ghi rõ yêu cầu trong phần ghi chú đơn hàng.' },
+  // Sprouty no longer ships anything: a kit is a simulated plant unlocked by
+  // an activation code. This group used to promise nationwide delivery, GHTK
+  // tracking numbers and damage-in-transit replacements, none of which exist.
+  activation: [
+    { q:'Mua xong thì tôi nhận được gì?', a:'Ngay sau khi thanh toán thành công, bạn nhận một <strong>mã kích hoạt</strong> hiển thị trong mục <a href="/account">Đơn hàng của tôi</a>. Sprouty không giao hàng vật lý — tất cả diễn ra trên web.' },
+    { q:'Kích hoạt cây ở đâu?', a:'Vào mục <a href="/my-plants">Cây của tôi</a>, nhập mã kích hoạt và đặt tên cho cây. Hạt sẽ được gieo ngay và bạn bắt đầu chăm cây cùng Plant Buddy AI.' },
+    { q:'Mã kích hoạt dùng được mấy lần?', a:'Mỗi mã chỉ dùng được <strong>một lần</strong> và gắn với một bộ kit. Nếu bạn mua nhiều kit, mỗi kit có mã riêng và trở thành một cây riêng trong vườn của bạn.' },
+    { q:'Tôi mất mã kích hoạt thì sao?', a:'Mã không bao giờ mất: nó luôn hiển thị lại trong <a href="/account">Đơn hàng của tôi</a> ứng với đơn đã thanh toán. Nếu vẫn không thấy, hãy <a href="/contact">liên hệ</a> với chúng tôi.' },
+    { q:'Cây mất bao lâu để lớn?', a:'Mỗi việc chăm cây có <strong>thời gian hồi</strong> riêng (tưới nước 4 giờ, bón phân 20 giờ...), nên cây lớn dần theo ngày thật. Chăm đều đặn mỗi ngày thì khoảng <strong>2–3 tuần</strong> là tới ngày thu hoạch.' },
+    { q:'Tôi bận vài ngày không vào chăm thì cây có chết không?', a:'Cây <strong>không bao giờ chết</strong> — cùng lắm là héo và ngừng lớn, chăm lại vài hôm là hồi phục. Bạn cũng có thể bật <strong>bơm tưới tự động</strong> (mở ở giai đoạn Cây con) để giữ ẩm khi đi vắng.' },
+    { q:'Bản Smart khác bản Standard chỗ nào?', a:'Bản Standard mở dần 8 thiết bị IoT theo từng giai đoạn cây lớn. Bản <strong>Smart</strong> mở sẵn <strong>cả 8 thiết bị ngay từ ngày đầu</strong> — có bơm tưới, đèn trồng cây và quạt tự động từ lúc còn là hạt.' },
   ],
   product: [
     { q:'Nguyên liệu trong các bộ kit có an toàn cho trẻ em không?', a:'An toàn là ưu tiên số 1 của Sprouty. Tất cả nguyên liệu đều được kiểm tra và đạt chuẩn an toàn cho trẻ em: kéo đầu tròn không sắc, keo không độc hại, màu vẽ đạt tiêu chuẩn EN71 và ASTM F963. Phụ huynh hoàn toàn yên tâm.' },

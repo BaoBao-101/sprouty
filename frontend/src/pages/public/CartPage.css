@@ -57,3 +57,5 @@
 .cart-trust span { font-size: .72rem; color: var(--ink-5); display: flex; align-items: center; gap: 4px }
 
 .cart-modal-note { font-size: .86rem; color: var(--ink-4); margin-bottom: 16px }
+
+.cart-promo { margin-bottom: 16px }
