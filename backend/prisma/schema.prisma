@@ -530,6 +530,7 @@ model VirtualPlant {
   devices PlantDevice[]
   careLogs PlantCareLog[]
   readings PlantSensorReading[]
+  coachMessages PlantCoachMessage[]
 
   // One plant per kit per account: the activation code is single-use and
   // per-product, so a second plant for the same kit could only come from a
@@ -574,6 +575,32 @@ model PlantCareLog {
   // per-action timestamp column that could disagree with this log.
   @@index([plantId, action, createdAt])
   @@index([plantId, createdAt])
+}
+
+/// What the child and Plant Buddy have said to each other about one plant.
+///
+/// Kept on the server rather than in the browser for two reasons: a child may
+/// open their garden on the family tablet and then a phone, and the coach can
+/// only answer a follow-up like "tại sao?" if it is given the turns that came
+/// before. Trimmed to a recent window; this is a conversation, not an archive.
+model PlantCoachMessage {
+  id        String   @id @default(cuid())
+  /// Total order within a plant's thread.
+  ///
+  /// createdAt cannot do this job: a question and its answer are written
+  /// together and land on the same millisecond, so ordering by time put the
+  /// answer before the question about half the time. Replayed that way the
+  /// model saw two user turns in a row and returned nothing at all.
+  seq       Int      @default(autoincrement())
+  plantId   String
+  /// 'user' or 'assistant' — mirrors the roles the AI providers expect.
+  role      String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  plant VirtualPlant @relation(fields: [plantId], references: [id], onDelete: Cascade)
+
+  @@index([plantId, seq])
 }
 
 model PlantSensorReading {

@@ -96,6 +96,14 @@ export interface SensorReading {
   recordedAt: string;
 }
 
+/** One turn in the Plant Buddy thread. */
+export interface CoachMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+}
+
 export interface CareHistoryEntry {
   id: string;
   action: CareActionId;
@@ -140,6 +148,7 @@ export interface PlantDetail extends PlantCard {
   devices: PlantDevice[];
   care: CareSlot[];
   readings: SensorReading[];
+  coachMessages: CoachMessage[];
   history: CareHistoryEntry[];
 }
 

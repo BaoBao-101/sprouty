@@ -342,6 +342,10 @@ export const API = {
         body: JSON.stringify({ question }),
       });
     },
+    /** Starts the Plant Buddy thread over. */
+    clearCoach(id: string) {
+      return _fetch(`/me/plants/${id}/coach`, { method: 'DELETE' });
+    },
     guide()       { return _fetch('/plants/guide'); },
   },
 

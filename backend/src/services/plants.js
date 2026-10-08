@@ -31,6 +31,18 @@ import {
   timeScale,
 } from './plant-sim.js';
 
+/**
+ * How much of the conversation Plant Buddy is given back, and how much is kept.
+ *
+ * The window is small on purpose: every turn is re-sent with the next request,
+ * so a long history costs tokens on every ask and pushes the plant's current
+ * readings — the part that has to be obeyed — further from the model's
+ * attention. Twelve turns is a conversation; a hundred is a transcript nobody
+ * reads and everybody pays for.
+ */
+const COACH_CONTEXT_TURNS = 12;
+const COACH_KEEP_MESSAGES = 60;
+
 /** How many sensor snapshots the chart shows, and how far apart they are kept. */
 const READING_MIN_GAP_MS = 20 * 60 * 1000;
 const READING_KEEP_DAYS = 10;
@@ -434,6 +446,60 @@ export async function setDeviceAuto(prisma, userId, plantId, type, autoMode) {
   return { type, autoMode, label: meta.label };
 }
 
+/**
+ * The recent conversation for one plant, oldest first — the order both the
+ * providers and the on-screen thread want.
+ */
+export async function coachHistory(prisma, plantId, take = COACH_CONTEXT_TURNS) {
+  // Ordered by seq, never by time: the two halves of an exchange share a
+  // timestamp, so time alone leaves their order to chance.
+  const rows = await prisma.plantCoachMessage.findMany({
+    where: { plantId },
+    orderBy: { seq: 'desc' },
+    take,
+  });
+  return rows.reverse();
+}
+
+/**
+ * Records one exchange and trims the backlog.
+ *
+ * Both messages are written together: a question saved without its answer
+ * would be replayed to the model as something it had ignored.
+ */
+export async function saveCoachExchange(prisma, plantId, question, answer) {
+  await prisma.plantCoachMessage.createMany({
+    data: [
+      { plantId, role: 'user', content: question.slice(0, 2000) },
+      { plantId, role: 'assistant', content: answer.slice(0, 4000) },
+    ],
+  });
+
+  // Trim by id, chosen through seq: two messages written in the same
+  // millisecond would otherwise make the cut arbitrary.
+  const keep = await prisma.plantCoachMessage.findMany({
+    where: { plantId },
+    orderBy: { seq: 'desc' },
+    take: COACH_KEEP_MESSAGES,
+    select: { id: true },
+  });
+  if (keep.length === COACH_KEEP_MESSAGES) {
+    await prisma.plantCoachMessage.deleteMany({
+      where: { plantId, id: { notIn: keep.map((m) => m.id) } },
+    });
+  }
+}
+
+/** Wipes the thread for one plant, at the owner's request. */
+export async function clearCoachHistory(prisma, userId, plantId) {
+  const plant = await prisma.virtualPlant.findFirst({
+    where: { id: plantId, userId },
+    select: { id: true },
+  });
+  if (!plant) throw new AppError('Không tìm thấy cây này.', 404);
+  await prisma.plantCoachMessage.deleteMany({ where: { plantId: plant.id } });
+}
+
 export async function renamePlant(prisma, userId, plantId, nickname) {
   const plant = await prisma.virtualPlant.findFirst({ where: { id: plantId, userId } });
   if (!plant) throw new AppError('Không tìm thấy cây này.', 404);
@@ -492,7 +558,7 @@ export async function plantDetailDto(prisma, plant, { now = new Date() } = {}) {
   const availability = await careAvailability(prisma, plant.id, plant.stage, now);
   const stage = stageMeta(plant.stage);
 
-  const [readings, logs] = await Promise.all([
+  const [readings, logs, coachMessages] = await Promise.all([
     prisma.plantSensorReading.findMany({
       where: { plantId: plant.id },
       orderBy: { recordedAt: 'asc' },
@@ -507,6 +573,7 @@ export async function plantDetailDto(prisma, plant, { now = new Date() } = {}) {
       orderBy: { createdAt: 'desc' },
       take: 20,
     }),
+    coachHistory(prisma, plant.id, COACH_KEEP_MESSAGES),
   ]);
 
   const species = speciesFor(product);
@@ -567,6 +634,12 @@ export async function plantDetailDto(prisma, plant, { now = new Date() } = {}) {
     }),
     care: CARE_ACTIONS.map((action) => availability[action.id]),
     readings,
+    coachMessages: coachMessages.map((m) => ({
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      createdAt: m.createdAt,
+    })),
     history: logs.map((log) => ({
       id: log.id,
       action: log.action,

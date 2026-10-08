@@ -13,7 +13,10 @@ import { callAi, classifyAiError, SPROUTY_SYSTEM, missingProviderKey } from '../
 import { CARE_ACTIONS, DEVICES, STAGES } from '../services/plant-sim.js';
 import {
   advance,
+  clearCoachHistory,
+  coachHistory,
   performCare,
+  saveCoachExchange,
   plantCardDto,
   plantDetailDto,
   plantPromptContext,
@@ -226,11 +229,25 @@ CÁCH TRẢ LỜI:
       ? question.trim()
       : 'Cây của mình giờ thế nào, mình nên làm gì tiếp theo?';
 
+    // Replaying the thread is what lets a follow-up work. Asked on its own,
+    // "tại sao?" reached the model with nothing to refer back to.
+    const prior = await coachHistory(fastify.prisma, plant.id);
+
     try {
       const reply_text = await callAi({
-        messages: [{ role: 'user', content: userMessage }],
+        messages: [
+          ...prior.map((m) => ({ role: m.role, content: m.content })),
+          { role: 'user', content: userMessage },
+        ],
         system,
       });
+
+      // Saved after the call succeeded: a question stored against a failed
+      // request would be replayed later as something the coach had ignored.
+      // Failure to record must not lose the answer already on its way back.
+      await saveCoachExchange(fastify.prisma, plant.id, userMessage, reply_text)
+        .catch((err) => fastify.log.error({ err }, 'Could not save coach exchange'));
+
       return {
         reply: reply_text,
         nextStep: detail.nextStep,
@@ -244,6 +261,14 @@ CÁCH TRẢ LỜI:
       fastify.log.error({ err, aiCause: cause.kind, fix: cause.hint }, 'Plant coach error');
       return reply.code(502).send({ message: 'Dịch vụ AI tạm thời không khả dụng. Thử lại sau.' });
     }
+  });
+
+  // DELETE /api/v1/me/plants/:plantId/coach — start the thread over.
+  fastify.delete('/me/plants/:plantId/coach', {
+    preHandler: [requireAuth, requireCsrf],
+  }, async (req) => {
+    await clearCoachHistory(fastify.prisma, req.user.id, req.params.plantId);
+    return { message: 'Đã xoá lịch sử trò chuyện.' };
   });
 
   // GET /api/v1/me/rewards — the "buy 3, get a workshop" progress.
