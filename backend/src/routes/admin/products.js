@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { AppError } from '../../utils/errors.js';
 import { requireEmployee, requireCsrf, requireAdmin } from '../../middleware/rbac.js';
 import { isSpeciesKey, speciesCatalog } from '../../services/plant-sim.js';
+import { readPaging, paged, searchOr } from './paging.js';
 
 // Reject any string containing HTML angle brackets — defense-in-depth against stored XSS.
 const noHtml = (label) => z.string().refine(
@@ -116,13 +117,34 @@ export default async function adminProductRoutes(fastify) {
 
   // GET /api/v1/admin/products
   fastify.get('/products', { preHandler: [requireEmployee] }, async (req) => {
-    const { status } = req.query;
-    const where = status ? { status } : {};
-    const products = await fastify.prisma.product.findMany({
-      where,
-      orderBy: { id: 'asc' },
-    });
-    return { products };
+    const paging = readPaging(req.query, { defaultLimit: 24 });
+    const { status, category } = req.query;
+
+    const where = {};
+    if (status) where.status = String(status);
+    if (category) where.category = String(category);
+    const or = searchOr(req.query.search, ['name', 'description', 'speciesKey']);
+    if (or) where.OR = or;
+
+    const [products, total, statusCounts, categoryRows] = await Promise.all([
+      fastify.prisma.product.findMany({
+        where,
+        orderBy: { id: 'asc' },
+        skip: paging.skip,
+        take: paging.take,
+      }),
+      fastify.prisma.product.count({ where }),
+      fastify.prisma.product.groupBy({ by: ['status'], _count: { _all: true } }),
+      fastify.prisma.product.groupBy({ by: ['category'], _count: { _all: true } }),
+    ]);
+
+    return {
+      ...paged(products, total, paging, 'products'),
+      counts: Object.fromEntries(statusCounts.map((r) => [r.status, r._count._all])),
+      categories: categoryRows
+        .filter((r) => r.category)
+        .map((r) => ({ value: r.category, count: r._count._all })),
+    };
   });
 
   // GET /api/v1/admin/products/sales — lifetime sold qty + revenue per product,

@@ -5,6 +5,7 @@ import {
   PageHeader,
   Panel,
   Pill,
+  Pagination,
   SearchBox,
   StatCard,
   StatGrid,
@@ -18,6 +19,7 @@ import { normalizeProduct } from '@/services/products';
 import { showToast } from '@/services/toast';
 import { formatPrice, type Product } from '@/types/product';
 import { AdminIcon } from '@/components/icons/AdminIcon';
+import { usePagedList } from '@/components/admin/usePagedList';
 
 interface Post {
   id: string;
@@ -50,11 +52,27 @@ const EMPTY_EDITOR = { id: '', title: '', excerpt: '', content: '' };
 type Filter = '' | 'draft' | 'published' | 'archived';
 
 export default function BlogAdmin() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [state, setState] = useState<LoadState>('loading');
-  const [error, setError] = useState('');
   const [filter, setFilter] = useState<Filter>('');
   const [search, setSearch] = useState('');
+
+  // Server-paged: the list used to be the first 200 rows, filtered in the
+  // browser, so an older post could not be reached or searched for.
+  const {
+    items: posts,
+    state,
+    error,
+    page,
+    pages,
+    total,
+    counts,
+    setPage,
+    reload: load,
+  } = usePagedList<Post>(
+    (params) => API.admin.blog.list(params),
+    'posts',
+    { status: filter, search: search.trim() },
+    { errorText: 'Không tải được bài viết.' },
+  );
 
   const [products, setProducts] = useState<Product[]>([]);
   const [productQuery, setProductQuery] = useState('');
@@ -71,21 +89,6 @@ export default function BlogAdmin() {
 
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
-  const load = useCallback(() => {
-    setState('loading');
-    API.admin.blog
-      .list()
-      .then((data: any) => {
-        setPosts(data.posts || []);
-        setState('ready');
-      })
-      .catch((err: any) => {
-        setError(err?.message || 'Không tải được bài viết.');
-        setState('error');
-      });
-  }, []);
-
-  useEffect(load, [load]);
 
   useEffect(() => {
     API.admin.products
@@ -218,7 +221,9 @@ export default function BlogAdmin() {
     try {
       await API.admin.blog.status(postId, status);
       showToast(`Đã chuyển sang “${STATUS_LABEL[status]}”`, 'success');
-      setPosts((list) => list.map((p) => (p.id === postId ? { ...p, status } : p)));
+      // Reload rather than patch the row in place: with a status filter on,
+      // the post has just left the list it is sitting in.
+      load();
     } catch (err: any) {
       showToast(err?.message || 'Không cập nhật được blog', 'error');
       load();
@@ -242,22 +247,6 @@ export default function BlogAdmin() {
     );
   }
 
-  const counts = useMemo(() => {
-    const out: Record<string, number> = { draft: 0, published: 0, archived: 0 };
-    for (const post of posts) out[post.status] = (out[post.status] || 0) + 1;
-    return out;
-  }, [posts]);
-
-  const visible = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return posts.filter((post) => {
-      if (filter && post.status !== filter) return false;
-      if (!term) return true;
-      return (
-        post.title.toLowerCase().includes(term) || post.slug.toLowerCase().includes(term)
-      );
-    });
-  }, [posts, filter, search]);
 
   const filters: Array<FilterOption<Filter>> = [
     { value: '', label: 'Tất cả', count: posts.length },
@@ -323,7 +312,7 @@ export default function BlogAdmin() {
             <TableStates
               state={state}
               error={error}
-              isEmpty={visible.length === 0}
+              isEmpty={posts.length === 0}
               columns={6}
               emptyIcon={<AdminIcon name="blog" size={24} />}
               emptyTitle={search || filter ? 'Không tìm thấy bài nào' : 'Chưa có bài viết'}
@@ -335,7 +324,7 @@ export default function BlogAdmin() {
               onRetry={load}
             />
             {state === 'ready' &&
-              visible.map((post) => (
+              posts.map((post) => (
                 <tr key={post.id}>
                   <td>
                     <label className="blog-cover-cell" title="Thay ảnh bìa">
@@ -393,6 +382,8 @@ export default function BlogAdmin() {
               ))}
           </tbody>
         </table>
+
+        <Pagination page={page} pages={pages} total={total} unit="bài viết" onChange={setPage} />
       </Panel>
 
       {editorOpen && (

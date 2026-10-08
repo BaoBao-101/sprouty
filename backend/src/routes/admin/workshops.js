@@ -4,6 +4,7 @@ import { AppError } from '../../utils/errors.js';
 import { multipartFields, noHtml, parseOrThrow } from '../../utils/validation.js';
 import { auditLog } from '../../services/audit.js';
 import { createAsset } from '../../services/storage/index.js';
+import { readPaging, paged, searchOr } from './paging.js';
 
 const workshopSchema = z.object({
   title: noHtml('Tên workshop').and(
@@ -95,6 +96,45 @@ export default async function adminWorkshopRoutes(fastify) {
 
   // GET /api/v1/admin/workshops/stats — per-workshop registration totals plus
   // a per-location aggregate. "Location" is the venue field on Workshop today.
+  // The table's own source. /workshops/stats stays as it is because the
+  // metric tiles and the per-location breakdown are totals over every row;
+  // paginating those would make them count whatever happens to be on screen.
+  fastify.get('/workshops', { preHandler: [requireAdmin] }, async (req) => {
+    const paging = readPaging(req.query);
+
+    const where = {};
+    const or = searchOr(req.query.search, ['title', 'location', 'description']);
+    if (or) where.OR = or;
+
+    const now = new Date();
+    if (req.query.when === 'upcoming') where.dateTime = { gte: now };
+    if (req.query.when === 'past') where.dateTime = { lt: now };
+
+    const [workshops, total, upcoming, past] = await Promise.all([
+      fastify.prisma.workshop.findMany({
+        where,
+        include: {
+          // Seats, not rows: one booking can carry several children.
+          registrations: {
+            where: { status: { not: 'cancelled' } },
+            select: { childCount: true, paidAt: true, amount: true },
+          },
+        },
+        orderBy: { dateTime: 'desc' },
+        skip: paging.skip,
+        take: paging.take,
+      }),
+      fastify.prisma.workshop.count({ where }),
+      fastify.prisma.workshop.count({ where: { dateTime: { gte: now } } }),
+      fastify.prisma.workshop.count({ where: { dateTime: { lt: now } } }),
+    ]);
+
+    return {
+      ...paged(workshops, total, paging, 'workshops'),
+      counts: { upcoming, past, all: upcoming + past },
+    };
+  });
+
   fastify.get('/workshops/stats', { preHandler: [requireAdmin] }, async () => {
     const [workshops, byLocation, totals] = await Promise.all([
       fastify.prisma.workshop.findMany({

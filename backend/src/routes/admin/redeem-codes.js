@@ -4,6 +4,7 @@ import { requireAdmin, requireCsrf } from '../../middleware/rbac.js';
 import { parseOrThrow } from '../../utils/validation.js';
 import { auditLog } from '../../services/audit.js';
 import { adminRedeemCreateSchema, hashRedeemCode } from '../redeem.js';
+import { readPaging, paged, searchOr } from './paging.js';
 
 const updateSchema = z.object({
   label: z.string().min(2).max(200).optional(),
@@ -20,16 +21,40 @@ function generateCode() {
 }
 
 export default async function adminRedeemCodeRoutes(fastify) {
-  fastify.get('/redeem-codes', { preHandler: [requireAdmin] }, async () => {
-    const codes = await fastify.prisma.redeemCode.findMany({
-      include: {
-        product: { select: { id: true, name: true } },
-        _count: { select: { redemptions: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 200,
-    });
-    return { codes };
+  fastify.get('/redeem-codes', { preHandler: [requireAdmin] }, async (req) => {
+    const paging = readPaging(req.query);
+
+    const where = {};
+    if (req.query.status) where.status = String(req.query.status);
+    // The code itself is stored hashed, so it cannot be searched. The label
+    // and the description are what an admin remembers about a batch anyway.
+    const or = searchOr(req.query.search, ['label', 'description']);
+    if (or) where.OR = or;
+
+    const [codes, total, statusCounts, usedAgg] = await Promise.all([
+      fastify.prisma.redeemCode.findMany({
+        where,
+        include: {
+          product: { select: { id: true, name: true } },
+          _count: { select: { redemptions: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: paging.skip,
+        take: paging.take,
+      }),
+      fastify.prisma.redeemCode.count({ where }),
+      // Counts label the filter buttons, so they span every row rather than
+      // the page in hand.
+      fastify.prisma.redeemCode.groupBy({ by: ['status'], _count: { _all: true } }),
+      // Headline figures, so they are table-wide too.
+      fastify.prisma.redeemCode.aggregate({ _sum: { usedCount: true } }),
+    ]);
+
+    return {
+      ...paged(codes, total, paging, 'codes'),
+      counts: Object.fromEntries(statusCounts.map((r) => [r.status, r._count._all])),
+      usedTotal: usedAgg._sum.usedCount || 0,
+    };
   });
 
   fastify.post('/redeem-codes', { preHandler: [requireAdmin, requireCsrf] }, async (req, reply) => {

@@ -235,7 +235,7 @@ export const API = {
       updateStatus(id, status) { return _fetch(`/admin/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }); },
     },
     redeemCodes: {
-      list()             { return _fetch('/admin/redeem-codes'); },
+      list(params = {})  { return _fetch('/admin/redeem-codes?' + new URLSearchParams(params)); },
       create(d)          { return _fetch('/admin/redeem-codes', { method: 'POST', body: JSON.stringify(d) }); },
       update(id, d)      { return _fetch(`/admin/redeem-codes/${id}`, { method: 'PATCH', body: JSON.stringify(d) }); },
       remove(id)         { return _fetch(`/admin/redeem-codes/${id}`, { method: 'DELETE' }); },

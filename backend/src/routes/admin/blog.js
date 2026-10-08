@@ -5,6 +5,7 @@ import { multipartFields, noHtml, parseOrThrow } from '../../utils/validation.js
 import { auditLog } from '../../services/audit.js';
 import { createAsset } from '../../services/storage/index.js';
 import { publishBlogEvent } from '../../services/blog-events.js';
+import { readPaging, paged, searchOr } from './paging.js';
 
 const postSchema = z.object({
   title: noHtml('Tiêu đề').and(z.string().min(2).max(200)),
@@ -45,15 +46,31 @@ export default async function adminBlogRoutes(fastify) {
   }
 
   fastify.get('/blog', { preHandler: [requireEmployee] }, async (req) => {
+    const paging = readPaging(req.query);
+
     const where = {};
     if (req.query.status) where.status = String(req.query.status);
-    const posts = await fastify.prisma.blogPost.findMany({
-      where,
-      include: { coverAsset: true, author: { select: { id: true, name: true, email: true } } },
-      orderBy: { updatedAt: 'desc' },
-      take: 200,
-    });
-    return { posts };
+    const or = searchOr(req.query.search, ['title', 'slug', 'excerpt']);
+    if (or) where.OR = or;
+
+    const [posts, total, statusCounts] = await Promise.all([
+      fastify.prisma.blogPost.findMany({
+        where,
+        include: { coverAsset: true, author: { select: { id: true, name: true, email: true } } },
+        orderBy: { updatedAt: 'desc' },
+        skip: paging.skip,
+        take: paging.take,
+      }),
+      fastify.prisma.blogPost.count({ where }),
+      // Counts label the filter buttons, so they span the whole table:
+      // a tab that renumbered itself as you clicked it would be useless.
+      fastify.prisma.blogPost.groupBy({ by: ['status'], _count: { _all: true } }),
+    ]);
+
+    return {
+      ...paged(posts, total, paging, 'posts'),
+      counts: Object.fromEntries(statusCounts.map((r) => [r.status, r._count._all])),
+    };
   });
 
   fastify.post('/blog', { preHandler: [requireEmployee, requireCsrf] }, async (req, reply) => {

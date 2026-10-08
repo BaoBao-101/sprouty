@@ -7,6 +7,7 @@ import {
   PageHeader,
   Panel,
   Pill,
+  Pagination,
   SearchBox,
   StatCard,
   StatGrid,
@@ -18,6 +19,7 @@ import {
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { AdminIcon } from '@/components/icons/AdminIcon';
+import { usePagedList } from '@/components/admin/usePagedList';
 
 interface Code {
   id: string;
@@ -77,11 +79,29 @@ async function copyText(text: string, message: string) {
 }
 
 export default function RedeemCodes() {
-  const [codes, setCodes] = useState<Code[]>([]);
-  const [state, setState] = useState<LoadState>('loading');
-  const [error, setError] = useState('');
   const [filter, setFilter] = useState<Filter>('');
   const [search, setSearch] = useState('');
+
+  // Server-paged. The tiles below read `counts` and `usedTotal`, which the
+  // endpoint computes over the whole table — a headline figure that changed
+  // when you turned the page would be worse than no figure at all.
+  const {
+    items: codes,
+    state,
+    error,
+    page,
+    pages,
+    total,
+    counts,
+    raw,
+    setPage,
+    reload: load,
+  } = usePagedList<Code>(
+    (params) => API.admin.redeemCodes.list(params),
+    'codes',
+    { status: filter, search: search.trim() },
+    { errorText: 'Không tải được mã.' },
+  );
 
   const [kits, setKits] = useState<KitOption[]>([]);
   const [creating, setCreating] = useState(false);
@@ -98,21 +118,6 @@ export default function RedeemCodes() {
   const [redemptionState, setRedemptionState] = useState<LoadState>('loading');
   const [redemptionError, setRedemptionError] = useState('');
 
-  const load = useCallback(() => {
-    setState('loading');
-    API.admin.redeemCodes
-      .list()
-      .then((data: any) => {
-        setCodes(data.codes || []);
-        setState('ready');
-      })
-      .catch((err: any) => {
-        setError(err?.message || 'Không tải được mã.');
-        setState('error');
-      });
-  }, []);
-
-  useEffect(load, [load]);
 
   // Only kits can carry a redeem code, so the picker lists just those.
   useEffect(() => {
@@ -217,26 +222,18 @@ export default function RedeemCodes() {
     );
   }
 
-  const activeCount = codes.filter((c) => c.status === 'active').length;
-  const usedTotal = codes.reduce((sum, c) => sum + (c.usedCount || 0), 0);
-
-  const visible = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return codes.filter((code) => {
-      if (filter === 'active' && code.status !== 'active') return false;
-      if (filter === 'disabled' && code.status === 'active') return false;
-      if (!term) return true;
-      return (
-        code.label.toLowerCase().includes(term) ||
-        (code.product?.name || '').toLowerCase().includes(term)
-      );
-    });
-  }, [codes, filter, search]);
+  const activeCount = counts.active || 0;
+  const disabledCount = Object.entries(counts).reduce(
+    (sum, [status, n]) => (status === 'active' ? sum : sum + n),
+    0,
+  );
+  const codeTotal = activeCount + disabledCount;
+  const usedTotal = raw?.usedTotal || 0;
 
   const filters: Array<FilterOption<Filter>> = [
-    { value: '', label: 'Tất cả', count: codes.length },
+    { value: '', label: 'Tất cả', count: codeTotal },
     { value: 'active', label: 'Đang hoạt động', count: activeCount },
-    { value: 'disabled', label: 'Đã tắt', count: codes.length - activeCount },
+    { value: 'disabled', label: 'Đã tắt', count: disabledCount },
   ];
 
   return (
@@ -256,7 +253,7 @@ export default function RedeemCodes() {
           icon={<AdminIcon name="ticket" />}
           tone="orange"
           loading={state === 'loading'}
-          value={codes.length}
+          value={codeTotal}
           label="Tổng số mã"
         />
         <StatCard
@@ -295,7 +292,7 @@ export default function RedeemCodes() {
             <TableStates
               state={state}
               error={error}
-              isEmpty={visible.length === 0}
+              isEmpty={codes.length === 0}
               columns={5}
               emptyIcon={<AdminIcon name="ticket" size={24} />}
               emptyTitle={
@@ -309,7 +306,7 @@ export default function RedeemCodes() {
               onRetry={load}
             />
             {state === 'ready' &&
-              visible.map((code) => (
+              codes.map((code) => (
                 <tr key={code.id}>
                   <td>
                     <div className="ad-cell-main">{code.label}</div>
@@ -356,6 +353,8 @@ export default function RedeemCodes() {
               ))}
           </tbody>
         </table>
+
+        <Pagination page={page} pages={pages} total={total} unit="mã" onChange={setPage} />
       </Panel>
 
       {creating && (
