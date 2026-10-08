@@ -1354,10 +1354,17 @@
 }
 
 /* The model answers in short paragraphs; keeping its line breaks is what makes
-   a four-sentence answer skimmable instead of a wall. */
+   a four-sentence answer skimmable instead of a wall.
+
+   The three inherits are not tidiness: the global sheet styles every p, so
+   without them a white message on the purple bubble came out in the body
+   grey, at the body size, on the body leading. */
 .coach-bubble p {
   margin: 0;
   white-space: pre-wrap;
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
 }
 
 @keyframes coach-in {
@@ -1441,24 +1448,22 @@
   background: rgba(255, 255, 255, 0.86);
 }
 
-/* One row that scrolls sideways rather than a block that wraps: the input
-   below has to stay in the same place however many chips fit the width. */
+/* These wrap rather than scroll sideways. A row that scrolls saves height,
+   but it pays for it by slicing the chip at the edge in half, which reads
+   as broken rather than as an invitation to scroll - and a hidden sideways
+   scrollbar is not something a child goes looking for. The panel is a fixed
+   height, so a second line costs the thread a few pixels and leaves the
+   input exactly where it was. */
 .coach-quick {
   display: flex;
+  flex-wrap: wrap;
   gap: 7px;
   margin-bottom: 9px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  scrollbar-width: none;
-  scroll-snap-type: x proximity;
 }
 
-.coach-quick::-webkit-scrollbar { display: none }
-
 .coach-quick button {
-  flex: none;
-  scroll-snap-align: start;
-  white-space: nowrap;
+  flex: 0 1 auto;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   gap: 5px;
