@@ -1,0 +1,141 @@
+# Deploys the API to the VPS on every push to main.
+#
+# The frontend is not here: Vercel builds it from its own Git integration (see
+# docs/deploy-split.md). This workflow is the other half.
+#
+# It copies **only `backend/`**. That is deliberate rather than tidy-minded: the
+# VPS keeps its own `docker-compose.yml`, `docker/nginx.conf` and `.env`, which
+# differ from the repo's because the SPA lives on Vercel and this host holds a
+# certificate for api.sprouty.id.vn alone. Copying the repo wholesale replaced
+# them once and nginx refused to start on a certificate the host does not have,
+# taking the API down. Syncing one directory makes that mistake impossible to
+# repeat by accident.
+
+name: Deploy backend to VPS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+  # So a deploy can be re-run without an empty commit.
+  workflow_dispatch:
+
+# Two pushes in quick succession must not build the same container at once.
+# Newer wins; an in-flight deploy is allowed to finish rather than leaving the
+# host half-updated.
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          # Pinned, not scanned. ssh-keyscan on every run trusts whatever answers
+          # on the day, which is the one thing host keys exist to prevent.
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+          cat >> ~/.ssh/config <<EOF
+          Host vps
+            HostName ${{ secrets.VPS_HOST }}
+            User ${{ secrets.VPS_USER }}
+            IdentityFile ~/.ssh/id_deploy
+            IdentitiesOnly yes
+            ConnectTimeout 20
+            ServerAliveInterval 30
+          EOF
+          chmod 600 ~/.ssh/config
+
+      - name: Check the host answers before changing anything
+        run: ssh vps 'echo "connected as $(whoami) on $(hostname)"'
+
+      - name: Upload backend/
+        run: |
+          # node_modules and uploads are the container's business, not the
+          # repo's: the image installs its own dependencies, and uploads is a
+          # Docker volume holding customer files.
+          tar czf - \
+            --exclude='backend/node_modules' \
+            --exclude='backend/uploads' \
+            --exclude='backend/.env' \
+            backend \
+            | ssh vps 'cat > /tmp/backend.tar.gz'
+
+          ssh vps '
+            set -e
+            cd /var/www/sprouty
+            sudo tar xzf /tmp/backend.tar.gz -C /var/www/sprouty
+            rm -f /tmp/backend.tar.gz
+            echo "backend/ updated"
+          '
+
+      - name: Rebuild and start
+        run: |
+          ssh vps '
+            set -e
+            cd /var/www/sprouty
+            # The container runs `prisma migrate deploy` itself on start, so
+            # migrations apply here without a separate step.
+            sudo docker compose up -d --build backend
+          '
+
+      - name: Wait for the container to report healthy
+        run: |
+          ssh vps '
+            for i in $(seq 1 60); do
+              status=$(sudo docker inspect -f "{{.State.Health.Status}}" sprouty-backend-1 2>/dev/null || echo missing)
+              [ "$status" = healthy ] && { echo "healthy after ${i}0s"; exit 0; }
+              [ "$status" = unhealthy ] && break
+              sleep 10
+            done
+            echo "::error::backend did not become healthy"
+            sudo docker compose -f /var/www/sprouty/docker-compose.yml logs backend --tail 60
+            exit 1
+          '
+
+      - name: Point nginx at the new container
+        run: |
+          # nginx resolves `backend` once at startup, so a recreated container
+          # leaves it proxying to an address that no longer exists — which
+          # presents as a 502 from a backend that is perfectly healthy.
+          ssh vps 'cd /var/www/sprouty && sudo docker compose restart nginx'
+
+      - name: Verify the public API
+        run: |
+          for i in $(seq 1 12); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 \
+              https://api.sprouty.id.vn/api/v1/health || echo 000)
+            if [ "$code" = 200 ]; then
+              echo "API healthy: $(curl -s --max-time 15 https://api.sprouty.id.vn/api/v1/health)"
+              exit 0
+            fi
+            echo "attempt $i: HTTP $code"
+            sleep 5
+          done
+          echo "::error::API did not answer 200 after deploy"
+          exit 1
+
+      - name: Report
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = success ]; then
+            echo "### Backend deployed" >> $GITHUB_STEP_SUMMARY
+            echo "\`${{ github.sha }}\` is live on api.sprouty.id.vn" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Deploy failed" >> $GITHUB_STEP_SUMMARY
+            echo "The previous container may still be serving. Check the logs above." >> $GITHUB_STEP_SUMMARY
+          fi
