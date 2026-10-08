@@ -24,6 +24,7 @@ import {
   type OrderStatus,
 } from '@/types/order';
 import { formatPrice } from '@/types/product';
+import { AdminIcon } from '@/components/icons/AdminIcon';
 
 const PAGE_SIZE = 20;
 
@@ -165,7 +166,7 @@ export default function Orders() {
         subtitle="Theo dõi và cập nhật trạng thái giao hàng"
         actions={
           <button className="btn btn-ghost btn-sm" onClick={load} disabled={state === 'loading'}>
-            ↻ Làm mới
+            <AdminIcon name="refresh" size={16} /> Làm mới
           </button>
         }
       />
@@ -202,7 +203,7 @@ export default function Orders() {
               error={error}
               isEmpty={orders.length === 0}
               columns={7}
-              emptyIcon="📦"
+              emptyIcon={<AdminIcon name="orders" size={24} />}
               emptyTitle={search || filter ? 'Không tìm thấy đơn nào' : 'Chưa có đơn hàng'}
               emptyHint={
                 search || filter
@@ -238,7 +239,7 @@ export default function Orders() {
                           from where the parcel is, and staff need both. */}
                       <div style={{ marginTop: 4 }}>
                         <Pill tone={order.paidAt ? 'green' : 'amber'}>
-                          {order.paidAt ? '✓ Đã thu tiền' : 'Chưa thu tiền'}
+                          {order.paidAt ? 'Đã thu tiền' : 'Chưa thu tiền'}
                         </Pill>
                       </div>
                     </td>
@@ -255,7 +256,7 @@ export default function Orders() {
                             disabled={busyId === order.id}
                             onClick={() => markPaid(order)}
                           >
-                            💰 Đã thu tiền
+                            <AdminIcon name="sales" size={15} /> Đã thu tiền
                           </button>
                         )}
                         {/* One click for the usual next step; the select stays

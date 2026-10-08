@@ -17,6 +17,7 @@ import {
 } from '@/components/admin/ui';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
+import { AdminIcon } from '@/components/icons/AdminIcon';
 
 interface Code {
   id: string;
@@ -41,9 +42,9 @@ interface KitOption {
 }
 
 const FEATURES = [
-  { value: 'ai_assistant', label: 'Trợ lý AI', icon: '🤖', hint: 'Hỏi đáp chăm cây trong app' },
-  { value: 'instruction_videos', label: 'Video hướng dẫn', icon: '🎬', hint: 'Xem video từng bước' },
-  { value: 'image_uploads', label: 'Upload ảnh', icon: '🖼', hint: 'Đăng ảnh lên Cây Kỷ Niệm' },
+  { value: 'ai_assistant', label: 'Trợ lý AI', icon: <AdminIcon name="spark" size={18} />, hint: 'Hỏi đáp chăm cây trong app' },
+  { value: 'instruction_videos', label: 'Video hướng dẫn', icon: <AdminIcon name="video" size={18} />, hint: 'Xem video từng bước' },
+  { value: 'image_uploads', label: 'Upload ảnh', icon: <AdminIcon name="images" size={18} />, hint: 'Đăng ảnh lên Cây Kỷ Niệm' },
 ];
 
 const FEATURE_LABEL: Record<string, string> = Object.fromEntries(
@@ -252,21 +253,21 @@ export default function RedeemCodes() {
 
       <StatGrid>
         <StatCard
-          icon="🎟"
+          icon={<AdminIcon name="ticket" />}
           tone="orange"
           loading={state === 'loading'}
           value={codes.length}
           label="Tổng số mã"
         />
         <StatCard
-          icon="✅"
+          icon={<AdminIcon name="check" />}
           tone="green"
           loading={state === 'loading'}
           value={activeCount}
           label="Đang hoạt động"
         />
         <StatCard
-          icon="👤"
+          icon={<AdminIcon name="user" />}
           tone="blue"
           loading={state === 'loading'}
           value={usedTotal}
@@ -296,7 +297,7 @@ export default function RedeemCodes() {
               error={error}
               isEmpty={visible.length === 0}
               columns={5}
-              emptyIcon="🎟"
+              emptyIcon={<AdminIcon name="ticket" size={24} />}
               emptyTitle={
                 search || filter ? 'Không tìm thấy mã nào' : 'Chưa có mã kích hoạt nào'
               }
@@ -483,7 +484,7 @@ export default function RedeemCodes() {
                 onClick={() => copyText(code, 'Đã sao chép mã')}
               >
                 <code>{code}</code>
-                <span aria-hidden="true">📋</span>
+                <AdminIcon name="copy" size={15} />
               </button>
             ))}
           </div>
@@ -505,7 +506,7 @@ export default function RedeemCodes() {
             state={redemptionState}
             error={redemptionError}
             isEmpty={redemptions.length === 0}
-            emptyIcon="🫥"
+            emptyIcon={<AdminIcon name="user" size={24} />}
             emptyTitle="Chưa có ai kích hoạt"
             emptyHint="Khi khách nhập mã, lượt kích hoạt sẽ hiện ở đây."
           />

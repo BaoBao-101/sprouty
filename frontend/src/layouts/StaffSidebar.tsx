@@ -4,8 +4,12 @@ import { useAuth } from '@/contexts/AuthContext';
 // Both staff areas render this shell, so it is where their stylesheets belong.
 // They used to be imported by AdminLayout alone, even though the employee pages
 // reuse the same tables, panels and modals.
+import { AdminIcon } from '@/components/icons/AdminIcon';
 import './admin.css';
 import './admin-ui.css';
+// Redefines the tokens the two above use, so the staff area reads as a tool
+// rather than as the storybook site whose stylesheet it shares.
+import './admin-theme.css';
 
 export interface SidebarItem {
   to: string;
@@ -35,7 +39,7 @@ export function StaffSidebar({ subtitle, groups }: { subtitle: string; groups: S
   return (
     <>
       <button className="sb-toggle" onClick={() => setOpen((v) => !v)} aria-label="Mở menu">
-        ☰
+        <AdminIcon name="menu" size={20} />
       </button>
       <div className={`sb-backdrop${open ? ' open' : ''}`} onClick={close} />
 
@@ -73,7 +77,10 @@ export function StaffSidebar({ subtitle, groups }: { subtitle: string; groups: S
               navigate('/');
             }}
           >
-            <span className="sb-ico">🏠</span>Trang chủ
+            <span className="sb-ico">
+              <AdminIcon name="home" size={19} />
+            </span>
+            Trang chủ
           </a>
         </nav>
 
@@ -87,7 +94,10 @@ export function StaffSidebar({ subtitle, groups }: { subtitle: string; groups: S
               void logout();
             }}
           >
-            <span className="sb-ico">🚪</span>Đăng xuất
+            <span className="sb-ico">
+              <AdminIcon name="logout" size={19} />
+            </span>
+            Đăng xuất
           </a>
         </div>
       </aside>

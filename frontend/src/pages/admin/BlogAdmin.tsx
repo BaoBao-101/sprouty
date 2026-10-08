@@ -17,6 +17,7 @@ import { API } from '@/services/api';
 import { normalizeProduct } from '@/services/products';
 import { showToast } from '@/services/toast';
 import { formatPrice, type Product } from '@/types/product';
+import { AdminIcon } from '@/components/icons/AdminIcon';
 
 interface Post {
   id: string;
@@ -279,21 +280,21 @@ export default function BlogAdmin() {
 
       <StatGrid>
         <StatCard
-          icon="📝"
+          icon={<AdminIcon name="blog" />}
           tone="orange"
           loading={state === 'loading'}
           value={posts.length}
           label="Tổng bài viết"
         />
         <StatCard
-          icon="🌍"
+          icon={<AdminIcon name="eye" />}
           tone="green"
           loading={state === 'loading'}
           value={counts.published || 0}
           label="Đang hiển thị"
         />
         <StatCard
-          icon="✏️"
+          icon={<AdminIcon name="edit" />}
           tone="amber"
           loading={state === 'loading'}
           value={counts.draft || 0}
@@ -324,7 +325,7 @@ export default function BlogAdmin() {
               error={error}
               isEmpty={visible.length === 0}
               columns={6}
-              emptyIcon="📝"
+              emptyIcon={<AdminIcon name="blog" size={24} />}
               emptyTitle={search || filter ? 'Không tìm thấy bài nào' : 'Chưa có bài viết'}
               emptyHint={
                 search || filter
@@ -476,7 +477,7 @@ export default function BlogAdmin() {
                 {coverPreview || existingCover ? (
                   <img src={coverPreview || existingCover || ''} alt="" />
                 ) : (
-                  <span>🖼</span>
+                  <AdminIcon name="images" size={20} />
                 )}
               </div>
               <div>

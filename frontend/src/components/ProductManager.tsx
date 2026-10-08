@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { formatPrice } from '@/types/product';
+import { AdminIcon } from '@/components/icons/AdminIcon';
 
 /**
  * The product catalogue, shared by the admin and employee areas.
@@ -66,7 +67,7 @@ function ProductRow({
     <tr className={deleting ? 'row-busy' : undefined}>
       <td>
         {imageFailed || !firstImage ? (
-          <div className="prod-img prod-img-fallback">{product.emoji || '🎨'}</div>
+          <div className="prod-img prod-img-fallback">{product.emoji || <AdminIcon name="products" size={22} />}</div>
         ) : (
           <img className="prod-img" src={firstImage} alt="" onError={() => setImageFailed(true)} />
         )}
@@ -244,7 +245,7 @@ export function ProductManager() {
                 <p className="editor-sub">{videoFor.name}</p>
               </div>
               <button className="adm-modal-close" onClick={() => setVideoFor(null)} aria-label="Đóng">
-                ✕
+                <AdminIcon name="close" size={18} />
               </button>
             </div>
             <div className="editor-body">

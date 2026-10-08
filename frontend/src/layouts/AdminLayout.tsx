@@ -1,49 +1,51 @@
 import { Outlet } from 'react-router-dom';
 import { StaffSidebar, type SidebarGroup } from './StaffSidebar';
+import { AdminIcon, type AdminIconName } from '@/components/icons/AdminIcon';
 
-const icon = (file: string) => <img src={`/assets/images/sprouty-icons/${file}`} alt="" />;
+/** One stroke weight across the nav; see components/icons/AdminIcon. */
+const icon = (name: AdminIconName) => <AdminIcon name={name} size={19} />;
 
 const GROUPS: SidebarGroup[] = [
   {
     title: 'Tổng quan',
-    items: [{ to: '/admin', label: 'Dashboard', icon: '📊', end: true }],
+    items: [{ to: '/admin', label: 'Tổng quan', icon: icon('dashboard'), end: true }],
   },
   {
     title: 'Kinh doanh',
     items: [
-      { to: '/admin/orders', label: 'Đơn hàng', icon: '📦' },
-      { to: '/admin/sales', label: 'Báo cáo bán hàng', icon: '💰' },
-      { to: '/admin/redeem', label: 'Mã kích hoạt', icon: icon('RedeemCode.png') },
+      { to: '/admin/orders', label: 'Đơn hàng', icon: icon('orders') },
+      { to: '/admin/sales', label: 'Báo cáo bán hàng', icon: icon('sales') },
+      { to: '/admin/redeem', label: 'Mã kích hoạt', icon: icon('redeem') },
     ],
   },
   {
     title: 'Nội dung',
     items: [
-      { to: '/admin/workshops', label: 'Workshop', icon: icon('Workshop.png') },
-      { to: '/admin/blog', label: 'Blog', icon: '📝' },
-      { to: '/admin/user-images', label: 'Ảnh người dùng', icon: icon('AddPhoto.png') },
-      { to: '/admin/products', label: 'Quản lý sản phẩm', icon: '🎨' },
+      { to: '/admin/workshops', label: 'Workshop', icon: icon('workshop') },
+      { to: '/admin/blog', label: 'Blog', icon: icon('blog') },
+      { to: '/admin/user-images', label: 'Ảnh người dùng', icon: icon('images') },
+      { to: '/admin/products', label: 'Sản phẩm', icon: icon('products') },
     ],
   },
   {
     title: 'Người dùng',
-    items: [{ to: '/admin/users', label: 'Người dùng', icon: '👥' }],
+    items: [{ to: '/admin/users', label: 'Người dùng', icon: icon('users') }],
   },
   {
     // Not "Hệ thống": StaffSidebar already renders a group by that name for the
     // back-to-site link, and two identical headings read as a rendering bug.
     title: 'Giám sát',
-    items: [{ to: '/admin/audit', label: 'Nhật ký hoạt động', icon: '🗒' }],
+    items: [{ to: '/admin/audit', label: 'Nhật ký hoạt động', icon: icon('audit') }],
   },
 ];
 
 export function AdminLayout() {
   return (
-    <>
-      <StaffSidebar subtitle="Admin Dashboard" groups={GROUPS} />
+    <div className="staff-root">
+      <StaffSidebar subtitle="Quản trị" groups={GROUPS} />
       <main className="staff-main">
         <Outlet />
       </main>
-    </>
+    </div>
   );
 }

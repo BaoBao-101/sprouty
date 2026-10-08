@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { AdminIcon } from '@/components/icons/AdminIcon';
 
 /**
  * Shared shell pieces for the admin area.
@@ -47,7 +48,7 @@ export function StatCard({
   tone = 'orange',
   loading,
 }: {
-  icon: string;
+  icon: ReactNode;
   value: ReactNode;
   label: string;
   hint?: ReactNode;
@@ -163,7 +164,7 @@ export function SearchBox({
   return (
     <div className="ad-search">
       <span className="ad-search-icon" aria-hidden="true">
-        🔍
+        <AdminIcon name="search" size={17} />
       </span>
       <input
         type="search"
@@ -174,7 +175,7 @@ export function SearchBox({
       />
       {text && (
         <button className="ad-search-clear" onClick={() => setText('')} aria-label="Xoá tìm kiếm">
-          ✕
+          <AdminIcon name="close" size={13} />
         </button>
       )}
     </div>
@@ -194,7 +195,7 @@ export function TableStates({
   error,
   isEmpty,
   columns,
-  emptyIcon = '📭',
+  emptyIcon = <AdminIcon name="inbox" size={24} />,
   emptyTitle = 'Chưa có dữ liệu',
   emptyHint,
   onRetry,
@@ -203,7 +204,7 @@ export function TableStates({
   error?: string;
   isEmpty: boolean;
   columns: number;
-  emptyIcon?: string;
+  emptyIcon?: ReactNode;
   emptyTitle?: string;
   emptyHint?: ReactNode;
   onRetry?: () => void;
@@ -229,7 +230,9 @@ export function TableStates({
       <tr>
         <td colSpan={columns}>
           <div className="ad-blank error">
-            <span className="ad-blank-icon">⚠️</span>
+            <span className="ad-blank-icon">
+              <AdminIcon name="alert" size={24} />
+            </span>
             <p className="ad-blank-title">Không tải được dữ liệu</p>
             <p className="ad-blank-hint">{error}</p>
             {onRetry && (
@@ -265,7 +268,7 @@ export function BlockStates({
   state,
   error,
   isEmpty,
-  emptyIcon = '📭',
+  emptyIcon = <AdminIcon name="inbox" size={24} />,
   emptyTitle = 'Chưa có dữ liệu',
   emptyHint,
   onRetry,
@@ -273,7 +276,7 @@ export function BlockStates({
   state: LoadState;
   error?: string;
   isEmpty: boolean;
-  emptyIcon?: string;
+  emptyIcon?: ReactNode;
   emptyTitle?: string;
   emptyHint?: ReactNode;
   onRetry?: () => void;
@@ -282,7 +285,9 @@ export function BlockStates({
   if (state === 'error') {
     return (
       <div className="ad-blank error">
-        <span className="ad-blank-icon">⚠️</span>
+        <span className="ad-blank-icon">
+          <AdminIcon name="alert" size={24} />
+        </span>
         <p className="ad-blank-title">Không tải được dữ liệu</p>
         <p className="ad-blank-hint">{error}</p>
         {onRetry && (
@@ -339,8 +344,13 @@ export function Pagination({
       <span className="ad-pager-total">
         {total.toLocaleString('vi-VN')} {unit}
       </span>
-      <button className="ad-page" disabled={page <= 1} onClick={() => onChange(page - 1)}>
-        ‹
+      <button
+        className="ad-page"
+        disabled={page <= 1}
+        onClick={() => onChange(page - 1)}
+        aria-label="Trang trước"
+      >
+        <AdminIcon name="chevron-left" size={16} />
       </button>
       {pageWindow(page, pages).map((entry, i) =>
         entry === '…' ? (
@@ -357,8 +367,13 @@ export function Pagination({
           </button>
         ),
       )}
-      <button className="ad-page" disabled={page >= pages} onClick={() => onChange(page + 1)}>
-        ›
+      <button
+        className="ad-page"
+        disabled={page >= pages}
+        onClick={() => onChange(page + 1)}
+        aria-label="Trang sau"
+      >
+        <AdminIcon name="chevron-right" size={16} />
       </button>
     </nav>
   );
@@ -413,7 +428,7 @@ export function Modal({
             {subtitle && <p className="editor-sub">{subtitle}</p>}
           </div>
           <button className="adm-modal-close" onClick={onClose} aria-label="Đóng">
-            ✕
+            <AdminIcon name="close" size={18} />
           </button>
         </div>
         <div className="editor-body">{children}</div>

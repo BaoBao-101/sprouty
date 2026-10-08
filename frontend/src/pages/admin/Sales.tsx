@@ -14,6 +14,7 @@ import {
 } from '@/components/admin/ui';
 import { API } from '@/services/api';
 import { formatPrice } from '@/types/product';
+import { AdminIcon } from '@/components/icons/AdminIcon';
 
 interface SalesRow {
   id: number;
@@ -111,28 +112,28 @@ export default function Sales() {
         subtitle="Số lượng bán ra và doanh thu theo từng sản phẩm"
         actions={
           <button className="btn btn-ghost btn-sm" onClick={load} disabled={loading}>
-            ↻ Làm mới
+            <AdminIcon name="refresh" size={16} /> Làm mới
           </button>
         }
       />
 
       <StatGrid>
         <StatCard
-          icon="💰"
+          icon={<AdminIcon name="sales" />}
           tone="orange"
           loading={loading}
           value={`${compactVnd(summary.revenue)}đ`}
           label="Tổng doanh thu"
         />
         <StatCard
-          icon="📦"
+          icon={<AdminIcon name="orders" />}
           tone="blue"
           loading={loading}
           value={summary.qty.toLocaleString('vi-VN')}
           label="Sản phẩm đã bán"
         />
         <StatCard
-          icon="🏆"
+          icon={<AdminIcon name="star" />}
           tone="amber"
           loading={loading}
           value={summary.best?.name || '—'}
@@ -140,7 +141,7 @@ export default function Sales() {
           hint={summary.best ? formatPrice(summary.best.totalRevenue || 0) : undefined}
         />
         <StatCard
-          icon="🌱"
+          icon={<AdminIcon name="seed" />}
           tone="green"
           loading={loading}
           value={`${summary.selling}/${rows.length}`}
@@ -182,7 +183,7 @@ export default function Sales() {
               error={error}
               isEmpty={visible.length === 0}
               columns={6}
-              emptyIcon="📊"
+              emptyIcon={<AdminIcon name="chart" size={24} />}
               emptyTitle={search ? 'Không tìm thấy sản phẩm' : 'Chưa có sản phẩm'}
               emptyHint={search ? 'Thử một từ khoá khác.' : undefined}
               onRetry={load}

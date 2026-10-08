@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
+import { AdminIcon } from '@/components/icons/AdminIcon';
 
 /**
  * Moderation queue for the photos customers upload to Cây Kỷ Niệm.
@@ -181,7 +182,7 @@ export default function UserImages() {
                         <img src={image.asset.url} alt="" className="user-image-thumb" />
                       </button>
                     ) : (
-                      <div className="user-image-thumb user-image-missing">🖼</div>
+                      <div className="user-image-thumb user-image-missing"><AdminIcon name="images" size={22} /></div>
                     )}
                   </td>
                   <td>
@@ -259,7 +260,7 @@ export default function UserImages() {
         >
           <div className="adm-modal-box" style={{ maxWidth: 640 }}>
             <button className="adm-modal-close" onClick={() => setPreview(null)} aria-label="Đóng">
-              ✕
+              <AdminIcon name="close" size={18} />
             </button>
             <h2 className="adm-modal-title" style={{ marginBottom: 6 }}>
               {preview.title || 'Ảnh của khách'}

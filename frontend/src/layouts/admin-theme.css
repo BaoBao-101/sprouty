@@ -1,0 +1,659 @@
+/*
+ * Staff theme.
+ *
+ * The public site is built for a six-year-old: cream paper, rounded corners,
+ * a warm green, a display face with a wobble in it. None of that belongs on a
+ * screen someone works in all day — it costs contrast, costs density, and
+ * makes a table of 200 orders read as a storybook.
+ *
+ * Rather than rewrite the thousand lines of admin CSS, this redefines the
+ * tokens those rules already use, scoped to `.staff-root`. Slate instead of
+ * cream, one accent instead of three, tighter radii, a type scale that assumes
+ * the reader is working rather than browsing. The public site is untouched.
+ */
+
+.staff-root {
+  /* ── Ink ─────────────────────────────────────────────────────────────── */
+  --ink: #0F172A;
+  --ink-2: #1E293B;
+  --ink-3: #475569;
+  --ink-4: #64748B;
+  --ink-5: #94A3B8;
+
+  /* ── Surfaces ────────────────────────────────────────────────────────── */
+  --cream: #F7F8FA;
+  --cream-2: #F1F5F9;
+  --surface: #FFFFFF;
+  --surface-2: #F8FAFC;
+
+  /* ── Lines ───────────────────────────────────────────────────────────── */
+  --border-c: #E2E8F0;
+  --parchment: #E2E8F0;
+  --parchment-2: #E2E8F0;
+  --rule: #E8EDF3;
+
+  /* ── Accent ──────────────────────────────────────────────────────────────
+     One colour carries every primary action. The brand green, taken down to a
+     weight that can sit next to black text without glowing. `--orange` is the
+     name the old rules use for "the accent", so it is redefined rather than
+     hunted down and renamed. */
+  --accent: #15803D;
+  --accent-hover: #126E35;
+  --accent-pale: #ECFDF3;
+  --orange: var(--accent);
+  --orange-hover: var(--accent-hover);
+  --orange-pale: var(--accent-pale);
+  --terracotta: var(--accent);
+  --primary-600: var(--accent);
+  --primary-500: #16A34A;
+  --primary-700: #166534;
+  --primary-100: var(--accent-pale);
+  --sage-lt: var(--accent-pale);
+  --green: var(--accent);
+
+  /* ── Status ──────────────────────────────────────────────────────────── */
+  --rose: #DC2626;
+  --amber: #B45309;
+  --cobalt: #0284C7;
+  --cobalt-bg: #EFF6FF;
+
+  /* ── Geometry: a working screen wants corners, not pillows ───────────── */
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 10px;
+  --r-xl: 12px;
+  --r-2xl: 14px;
+
+  /* ── Shadow: slate, and barely there ─────────────────────────────────── */
+  --sh-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --sh-md: 0 2px 8px rgba(15, 23, 42, 0.07), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --sh-lg: 0 8px 24px rgba(15, 23, 42, 0.1), 0 2px 6px rgba(15, 23, 42, 0.05);
+  --sh-xl: 0 18px 44px rgba(15, 23, 42, 0.16);
+
+  /* The display face is the brand's voice; in here everything speaks in the
+     UI face, which is what makes the area read as a tool. */
+  --font-display: var(--font-h);
+
+  font-size: 15px;
+  color: var(--ink-2);
+  letter-spacing: 0;
+}
+
+.staff-root h1,
+.staff-root h2,
+.staff-root h3,
+.staff-root h4,
+.staff-root h5 {
+  font-family: var(--font-h);
+  letter-spacing: -0.011em;
+  color: var(--ink);
+}
+
+/* ── Sidebar ───────────────────────────────────────────────────────────────
+   Was the brand ink with an orange chip on the active row. Now a near-black
+   slate with a quiet tint, because the sidebar is a map, not the subject. */
+
+.staff-root .staff-sidebar {
+  width: 248px;
+  background: #0B1220;
+  border-right: 1px solid rgba(148, 163, 184, 0.13);
+}
+
+.staff-root .sb-brand {
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.11);
+}
+
+.staff-root .brand-sub {
+  color: #64748B;
+  letter-spacing: 0.13em;
+  font-size: 0.62rem;
+}
+
+.staff-root .sb-group {
+  color: #52607A;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  padding: 0 12px;
+  margin: 18px 0 7px;
+  display: block;
+}
+
+.staff-root .staff-sidebar a {
+  gap: 11px;
+  padding: 8px 11px;
+  border-radius: var(--r-md);
+  color: #94A3B8;
+  font-size: 0.855rem;
+  font-weight: 500;
+  font-family: var(--font-h);
+  position: relative;
+}
+
+.staff-root .staff-sidebar a:hover {
+  background: rgba(148, 163, 184, 0.1);
+  color: #E2E8F0;
+}
+
+/* The active row is a tint plus a rail, not a filled slab: it marks where you
+   are without becoming the loudest thing on the screen. */
+.staff-root .staff-sidebar a.active {
+  background: rgba(34, 197, 94, 0.14);
+  color: #F0FDF4;
+  box-shadow: none;
+  font-weight: 600;
+}
+
+.staff-root .staff-sidebar a.active::before {
+  content: '';
+  position: absolute;
+  left: -11px;
+  top: 7px;
+  bottom: 7px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: #4ADE80;
+}
+
+.staff-root .sb-ico {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: currentColor;
+}
+
+.staff-root .sb-ico img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.staff-root .sb-foot {
+  border-top: 1px solid rgba(148, 163, 184, 0.11);
+  padding: 10px 12px 14px;
+}
+
+.staff-root .sb-logout {
+  color: #94A3B8;
+}
+
+.staff-root .sb-logout:hover {
+  background: rgba(239, 68, 68, 0.13);
+  color: #FCA5A5;
+}
+
+.staff-root .sb-toggle {
+  background: #0B1220;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #E2E8F0;
+  border-radius: var(--r-md);
+}
+
+/* ── Main ──────────────────────────────────────────────────────────────── */
+
+.staff-root .staff-main {
+  background: var(--cream);
+  min-height: 100vh;
+}
+
+/* ── Page header ───────────────────────────────────────────────────────── */
+
+.staff-root .ad-head {
+  align-items: center;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border-c);
+  margin-bottom: 22px;
+}
+
+.staff-root .ad-head-text h1 {
+  font-size: 1.38rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.staff-root .ad-head-text p {
+  font-size: 0.855rem;
+  color: var(--ink-4);
+}
+
+/* ── Metric tiles ──────────────────────────────────────────────────────── */
+
+.staff-root .ad-stat {
+  padding: 16px 17px;
+  border-radius: var(--r-lg);
+  box-shadow: none;
+}
+
+.staff-root .ad-stat:hover {
+  transform: none;
+  border-color: #CBD5E1;
+  box-shadow: var(--sh-sm);
+}
+
+.staff-root .ad-stat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-md);
+  color: var(--tone-ink);
+}
+
+.staff-root .ad-stat-value {
+  font-size: 1.62rem;
+  font-weight: 700;
+  letter-spacing: -0.028em;
+  font-variant-numeric: tabular-nums;
+}
+
+.staff-root .ad-stat-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.07em;
+  font-weight: 600;
+  color: var(--ink-4);
+}
+
+/* ── Panels ────────────────────────────────────────────────────────────── */
+
+.staff-root .ad-panel {
+  box-shadow: none;
+}
+
+.staff-root .ad-panel-head {
+  padding: 14px 18px;
+  background: var(--surface-2);
+}
+
+.staff-root .ad-panel-head h2 {
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+/* ── Tables: the main thing staff look at ──────────────────────────────── */
+
+.staff-root .ad-table th,
+.staff-root table thead th {
+  background: var(--surface-2);
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  white-space: nowrap;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-c);
+}
+
+.staff-root .ad-table td,
+.staff-root table tbody td {
+  padding: 12px 14px;
+  font-size: 0.87rem;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: middle;
+}
+
+.staff-root table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.staff-root table tbody tr:hover td {
+  background: var(--surface-2);
+}
+
+/* Figures line up only if their digits are the same width. */
+.staff-root .num,
+.staff-root .ad-num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ── Controls ──────────────────────────────────────────────────────────── */
+
+.staff-root .form-input,
+.staff-root .form-select,
+.staff-root textarea.form-input,
+.staff-root select {
+  border: 1px solid #CBD5E1;
+  border-radius: var(--r-md);
+  background: #fff;
+  font-size: 0.875rem;
+  color: var(--ink);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.staff-root .form-input:focus,
+.staff-root .form-select:focus,
+.staff-root select:focus,
+.staff-root textarea.form-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.13);
+}
+
+.staff-root .form-label {
+  font-family: var(--font-h);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-3);
+  margin-bottom: 6px;
+}
+
+.staff-root .btn {
+  border-radius: var(--r-md);
+  font-family: var(--font-h);
+  font-weight: 600;
+  font-size: 0.86rem;
+  letter-spacing: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.staff-root .btn-primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: none;
+}
+
+.staff-root .btn-primary:hover {
+  background: var(--accent-hover);
+  transform: none;
+}
+
+.staff-root .btn-ghost {
+  background: #fff;
+  border-color: #CBD5E1;
+  color: var(--ink-2);
+}
+
+.staff-root .btn-ghost:hover {
+  background: var(--surface-2);
+  border-color: #94A3B8;
+  color: var(--ink);
+}
+
+/* ── Search: the one control staff reach for first ─────────────────────── */
+
+.staff-root .ad-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 260px;
+}
+
+.staff-root .ad-search-icon {
+  position: absolute;
+  left: 11px;
+  display: grid;
+  place-items: center;
+  color: var(--ink-4);
+  pointer-events: none;
+}
+
+.staff-root .ad-search .form-input {
+  height: 38px;
+  padding-left: 36px;
+  padding-right: 34px;
+  width: 100%;
+}
+
+.staff-root .ad-search .form-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.staff-root .ad-search-clear {
+  position: absolute;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--cream-2);
+  color: var(--ink-4);
+  cursor: pointer;
+}
+
+.staff-root .ad-search-clear:hover {
+  background: #E2E8F0;
+  color: var(--ink-2);
+}
+
+/* ── Filter pills ──────────────────────────────────────────────────────── */
+
+.staff-root .ad-pill {
+  border-radius: var(--r-md);
+  border: 1px solid var(--border-c);
+  background: #fff;
+  font-family: var(--font-h);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink-3);
+  padding: 7px 12px;
+}
+
+.staff-root .ad-pill:hover {
+  border-color: #94A3B8;
+  color: var(--ink);
+}
+
+.staff-root .ad-pill.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.staff-root .ad-pill-count {
+  background: rgba(15, 23, 42, 0.07);
+  color: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.staff-root .ad-pill.active .ad-pill-count {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+/* ── Tags ──────────────────────────────────────────────────────────────── */
+
+.staff-root .ad-tag {
+  border-radius: var(--r-sm);
+  font-family: var(--font-h);
+  font-size: 0.73rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  padding: 3px 8px;
+  border: 1px solid transparent;
+}
+
+/* ── Pagination ────────────────────────────────────────────────────────── */
+
+.staff-root .ad-pager {
+  border-top: 1px solid var(--border-c);
+  padding: 12px 16px;
+  gap: 5px;
+}
+
+.staff-root .ad-pager-total {
+  font-size: 0.8rem;
+  color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+}
+
+.staff-root .ad-page {
+  min-width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-c);
+  background: #fff;
+  color: var(--ink-3);
+  font-family: var(--font-h);
+  font-size: 0.82rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  display: inline-grid;
+  place-items: center;
+}
+
+.staff-root .ad-page:hover:not(:disabled):not(.active) {
+  border-color: #94A3B8;
+  color: var(--ink);
+}
+
+.staff-root .ad-page.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.staff-root .ad-page:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Empty and error states ────────────────────────────────────────────── */
+
+.staff-root .ad-blank {
+  padding: 46px 20px;
+  text-align: center;
+  color: var(--ink-4);
+}
+
+.staff-root .ad-blank-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin: 0 auto 12px;
+  border-radius: var(--r-lg);
+  background: var(--cream-2);
+  color: var(--ink-5);
+}
+
+.staff-root .ad-blank.error .ad-blank-icon {
+  background: #FEF2F2;
+  color: var(--rose);
+}
+
+.staff-root .ad-blank-title {
+  font-family: var(--font-h);
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  margin: 0 0 4px;
+}
+
+.staff-root .ad-blank-hint {
+  font-size: 0.82rem;
+  margin: 0 0 12px;
+}
+
+/* ── Dialogs ───────────────────────────────────────────────────────────── */
+
+.staff-root .adm-modal-box,
+.adm-modal .editor-box {
+  border-radius: var(--r-xl);
+}
+
+/* ── Icon buttons in table rows ────────────────────────────────────────── */
+
+.staff-root .ad-icon-btn {
+  width: 30px;
+  height: 30px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-c);
+  background: #fff;
+  color: var(--ink-4);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.staff-root .ad-icon-btn:hover {
+  border-color: #94A3B8;
+  color: var(--ink);
+  background: var(--surface-2);
+}
+
+.staff-root .ad-icon-btn.danger:hover {
+  border-color: #FCA5A5;
+  background: #FEF2F2;
+  color: var(--rose);
+}
+
+.staff-root .ad-row-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* ── Icons in flowing text ─────────────────────────────────────────────────
+   An svg is replaced-content and sits on the baseline, which puts it a few
+   pixels high next to lowercase. Nudged down once, here, rather than in every
+   span that happens to start with one. */
+
+.staff-root svg {
+  flex: none;
+  vertical-align: -0.17em;
+}
+
+.staff-root .btn svg,
+.staff-root .ad-pill svg,
+.staff-root .ad-page svg,
+.staff-root .ad-icon-btn svg,
+.staff-root .sb-ico svg,
+.staff-root .ad-stat-icon svg,
+.staff-root .ad-blank-icon svg,
+.staff-root .ad-search-icon svg,
+.staff-root .ad-search-clear svg,
+.staff-root .adm-modal-close svg {
+  vertical-align: 0;
+}
+
+/* ── Leaderboard rank ──────────────────────────────────────────────────────
+   Was a medal emoji, which is three different pictures on three different
+   machines and tells you nothing the number does not. A number in a chip,
+   with the top three tinted. */
+
+.staff-root .dash-top-rank {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: var(--r-sm);
+  background: var(--cream-2);
+  color: var(--ink-4);
+  font-size: 0.74rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.staff-root .dash-top-rank.gold { background: #FEF3C7; color: #92400E }
+.staff-root .dash-top-rank.silver { background: #E8EDF3; color: #475569 }
+.staff-root .dash-top-rank.bronze { background: #FDEBDD; color: #9A3412 }
+
+/* ── Editor rail ───────────────────────────────────────────────────────── */
+
+.staff-root .editor-step-icon {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--ink-4);
+}
+
+.staff-root .editor-step.active .editor-step-icon {
+  color: var(--accent);
+}

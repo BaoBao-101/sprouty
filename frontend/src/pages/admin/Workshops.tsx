@@ -17,6 +17,7 @@ import {
 import { API } from '@/services/api';
 import { formatWorkshopWhen } from '@/types/workshop';
 import { showToast } from '@/services/toast';
+import { AdminIcon } from '@/components/icons/AdminIcon';
 
 interface WorkshopRow {
   id: string;
@@ -395,7 +396,7 @@ export default function Workshops() {
 
       <StatGrid>
         <StatCard
-          icon="🎪"
+          icon={<AdminIcon name="workshop" />}
           tone="orange"
           loading={loading}
           value={totals?.workshopCount ?? '—'}
@@ -403,21 +404,21 @@ export default function Workshops() {
           hint={`${upcomingCount} buổi sắp tới`}
         />
         <StatCard
-          icon="🪑"
+          icon={<AdminIcon name="seat" />}
           tone="blue"
           loading={loading}
           value={totals ? (totals.totalCapacity || 0).toLocaleString('vi-VN') : '—'}
           label="Tổng sức chứa"
         />
         <StatCard
-          icon="✋"
+          icon={<AdminIcon name="clock" />}
           tone="green"
           loading={loading}
           value={totals ? (totals.totalRegistrations || 0).toLocaleString('vi-VN') : '—'}
           label="Tổng lượt đăng ký"
         />
         <StatCard
-          icon="📊"
+          icon={<AdminIcon name="chart" />}
           tone="amber"
           loading={loading}
           value={`${fillRate}%`}
@@ -447,7 +448,7 @@ export default function Workshops() {
               error={error}
               isEmpty={visible.length === 0}
               columns={5}
-              emptyIcon="🎪"
+              emptyIcon={<AdminIcon name="workshop" size={24} />}
               emptyTitle={filter ? 'Không có buổi nào' : 'Chưa có workshop'}
               emptyHint={
                 filter ? 'Thử chọn bộ lọc khác.' : 'Bấm “Tạo workshop” để mở buổi đầu tiên.'
@@ -460,7 +461,7 @@ export default function Workshops() {
                   <td>
                     <div className="ws-row">
                       <div className="ws-row-thumb">
-                        {w.imageUrl ? <img src={w.imageUrl} alt="" /> : <span>🎪</span>}
+                        {w.imageUrl ? <img src={w.imageUrl} alt="" /> : <AdminIcon name="workshop" size={22} />}
                       </div>
                       <div style={{ minWidth: 0 }}>
                         <div className="ad-cell-main">{w.title}</div>
@@ -481,7 +482,7 @@ export default function Workshops() {
                             cannot — the public page lists upcoming ones only. */}
                         {w.status === 'published' && !w.upcoming && (
                           <div className="ws-row-warn">
-                            ⚠️ Đã qua giờ diễn ra nên không hiện trên trang khách. Sửa lại thời
+                            <AdminIcon name="alert" size={15} /> Đã qua giờ diễn ra nên không hiện trên trang khách. Sửa lại thời
                             gian nếu muốn mở đăng ký.
                           </div>
                         )}
@@ -545,7 +546,7 @@ export default function Workshops() {
               error={error}
               isEmpty={(stats?.byLocation.length ?? 0) === 0}
               columns={3}
-              emptyIcon="📍"
+              emptyIcon={<AdminIcon name="pin" size={24} />}
               emptyTitle="Chưa có dữ liệu"
               onRetry={load}
             />
@@ -592,14 +593,14 @@ export default function Workshops() {
               {form.imageUrl ? (
                 <img src={form.imageUrl} alt="" onError={(e) => (e.currentTarget.style.opacity = '0.2')} />
               ) : (
-                <span>🎪</span>
+                <AdminIcon name="workshop" size={22} />
               )}
             </div>
             <div className="ws-preview-main">
               <div className="ws-preview-label">Khách sẽ thấy</div>
               <div className="ws-preview-title">{form.title || 'Tên workshop'}</div>
               <div className="ws-preview-meta">
-                📅{' '}
+                <AdminIcon name="calendar" size={15} />{' '}
                 {form.dateTime
                   ? formatWorkshopWhen({
                       dateTime: fromLocalInput(form.dateTime),
@@ -607,7 +608,7 @@ export default function Workshops() {
                     })
                   : 'chưa chọn thời gian'}
                 <br />
-                📍 {form.location || 'chưa nhập địa điểm'}
+                <AdminIcon name="pin" size={15} /> {form.location || 'chưa nhập địa điểm'}
               </div>
               <div className="ws-preview-tags">
                 {form.ageRange && <span className="tag">{form.ageRange}</span>}
@@ -660,7 +661,7 @@ export default function Workshops() {
                   the admin can still change it. */}
               <span className={`field-hint${startsInPast ? ' warn' : ''}`}>
                 {startsInPast
-                  ? '⚠️ Thời gian này đã qua — buổi sẽ không hiện cho khách.'
+                  ? 'Thời gian này đã qua — buổi sẽ không hiện cho khách.'
                   : 'Theo giờ máy của bạn'}
               </span>
             </label>
@@ -742,7 +743,7 @@ export default function Workshops() {
                 {form.imageUrl ? (
                   <img src={form.imageUrl} alt="" />
                 ) : (
-                  <span>🖼</span>
+                  <AdminIcon name="images" size={22} />
                 )}
               </div>
               <div className="ws-cover-actions">
@@ -819,7 +820,7 @@ export default function Workshops() {
             state={regState}
             error={regError}
             isEmpty={registrations.length === 0}
-            emptyIcon="🪑"
+            emptyIcon={<AdminIcon name="seat" size={24} />}
             emptyTitle="Chưa có ai đăng ký"
             emptyHint="Khách đăng ký từ trang Workshop sẽ hiện ở đây."
           />
@@ -829,13 +830,13 @@ export default function Workshops() {
           {regState === 'ready' && registrations.length > 0 && (
             <div className="ws-reg-summary">
               {regCounts.paid > 0 && (
-                <span className="ok">✓ {regCounts.paid} đã thanh toán</span>
+                <span className="ok"><AdminIcon name="check" size={14} /> {regCounts.paid} đã thanh toán</span>
               )}
               {regCounts.unpaid > 0 && (
-                <span className="wait">◷ {regCounts.unpaid} chưa thanh toán</span>
+                <span className="wait"><AdminIcon name="clock" size={14} /> {regCounts.unpaid} chưa thanh toán</span>
               )}
               {regCounts.cancelled > 0 && (
-                <span className="off">✕ {regCounts.cancelled} đã huỷ</span>
+                <span className="off"><AdminIcon name="close" size={14} /> {regCounts.cancelled} đã huỷ</span>
               )}
             </div>
           )}
@@ -861,7 +862,7 @@ export default function Workshops() {
                         title="Ghi nhận đã thu tiền"
                         onClick={() => markRegistrationPaid(r.id, r.amount)}
                       >
-                        💰
+                        <AdminIcon name="sales" size={16} />
                       </button>
                     )}
                     {r.status !== 'cancelled' ? (
@@ -870,7 +871,7 @@ export default function Workshops() {
                         title="Huỷ chỗ (giữ lại bản ghi)"
                         onClick={() => setRegistrationStatus(r.id, 'cancelled')}
                       >
-                        ✕
+                        <AdminIcon name="close" size={16} />
                       </button>
                     ) : (
                       <button
@@ -878,7 +879,7 @@ export default function Workshops() {
                         title="Mở lại chỗ"
                         onClick={() => setRegistrationStatus(r.id, 'pending')}
                       >
-                        ↺
+                        <AdminIcon name="refresh" size={16} />
                       </button>
                     )}
                     <button
@@ -886,7 +887,7 @@ export default function Workshops() {
                       title="Xoá hẳn khỏi danh sách"
                       onClick={() => cancelRegistration(r.id)}
                     >
-                      🗑
+                      <AdminIcon name="trash" size={16} />
                     </button>
                   </span>
                 </div>
@@ -894,16 +895,20 @@ export default function Workshops() {
                 <div className="ws-reg-meta">
                   {/* Tappable: staff call these from a phone at the door. */}
                   {r.guestPhone ? (
-                    <a href={`tel:${r.guestPhone}`}>📞 {r.guestPhone}</a>
+                    <a href={`tel:${r.guestPhone}`}><AdminIcon name="phone" size={14} /> {r.guestPhone}</a>
                   ) : (
-                    <span>📞 —</span>
+                    <span><AdminIcon name="phone" size={14} /> —</span>
                   )}
                   {(r.guestEmail || r.user?.email) && (
-                    <span className="ws-reg-email">✉ {r.guestEmail || r.user?.email}</span>
+                    <span className="ws-reg-email"><AdminIcon name="mail" size={14} /> {r.guestEmail || r.user?.email}</span>
                   )}
-                  <span>👶 {r.childAge || 'chưa rõ tuổi'}</span>
+                  <span><AdminIcon name="user" size={14} /> {r.childAge || 'chưa rõ tuổi'}</span>
                   <span>{r.childCount} bé</span>
-                  {r.amount > 0 && <span>💰 {r.amount.toLocaleString('vi-VN')}đ</span>}
+                  {r.amount > 0 && (
+                    <span>
+                      <AdminIcon name="sales" size={14} /> {r.amount.toLocaleString('vi-VN')}đ
+                    </span>
+                  )}
                   <span className="ws-reg-when">
                     {new Date(r.createdAt).toLocaleString('vi-VN', {
                       day: '2-digit',
@@ -914,7 +919,11 @@ export default function Workshops() {
                   </span>
                 </div>
 
-                {r.note && <div className="ws-reg-note">📝 {r.note}</div>}
+                {r.note && (
+                  <div className="ws-reg-note">
+                    <AdminIcon name="blog" size={14} /> {r.note}
+                  </div>
+                )}
               </div>
             ))}
         </Modal>

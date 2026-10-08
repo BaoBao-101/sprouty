@@ -5,6 +5,7 @@ import { VideoPanel } from './VideoPanel';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { formatPrice } from '@/types/product';
+import { AdminIcon, type AdminIconName } from '@/components/icons/AdminIcon';
 
 export interface AdminProduct {
   id: number;
@@ -28,12 +29,12 @@ export interface AdminProduct {
 
 type TabKey = 'basic' | 'pricing' | 'images' | 'includes' | 'videos';
 
-const TABS: Array<{ key: TabKey; label: string; icon: string }> = [
-  { key: 'basic', label: 'Thông tin', icon: '📝' },
-  { key: 'pricing', label: 'Giá & nhãn', icon: '💰' },
-  { key: 'images', label: 'Hình ảnh', icon: '🖼' },
-  { key: 'includes', label: 'Trong hộp', icon: '📦' },
-  { key: 'videos', label: 'Video', icon: '🎬' },
+const TABS: Array<{ key: TabKey; label: string; icon: AdminIconName }> = [
+  { key: 'basic', label: 'Thông tin', icon: 'blog' },
+  { key: 'pricing', label: 'Giá & nhãn', icon: 'sales' },
+  { key: 'images', label: 'Hình ảnh', icon: 'images' },
+  { key: 'includes', label: 'Trong hộp', icon: 'orders' },
+  { key: 'videos', label: 'Video', icon: 'video' },
 ];
 
 const BADGES = [
@@ -310,7 +311,9 @@ export function ProductEditor({
                     title={locked ? 'Lưu sản phẩm trước để thêm video' : undefined}
                     onClick={() => setTab(t.key)}
                   >
-                    <span className="editor-step-icon">{locked ? '🔒' : t.icon}</span>
+                    <span className="editor-step-icon">
+                      <AdminIcon name={locked ? 'lock' : t.icon} size={16} />
+                    </span>
                     <span className="editor-step-label">{t.label}</span>
                     {tabBadge[t.key] && <span className="editor-step-badge">{tabBadge[t.key]}</span>}
                   </button>

@@ -14,6 +14,7 @@ import {
 import { API } from '@/services/api';
 import { ORDER_STATUS_VN, ORDER_STATUSES, shortOrderId, type OrderStatus } from '@/types/order';
 import { formatPrice } from '@/types/product';
+import { AdminIcon } from '@/components/icons/AdminIcon';
 
 interface Stats {
   totals: {
@@ -51,7 +52,7 @@ const STATUS_TONE: Record<OrderStatus, string> = {
   cancelled: 'rose',
 };
 
-const RANK_MEDAL = ['🥇', '🥈', '🥉'];
+const RANK_TONE = ['gold', 'silver', 'bronze'];
 
 export default function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -90,14 +91,14 @@ export default function Dashboard() {
         subtitle="Tổng quan hoạt động của Sprouty"
         actions={
           <button className="btn btn-ghost btn-sm" onClick={load} disabled={loading}>
-            {loading ? 'Đang tải…' : '↻ Làm mới'}
+            <><AdminIcon name="refresh" size={16} />{loading ? 'Đang tải…' : 'Làm mới'}</>
           </button>
         }
       />
 
       <StatGrid>
         <StatCard
-          icon="👥"
+          icon={<AdminIcon name="users" />}
           tone="blue"
           loading={loading}
           value={totals?.users ?? '—'}
@@ -105,7 +106,7 @@ export default function Dashboard() {
           hint={totals ? `+${totals.newUsers7d} trong 7 ngày` : undefined}
         />
         <StatCard
-          icon="📦"
+          icon={<AdminIcon name="orders" />}
           tone="orange"
           loading={loading}
           value={totals?.orders ?? '—'}
@@ -113,21 +114,21 @@ export default function Dashboard() {
           hint={statusTotal ? `${byStatus.pending ?? 0} chờ xác nhận` : undefined}
         />
         <StatCard
-          icon="🎨"
+          icon={<AdminIcon name="products" />}
           tone="green"
           loading={loading}
           value={totals?.products ?? '—'}
           label="Sản phẩm"
         />
         <StatCard
-          icon="💰"
+          icon={<AdminIcon name="sales" />}
           tone="amber"
           loading={loading}
           value={totals ? `${compactVnd(totals.revenue7d)}đ` : '—'}
           label="Doanh thu 7 ngày"
         />
         <StatCard
-          icon="📈"
+          icon={<AdminIcon name="trending" />}
           tone="rose"
           loading={loading}
           value={totals ? `${compactVnd(totals.revenue30d)}đ` : '—'}
@@ -140,7 +141,7 @@ export default function Dashboard() {
           title="Đơn hàng theo trạng thái"
           action={
             <Link className="btn btn-ghost btn-sm" to="/admin/orders">
-              Xem tất cả →
+              Xem tất cả <AdminIcon name="arrow-right" size={15} />
             </Link>
           }
         >
@@ -162,20 +163,20 @@ export default function Dashboard() {
           title="Top 5 sản phẩm bán chạy"
           action={
             <Link className="btn btn-ghost btn-sm" to="/admin/sales">
-              Báo cáo →
+              Báo cáo <AdminIcon name="arrow-right" size={15} />
             </Link>
           }
         >
           {topProducts.length === 0 && (
             <div className="ad-blank">
-              <span className="ad-blank-icon">🌱</span>
+              <span className="ad-blank-icon"><AdminIcon name="seed" size={24} /></span>
               <p className="ad-blank-title">Chưa có dữ liệu bán hàng</p>
               <p className="ad-blank-hint">Số liệu xuất hiện sau đơn hàng đã thanh toán đầu tiên.</p>
             </div>
           )}
           {topProducts.map((item, i) => (
             <div className="dash-top" key={i}>
-              <span className="dash-top-rank">{RANK_MEDAL[i] ?? i + 1}</span>
+              <span className={`dash-top-rank${RANK_TONE[i] ? ' ' + RANK_TONE[i] : ''}`}>{i + 1}</span>
               <ProductIcon name={item.product?.name || ''} />
               <div className="dash-top-main">
                 <div className="ad-cell-main">{item.product?.name || 'Sản phẩm'}</div>
@@ -195,7 +196,7 @@ export default function Dashboard() {
         flush
         action={
           <Link className="btn btn-ghost btn-sm" to="/admin/orders">
-            Quản lý đơn →
+            Quản lý đơn <AdminIcon name="arrow-right" size={15} />
           </Link>
         }
       >
@@ -215,7 +216,7 @@ export default function Dashboard() {
               error={error}
               isEmpty={recentOrders.length === 0}
               columns={5}
-              emptyIcon="📦"
+              emptyIcon={<AdminIcon name="orders" size={24} />}
               emptyTitle="Chưa có đơn hàng"
               emptyHint="Đơn hàng mới nhất sẽ hiện ở đây."
               onRetry={load}

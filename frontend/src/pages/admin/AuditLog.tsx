@@ -11,6 +11,7 @@ import {
   type LoadState,
 } from '@/components/admin/ui';
 import { API } from '@/services/api';
+import { AdminIcon } from '@/components/icons/AdminIcon';
 
 /**
  * Reader for the audit trail.
@@ -153,7 +154,7 @@ export default function AuditLog() {
         subtitle="Ai đã làm gì trên hệ thống — chỉ ghi, không sửa hay xoá được"
         actions={
           <button className="btn btn-ghost btn-sm" onClick={load} disabled={state === 'loading'}>
-            ↻ Làm mới
+            <AdminIcon name="refresh" size={16} /> Làm mới
           </button>
         }
       />
@@ -207,7 +208,7 @@ export default function AuditLog() {
               error={error}
               isEmpty={visible.length === 0}
               columns={5}
-              emptyIcon="🗒"
+              emptyIcon={<AdminIcon name="audit" size={24} />}
               emptyTitle={search || filter ? 'Không có bản ghi khớp' : 'Chưa có hoạt động nào'}
               emptyHint={
                 search || filter

@@ -16,6 +16,7 @@ import {
 } from '@/components/admin/ui';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
+import { AdminIcon } from '@/components/icons/AdminIcon';
 
 interface AdminUser {
   id: string;
@@ -403,14 +404,14 @@ export default function Users() {
 
       <StatGrid>
         <StatCard
-          icon="👥"
+          icon={<AdminIcon name="users" />}
           tone="blue"
           loading={state === 'loading'}
           value={users.length}
           label="Tổng tài khoản"
         />
         <StatCard
-          icon="🛠"
+          icon={<AdminIcon name="settings" />}
           tone="orange"
           loading={state === 'loading'}
           value={counts.employee + counts.admin}
@@ -418,14 +419,14 @@ export default function Users() {
           hint={`${counts.admin} quản trị · ${counts.employee} nhân viên`}
         />
         <StatCard
-          icon="⭐"
+          icon={<AdminIcon name="star" />}
           tone="amber"
           loading={state === 'loading'}
           value={counts.vip}
           label="Khách VIP"
         />
         <StatCard
-          icon="🚫"
+          icon={<AdminIcon name="lock" />}
           tone="rose"
           loading={state === 'loading'}
           value={counts.disabled}
@@ -459,7 +460,7 @@ export default function Users() {
               error={error}
               isEmpty={users.length === 0}
               columns={5}
-              emptyIcon="👥"
+              emptyIcon={<AdminIcon name="users" size={24} />}
               emptyTitle={search || filter ? 'Không tìm thấy ai' : 'Chưa có người dùng'}
               emptyHint={search || filter ? 'Thử bỏ bộ lọc hoặc đổi từ khoá.' : undefined}
               onRetry={load}
@@ -477,7 +478,7 @@ export default function Users() {
                           {user.name}
                           {user.isVip && (
                             <span className="usr-vip" title="Khách VIP">
-                              ⭐
+                              <AdminIcon name="star" size={14} />
                             </span>
                           )}
                         </div>
@@ -530,7 +531,7 @@ export default function Users() {
                           disabled={busyId === user.id}
                           onClick={() => grantVip(user)}
                         >
-                          ⭐ Cấp VIP
+                          <AdminIcon name="star" size={15} /> Cấp VIP
                         </button>
                       )}
                       <button
@@ -538,7 +539,7 @@ export default function Users() {
                         disabled={busyId === user.id}
                         onClick={() => setResetting(user)}
                       >
-                        🔑 Đặt lại mật khẩu
+                        <AdminIcon name="lock" size={15} /> Đặt lại mật khẩu
                       </button>
                     </div>
                   </td>
