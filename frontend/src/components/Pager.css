@@ -1,0 +1,87 @@
+/* ── Paging on the customer's own pages ────────────────────────────────────
+   Bigger than the admin's: a parent reads this on a phone, often one-handed,
+   so every target clears 40px and the count is spelled out rather than left
+   as a bare number beside some arrows. */
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 2px solid var(--parchment-2);
+}
+
+.pager-total {
+  font-family: var(--font-h);
+  font-size: 0.86rem;
+  color: var(--ink-4);
+}
+
+.pager-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pager-num,
+.pager-step {
+  --icon-accent: var(--primary-300);
+  min-width: 42px;
+  height: 42px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 12px;
+  border-radius: var(--r-md);
+  border: 2px solid var(--parchment-2);
+  background: var(--surface);
+  color: var(--ink-3);
+  font-family: var(--font-h);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.18s, color 0.18s, background 0.18s, transform 0.18s;
+}
+
+.pager-num:hover:not(.active),
+.pager-step:hover:not(:disabled) {
+  border-color: var(--primary-300);
+  color: var(--primary-700);
+  transform: translateY(-1px);
+}
+
+.pager-num.active {
+  background: var(--primary-500);
+  border-color: var(--primary-500);
+  color: #fff;
+  cursor: default;
+}
+
+.pager-step:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* One arrow glyph, turned round for "previous" — the set has no left arrow,
+   and a mirrored right one is the same drawing at the same weight. */
+.pager-back {
+  transform: rotate(180deg);
+}
+
+.pager-gap {
+  padding: 0 2px;
+  color: var(--ink-5);
+}
+
+@media (max-width: 560px) {
+  .pager {
+    justify-content: center;
+  }
+
+  .pager-total {
+    width: 100%;
+    text-align: center;
+  }
+}

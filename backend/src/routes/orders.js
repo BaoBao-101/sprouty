@@ -256,21 +256,53 @@ export default async function orderRoutes(fastify) {
   });
 
   // GET /api/v1/orders
+  // GET /api/v1/orders — the customer's own order history, paged.
+  //
+  // Paged because it only grows, and because each row costs a redeem-code
+  // check: returning every order a long-standing customer ever placed meant
+  // doing that work for all of them to render the ten they were looking at.
+  // The counts are over the whole history, so the tabs do not renumber
+  // themselves as you click between them.
   fastify.get('/orders', { preHandler: [requireAuth] }, async (req) => {
-    const orders = await fastify.prisma.order.findMany({
-      where: { userId: req.user.id },
-      include: {
-        items: {
-          include: { product: { select: { id: true, name: true, emoji: true, images: true } } },
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(50, Math.max(1, Number.parseInt(req.query.limit, 10) || 10));
+
+    const where = { userId: req.user.id };
+    if (req.query.status) where.status = String(req.query.status);
+
+    const [orders, total, statusCounts] = await Promise.all([
+      fastify.prisma.order.findMany({
+        where,
+        include: {
+          items: {
+            include: { product: { select: { id: true, name: true, emoji: true, images: true } } },
+          },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      fastify.prisma.order.count({ where }),
+      fastify.prisma.order.groupBy({
+        by: ['status'],
+        where: { userId: req.user.id },
+        _count: { _all: true },
+      }),
+    ]);
+
     const ordersWithCodes = await Promise.all(orders.map(async (order) => ({
       ...order,
       redeemCodes: await ensurePurchaseRedeemCodes(fastify.prisma, order),
     })));
-    return { orders: ordersWithCodes };
+
+    return {
+      orders: ordersWithCodes,
+      page,
+      limit,
+      total,
+      pages: Math.max(1, Math.ceil(total / limit)),
+      counts: Object.fromEntries(statusCounts.map((r) => [r.status, r._count._all])),
+    };
   });
 
   // GET /api/v1/orders/:id
