@@ -595,3 +595,60 @@
   font-weight: 700;
   color: var(--primary-600);
 }
+
+/* ── Order filters ─────────────────────────────────────────────────────────
+   The question a parent opens this page with is almost always "cái nào tôi
+   chưa trả tiền?", so the answer is one tap rather than a scroll. A tab with
+   nothing in it is hidden instead of shown empty — an account with no
+   cancelled orders should not be offered a "Đã huỷ (0)" tab. */
+
+.acc-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.acc-filters button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: var(--r-full);
+  border: 2px solid var(--parchment-2);
+  background: var(--surface);
+  color: var(--ink-3);
+  font-family: var(--font-h);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.18s, color 0.18s, background 0.18s, transform 0.18s;
+}
+
+.acc-filters button:hover:not(.active) {
+  border-color: var(--primary-300);
+  color: var(--primary-700);
+  transform: translateY(-1px);
+}
+
+.acc-filters button.active {
+  background: var(--primary-500);
+  border-color: var(--primary-500);
+  color: #fff;
+}
+
+.acc-filters em {
+  font-style: normal;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 1px 8px;
+  border-radius: var(--r-full);
+  background: var(--parchment);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.acc-filters button.active em {
+  background: rgba(255, 255, 255, 0.26);
+  color: #fff;
+}

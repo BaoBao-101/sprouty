@@ -5,6 +5,7 @@ import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { formatPrice } from '@/types/product';
 import { TicketQr } from '@/components/TicketQr';
+import { Pager } from '@/components/Pager';
 import {
   formatWorkshopWhen,
   type MyWorkshopRegistration,
@@ -35,6 +36,9 @@ function bookingState(r: MyWorkshopRegistration) {
   return { label: 'Chưa thanh toán', cls: 'unpaid' };
 }
 
+/** Four to a page: these cards are tall, each one carrying a ticket. */
+const PER_PAGE = 4;
+
 export default function MyWorkshops() {
   const { isLoggedIn } = useAuth();
   const [rows, setRows] = useState<MyWorkshopRegistration[]>([]);
@@ -42,6 +46,8 @@ export default function MyWorkshops() {
   const [error, setError] = useState('');
   const [payment, setPayment] = useState<{ reg: MyWorkshopRegistration; info: WorkshopPayment } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [soonPage, setSoonPage] = useState(1);
+  const [pastPage, setPastPage] = useState(1);
 
   const load = useCallback(() => {
     if (!isLoggedIn) return setState('ready');
@@ -107,6 +113,12 @@ export default function MyWorkshops() {
 
   const upcoming = rows.filter((r) => r.upcoming && r.status !== 'cancelled');
   const others = rows.filter((r) => !r.upcoming || r.status === 'cancelled');
+
+  // Paged in the browser: a family has a handful of bookings, and the list
+  // is already in hand. Paging is here to stop four tall ticket cards
+  // burying the next section, not to save a request.
+  const soon = upcoming.slice((soonPage - 1) * PER_PAGE, soonPage * PER_PAGE);
+  const past = others.slice((pastPage - 1) * PER_PAGE, pastPage * PER_PAGE);
 
   function card(reg: MyWorkshopRegistration) {
     const w = reg.workshop;
@@ -244,14 +256,28 @@ export default function MyWorkshops() {
       {state === 'ready' && upcoming.length > 0 && (
         <>
           <h2 className="myws-section">Sắp tới ({upcoming.length})</h2>
-          <div className="myws-list">{upcoming.map(card)}</div>
+          <div className="myws-list">{soon.map(card)}</div>
+          <Pager
+            page={soonPage}
+            pages={Math.ceil(upcoming.length / PER_PAGE)}
+            total={upcoming.length}
+            unit="buổi sắp tới"
+            onChange={setSoonPage}
+          />
         </>
       )}
 
       {state === 'ready' && others.length > 0 && (
         <>
           <h2 className="myws-section">Đã qua &amp; đã huỷ ({others.length})</h2>
-          <div className="myws-list">{others.map(card)}</div>
+          <div className="myws-list">{past.map(card)}</div>
+          <Pager
+            page={pastPage}
+            pages={Math.ceil(others.length / PER_PAGE)}
+            total={others.length}
+            unit="buổi"
+            onChange={setPastPage}
+          />
         </>
       )}
 

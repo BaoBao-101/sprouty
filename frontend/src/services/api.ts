@@ -184,7 +184,7 @@ export const API = {
 
   orders: {
     create(data) { return _fetch('/orders', { method: 'POST', body: JSON.stringify(data) }); },
-    list()       { return _fetch('/orders'); },
+    list(params = {}) { return _fetch('/orders?' + new URLSearchParams(params)); },
     get(id)      { return _fetch(`/orders/${id}`); },
     cancel(id)   { return _fetch(`/orders/${id}/cancel`, { method: 'PATCH' }); },
     /**

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { SproutyIcon } from '@/components/icons/SproutyIcon';
+import { Pager } from '@/components/Pager';
 import {
   formatOrderDate,
   ORDER_STATUS_CLASS,
@@ -344,23 +345,53 @@ export default function Account() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const [filter, setFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+
+  // Paged on the server. A customer who has been here two years should not
+  // wait for every order they ever placed to be fetched, and have a redeem
+  // code checked for each one, to read the three on screen.
   const loadOrders = useCallback(() => {
     setLoading(true);
+    const params: Record<string, string> = { page: String(page), limit: '5' };
+    if (filter) params.status = filter;
     API.orders
-      .list()
+      .list(params)
       .then((data: any) => {
         setOrders(data.orders || []);
+        setPages(data.pages || 1);
+        setTotal(data.total || 0);
+        setCounts(data.counts || {});
         setError('');
       })
       .catch((err: any) => setError(err?.message || 'Lỗi tải đơn hàng'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [page, filter]);
 
   useEffect(loadOrders, [loadOrders]);
 
-  const orderCount = orders.length;
-  const pendingCount = orders.filter((o) => o.status === 'pending').length;
+  // Changing the filter while on page 3 would ask for page 3 of a result
+  // that may only have one.
+  function pickFilter(next: string) {
+    setFilter(next);
+    setPage(1);
+  }
+
+  // Headline figures span the whole history, not the page being shown.
+  const orderCount = Object.values(counts).reduce((n, c) => n + c, 0);
+  const pendingCount = counts.pending || 0;
   const codeCount = orders.reduce((n, o) => n + (o.redeemCodes?.length || 0), 0);
+
+  const FILTERS: Array<{ value: string; label: string }> = [
+    { value: '', label: 'Tất cả' },
+    { value: 'pending', label: 'Chờ thanh toán' },
+    { value: 'processing', label: 'Đang xử lý' },
+    { value: 'delivered', label: 'Hoàn tất' },
+    { value: 'cancelled', label: 'Đã huỷ' },
+  ];
 
   return (
     <>
@@ -384,7 +415,7 @@ export default function Account() {
               </div>
               <div className="acc-stat">
                 <strong>{codeCount}</strong>
-                <span>mã kích hoạt</span>
+                <span>mã trang này</span>
               </div>
               <div className="acc-stat">
                 <strong>{pendingCount}</strong>
@@ -422,6 +453,29 @@ export default function Account() {
 
         {tab === 'orders' && (
           <div className="acc-orders">
+            {/* Filter first: the question a parent opens this page with is
+                almost always "cái nào tôi chưa trả tiền?" */}
+            {orderCount > 0 && (
+              <div className="acc-filters" role="tablist">
+                {FILTERS.map((f) => {
+                  const n = f.value ? counts[f.value] || 0 : orderCount;
+                  if (f.value && n === 0) return null;
+                  return (
+                    <button
+                      key={f.value}
+                      role="tab"
+                      aria-selected={filter === f.value}
+                      className={filter === f.value ? 'active' : ''}
+                      onClick={() => pickFilter(f.value)}
+                    >
+                      {f.label}
+                      <em>{n}</em>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {loading && <p className="acc-muted">Đang tải đơn hàng…</p>}
             {error && <div className="acc-error">{error}</div>}
 
@@ -430,18 +484,30 @@ export default function Account() {
                 <span className="acc-empty-icon">
                   <SproutyIcon name="cart" size={38} />
                 </span>
-                <h3>Bạn chưa có đơn hàng nào</h3>
-                <p>Chọn một bộ kit, thanh toán xong là có mã kích hoạt để gieo hạt ngay.</p>
-                <Link to="/shop" className="btn btn-primary btn-lg">
-                  Khám phá sản phẩm
-                  <SproutyIcon name="arrow-right" size={18} />
-                </Link>
+                <h3>{filter ? 'Không có đơn nào ở mục này' : 'Bạn chưa có đơn hàng nào'}</h3>
+                <p>
+                  {filter
+                    ? 'Chọn “Tất cả” để xem lại toàn bộ đơn hàng của bạn.'
+                    : 'Chọn một bộ kit, thanh toán xong là có mã kích hoạt để gieo hạt ngay.'}
+                </p>
+                {filter ? (
+                  <button className="btn btn-ghost btn-lg" onClick={() => pickFilter('')}>
+                    Xem tất cả đơn
+                  </button>
+                ) : (
+                  <Link to="/shop" className="btn btn-primary btn-lg">
+                    Khám phá sản phẩm
+                    <SproutyIcon name="arrow-right" size={18} />
+                  </Link>
+                )}
               </div>
             )}
 
             {orders.map((order) => (
               <OrderCard key={order.id} order={order} onCancelled={loadOrders} />
             ))}
+
+            <Pager page={page} pages={pages} total={total} unit="đơn hàng" onChange={setPage} />
           </div>
         )}
 

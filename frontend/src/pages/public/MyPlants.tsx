@@ -18,6 +18,7 @@ import { showToast } from '@/services/toast';
 import { SproutyIcon } from '@/components/icons/SproutyIcon';
 import { PlantArt } from '@/components/PlantArt';
 import { PromoBanner, refreshRewards } from '@/components/PromoBanner';
+import { Pager } from '@/components/Pager';
 import type { PlantCard, PlantEvent } from '@/types/plant';
 import './MyPlants.css';
 
@@ -216,10 +217,15 @@ function PlantGridCard({ plant, urgent }: { plant: PlantCard; urgent?: Alert[] }
   );
 }
 
+/** Six to a page: two rows of three on a laptop, six cards on a phone. */
+const PER_PAGE = 6;
+
 export default function MyPlants() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [plants, setPlants] = useState<PlantCard[]>([]);
+  const [growPage, setGrowPage] = useState(1);
+  const [cropPage, setCropPage] = useState(1);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
@@ -253,6 +259,13 @@ export default function MyPlants() {
   const firstName = user?.name.split(' ').pop() ?? '';
   const growing = plants.filter((p) => !p.harvestedAt);
   const harvested = plants.filter((p) => p.harvestedAt);
+
+  // Paged in the browser, not on the server, and deliberately: every plant
+  // has to be ticked forward on each load for the alert bar above to be
+  // true, so the whole garden is in hand anyway. Fetching a page of it
+  // would mean a plant on page 2 going unwatered without anyone being told.
+  const visibleGrowing = growing.slice((growPage - 1) * PER_PAGE, growPage * PER_PAGE);
+  const visibleHarvested = harvested.slice((cropPage - 1) * PER_PAGE, cropPage * PER_PAGE);
   const alertsByPlant = alerts.reduce<Record<string, Alert[]>>((acc, a) => {
     (acc[a.plantId] ||= []).push(a);
     return acc;
@@ -343,10 +356,18 @@ export default function MyPlants() {
                 <SproutyIcon name="leaf" size={22} /> Đang lớn
               </h2>
               <div className="plants-grid">
-                {growing.map((plant) => (
+                {visibleGrowing.map((plant) => (
                   <PlantGridCard key={plant.id} plant={plant} urgent={alertsByPlant[plant.id]} />
                 ))}
               </div>
+
+              <Pager
+                page={growPage}
+                pages={Math.ceil(growing.length / PER_PAGE)}
+                total={growing.length}
+                unit="cây đang lớn"
+                onChange={setGrowPage}
+              />
             </>
           )}
 
@@ -356,10 +377,18 @@ export default function MyPlants() {
                 <SproutyIcon name="trophy" size={22} /> Đã thu hoạch
               </h2>
               <div className="plants-grid">
-                {harvested.map((plant) => (
+                {visibleHarvested.map((plant) => (
                   <PlantGridCard key={plant.id} plant={plant} />
                 ))}
               </div>
+
+              <Pager
+                page={cropPage}
+                pages={Math.ceil(harvested.length / PER_PAGE)}
+                total={harvested.length}
+                unit="cây đã thu hoạch"
+                onChange={setCropPage}
+              />
             </>
           )}
         </div>
