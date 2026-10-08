@@ -139,9 +139,10 @@ export function AiBubble() {
               className="aib-icon-btn"
               to="/ai"
               title="Mở toàn màn hình"
+              aria-label="Mở toàn màn hình"
               onClick={() => setOpen(false)}
             >
-              <SproutyIcon name="album" size={16} />
+              <SproutyIcon name="arrow-right" size={17} />
             </Link>
             <button className="aib-icon-btn" title="Đóng" onClick={() => setOpen(false)}>
               <SproutyIcon name="close" size={17} />
@@ -158,6 +159,16 @@ export function AiBubble() {
                   Hỏi mình về <b>kit trồng cây</b>, cách chăm cây, thiết bị IoT hay lịch workshop
                   nhé!
                 </p>
+
+                {isLoggedIn && !locked && (
+                  <div className="aib-quick">
+                    {PROMPTS.map((p) => (
+                      <button key={p} disabled={typing} onClick={() => ask(p)}>
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -208,16 +219,6 @@ export function AiBubble() {
             </div>
           ) : (
             <div className="aib-foot">
-              {messages.length === 0 && (
-                <div className="aib-quick">
-                  {PROMPTS.map((p) => (
-                    <button key={p} disabled={typing} onClick={() => ask(p)}>
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              )}
-
               <div className="aib-input">
                 <input
                   className="form-input"

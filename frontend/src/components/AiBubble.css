@@ -7,7 +7,7 @@
   position: fixed;
   right: 22px;
   bottom: 22px;
-  z-index: 480;
+  z-index: 560;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -97,7 +97,9 @@
 .aib-panel {
   width: 374px;
   max-width: calc(100vw - 32px);
-  height: min(540px, calc(100vh - 130px));
+  /* Clears the sticky site header as well as the launcher below it, so
+     the panel never opens into a strip it does not own. */
+  height: min(560px, calc(100vh - 186px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -216,14 +218,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 10px;
+  gap: 14px;
+  padding: 6px 2px;
 }
 
 .aib-empty-icon {
   --icon-accent: var(--primary-300);
-  width: 58px;
-  height: 58px;
+  width: 54px;
+  height: 54px;
   display: grid;
   place-items: center;
   border-radius: 22px;
@@ -342,13 +344,17 @@
   background: var(--surface);
 }
 
-/* Shown only while the thread is empty: once there is a conversation, the
-   suggestions are noise between the answer and the next question. */
+/* Part of the greeting, not of the composer: these are what to say when
+   you have nothing to say yet, so they belong under the hello rather than
+   above the input with a hand-sized gap between the two. They go once the
+   conversation starts, when they would only separate an answer from the
+   next question. */
 .aib-quick {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 6px;
-  margin-bottom: 9px;
+  max-width: 300px;
 }
 
 .aib-quick button {
@@ -423,10 +429,11 @@
 @media (max-width: 520px) {
   .aib { right: 14px; bottom: 14px; left: 14px; align-items: stretch }
 
+
   .aib-panel {
     width: auto;
     max-width: none;
-    height: min(560px, calc(100vh - 110px));
+    height: min(560px, calc(100vh - 170px));
   }
 
   .aib-launch { align-self: flex-end }
