@@ -6,7 +6,8 @@ export interface OrderItem {
   unitPrice: number;
   /** 'standard' | 'smart' — which variant was bought, when one was offered. */
   variant?: string | null;
-  product?: { name?: string; emoji?: string };
+  /** The server selects images for this endpoint; the type never said so. */
+  product?: { name?: string; emoji?: string; images?: string[] };
 }
 
 export interface RedeemCode {
@@ -40,7 +41,10 @@ export const ORDER_STATUS_VN: Record<OrderStatus, string> = {
   pending: 'Chờ xác nhận',
   processing: 'Đang xử lý',
   shipped: 'Đang giao',
-  delivered: 'Đã giao',
+  // Not "Đã giao": this is also where an order lands whose only
+  // deliverable was an activation code, and nothing was delivered to
+  // anywhere. "Hoàn tất" is true of both.
+  delivered: 'Hoàn tất',
   cancelled: 'Đã hủy',
 };
 

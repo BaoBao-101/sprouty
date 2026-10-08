@@ -500,3 +500,436 @@
     margin-left: 0;
   }
 }
+
+/* ── Paying is the page, not a sidebar ─────────────────────────────────────
+   The layout was 1fr + a 380px rail, with the order details given the width
+   and the payment instructions squeezed into the rail. Once those became
+   three steps with a QR, a bank block and a memo warning, the rail ran a mile
+   down the screen while the wide column sat empty beside it.
+
+   While there is money owed, paying is the main thing on the page and the
+   order is the reference next to it. Once it is settled the instructions
+   disappear, and the layout goes back to one column rather than leaving a
+   380px hole where they were. */
+
+.pay-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.pay-layout.paying {
+  grid-template-columns: 330px minmax(0, 1fr);
+}
+
+/* Sticky belongs on the short column. It was on the tall one, where it could
+   never move anyway. */
+.pay-layout.paying .pay-card {
+  position: sticky;
+  top: 108px;
+}
+
+.pay-summary {
+  position: static;
+  padding: 26px 28px;
+}
+
+/* Scan it, or type it — two ways to do the same thing, so they sit side by
+   side rather than one under the other. Waiting is what follows both. */
+.pay-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 26px 30px;
+  align-items: start;
+}
+
+.pay-steps > li:last-child {
+  grid-column: 1 / -1;
+}
+
+/* ── The QR, framed ────────────────────────────────────────────────────── */
+
+.pay-steps .sum-qr {
+  margin: 0 0 0 37px;
+  padding: 14px;
+  background: #fff;
+  border: 2px solid var(--parchment-2);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-sm);
+  display: inline-block;
+}
+
+.pay-steps .sum-qr img {
+  max-width: 190px;
+  border-radius: 0;
+}
+
+/* ── Bank rows ─────────────────────────────────────────────────────────── */
+
+.pay-bank {
+  padding: 4px 14px;
+  border-radius: var(--r-lg);
+  background: var(--cream-2);
+  border: 1.5px solid var(--parchment-2);
+}
+
+.pay-memo { margin-top: 12px }
+
+/* ── Waiting ───────────────────────────────────────────────────────────── */
+
+.pay-waiting {
+  align-items: center;
+  background: var(--primary-100);
+  border-color: var(--primary-300);
+}
+
+.pay-waiting .spinner {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-width: 2.5px;
+  color: var(--primary-600);
+}
+
+/* ── Test mode ─────────────────────────────────────────────────────────────
+   A tool, not a second way to buy. It was a slab of near-black in the middle
+   of a cream page, which made the one thing nobody should press in production
+   the loudest thing on it. */
+
+.pay-devbox {
+  margin-top: 22px;
+  background: var(--cream-2);
+  border: 1.5px dashed var(--ink-5);
+  border-radius: var(--r-lg);
+  padding: 14px 16px;
+}
+
+.pay-devbox-tag {
+  background: var(--ink-4);
+  color: #fff;
+}
+
+.pay-devbox-btn {
+  background: var(--ink-3);
+  border-radius: var(--r-md);
+}
+
+.pay-devbox-btn:hover:not(:disabled) {
+  background: var(--ink-2);
+}
+
+@media (max-width: 1024px) {
+  .pay-layout.paying { grid-template-columns: minmax(0, 1fr) }
+  .pay-layout.paying .pay-card { position: static }
+}
+
+@media (max-width: 720px) {
+  .pay-steps { grid-template-columns: minmax(0, 1fr) }
+  .pay-steps .sum-qr { margin-left: 0 }
+}
+
+/* ── Order details, in a 330px column ──────────────────────────────────────
+   Everything here was built as label-beside-value rows for a wide column. At
+   this width the value got half of what little there was, and an address wrapped
+   to four lines against its own label. Labels go above their values. */
+
+.ord-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-bottom: 14px;
+  border-bottom: 1.5px solid var(--parchment-2);
+}
+
+.ord-code {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ord-code em {
+  font-style: normal;
+  font-family: var(--font-h);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+/* Monospace: this gets read out to support and typed into a bank memo. */
+.ord-code code {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+}
+
+.ord-state {
+  padding: 5px 12px;
+  border-radius: var(--r-full);
+  font-family: var(--font-h);
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: var(--cream-2);
+  color: var(--ink-3);
+}
+
+.ord-state.s-pending { background: #FFF7ED; color: var(--terracotta) }
+.ord-state.s-processing { background: var(--primary-100); color: var(--primary-700) }
+.ord-state.s-cancelled { background: #FEF2F2; color: var(--rose) }
+
+/* ── Items ─────────────────────────────────────────────────────────────── */
+
+.ord-item {
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.ord-item-thumb {
+  position: relative;
+  flex: none;
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--cream-2);
+  border: 1.5px solid var(--parchment-2);
+  font-size: 1.5rem;
+}
+
+.ord-item-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* A quantity badge, so "× 2" is not something to notice in small grey text. */
+.ord-item-qty {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  min-width: 21px;
+  padding: 0 5px;
+  border-radius: var(--r-full) 0 var(--r-md) 0;
+  background: var(--primary-600);
+  color: #fff;
+  font-style: normal;
+  font-family: var(--font-h);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-align: center;
+  line-height: 18px;
+}
+
+.ord-item-main { gap: 4px }
+
+.ord-item-name { font-size: 0.94rem }
+
+.ord-item-sub {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.ord-item-variant {
+  padding: 1px 7px;
+  border-radius: var(--r-full);
+  background: var(--cobalt-bg);
+  color: #0C6A95;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+/* Under the name rather than off to the right: at this width a third column
+   left the product name about eleven characters. */
+.ord-item-line {
+  font-family: var(--font-h);
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+/* Matches the amount on the payment side. Two colours for the same number on
+   one screen invites the reader to look for a difference. */
+.ord-total strong { color: var(--primary-700) }
+
+/* ── Who is ordering ───────────────────────────────────────────────────── */
+
+.ord-ship {
+  background: var(--surface);
+  border: 1.5px solid var(--parchment-2);
+  padding: 16px;
+}
+
+.ord-ship-edit {
+  --icon-accent: var(--primary-300);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: none;
+  padding: 4px 6px;
+  border-radius: var(--r-sm);
+  color: var(--primary-600);
+  font-family: var(--font-h);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ord-ship-edit:hover { background: var(--primary-100) }
+
+.ord-ship-list {
+  margin-top: 12px;
+  gap: 12px;
+}
+
+.ord-ship-list > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ord-ship-list dt {
+  width: auto;
+  font-family: var(--font-h);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+.ord-ship-list dd {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+/* An address nobody has entered says so, instead of printing an em dash that
+   looks like a value. */
+.ord-ship-list dd.is-missing {
+  font-weight: 500;
+  font-style: italic;
+  color: var(--ink-4);
+}
+
+/* ── Fixes to the two rules above ──────────────────────────────────────────
+   `dt` carried `flex: 0 0 118px` from when this list was label-beside-value.
+   Turning the container into a column turned that basis from a width into a
+   HEIGHT, which is where the hand-sized gap between each label and its value
+   came from. flex-basis follows the main axis, and the main axis moved. */
+
+.ord-ship-list dt,
+.ord-ship-list dd {
+  flex: 0 0 auto;
+}
+
+/* ── Balance ───────────────────────────────────────────────────────────────
+   The QR is a fixed-size square; giving it half the panel left a column of
+   white under it as tall as the bank details beside it. It takes what it
+   needs and the transfer details take the rest. */
+
+.pay-steps {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.pay-layout.paying {
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 1180px) {
+  .pay-steps { grid-template-columns: minmax(0, 1fr) }
+  .pay-steps .sum-qr { margin-left: 37px }
+}
+
+/* ── Bank details ──────────────────────────────────────────────────────────
+   `word-break: break-all` was splitting "Vietcombank" into "Vietcomban / k"
+   and the account number into "102090 / 2831". break-all breaks anywhere at
+   all, including mid-number — which for a figure somebody is copying into a
+   banking app is worse than an overflow would have been.
+
+   The label goes above the value for the same reason the contact block does:
+   side by side in this column there is nowhere for a long value to go. */
+
+.pay-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+  padding: 10px 0;
+}
+
+.pay-row .lbl {
+  font-family: var(--font-h);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+.pay-row .val-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pay-row .val {
+  display: block;
+  text-align: left;
+  font-size: 1.02rem;
+  /* Never mid-word, and never mid-number. */
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+.pay-row .copy-btn {
+  --icon-accent: var(--primary-300);
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: var(--r-md);
+  border: 1.5px solid var(--parchment-2);
+  background: var(--surface);
+  color: var(--primary-700);
+  font-family: var(--font-h);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pay-row .copy-btn:hover { background: var(--primary-100); border-color: var(--primary-300) }
+
+/* ── Columns that cannot squeeze each other ────────────────────────────────
+   `auto` sized the QR column to its widest content — which is the sentence
+   under the heading, not the QR — and left the transfer details about 260px.
+   That is what made every value wrap. The QR gets a fixed share and the
+   details get the rest. */
+
+.pay-steps {
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  gap: 24px 32px;
+}
+
+/* The indent lines content up under its step number; the QR is a block, and
+   indenting it only took width away from the thing that needed it. */
+.pay-steps .sum-qr { margin-left: 0 }
+.pay-steps .sum-qr img { max-width: 100%; width: 100% }
+
+@media (max-width: 1240px) {
+  .pay-steps { grid-template-columns: minmax(0, 1fr) }
+  .pay-steps .sum-qr { max-width: 230px }
+}

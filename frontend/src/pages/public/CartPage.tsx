@@ -8,6 +8,14 @@ import { showToast } from '@/services/toast';
 import type { CartLine } from '@/services/cart';
 import { formatPrice } from '@/types/product';
 import { PromoBanner } from '@/components/PromoBanner';
+import { SproutyIcon } from '@/components/icons/SproutyIcon';
+import {
+  AddressFields,
+  EMPTY_ADDRESS,
+  joinAddress,
+  missingAddressField,
+  type AddressParts,
+} from '@/components/AddressFields';
 import './CartPage.css';
 
 
@@ -80,21 +88,23 @@ function ShippingModal({
 
   const [name, setName] = useState(user?.name ?? '');
   const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
+  const [address, setAddress] = useState<AddressParts>(EMPTY_ADDRESS);
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
   async function submit() {
     setError('');
-    if (!name.trim() || !phone.trim() || (needsAddress && !address.trim())) {
-      return setError('Vui lòng điền đầy đủ thông tin.');
-    }
+    if (!name.trim()) return setError('Nhập họ tên người nhận.');
     if (!/^[0-9]{9,11}$/.test(phone.trim())) {
       return setError('Số điện thoại không hợp lệ (9–11 chữ số).');
     }
-    if (needsAddress && address.trim().length < 10) {
-      return setError('Địa chỉ quá ngắn, vui lòng nhập đầy đủ.');
+
+    // Names the empty box rather than saying "thiếu thông tin" and leaving
+    // the customer to find which one.
+    if (needsAddress) {
+      const missing = missingAddressField(address);
+      if (missing) return setError(missing);
     }
 
     setBusy(true);
@@ -107,7 +117,7 @@ function ShippingModal({
         })),
         shippingName: name.trim(),
         shippingPhone: phone.trim(),
-        shippingAddress: address.trim() || undefined,
+        shippingAddress: joinAddress(address) || undefined,
         note: note.trim() || undefined,
       };
       const { order } = await API.orders.create(payload);
@@ -119,7 +129,7 @@ function ShippingModal({
     }
   }
 
-  const submitLabel = needsAddress ? 'Đặt hàng ngay →' : 'Thanh toán ngay →';
+  const submitLabel = 'Tới bước thanh toán';
 
   return (
     <div
@@ -128,70 +138,77 @@ function ShippingModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="adm-modal-box" style={{ maxWidth: 440 }}>
+      <div className="adm-modal-box cart-modal" style={{ maxWidth: 520 }}>
         <button className="adm-modal-close" onClick={onClose} aria-label="Đóng">
-          ✕
+          <SproutyIcon name="arrow-right" size={18} />
         </button>
-        <h2 className="adm-modal-title">
-          {needsAddress ? 'Thông tin giao hàng' : 'Xác nhận thanh toán'}
-        </h2>
 
-        {!needsAddress && (
-          <p className="cart-modal-note">
-            Không cần giao hàng. Thanh toán xong bạn nhận mã kích hoạt ngay, nhập ở mục{' '}
-            <strong>Cây của tôi</strong> là cây bắt đầu nảy mầm.
-          </p>
-        )}
-
-        <div className="form-group">
-          <label className="form-label">Họ tên *</label>
-          <input className="form-input" type="text" value={name} onChange={(e) => setName(e.target.value)} />
+        <div className="cart-modal-head">
+          <h2 className="adm-modal-title">Thông tin nhận hàng</h2>
+          <p className="cart-modal-note">Bước sau là chuyển khoản.</p>
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Số điện thoại *</label>
-          <input
-            className="form-input"
-            type="tel"
-            placeholder="0901234567"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-        </div>
+        <div className="cart-modal-body">
 
-        {needsAddress && (
+
+        <div className="cart-modal-grid">
           <div className="form-group">
-            <label className="form-label">Địa chỉ giao hàng *</label>
-            <textarea
+            <label className="form-label">Họ tên *</label>
+            <input
               className="form-input"
-              rows={3}
-              style={{ resize: 'vertical' }}
-              placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
+              type="text"
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
             />
           </div>
-        )}
+
+          <div className="form-group">
+            <label className="form-label">Số điện thoại *</label>
+            <input
+              className="form-input"
+              type="tel"
+              autoComplete="tel"
+              placeholder="0901234567"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <AddressFields value={address} onChange={setAddress} />
 
         <div className="form-group">
           <label className="form-label">Ghi chú (tùy chọn)</label>
           <input
             className="form-input"
             type="text"
-            placeholder={needsAddress ? 'Giao buổi chiều, gọi trước khi giao...' : 'Ghi chú thêm (nếu có)'}
+            placeholder="Giao buổi chiều, gọi trước khi giao…"
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
         </div>
 
-        {error && <div className="form-error mb-12">{error}</div>}
+          {error && <div className="form-error mb-12">{error}</div>}
+        </div>
 
-        <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+        <div className="cart-modal-foot">
+          {/* Beside the button, not in a panel of its own above the fields:
+              the amount matters at the moment of deciding, and the cart
+              summary that shows it is behind the overlay. */}
+          <span className="cart-modal-total">
+            <em>{items.reduce((n, i) => n + i.qty, 0)} sản phẩm</em>
+            <strong>
+              {formatPrice(items.reduce((sum, i) => sum + (Number(i.price) || 0) * i.qty, 0))}
+            </strong>
+          </span>
+
           <button className="btn btn-ghost" onClick={onClose}>
-            Hủy
+            Quay lại
           </button>
-          <button className="btn btn-primary" style={{ flex: 1 }} disabled={busy} onClick={submit}>
-            {busy ? 'Đang xử lý...' : submitLabel}
+          <button className="btn btn-primary" disabled={busy} onClick={submit}>
+            {busy ? 'Đang xử lý…' : submitLabel}
+            {!busy && <SproutyIcon name="arrow-right" size={18} />}
           </button>
         </div>
       </div>
@@ -205,13 +222,15 @@ export default function CartPage() {
   const { items, count, total, clear } = useCart();
   const [shippingOpen, setShippingOpen] = useState(false);
 
-  // Nothing in the catalogue is shipped any more: a kit unlocks a simulated
-  // plant that is activated with a code on "Cây của tôi", and VIP was always
-  // digital. So there is no address to collect and no delivery to charge for.
-  // Named rather than inlined, because this and requiresShipping() in
-  // backend/src/routes/orders.js are the two places to change if a physical
-  // product is ever introduced again.
-  const needsAddress = false;
+  // Kits are posted, so checkout asks where to. This was hard-coded false
+  // during the spell when the catalogue was treated as entirely digital,
+  // which meant every order stored a placeholder where its address should
+  // be and nobody was ever asked for one.
+  //
+  // The server decides what it enforces, from PHYSICAL_CATEGORIES; asking
+  // for an address is safe either way, because an order that turns out not
+  // to need one simply keeps what it was given.
+  const needsAddress = true;
 
   // Asked before the redirect rather than after it: a checkout that silently
   // turns into a login form reads as the basket having been lost.
@@ -290,7 +309,7 @@ export default function CartPage() {
 
                 <div className="sum-row">
                   <span>Giao hàng</span>
-                  <strong style={{ color: 'var(--green)' }}>Không cần — kích hoạt online</strong>
+                  <strong className="cart-ship-note">Nhập địa chỉ ở bước sau</strong>
                 </div>
 
                 <div className="sum-divider" />

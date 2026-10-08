@@ -48,7 +48,10 @@ export function WorkshopRegisterModal({
   const freeSeats = rewards?.availableCount ?? 0;
   // Ticked by default when they have one — they earned it, and a parent who
   // paid again without noticing would have a fair complaint.
-  const [useReward, setUseReward] = useState(true);
+  // How many of the earned free seats to spend here. A tick could only ever
+  // mean "one", so a parent bringing three children and holding three
+  // rewards had to pay for two of them.
+  const [rewardCount, setRewardCount] = useState(0);
 
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -74,9 +77,12 @@ export function WorkshopRegisterModal({
 
   const seats = parseInt(childCount, 10) || 1;
   const fullTotal = workshop.price * seats;
-  // A reward covers one child's seat, which is what the promotion offers.
-  const rewardApplies = isLoggedIn && freeSeats > 0 && useReward && workshop.price > 0;
-  const discount = rewardApplies ? Math.min(fullTotal, workshop.price) : 0;
+
+  // One reward covers one seat. Never more than there are children — a
+  // reward spent on a seat nobody is sitting in is simply lost.
+  const maxRewards = isLoggedIn && workshop.price > 0 ? Math.min(freeSeats, seats) : 0;
+  const usedRewards = Math.min(rewardCount, maxRewards);
+  const discount = workshop.price * usedRewards;
   const total = fullTotal - discount;
 
   async function submit() {
@@ -102,7 +108,7 @@ export function WorkshopRegisterModal({
         childCount: seats,
         note: note.trim(),
         paymentMethod: payMethod,
-        useReward: rewardApplies,
+        rewardCount: usedRewards,
       });
       // Null when the session is free, or when SePay is not configured — the
       // booking still stands, the customer just pays at the venue.
@@ -341,30 +347,65 @@ export function WorkshopRegisterModal({
                 </div>
               </div>
 
-              {/* The earned free seat, offered before the payment choice:
-                  whether there is anything left to pay depends on it. */}
-              {isLoggedIn && freeSeats > 0 && workshop.price > 0 && (
+              {/* The earned free seats, offered before the payment choice:
+                  whether there is anything left to pay depends on them. A
+                  stepper rather than a tick, because the parent decides how
+                  many of their seats to spend on this session. */}
+              {maxRewards > 0 && (
                 <div className="form-group">
-                  <label className={`ws-reward${useReward ? ' active' : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={useReward}
-                      onChange={(e) => setUseReward(e.target.checked)}
-                    />
+                  <div className={`ws-reward${usedRewards > 0 ? ' active' : ''}`}>
                     <span className="ws-reward-icon">
                       <SproutyIcon name="ticket" size={24} />
                     </span>
+
                     <span className="ws-reward-copy">
-                      <strong>
-                        Dùng suất workshop miễn phí {freeSeats > 1 && `(bạn còn ${freeSeats} suất)`}
-                      </strong>
+                      <strong>Dùng suất workshop miễn phí</strong>
                       <em>
-                        Phần thưởng từ ưu đãi mua {rewards?.threshold ?? 3} sản phẩm trồng cây — miễn
-                        phí 1 bé{seats > 1 ? `, ${seats - 1} bé còn lại vẫn tính phí` : ''}.
+                        Bạn có <b>{freeSeats} suất</b> từ ưu đãi mua{' '}
+                        {rewards?.threshold ?? 3} sản phẩm trồng cây. Mỗi suất miễn phí cho 1 bé.
                       </em>
                     </span>
-                    <span className="ws-reward-save">−{formatPrice(discount)}</span>
-                  </label>
+
+                    <span className="ws-reward-pick">
+                      <button
+                        type="button"
+                        aria-label="Bớt một suất"
+                        disabled={usedRewards <= 0}
+                        onClick={() => setRewardCount(Math.max(0, usedRewards - 1))}
+                      >
+                        −
+                      </button>
+                      <b>{usedRewards}</b>
+                      <button
+                        type="button"
+                        aria-label="Thêm một suất"
+                        disabled={usedRewards >= maxRewards}
+                        onClick={() => setRewardCount(Math.min(maxRewards, usedRewards + 1))}
+                      >
+                        +
+                      </button>
+                    </span>
+                  </div>
+
+                  {/* What the choice costs or saves, in money, next to it. */}
+                  <div className="ws-reward-foot">
+                    {usedRewards > 0 ? (
+                      <span className="ws-reward-save">
+                        Tiết kiệm {formatPrice(discount)}
+                        {seats > usedRewards &&
+                          ` · còn ${seats - usedRewards} bé tính phí`}
+                      </span>
+                    ) : (
+                      <span className="ws-reward-hint">
+                        Bấm <b>+</b> để dùng suất miễn phí cho buổi này.
+                      </span>
+                    )}
+                    {maxRewards < freeSeats && (
+                      <span className="ws-reward-hint">
+                        Tối đa {maxRewards} suất cho {seats} bé.
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
 

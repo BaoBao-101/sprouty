@@ -12,8 +12,16 @@ import './Pager.css';
  * furniture that tells you only that there is nothing more to see.
  */
 
-/** Page numbers around the current one, with gaps instead of every number. */
-function window(page: number, pages: number): Array<number | 'gap'> {
+/**
+ * Page numbers around the current one, with gaps instead of every number.
+ *
+ * Not named `window`. A module-scope `function window` shadows the global for
+ * the whole file, and the React plugin injects a preamble check that reads
+ * `window.__vite_plugin_react_preamble_installed__` at the top of every module
+ * it transforms — which then reads a property off this function, finds
+ * undefined, and throws "can't detect preamble" on any page importing it.
+ */
+function pageWindow(page: number, pages: number): Array<number | 'gap'> {
   if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1);
   const out: Array<number | 'gap'> = [1];
   const from = Math.max(2, page - 1);
@@ -57,7 +65,7 @@ export function Pager({
           <SproutyIcon name="arrow-right" size={17} className="pager-back" />
         </button>
 
-        {window(page, pages).map((entry, i) =>
+        {pageWindow(page, pages).map((entry, i) =>
           entry === 'gap' ? (
             <span className="pager-gap" key={`gap-${i}`}>
               …

@@ -3,6 +3,12 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { SproutyIcon } from '@/components/icons/SproutyIcon';
+import {
+  AddressFields,
+  joinAddress,
+  splitAddress,
+  type AddressParts,
+} from '@/components/AddressFields';
 import { refreshRewards } from '@/components/PromoBanner';
 import { ORDER_STATUS_VN, shortOrderId, type Order } from '@/types/order';
 import { formatPrice } from '@/types/product';
@@ -48,16 +54,32 @@ function copy(text: string) {
   );
 }
 
+/**
+ * One line of bank detail.
+ *
+ * The label sits above the value, not beside it. An account number and a
+ * bank name are read back character by character while someone types them
+ * into an app, so they must never wrap — and beside a label in a column
+ * this width they had nowhere to go.
+ */
 function Row({ label, value, copyable }: { label: string; value?: string; copyable?: boolean }) {
   return (
     <div className="pay-row">
       <span className="lbl">{label}</span>
-      <span className="val">{value || '—'}</span>
-      {copyable && value && (
-        <button className="copy-btn" type="button" onClick={() => copy(value)}>
-          📋 Copy
-        </button>
-      )}
+      <span className="val-row">
+        <span className="val">{value || '—'}</span>
+        {copyable && value && (
+          <button
+            className="copy-btn"
+            type="button"
+            title="Sao chép"
+            onClick={() => copy(value)}
+          >
+            <SproutyIcon name="album" size={14} />
+            Sao chép
+          </button>
+        )}
+      </span>
     </div>
   );
 }
@@ -71,16 +93,33 @@ function Row({ label, value, copyable }: { label: string; value?: string; copyab
  * and this is the one screen where a customer reads them back — so a typo
  * spotted here has to be fixable without phoning support.
  */
+/**
+ * The address, or nothing.
+ *
+ * Orders in a category that does not ship are stored with a sentence in
+ * the address column explaining that they do not. It is a marker, not an
+ * address, and showing it to a customer under the heading "Địa chỉ nhận
+ * hàng" reads as a delivery going to a place called "Không áp dụng".
+ */
+const NO_SHIPPING_MARK = 'Không áp dụng';
+
+function realAddress(order: Order) {
+  const value = (order.shippingAddress || '').trim();
+  return value.startsWith(NO_SHIPPING_MARK) ? '' : value;
+}
+
 function ContactBlock({ order, onSaved }: { order: Order; onSaved: () => void }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(order.shippingName || '');
   const [phone, setPhone] = useState(order.shippingPhone || '');
+  const [address, setAddress] = useState<AddressParts>(() => splitAddress(realAddress(order)));
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
   function open() {
     setName(order.shippingName || '');
     setPhone(order.shippingPhone || '');
+    setAddress(splitAddress(realAddress(order)));
     setError('');
     setEditing(true);
   }
@@ -94,11 +133,12 @@ function ContactBlock({ order, onSaved }: { order: Order; onSaved: () => void })
 
     setBusy(true);
     try {
-      // No address is sent: the server fills in its own "digital product"
-      // placeholder for orders that need no delivery.
       const { message } = await API.orders.updateShipping(order.id, {
         shippingName: name.trim(),
         shippingPhone: phone.trim(),
+        // Sent only when there is one. The server keeps whatever it already
+        // holds for an order that does not ship.
+        ...(joinAddress(address) ? { shippingAddress: joinAddress(address) } : {}),
       });
       showToast(message || 'Đã cập nhật thông tin liên hệ', 'success');
       setEditing(false);
@@ -110,28 +150,36 @@ function ContactBlock({ order, onSaved }: { order: Order; onSaved: () => void })
     }
   }
 
+  const shown = realAddress(order);
+
   if (!editing) {
     return (
       <div className="ord-ship">
         <div className="ord-ship-top">
-          <span className="ord-ship-label">Thông tin liên hệ</span>
+          <span className="ord-ship-label">Người đặt hàng</span>
           <button className="ord-ship-edit" type="button" onClick={open}>
-            ✎ Sửa
+            <SproutyIcon name="pencil" size={14} />
+            Sửa
           </button>
         </div>
 
+        {/* Label above value, not beside it. Beside it, in a column this
+            narrow, the value gets half the width and an address wraps to
+            four lines. */}
         <dl className="ord-ship-list">
           <div>
-            <dt>Người mua</dt>
+            <dt>Họ và tên</dt>
             <dd>{order.shippingName || '—'}</dd>
           </div>
           <div>
-            <dt>Điện thoại</dt>
+            <dt>Số điện thoại</dt>
             <dd>{order.shippingPhone || '—'}</dd>
           </div>
           <div>
-            <dt>Nhận hàng</dt>
-            <dd>Mã kích hoạt hiện ngay sau khi thanh toán — không cần giao hàng.</dd>
+            <dt>Địa chỉ nhận hàng</dt>
+            <dd className={shown ? undefined : 'is-missing'}>
+              {shown || 'Chưa có — bấm Sửa để thêm'}
+            </dd>
           </div>
         </dl>
       </div>
@@ -161,6 +209,10 @@ function ContactBlock({ order, onSaved }: { order: Order; onSaved: () => void })
             placeholder="0909000000"
           />
         </label>
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <AddressFields value={address} onChange={setAddress} required={false} />
       </div>
 
       {error && <div className="form-error mb-12" style={{ marginTop: 10 }}>{error}</div>}
@@ -349,7 +401,7 @@ export default function PaymentPage() {
         )}
 
         {order && phase !== 'notfound' && (
-          <div className="pay-layout">
+          <div className={`pay-layout${isPending ? ' paying' : ''}`}>
             <div className="pay-card">
               {phase === 'timeout' ? (
                 <>
@@ -376,28 +428,47 @@ export default function PaymentPage() {
                 // where to send the payment.
                 <>
                   <h2>Đơn hàng của bạn</h2>
+
+                  {/* The order code is read out to support and typed into a
+                      bank memo, so it gets monospace and a line of its own
+                      rather than sharing one with the status. */}
                   <div className="ord-head">
-                    <span>
-                      Mã đơn <strong title={order.id}>{shortOrderId(order.id)}</strong>
+                    <span className="ord-code">
+                      <em>Mã đơn</em>
+                      <code title={order.id}>{shortOrderId(order.id)}</code>
                     </span>
-                    <span>
-                      Trạng thái <strong>{ORDER_STATUS_VN[order.status] ?? order.status}</strong>
+                    <span className={`ord-state s-${order.status}`}>
+                      {ORDER_STATUS_VN[order.status] ?? order.status}
                     </span>
                   </div>
 
+                  {/* The real product photo, not an emoji. This is the only
+                      place a customer confirms they are paying for the thing
+                      they meant to buy, and a 📦 confirms nothing. */}
                   <div className="ord-items">
                     {order.items?.map((item, i) => (
                       <div className="ord-item" key={i}>
-                        <span className="ord-item-emoji">{item.product?.emoji || '📦'}</span>
+                        <span className="ord-item-thumb">
+                          {item.product?.images?.[0] ? (
+                            <img src={item.product.images[0]} alt="" />
+                          ) : (
+                            <span>{item.product?.emoji || '🌱'}</span>
+                          )}
+                          {item.qty > 1 && <em className="ord-item-qty">{item.qty}</em>}
+                        </span>
+
                         <span className="ord-item-main">
                           <span className="ord-item-name">{item.product?.name || 'Sản phẩm'}</span>
                           <span className="ord-item-sub">
-                            {item.variant === 'smart' && 'Bản Smart · '}
-                            {formatPrice(item.unitPrice)} × {item.qty}
+                            {item.variant === 'smart' && (
+                              <b className="ord-item-variant">Bản Smart</b>
+                            )}
+                            {formatPrice(item.unitPrice)}
+                            {item.qty > 1 && ` × ${item.qty}`}
                           </span>
-                        </span>
-                        <span className="ord-item-line">
-                          {formatPrice(item.unitPrice * item.qty)}
+                          <span className="ord-item-line">
+                            {formatPrice(item.unitPrice * item.qty)}
+                          </span>
                         </span>
                       </div>
                     ))}

@@ -10,7 +10,7 @@
  * which of their plants is thirsty without opening any of them.
  */
 
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { API } from '@/services/api';
@@ -27,11 +27,46 @@ interface Alert extends PlantEvent {
   nickname: string;
 }
 
-function ActivateCard({ onActivated }: { onActivated: (plantId: string) => void }) {
+/**
+ * Activating a kit, in a dialog.
+ *
+ * It used to be a panel above the garden, open on every visit, for a field
+ * most visits never touch — a once-per-kit errand pushing the thing people
+ * came for most of a screen down. It is a button in the hero now, and this
+ * opens when somebody has a code in hand.
+ */
+function ActivateDialog({
+  onClose,
+  onActivated,
+}: {
+  onClose: () => void;
+  onActivated: (plantId: string) => void;
+}) {
   const [code, setCode] = useState('');
   const [nickname, setNickname] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  const codeRef = useRef<HTMLInputElement>(null);
+
+  // One field matters, and the dialog was opened to fill it in.
+  useEffect(() => {
+    codeRef.current?.focus();
+  }, []);
+
+  // Escape closes it, and the page behind must not scroll under it.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previous;
+    };
+  }, [onClose]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -61,59 +96,74 @@ function ActivateCard({ onActivated }: { onActivated: (plantId: string) => void 
   }
 
   return (
-    <form className="activate-card" onSubmit={submit}>
-      <div className="activate-head">
-        <span className="activate-icon">
-          <SproutyIcon name="seed" size={28} />
-        </span>
-        <div>
-          <h2>Kích hoạt cây mới</h2>
-          <p>
-            Nhập mã kích hoạt trong đơn hàng của bạn. Hạt sẽ được gieo ngay và bạn bắt đầu chăm cây
-            cùng Plant Buddy.
-          </p>
+    <div
+      className="activate-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Kích hoạt cây mới"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <form className="activate-card" onSubmit={submit}>
+        <div className="activate-head">
+          <span className="activate-icon">
+            <SproutyIcon name="seed" size={28} />
+          </span>
+          <div>
+            <h2>Kích hoạt cây mới</h2>
+            <p>Nhập mã trong đơn hàng của bạn — hạt sẽ được gieo ngay.</p>
+          </div>
+          <button type="button" className="activate-close" onClick={onClose} aria-label="Đóng">
+            <SproutyIcon name="arrow-right" size={18} />
+          </button>
         </div>
-      </div>
 
-      <div className="activate-fields">
-        <label className="activate-field">
-          <span>Mã kích hoạt</span>
-          <input
-            className="form-input activate-code"
-            placeholder="SPR-XXXX-XXXX-XXXX-XXXX"
-            autoComplete="one-time-code"
-            maxLength={128}
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-          />
-        </label>
-        <label className="activate-field activate-field-name">
-          <span>Đặt tên cho cây <em>(tuỳ chọn)</em></span>
-          <input
-            className="form-input"
-            placeholder="Bé Đậu, Cà Chua Nhỏ..."
-            maxLength={40}
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-          />
-        </label>
-        <button className="btn btn-primary activate-submit" disabled={busy}>
-          {busy ? 'Đang gieo hạt...' : 'Gieo hạt'}
-          {!busy && <SproutyIcon name="arrow-right" size={18} />}
-        </button>
-      </div>
+        <>
+          <div className="activate-fields">
+            <label className="activate-field">
+              <span>Mã kích hoạt</span>
+              <input
+                ref={codeRef}
+                className="form-input activate-code"
+                placeholder="SPR-XXXX-XXXX-XXXX-XXXX"
+                autoComplete="one-time-code"
+                maxLength={128}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+              />
+            </label>
+            <label className="activate-field activate-field-name">
+              <span>
+                Đặt tên cho cây <em>(tuỳ chọn)</em>
+              </span>
+              <input
+                className="form-input"
+                placeholder="Bé Đậu, Cà Chua Nhỏ..."
+                maxLength={40}
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+              />
+            </label>
+            <button className="btn btn-primary activate-submit" disabled={busy}>
+              {busy ? 'Đang gieo hạt...' : 'Gieo hạt'}
+              {!busy && <SproutyIcon name="arrow-right" size={18} />}
+            </button>
+          </div>
 
-      {error && (
-        <p className="activate-error">
-          <SproutyIcon name="warning" size={18} /> {error}
-        </p>
-      )}
+          {error && (
+            <p className="activate-error">
+              <SproutyIcon name="warning" size={18} /> {error}
+            </p>
+          )}
 
-      <p className="activate-hint">
-        Chưa có mã? <Link to="/shop">Chọn một bộ kit</Link> — mã kích hoạt hiện ngay sau khi thanh
-        toán, trong trang <Link to="/account">Đơn hàng của tôi</Link>.
-      </p>
-    </form>
+          <p className="activate-hint">
+            Chưa có mã? <Link to="/shop">Chọn một bộ kit</Link> — mã kích hoạt hiện ngay sau khi
+            thanh toán, trong trang <Link to="/account">Đơn hàng của tôi</Link>.
+          </p>
+        </>
+      </form>
+    </div>
   );
 }
 
@@ -181,15 +231,21 @@ function PlantGridCard({ plant, urgent }: { plant: PlantCard; urgent?: Alert[] }
         <div className="pc-bar-label">{Math.round(plant.stageProgress)}% của chặng này</div>
 
         <div className="pc-metrics">
-          <span className={`pc-metric ${plant.moisture < 35 ? 'bad' : plant.moisture > 85 ? 'warn' : 'good'}`}>
+          <span
+            className={`pc-metric ${plant.moisture < 35 ? 'bad' : plant.moisture > 85 ? 'warn' : 'good'}`}
+          >
             <SproutyIcon name="moisture" size={16} />
             {Math.round(plant.moisture)}%
           </span>
-          <span className={`pc-metric ${plant.nutrient < 30 ? 'bad' : plant.nutrient < 45 ? 'warn' : 'good'}`}>
+          <span
+            className={`pc-metric ${plant.nutrient < 30 ? 'bad' : plant.nutrient < 45 ? 'warn' : 'good'}`}
+          >
             <SproutyIcon name="nutrient" size={16} />
             {Math.round(plant.nutrient)}%
           </span>
-          <span className={`pc-metric ${plant.pestRisk > 55 ? 'bad' : plant.pestRisk > 40 ? 'warn' : 'good'}`}>
+          <span
+            className={`pc-metric ${plant.pestRisk > 55 ? 'bad' : plant.pestRisk > 40 ? 'warn' : 'good'}`}
+          >
             <SproutyIcon name="pest" size={16} />
             {Math.round(plant.pestRisk)}%
           </span>
@@ -226,6 +282,7 @@ export default function MyPlants() {
   const [plants, setPlants] = useState<PlantCard[]>([]);
   const [growPage, setGrowPage] = useState(1);
   const [cropPage, setCropPage] = useState(1);
+  const [activating, setActivating] = useState(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
@@ -275,8 +332,16 @@ export default function MyPlants() {
     <>
       <div className="plants-hero">
         <div className="container">
-          <div className="breadcrumb plants-hero-crumb">
-            <Link to="/">Trang chủ</Link> › Cây của tôi
+          <div className="plants-hero-top">
+            <div className="breadcrumb plants-hero-crumb">
+              <Link to="/">Trang chủ</Link> › Cây của tôi
+            </div>
+
+            {/* Top right, out of the way of the garden it sits above. */}
+            <button className="plants-activate-btn" onClick={() => setActivating(true)}>
+              <SproutyIcon name="seed" size={19} />
+              Kích hoạt cây mới
+            </button>
           </div>
           <div className="plants-hero-row">
             <div className="plants-hero-copy">
@@ -326,12 +391,6 @@ export default function MyPlants() {
             </div>
           )}
 
-          <ActivateCard
-            onActivated={(plantId) => {
-              refreshRewards();
-              navigate(`/plant/${plantId}`);
-            }}
-          />
 
           {loading && <p className="plants-loading">Đang tải vườn của bạn…</p>}
 
@@ -393,6 +452,16 @@ export default function MyPlants() {
           )}
         </div>
       </section>
+
+      {activating && (
+        <ActivateDialog
+          onClose={() => setActivating(false)}
+          onActivated={(plantId) => {
+            refreshRewards();
+            navigate(`/plant/${plantId}`);
+          }}
+        />
+      )}
     </>
   );
 }

@@ -5,6 +5,7 @@ import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { formatPrice } from '@/types/product';
 import { TicketQr } from '@/components/TicketQr';
+import { refreshRewards } from '@/components/PromoBanner';
 import { Pager } from '@/components/Pager';
 import {
   formatWorkshopWhen,
@@ -82,6 +83,7 @@ export default function MyWorkshops() {
     if (
       !confirm(
         `Huỷ đăng ký "${reg.workshop.title}"?\n\nChỗ sẽ được mở lại cho người khác.` +
+          '\n\nSuất workshop miễn phí đã dùng cho đăng ký này sẽ được trả lại.' +
           (reg.paidAt ? '\n\nBạn đã thanh toán — vui lòng liên hệ để được hoàn tiền.' : ''),
       )
     )
@@ -92,6 +94,10 @@ export default function MyWorkshops() {
       const { message } = await API.workshops.cancelMine(reg.id);
       showToast(message || 'Đã huỷ đăng ký', 'success');
       load();
+      // The server gives any free seats back on cancel, but the promo banner
+      // caches the count — without this it keeps showing the old number until
+      // a full reload, which reads as "my rewards were not returned".
+      refreshRewards();
     } catch (err: any) {
       showToast(err?.message || 'Không huỷ được.', 'error');
     } finally {

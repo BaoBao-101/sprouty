@@ -75,7 +75,10 @@ export function PromoBanner({ variant = 'full', className = '' }: Props) {
   const available = rewards?.availableCount ?? 0;
 
   // A customer holding an unspent seat gets a different message: the useful
-  // next action is booking it, not buying more.
+  // next action is booking it, not buying more. It still shows how close the
+  // next one is, because the two facts used to be in branches that excluded
+  // each other — holding a seat hid the progress bar entirely, so nobody
+  // with a reward could see they were one purchase from the next.
   if (isLoggedIn && available > 0) {
     return (
       <div className={`promo promo-won promo-${variant} ${className}`}>
@@ -84,10 +87,35 @@ export function PromoBanner({ variant = 'full', className = '' }: Props) {
         </span>
         <div className="promo-copy">
           <strong>
-            Bạn đang có {available} suất workshop miễn phí!
+            Bạn đang có {available} suất workshop miễn phí
           </strong>
-          <p>Chọn buổi workshop bạn thích và dùng suất tặng khi đăng ký — không mất phí.</p>
+          <p>
+            Chọn buổi bạn thích rồi dùng suất tặng khi đăng ký — không mất phí.
+            {have > 0 && (
+              <>
+                {' '}Mua thêm <b>{toNext}</b> sản phẩm nữa là có suất tiếp theo.
+              </>
+            )}
+          </p>
+
+          <div className="promo-track">
+            <div className="promo-pips" aria-hidden="true">
+              {Array.from({ length: threshold }).map((_, i) => (
+                <span key={i} className={`promo-pip${i < have ? ' filled' : ''}`}>
+                  {i < have ? (
+                    <SproutyIcon name="check" size={16} />
+                  ) : (
+                    <SproutyIcon name="seed" size={16} />
+                  )}
+                </span>
+              ))}
+            </div>
+            <span className="promo-track-note">
+              {have}/{threshold} cho suất kế tiếp
+            </span>
+          </div>
         </div>
+
         <Link to="/workshop" className="promo-cta">
           Chọn workshop
           <SproutyIcon name="arrow-right" size={18} />

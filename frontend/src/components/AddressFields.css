@@ -1,0 +1,18 @@
+/* ── Address, one box per part ─────────────────────────────────────────────
+   Street spans the row because it is the long one. Ward and province pair up
+   beneath it — two levels, which is what Vietnamese addresses have had since
+   the district level was abolished in July 2025. */
+
+.addr-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 14px;
+}
+
+.addr-fields .addr-wide {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 520px) {
+  .addr-fields { grid-template-columns: minmax(0, 1fr) }
+}

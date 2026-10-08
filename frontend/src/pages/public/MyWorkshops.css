@@ -114,3 +114,83 @@
   .myws-card { flex-direction: column }
   .myws-photo { width: 100%; height: 150px }
 }
+
+/* ── The ticket ────────────────────────────────────────────────────────────
+   A booking used to be a receipt: it recorded that money had changed hands
+   and nothing about the day itself. This is the half that was missing — the
+   code staff ask for at the door, the same string as a QR for a phone camera,
+   and, once somebody has ticked it off, the proof that the child went. */
+
+.myws-ticket {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 2px dashed var(--primary-300);
+  border-radius: var(--r-lg);
+  background: var(--primary-100);
+}
+
+.myws-ticket.used {
+  border-style: solid;
+  border-color: var(--primary-500);
+  background: #F0FDF4;
+}
+
+.myws-ticket .ticket-qr {
+  flex: none;
+  border-radius: 8px;
+  color: var(--ink);
+  background: #fff;
+  padding: 5px;
+  border: 1.5px solid var(--parchment-2);
+}
+
+.myws-ticket-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.myws-ticket-label {
+  font-family: var(--font-h);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--primary-700);
+}
+
+/* Monospace and spaced out: this gets read aloud across a noisy room, so a 0
+   and an O have to be different and the eye needs somewhere to rest. */
+.myws-ticket-code {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 1.62rem;
+  font-weight: 700;
+  letter-spacing: 0.17em;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.myws-ticket-hint {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+.myws-ticket-done {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--primary-600);
+}
+
+.myws-status.s-attended {
+  background: var(--primary-500);
+  color: #fff;
+}
+
+@media (max-width: 520px) {
+  .myws-ticket { flex-direction: column; align-items: flex-start }
+}

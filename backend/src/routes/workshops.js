@@ -2,9 +2,10 @@ import { z } from 'zod';
 import { AppError } from '../utils/errors.js';
 import { requireAuth, requireCsrf } from '../middleware/rbac.js';
 import { ticketCode } from './admin/attendance.js';
+import { reconcile, pollingConfigured } from '../services/sepay.js';
 import {
   assertRewardAvailable,
-  claimRewardTx,
+  claimRewardsTx,
   releaseRewardForRegistration,
   rewardThreshold,
 } from '../services/rewards.js';
@@ -36,6 +37,17 @@ const regSchema = z.object({
   }).optional().default('onsite'),
   // Spend a "mua 3 tặng 1" reward on this booking. Signed-in customers only:
   // a reward belongs to an account, and a guest has none to spend.
+  // A count, not a flag. The promotion gives a seat per reward, and a
+  // parent booking three children with two rewards should pay for one —
+  // which a boolean cannot express.
+  rewardCount: z.coerce.number({ invalid_type_error: 'Số suất miễn phí không hợp lệ.' })
+    .int('Số suất miễn phí phải là số nguyên.')
+    .min(0, 'Số suất miễn phí không hợp lệ.')
+    .max(20, 'Tối đa 20 suất miễn phí cho một lần đăng ký.')
+    .optional()
+    .default(0),
+  // Kept so a client that has not been reloaded still works; one tick is
+  // one reward.
   useReward: z.boolean().optional().default(false),
 });
 
@@ -144,6 +156,17 @@ export default async function workshopRoutes(fastify) {
   // dialog closed there was no way to check when the session was, where it was,
   // or whether staff had confirmed the seat.
   fastify.get('/me/workshops', { preHandler: [requireAuth] }, async (req) => {
+    // Same reason as the order page: a booking paid by QR is credited by a
+    // webhook SePay cannot deliver to a laptop. Asking SePay directly costs
+    // one throttled call and makes the two environments behave alike.
+    if (pollingConfigured()) {
+      const unpaid = await fastify.prisma.workshopRegistration.findFirst({
+        where: { userId: req.user.id, paidAt: null, status: { not: 'cancelled' }, amount: { gt: 0 } },
+        select: { id: true },
+      });
+      if (unpaid) await reconcile(fastify);
+    }
+
     const rows = await fastify.prisma.workshopRegistration.findMany({
       where: { userId: req.user.id },
       include: { workshop: true },
@@ -213,17 +236,18 @@ export default async function workshopRoutes(fastify) {
       data: { status: 'cancelled' },
     });
 
-    // Give the free seat back. Without this, cancelling a rewarded booking
-    // would quietly burn the reward — the customer bought three kits and would
-    // have nothing to show for it.
+    // Give the free seats back. Without this, cancelling a rewarded booking
+    // would quietly burn the rewards — the customer bought three kits and
+    // would have nothing to show for it.
     const released = await releaseRewardForRegistration(fastify.prisma, registration.id);
 
     return {
       message: released
-        ? 'Đã huỷ đăng ký. Suất workshop miễn phí đã được trả lại cho bạn.'
+        ? `Đã huỷ đăng ký. ${released} suất workshop miễn phí đã được trả lại cho bạn.`
         : 'Đã huỷ đăng ký. Chỗ được mở lại cho người khác.',
       registration: updated,
-      rewardReturned: Boolean(released),
+      rewardReturned: released > 0,
+      rewardsReturned: released,
     };
   });
 
@@ -249,11 +273,18 @@ export default async function workshopRoutes(fastify) {
       useReward,
     } = parsed.data;
 
-    if (useReward) {
+    // Never more rewards than children: a fourth reward on a booking for
+    // three would be spent on nothing.
+    const wantedRewards = Math.min(
+      parsed.data.rewardCount || (useReward ? 1 : 0),
+      childCount,
+    );
+
+    if (wantedRewards > 0) {
       // Checked here for a clear message before any seat arithmetic; the claim
       // itself is guarded again inside the transaction below, which is what
       // actually stops two bookings spending one reward.
-      await assertRewardAvailable(fastify.prisma, req.user.id);
+      await assertRewardAvailable(fastify.prisma, req.user.id, wantedRewards);
     }
 
     const workshop = await fastify.prisma.workshop.findUnique({ where: { id: workshopId } });
@@ -278,11 +309,11 @@ export default async function workshopRoutes(fastify) {
     // to the workshop's price cannot change what this customer owes.
     //
     // A reward covers one child's seat, which is what the promotion offers —
-    // "tặng 1 buổi workshop". Booking three children with one reward still
-    // leaves two seats to pay for, and the response says so rather than
-    // letting the parent discover it at the door.
+    // "tặng 1 buổi workshop". Two rewards cover two seats; a parent booking
+    // three children with two rewards still pays for the third, and the
+    // response says so rather than letting them find out at the door.
     const fullAmount = workshop.price * childCount;
-    const discount = useReward ? Math.min(fullAmount, workshop.price) : 0;
+    const discount = Math.min(fullAmount, workshop.price * wantedRewards);
     const data = {
       workshopId,
       childCount,
@@ -318,19 +349,19 @@ export default async function workshopRoutes(fastify) {
     }
 
     let registration;
-    let rewardSpent = false;
-    if (useReward) {
-      // The claim and the registration go in one transaction: a reward marked
+    let rewardsSpent = 0;
+    if (wantedRewards > 0) {
+      // The claims and the registration go in one transaction: rewards marked
       // claimed against a booking that failed to insert would be gone for
-      // nothing, and a free booking with no reward claimed would be a free
-      // seat the customer never earned.
-      const result = await fastify.prisma.$transaction(async (tx) => {
+      // nothing, and a discounted booking with no reward claimed would be a
+      // free seat the customer never earned.
+      registration = await fastify.prisma.$transaction(async (tx) => {
         const created = await tx.workshopRegistration.create({ data });
-        const rewardId = await claimRewardTx(tx, req.user.id, created.id);
-        if (!rewardId) {
-          // Lost the race, or the reward was spent in another tab. Rolling back
-          // is right: charging a customer who asked to use a reward, without
-          // telling them, would be worse than making them try again.
+        const ids = await claimRewardsTx(tx, req.user.id, created.id, wantedRewards);
+        if (ids.length !== wantedRewards) {
+          // Lost the race, or a reward was spent in another tab. Rolling back
+          // is right: charging a customer who asked to use their rewards,
+          // without telling them, would be worse than making them try again.
           throw new AppError(
             'Suất workshop miễn phí của bạn vừa được dùng ở một đăng ký khác. Vui lòng tải lại trang.',
             409,
@@ -338,21 +369,21 @@ export default async function workshopRoutes(fastify) {
         }
         return created;
       });
-      registration = result;
-      rewardSpent = true;
+      rewardsSpent = wantedRewards;
     } else {
       registration = await fastify.prisma.workshopRegistration.create({ data });
     }
 
     reply.code(201);
     return {
-      message: rewardSpent
+      message: rewardsSpent
         ? registration.amount === 0
-          ? 'Đã dùng suất workshop miễn phí — chỗ của bé đã được giữ!'
-          : 'Đã áp dụng suất miễn phí cho 1 bé. Phần còn lại vui lòng thanh toán để giữ chỗ.'
+          ? `Đã dùng ${rewardsSpent} suất workshop miễn phí — chỗ của bé đã được giữ!`
+          : `Đã áp dụng ${rewardsSpent} suất miễn phí. Phần còn lại vui lòng thanh toán để giữ chỗ.`
         : 'Đăng ký thành công!',
       registration,
-      rewardApplied: rewardSpent,
+      rewardApplied: rewardsSpent > 0,
+      rewardsUsed: rewardsSpent,
       rewardDiscount: discount,
       // Only when there is something to pay: a free session needs no QR.
       payment:

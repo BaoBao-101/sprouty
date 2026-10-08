@@ -522,3 +522,161 @@
   .plants-hero-stats { width: 100% }
   .phs-item { flex: 1 }
 }
+
+/* ── Activating a kit ──────────────────────────────────────────────────────
+   A button in the hero and a dialog behind it. As a panel above the garden it
+   was open on every visit for a field most visits never touch, pushing the
+   plants — the reason anyone opens this page — most of a screen down. */
+
+.plants-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* Solid, not a tinted pane: the hero lightens towards this corner, and a
+   translucent white button disappears into it. */
+.plants-activate-btn {
+  --icon-accent: var(--primary-300);
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 17px;
+  border-radius: var(--r-full);
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  background: #fff;
+  color: var(--primary-700);
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(20, 60, 30, 0.18);
+  transition: transform 0.2s, box-shadow 0.2s, color 0.2s;
+}
+
+.plants-activate-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(20, 60, 30, 0.26);
+  color: var(--primary-600);
+}
+
+/* ── The dialog ────────────────────────────────────────────────────────── */
+
+.activate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+  background: rgba(30, 15, 5, 0.6);
+  backdrop-filter: blur(4px);
+  animation: activate-fade 0.2s var(--ease);
+}
+
+.activate-overlay .activate-card {
+  width: 100%;
+  max-width: 560px;
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  animation: activate-rise 0.24s var(--ease);
+}
+
+.activate-overlay .activate-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 22px 16px;
+  border-bottom: 2px solid var(--parchment-2);
+}
+
+.activate-overlay .activate-head > div { flex: 1; min-width: 0 }
+
+.activate-overlay .activate-head h2 { margin: 0 }
+
+.activate-overlay .activate-head p {
+  margin: 3px 0 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--ink-3);
+}
+
+.activate-close {
+  --icon-accent: var(--ink-5);
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--cream-2);
+  color: var(--ink-4);
+  cursor: pointer;
+  /* The set has no cross at this weight, so the arrow is turned round rather
+     than mixing a text glyph into a drawn icon set. */
+  transition: background 0.18s, color 0.18s;
+}
+
+.activate-close svg { transform: rotate(180deg) }
+
+.activate-close:hover { background: var(--parchment-2); color: var(--ink-2) }
+
+.activate-overlay .activate-fields { padding: 18px 22px 0 }
+
+.activate-overlay .activate-error,
+.activate-overlay .activate-hint {
+  padding-left: 22px;
+  padding-right: 22px;
+}
+
+.activate-overlay .activate-hint { padding-bottom: 20px }
+
+@keyframes activate-fade {
+  from { opacity: 0 }
+  to   { opacity: 1 }
+}
+
+@keyframes activate-rise {
+  from { opacity: 0; transform: translateY(10px) scale(0.985) }
+  to   { opacity: 1; transform: none }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activate-overlay,
+  .activate-overlay .activate-card { animation: none }
+  .plants-activate-btn { transition: none }
+}
+
+/* ── Wider, and stacked ────────────────────────────────────────────────────
+   The three-column row was drawn for a full-width panel. Squeezed into a
+   dialog it left the nickname box about eleven characters wide and wrapped
+   its own label onto two lines, which pushed the two labels out of line with
+   each other. The code gets a row of its own — it is the one that matters and
+   the one that is long — and the name shares the next row with the button. */
+
+.activate-overlay .activate-card { max-width: 680px }
+
+.activate-overlay .activate-fields {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+}
+
+.activate-overlay .activate-field:first-child {
+  grid-column: 1 / -1;
+}
+
+.activate-overlay .activate-code {
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+}
+
+@media (max-width: 560px) {
+  .activate-overlay .activate-fields { grid-template-columns: minmax(0, 1fr) }
+  .activate-overlay .activate-submit { width: 100%; justify-content: center }
+}

@@ -179,3 +179,37 @@
     justify-content: center;
   }
 }
+
+/* ── Progress, even while holding a seat ───────────────────────────────────
+   The two facts used to live in branches that excluded each other: a customer
+   holding a reward saw the count and nothing else, so being one purchase from
+   the next one was invisible precisely to the people most likely to act on
+   it. */
+
+.promo-track {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.promo-track-note {
+  font-family: var(--font-h);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+}
+
+/* No colour overrides for .promo-won: that banner has a near-white
+   background, so forcing the pips and the caption to white made them
+   invisible — the row read as three faint smudges. The base styling is
+   already drawn for a light surface. */
+
+.promo-track .promo-pips { margin-top: 0 }
+
+.promo-track .promo-pip {
+  width: 24px;
+  height: 24px;
+}

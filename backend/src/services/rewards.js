@@ -106,20 +106,40 @@ export function rewardDto(reward) {
  * would both have read the same "available" row, and only one of them can win.
  * A caller that sees `null` must charge the customer normally.
  */
-export async function claimRewardTx(tx, userId, registrationId) {
-  const candidate = await tx.reward.findFirst({
+
+/**
+ * Claims up to `count` rewards for one booking.
+ *
+ * All or nothing: the caller is pricing a booking against the number it
+ * asked for, so claiming three of four and carrying on would charge the
+ * customer for a seat they had a reward for. Returning fewer than asked
+ * means the transaction should roll back.
+ *
+ * Each row is claimed with a guarded updateMany rather than a plain
+ * update, so two tabs spending the same reward cannot both succeed —
+ * the second sees count 0 and the whole claim fails.
+ */
+export async function claimRewardsTx(tx, userId, registrationId, count) {
+  if (count < 1) return [];
+
+  const candidates = await tx.reward.findMany({
     where: { userId, type: 'free_workshop', status: 'available' },
     orderBy: { milestone: 'asc' },
+    take: count,
     select: { id: true },
   });
-  if (!candidate) return null;
+  if (candidates.length < count) return [];
 
-  const claimed = await tx.reward.updateMany({
-    where: { id: candidate.id, status: 'available' },
-    data: { status: 'claimed', claimedRegistrationId: registrationId, claimedAt: new Date() },
-  });
-  if (claimed.count !== 1) return null;
-  return candidate.id;
+  const claimed = [];
+  for (const candidate of candidates) {
+    const result = await tx.reward.updateMany({
+      where: { id: candidate.id, status: 'available' },
+      data: { status: 'claimed', claimedRegistrationId: registrationId, claimedAt: new Date() },
+    });
+    if (result.count !== 1) return [];
+    claimed.push(candidate.id);
+  }
+  return claimed;
 }
 
 /**
@@ -129,20 +149,19 @@ export async function claimRewardTx(tx, userId, registrationId) {
  * customer paid for three kits and would end up with nothing to show for it.
  */
 export async function releaseRewardForRegistration(prisma, registrationId) {
-  const reward = await prisma.reward.findFirst({
+  // Every reward the booking spent, not the first one found. A booking can
+  // carry several now, and releasing one of three left the other two stuck
+  // as claimed against a registration that no longer exists — the customer
+  // bought the kits, earned the seats, cancelled once and lost them.
+  const released = await prisma.reward.updateMany({
     where: { claimedRegistrationId: registrationId, status: 'claimed' },
-    select: { id: true },
-  });
-  if (!reward) return null;
-  await prisma.reward.update({
-    where: { id: reward.id },
     data: { status: 'available', claimedRegistrationId: null, claimedAt: null },
   });
-  return reward.id;
+  return released.count;
 }
 
 /** Throws unless the customer has a free seat to spend. */
-export async function assertRewardAvailable(prisma, userId) {
+export async function assertRewardAvailable(prisma, userId, wanted = 1) {
   const count = await prisma.reward.count({
     where: { userId, type: 'free_workshop', status: 'available' },
   });
@@ -151,5 +170,8 @@ export async function assertRewardAvailable(prisma, userId) {
       `Bạn chưa có suất workshop miễn phí. Mua ${rewardThreshold()} sản phẩm trồng cây để được tặng 1 suất.`,
       409,
     );
+  }
+  if (count < wanted) {
+    throw new AppError(`Bạn chỉ còn ${count} suất miễn phí, không đủ ${wanted} suất.`, 409);
   }
 }

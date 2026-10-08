@@ -4,6 +4,7 @@ import { AppError } from '../utils/errors.js';
 import { requireAuth, requireCsrf } from '../middleware/rbac.js';
 import { auditLog } from '../services/audit.js';
 import { syncWorkshopRewards } from '../services/rewards.js';
+import { reconcile, pollingConfigured } from '../services/sepay.js';
 
 /**
  * Whether this deployment will credit a payment nobody made.
@@ -125,6 +126,35 @@ function buildWithSecret(secret, orderId, userId, productId) {
     .slice(0, 16)
     .toUpperCase();
   return `SPR-${digest.slice(0, 4)}-${digest.slice(4, 8)}-${digest.slice(8, 12)}-${digest.slice(12, 16)}`;
+}
+
+/**
+ * Closes an order that has nothing left to happen to it.
+ *
+ * The status ladder was built for parcels: pending, processing, shipped,
+ * delivered. An order whose only deliverable is an activation code never
+ * reaches a courier, so nothing ever moved it past `processing` — a
+ * customer who had paid, received their code, redeemed it and grown the
+ * plant was still looking at "đang xử lý" with no step left to take.
+ *
+ * Handing over the code is the delivery. Orders that do contain something
+ * physical keep the manual ladder, because for those the status is a claim
+ * about the real world that only a person can make.
+ */
+async function settleIfNothingToShip(prisma, order) {
+  if (order?.status !== 'processing' || !order.paidAt) return order;
+
+  const products = (order.items || []).map((i) => i.product).filter(Boolean);
+  if (!products.length || requiresShipping(products)) return order;
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: { status: 'delivered' },
+  });
+  // Mutated rather than re-read: the caller already holds the row and is
+  // about to serialise it.
+  order.status = 'delivered';
+  return order;
 }
 
 async function ensurePurchaseRedeemCodes(prisma, order) {
@@ -275,7 +305,7 @@ export default async function orderRoutes(fastify) {
         where,
         include: {
           items: {
-            include: { product: { select: { id: true, name: true, emoji: true, images: true } } },
+            include: { product: { select: { id: true, name: true, emoji: true, images: true, category: true } } },
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -290,10 +320,13 @@ export default async function orderRoutes(fastify) {
       }),
     ]);
 
-    const ordersWithCodes = await Promise.all(orders.map(async (order) => ({
-      ...order,
-      redeemCodes: await ensurePurchaseRedeemCodes(fastify.prisma, order),
-    })));
+    const ordersWithCodes = await Promise.all(
+      orders.map(async (order) => {
+        const redeemCodes = await ensurePurchaseRedeemCodes(fastify.prisma, order);
+        await settleIfNothingToShip(fastify.prisma, order);
+        return { ...order, redeemCodes };
+      }),
+    );
 
     return {
       orders: ordersWithCodes,
@@ -307,11 +340,24 @@ export default async function orderRoutes(fastify) {
 
   // GET /api/v1/orders/:id
   fastify.get('/orders/:id', { preHandler: [requireAuth] }, async (req, reply) => {
+    // The payment page polls this every second and a half while it waits. If
+    // SePay cannot reach us — which is every laptop, and any production day
+    // the webhook is missed or misrouted — this is the other direction: ask
+    // SePay what has arrived before answering. Throttled and shared across
+    // callers inside reconcile(), so one API call serves everyone waiting.
+    if (pollingConfigured()) {
+      const pending = await fastify.prisma.order.findFirst({
+        where: { id: req.params.id, userId: req.user.id, status: 'pending' },
+        select: { id: true },
+      });
+      if (pending) await reconcile(fastify);
+    }
+
     const order = await fastify.prisma.order.findFirst({
       where: { id: req.params.id, userId: req.user.id },
       include: {
         items: {
-          include: { product: { select: { id: true, name: true, emoji: true, images: true } } },
+          include: { product: { select: { id: true, name: true, emoji: true, images: true, category: true } } },
         },
       },
     });
@@ -319,6 +365,7 @@ export default async function orderRoutes(fastify) {
     // Show payment info while still pending; once paid the customer doesn't need it.
     const payment = order.status === 'pending' ? buildPaymentInfo(order) : null;
     const redeemCodes = await ensurePurchaseRedeemCodes(fastify.prisma, order);
+    await settleIfNothingToShip(fastify.prisma, order);
     return {
       order: { ...order, redeemCodes },
       payment,
@@ -376,7 +423,7 @@ export default async function orderRoutes(fastify) {
         shippingPhone: parsed.data.shippingPhone.trim(),
         shippingAddress,
       },
-      include: { items: { include: { product: { select: { id: true, name: true, emoji: true, images: true } } } } },
+      include: { items: { include: { product: { select: { id: true, name: true, emoji: true, images: true, category: true } } } } },
     });
 
     return { order: updated, message: 'Đã cập nhật thông tin giao hàng.' };
@@ -396,7 +443,7 @@ export default async function orderRoutes(fastify) {
       data: { status: 'cancelled' },
       include: {
         items: {
-          include: { product: { select: { id: true, name: true, emoji: true, images: true } } },
+          include: { product: { select: { id: true, name: true, emoji: true, images: true, category: true } } },
         },
       },
     });
@@ -438,7 +485,7 @@ export default async function orderRoutes(fastify) {
       where: { id: order.id },
       data: { paidAt: new Date(), status: 'processing' },
       include: {
-        items: { include: { product: { select: { id: true, name: true, emoji: true, images: true } } } },
+        items: { include: { product: { select: { id: true, name: true, emoji: true, images: true, category: true } } } },
       },
     });
 

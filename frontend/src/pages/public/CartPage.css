@@ -59,3 +59,204 @@
 .cart-modal-note { font-size: .86rem; color: var(--ink-4); margin-bottom: 16px }
 
 .cart-promo { margin-bottom: 16px }
+
+/* ── Checkout dialog ───────────────────────────────────────────────────────
+   It asked for a name, a phone number and nothing else, under a heading that
+   promised no delivery — while the order it created stored a placeholder
+   where its address should be. It collects an address now, and shows what is
+   being paid for, because the summary it refers to is behind the overlay. */
+
+.cart-modal .adm-modal-title {
+  margin-bottom: 6px;
+}
+
+.cart-modal-note {
+  margin: 0 0 16px;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--ink-3);
+}
+
+.cart-modal-sum {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  margin-bottom: 18px;
+  border-radius: var(--r-lg);
+  background: var(--primary-100);
+  border: 2px solid var(--primary-300);
+}
+
+.cart-modal-sum > span {
+  font-family: var(--font-h);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary-700);
+}
+
+.cart-modal-sum strong {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  line-height: 1.1;
+  color: var(--primary-700);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Name and phone are both short; side by side they stop the dialog becoming a
+   column of five identical boxes. */
+.cart-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 14px;
+}
+
+.cart-modal-foot {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.cart-modal-foot .btn-primary {
+  flex: 1;
+  justify-content: center;
+}
+
+/* The close button was a ✕ character; the icon set has no cross at this
+   weight, so the arrow is turned round rather than mixing a glyph in. */
+.cart-modal .adm-modal-close {
+  --icon-accent: var(--ink-5);
+  display: grid;
+  place-items: center;
+}
+
+.cart-modal .adm-modal-close svg {
+  transform: rotate(180deg);
+}
+
+/* Never mid-word: this sat in a narrow summary column and broke "online"
+   across two lines as "onlin" and "e". */
+.cart-ship-note {
+  color: var(--ink-3);
+  font-size: 0.86rem;
+  text-align: right;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+@media (max-width: 520px) {
+  .cart-modal-grid { grid-template-columns: minmax(0, 1fr) }
+}
+
+/* ── A dialog that fits the screen ─────────────────────────────────────────
+   With five fields it grew taller than the viewport, and because the whole
+   box scrolled, the title and the close button went off the top — you could
+   not see what you were filling in or how to get out of it. Header and
+   footer are pinned; only the fields move. */
+
+.cart-modal {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 40px);
+  padding: 0;
+  overflow: hidden;
+}
+
+.cart-modal-head {
+  flex: none;
+  padding: 26px 26px 14px;
+}
+
+.cart-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 26px;
+  scrollbar-width: thin;
+}
+
+.cart-modal-foot {
+  flex: none;
+  margin: 0;
+  padding: 16px 26px 22px;
+  border-top: 1.5px solid var(--parchment-2);
+  background: var(--surface);
+}
+
+.cart-modal .adm-modal-close {
+  top: 18px;
+  right: 18px;
+}
+
+/* An address is one or two lines, not a paragraph. */
+.cart-modal textarea.form-input {
+  min-height: 0;
+  height: 76px;
+}
+
+/* ── Tighter ───────────────────────────────────────────────────────────────
+   Four fields, a heading, a paragraph and a bordered amount panel added up to
+   more height than the screen had. The paragraph keeps only the half that is
+   news, the amount moves beside the button where the decision is made, and
+   the spacing stops being generous. */
+
+.cart-modal { max-height: calc(100vh - 32px) }
+
+.cart-modal-head { padding: 20px 24px 8px }
+
+.cart-modal .adm-modal-title { font-size: 1.22rem }
+
+.cart-modal-note {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+}
+
+.cart-modal-body { padding: 14px 24px 4px }
+
+.cart-modal-body .form-group { margin-bottom: 13px }
+
+.cart-modal-body .form-label {
+  margin-bottom: 4px;
+  font-size: 0.78rem;
+}
+
+.cart-modal-body .form-input { height: 44px }
+
+.cart-modal textarea.form-input { height: 62px }
+
+.cart-modal-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px 16px;
+}
+
+.cart-modal-total {
+  margin-right: auto;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.cart-modal-total em {
+  font-style: normal;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--ink-4);
+}
+
+.cart-modal-total strong {
+  font-family: var(--font-display);
+  font-size: 1.22rem;
+  color: var(--primary-700);
+  font-variant-numeric: tabular-nums;
+}
+
+.cart-modal-foot .btn-primary { flex: 0 1 auto }
+
+@media (max-width: 520px) {
+  .cart-modal-foot { flex-wrap: wrap }
+  .cart-modal-total { flex-basis: 100%; flex-direction: row; align-items: baseline; gap: 8px }
+  .cart-modal-foot .btn-primary { flex: 1 }
+}

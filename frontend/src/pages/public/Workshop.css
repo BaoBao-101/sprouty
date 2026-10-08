@@ -380,3 +380,135 @@
   .schedule-facts > div { flex-direction: column; gap: 2px }
   .schedule-facts dt { width: auto }
 }
+
+/* ── Choosing how many free seats to spend ─────────────────────────────────
+   This was a tick box, which could only ever mean "one". A parent bringing
+   three children and holding three earned seats had to pay for two of them
+   and nothing on the form explained why. */
+
+.ws-reward {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 16px;
+  border-radius: var(--r-lg);
+  border: 2px solid var(--parchment-2);
+  background: var(--surface);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.ws-reward.active {
+  border-color: var(--primary-500);
+  background: var(--primary-100);
+}
+
+.ws-reward-icon {
+  --icon-accent: var(--accent-orange-soft);
+  flex: none;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: #fff;
+  border: 2px solid var(--parchment-2);
+  color: var(--terracotta);
+  transform: rotate(-4deg);
+}
+
+.ws-reward.active .ws-reward-icon {
+  border-color: var(--primary-300);
+}
+
+.ws-reward-copy { flex: 1; min-width: 0 }
+
+.ws-reward-copy strong {
+  display: block;
+  font-family: var(--font-h);
+  font-size: 0.96rem;
+  color: var(--ink);
+}
+
+.ws-reward-copy em {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--ink-3);
+}
+
+.ws-reward-copy b { color: var(--primary-700) }
+
+/* Big enough for a thumb, because this is the one control on the form whose
+   value is money. */
+.ws-reward-pick {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--r-full);
+  background: var(--cream-2);
+  border: 1.5px solid var(--parchment-2);
+}
+
+.ws-reward-pick button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--primary-700);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ws-reward-pick button:hover:not(:disabled) {
+  background: var(--primary-500);
+  color: #fff;
+}
+
+.ws-reward-pick button:disabled { opacity: 0.35; cursor: not-allowed }
+
+.ws-reward-pick > b {
+  min-width: 26px;
+  text-align: center;
+  font-family: var(--font-h);
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.ws-reward-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 8px;
+  padding: 0 4px;
+}
+
+.ws-reward-save {
+  font-family: var(--font-h);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary-600);
+}
+
+.ws-reward-hint {
+  font-size: 0.82rem;
+  color: var(--ink-4);
+}
+
+.ws-reward-hint b { color: var(--ink-2) }
+
+@media (max-width: 520px) {
+  .ws-reward { flex-wrap: wrap }
+  .ws-reward-copy { flex-basis: calc(100% - 60px) }
+  .ws-reward-pick { margin-left: auto }
+}

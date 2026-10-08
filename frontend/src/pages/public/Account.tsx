@@ -41,8 +41,14 @@ function OrderTrack({ order }: { order: Order }) {
   }
 
   const paid = Boolean(order.paidAt);
+  const codes = order.redeemCodes || [];
+  // The last step is the customer's move, so it completes when they make
+  // it. Without this it sat as "current" forever — a plant could be three
+  // weeks grown and the order still showed activation as pending.
+  const activated = codes.length > 0 && codes.every((c) => c.redeemed);
+
   // Step 0 is always behind us; paying lights step 1 and opens step 2.
-  const reached = paid ? 2 : 1;
+  const reached = activated ? 3 : paid ? 2 : 1;
 
   return (
     <div className="otrack">
