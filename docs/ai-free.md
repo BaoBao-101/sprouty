@@ -2,7 +2,10 @@
 
 Written for: whoever sets the assistant up, now or the next time it stops working.
 
-Trợ lý AI đang hỏng vì tài khoản Gemini **hết hạn mức trả trước**:
+**Hiện đang dùng Groq** (xem Cách 1). Phần dưới giữ lại để biết vì sao đổi, và
+để làm gì khi Groq cũng hỏng.
+
+Gemini trước đó chết vì tài khoản **hết hạn mức trả trước**:
 
 ```
 "Your prepayment credits are depleted. Please go to AI Studio..."
@@ -34,8 +37,22 @@ thích OpenAI nên dùng được ngay, không phải sửa code.
 AI_PROVIDER=openai
 AI_ENDPOINT=https://api.groq.com/openai/v1/chat/completions
 AI_API_KEY=gsk_...
-AI_MODEL=llama-3.3-70b-versatile
+AI_MODEL=qwen/qwen3.8-27b
 AI_SUPPORTS_IMAGES=false
+```
+
+**Đây là cấu hình đang chạy thật** (đo được 674 ms cho một lượt hỏi Plant Buddy).
+
+Về chọn model: Groq còn có `openai/gpt-oss-20b` và `openai/gpt-oss-120b`, nhưng
+cả hai đều trả về nội dung **rỗng** với tham số hiện tại — chúng là model
+reasoning, đặt câu trả lời ở một trường khác. `qwen/qwen3.8-27b` trả lời tiếng
+Việt tự nhiên và dùng đúng số liệu cảm biến được đưa vào.
+
+Danh sách model đổi theo thời gian; kiểm tra bằng:
+
+```bash
+curl -s https://api.groq.com/openai/v1/models \
+  -H "Authorization: Bearer $AI_API_KEY" | grep -o '"id":"[^"]*"'
 ```
 
 `AI_SUPPORTS_IMAGES=false` là bắt buộc với model chỉ xử lý text. Không đặt, nút
@@ -51,9 +68,14 @@ Xoá `GEMINI_API_KEY` hoặc để nguyên cũng được — nó bị bỏ qua 
 
 Nếu muốn giữ Gemini. Khoá free khác khoá trả trước đang hết tiền.
 
-1. Vào **aistudio.google.com/apikey**
-2. **Create API key** → chọn một project **chưa bật billing**
-3. Khoá free bắt đầu bằng `AIza...`
+1. Vào **aistudio.google.com/app/apikey** (chú ý có `/app/`)
+2. **Create API key in new project**
+3. Khoá đúng phải bắt đầu bằng **`AIza...`**
+
+**Nếu khoá nhận được bắt đầu bằng `AQ.` thì không dùng được.** Đó là token
+OAuth gắn với phiên đăng nhập, không phải API key; Google từ chối nó ở cả ba
+cách gửi (`?key=`, header `x-goog-api-key`, `Authorization: Bearer`) với thông
+báo *"Expected OAuth 2 access token"*. Gặp trường hợp này thì dùng Groq.
 
 ```bash
 AI_PROVIDER=gemini
