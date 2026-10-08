@@ -30,7 +30,23 @@ chọn khi tạo project. Repo này có `vercel.json` ở gốc repo. Nếu khi 
 bạn đặt **Root Directory = `frontend`**, Vercel sẽ tìm `frontend/vercel.json` và
 không bao giờ thấy file ở gốc.
 
-## Cách sửa
+## Cách sửa nhanh nhất (không cần đụng vào code)
+
+File `vercel.json` ở gốc repo **đã có sẵn trên GitHub từ trước**. Chỉ cần bảo
+Vercel nhìn vào đó:
+
+1. Vào **vercel.com** → project Sprouty → **Settings** → **General**
+2. Tìm mục **Root Directory**
+3. Nếu đang là `frontend` → **xoá trống nó đi** rồi bấm **Save**
+4. Qua tab **Deployments** → deployment mới nhất → menu `…` → **Redeploy**
+5. **Bỏ tick** ô "Use existing Build Cache" → bấm **Redeploy**
+
+Chờ 1–2 phút rồi kiểm tra theo phần **Kiểm tra lại** bên dưới.
+
+---
+
+## Cách sửa lâu dài (sau khi push code mới)
+
 
 Repo giờ có **cả hai** file, nội dung tương đương, nên đặt Root Directory kiểu nào
 cũng chạy:
