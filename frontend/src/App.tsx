@@ -45,6 +45,7 @@ const AdminProducts = lazy(() => import('@/pages/admin/Products'));
 
 // Employee
 const EmployeeOrders = lazy(() => import('@/pages/employee/Orders'));
+const EmployeeAttendance = lazy(() => import('@/pages/employee/Attendance'));
 const EmployeeProducts = lazy(() => import('@/pages/employee/Products'));
 
 /** The old site was a set of .html files; keep those URLs working. */
@@ -171,6 +172,7 @@ export function App() {
             <Route path="/employee" element={<EmployeeLayout />}>
               <Route index element={<Navigate to="/employee/orders" replace />} />
               <Route path="orders" element={<EmployeeOrders />} />
+              <Route path="attendance" element={<EmployeeAttendance />} />
               <Route path="products" element={<EmployeeProducts />} />
             </Route>
           </Route>

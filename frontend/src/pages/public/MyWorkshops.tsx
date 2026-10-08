@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { formatPrice } from '@/types/product';
+import { TicketQr } from '@/components/TicketQr';
 import {
   formatWorkshopWhen,
   type MyWorkshopRegistration,
@@ -26,6 +27,9 @@ import './MyWorkshops.css';
  */
 function bookingState(r: MyWorkshopRegistration) {
   if (r.status === 'cancelled') return { label: 'Đã huỷ', cls: 'cancelled' };
+  // Attending outranks paying once it has happened: by then the question
+  // is no longer whether the seat is held, it is whether the child went.
+  if (r.checkedInAt) return { label: 'Đã tham gia', cls: 'attended' };
   if (r.paidAt) return { label: 'Đã thanh toán', cls: 'paid' };
   if (r.amount === 0) return { label: 'Đã giữ chỗ', cls: 'paid' };
   return { label: 'Chưa thanh toán', cls: 'unpaid' };
@@ -152,6 +156,37 @@ export default function MyWorkshops() {
             <div className="myws-warn">
               ⚠️ Suất này chưa được đảm bảo. Khi buổi học kín chỗ, chúng tôi ưu tiên những người
               đã thanh toán trước.
+            </div>
+          )}
+
+          {/* The ticket. A booking was a receipt until now: it recorded that
+              money had changed hands and nothing about the day itself. The
+              code is what staff ask for at the door, the QR is the same
+              string for a phone camera, and once somebody ticks it off here
+              is where the parent sees that it happened. */}
+          {reg.status !== 'cancelled' && (
+            <div className={`myws-ticket${reg.checkedInAt ? ' used' : ''}`}>
+              <TicketQr value={reg.ticket} size={104} />
+              <div className="myws-ticket-body">
+                <span className="myws-ticket-label">Mã vé của bạn</span>
+                <strong className="myws-ticket-code">{reg.ticket}</strong>
+                {reg.checkedInAt ? (
+                  <span className="myws-ticket-done">
+                    ✓ Đã điểm danh lúc{' '}
+                    {new Date(reg.checkedInAt).toLocaleString('vi-VN', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                    {reg.attendedCount ? ` · ${reg.attendedCount} bé` : ''}
+                  </span>
+                ) : (
+                  <span className="myws-ticket-hint">
+                    Đưa mã này cho nhân viên khi tới buổi học để xác nhận.
+                  </span>
+                )}
+              </div>
             </div>
           )}
 

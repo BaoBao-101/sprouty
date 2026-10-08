@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { AppError } from '../utils/errors.js';
 import { requireAuth, requireCsrf } from '../middleware/rbac.js';
+import { ticketCode } from './admin/attendance.js';
 import {
   assertRewardAvailable,
   claimRewardTx,
@@ -162,6 +163,12 @@ export default async function workshopRoutes(fastify) {
         paymentMethod: r.paymentMethod,
         amount: r.amount,
         paidAt: r.paidAt,
+        // The ticket: what staff ask for at the door, and the record of
+        // whether the child actually arrived. Paying and attending are
+        // different facts, and the account only ever showed the first.
+        ticket: ticketCode(r.id),
+        checkedInAt: r.checkedInAt,
+        attendedCount: r.attendedCount,
         createdAt: r.createdAt,
         upcoming: (r.workshop.endTime ?? r.workshop.dateTime) > now,
         workshop: {

@@ -34,7 +34,7 @@ export function PageHeader({
 
 /* ── Metric tiles ────────────────────────────────────────────── */
 
-export type StatTone = 'orange' | 'green' | 'blue' | 'amber' | 'rose';
+export type StatTone = 'orange' | 'green' | 'blue' | 'amber' | 'rose' | 'grey';
 
 export function StatGrid({ children }: { children: ReactNode }) {
   return <div className="ad-stats">{children}</div>;

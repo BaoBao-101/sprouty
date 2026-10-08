@@ -12,6 +12,7 @@ import {
   MoneyInput,
   PresetChips,
   PRODUCT_PRICE_PRESETS,
+  roundUpAbove,
   SMART_DELTA_PRESETS,
 } from '@/components/admin/fields';
 
@@ -270,15 +271,9 @@ export function ProductEditor({
   const smartDelta = parseInt(form.smartPriceDelta, 10) || 0;
   const discount = oldPrice > price && price > 0 ? Math.round((1 - price / oldPrice) * 100) : 0;
 
-  // Offered as the "before discount" figure: the round numbers just above
-  // the asking price, which is what a strike-through price almost always is.
-  // Typing one out by hand is the part nobody enjoys.
-  const roundUpSuggestions = useMemo(() => {
-    if (!price) return [];
-    return [1.15, 1.25, 1.4, 1.6]
-      .map((factor) => Math.round((price * factor) / 10000) * 10000)
-      .filter((n, i, all) => n > price && all.indexOf(n) === i);
-  }, [price]);
+  // The round numbers just above the asking price, which is what a
+  // struck-through "was" figure almost always is.
+  const roundUpSuggestions = useMemo(() => roundUpAbove(price), [price]);
 
   const imageCount = form.images.filter((u) => u.trim()).length;
   const includeCount = form.includes.filter((i) => i.trim()).length;
@@ -578,8 +573,8 @@ export function ProductEditor({
                     />
                     <span className="field-hint">
                       {discount
-                        ? `Hiện gạch ngang, gắn nhãn −${discount}%`
-                        : 'Giá niêm yết cũ, gạch ngang cạnh giá bán. Để trống nếu không giảm.'}
+                        ? `Giảm ${discount}% so với giá này`
+                        : 'Để trống nếu sản phẩm không giảm giá'}
                     </span>
                   </div>
                 </div>
@@ -752,11 +747,37 @@ export function ProductEditor({
           {error && <div className="form-error editor-error">{error}</div>}
 
           <div className="editor-foot">
+            {/* What is still missing, said before the button is pressed. It
+                used to be discoverable only by clicking a button that looked
+                ready and then being bounced to another tab. */}
+            {problem && !busy && (
+              <button
+                type="button"
+                className="editor-missing"
+                onClick={() => setTab(problem.tab)}
+              >
+                <AdminIcon name="alert" size={15} />
+                {problem.message}
+              </button>
+            )}
+
             <button type="button" className="btn btn-ghost" onClick={onClose}>
               {product ? 'Đóng' : 'Hủy'}
             </button>
             <button type="submit" className="btn btn-primary" disabled={busy}>
-              {busy ? 'Đang lưu...' : product ? 'Lưu thay đổi' : 'Lưu và thêm video →'}
+              {busy ? (
+                'Đang lưu…'
+              ) : product ? (
+                <>
+                  <AdminIcon name="save" size={17} />
+                  Lưu thay đổi
+                </>
+              ) : (
+                <>
+                  Lưu &amp; thêm video
+                  <AdminIcon name="arrow-right" size={16} />
+                </>
+              )}
             </button>
           </div>
         </form>

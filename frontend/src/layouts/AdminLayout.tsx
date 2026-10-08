@@ -22,6 +22,7 @@ const GROUPS: SidebarGroup[] = [
     title: 'Nội dung',
     items: [
       { to: '/admin/workshops', label: 'Workshop', icon: icon('workshop') },
+      { to: '/employee/attendance', label: 'Điểm danh', icon: icon('check') },
       { to: '/admin/blog', label: 'Blog', icon: icon('blog') },
       { to: '/admin/user-images', label: 'Ảnh người dùng', icon: icon('images') },
       { to: '/admin/products', label: 'Sản phẩm', icon: icon('products') },

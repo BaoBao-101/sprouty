@@ -99,6 +99,7 @@ model User {
   orders       Order[]
   sessions     Session[]
   workshopRegs WorkshopRegistration[]
+  workshopCheckIns WorkshopRegistration[] @relation("WorkshopCheckIns")
   actorLogs    AuditLog[] @relation("ActorLogs")
   assets       Asset[] @relation("AssetOwner")
   createdVideos InstructionVideo[] @relation("InstructionVideoCreator")
@@ -245,12 +246,27 @@ model WorkshopRegistration {
   // Int, matching Order.sepayTransactionId — SePay's transaction id is numeric.
   sepayTransactionId  Int?                  @unique
 
+  // Did the child actually turn up?
+  //
+  // Paying and attending are different facts, and they were conflated: a
+  // booking paid for weeks ago says nothing about whether anyone walked
+  // through the door, and staff on the day had nowhere to record that they
+  // did. The parent sees it too, which is what makes the booking a ticket
+  // rather than a receipt.
+  checkedInAt       DateTime?
+  checkedInByUserId String?
+  // Seats actually filled. Usually equals childCount, but a parent who
+  // booked two and brought one should not be recorded as bringing two.
+  attendedCount     Int?
+
   createdAt  DateTime                   @default(now())
 
-  workshop Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
-  user     User?    @relation(fields: [userId], references: [id])
+  workshop    Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id])
+  checkedInBy User?    @relation("WorkshopCheckIns", fields: [checkedInByUserId], references: [id])
 
   @@index([workshopId, status])
+  @@index([workshopId, checkedInAt])
 }
 
 model AuditLog {

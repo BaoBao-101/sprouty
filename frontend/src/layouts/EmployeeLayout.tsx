@@ -12,6 +12,11 @@ export function EmployeeLayout() {
       items: [
         { to: '/employee/orders', label: 'Đơn hàng', icon: <AdminIcon name="orders" size={19} /> },
         { to: '/employee/products', label: 'Sản phẩm', icon: <AdminIcon name="products" size={19} /> },
+        {
+          to: '/employee/attendance',
+          label: 'Điểm danh',
+          icon: <AdminIcon name="check" size={19} />,
+        },
       ],
     },
     ...(isAdmin

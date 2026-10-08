@@ -39,6 +39,11 @@ export interface MyWorkshopRegistration {
   paymentMethod: 'online' | 'onsite';
   amount: number;
   paidAt?: string | null;
+  /** Six characters staff ask for at the door; also the QR payload. */
+  ticket: string;
+  /** Set once staff confirm the child arrived. */
+  checkedInAt: string | null;
+  attendedCount: number | null;
   createdAt: string;
   upcoming: boolean;
   workshop: PublicWorkshop & { status: string };

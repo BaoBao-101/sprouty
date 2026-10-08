@@ -1,0 +1,406 @@
+/* ── The door ──────────────────────────────────────────────────────────────
+   Bigger hit targets than the rest of the admin. This screen is used standing
+   up, on a tablet, with a queue forming, so the one thing anyone taps is a
+   button you cannot miss. */
+
+.att-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-4);
+}
+
+.att-date .form-input {
+  height: 38px;
+  width: auto;
+}
+
+/* ── Sessions on the day ───────────────────────────────────────────────── */
+
+.att-sessions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.att-session {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 13px 15px;
+  border: 1px solid var(--border-c);
+  border-radius: var(--r-md);
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink-4);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.att-session:hover { border-color: #94A3B8 }
+
+.att-session.open {
+  border-color: var(--accent);
+  background: var(--accent-pale);
+}
+
+.att-session-time {
+  flex: none;
+  min-width: 86px;
+  font-family: var(--font-h);
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.att-session-time em {
+  font-style: normal;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink-4);
+}
+
+.att-session-main { flex: 1; min-width: 0 }
+
+.att-session-main strong {
+  display: block;
+  font-size: 0.95rem;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.att-session-loc {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--ink-4);
+}
+
+.att-session-count {
+  flex: none;
+  width: 124px;
+  text-align: right;
+}
+
+.att-session-count b {
+  font-size: 1.02rem;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.att-session-count em {
+  display: block;
+  font-style: normal;
+  font-size: 0.74rem;
+  color: var(--ink-4);
+}
+
+.att-bar {
+  display: block;
+  height: 5px;
+  margin-top: 5px;
+  border-radius: var(--r-full);
+  background: var(--border-c);
+  overflow: hidden;
+}
+
+.att-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.25s;
+}
+
+/* ── The register ──────────────────────────────────────────────────────── */
+
+.att-register-tools {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.att-register-count {
+  font-size: 0.82rem;
+  color: var(--ink-4);
+}
+
+.att-register-count b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.att-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.att-search > svg {
+  position: absolute;
+  left: 11px;
+  color: var(--ink-4);
+  pointer-events: none;
+}
+
+.att-search .form-input {
+  height: 38px;
+  min-width: 260px;
+  padding-left: 35px;
+}
+
+.att-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.att-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-c);
+  border-radius: var(--r-md);
+  background: #fff;
+}
+
+/* Already in: faded, because the queue is the subject and they are not in it. */
+.att-row.done {
+  background: var(--surface-2);
+  border-color: #D5E7DC;
+}
+
+.att-row.done .att-who strong { color: var(--ink-3) }
+
+/* The code the parent reads out. Monospace so a 0 and an O are different. */
+.att-ticket {
+  flex: none;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  background: var(--ink);
+  color: #fff;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.att-row.done .att-ticket { background: var(--accent) }
+
+.att-who { flex: 1; min-width: 0 }
+
+.att-who strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.att-who > span {
+  font-size: 0.82rem;
+  color: var(--ink-4);
+}
+
+.att-note {
+  display: block;
+  margin-top: 3px;
+  font-style: italic;
+  font-size: 0.8rem;
+  color: var(--ink-3);
+}
+
+.att-flags {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.att-when {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.74rem;
+  color: var(--ink-4);
+}
+
+/* One tap, and it has to be hittable with a thumb while holding a tablet. */
+.att-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 142px;
+  height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: var(--r-md);
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-h);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.att-btn:hover:not(:disabled) { background: var(--accent-hover) }
+
+.att-btn.undo {
+  background: #fff;
+  border: 1px solid var(--border-c);
+  color: var(--ink-4);
+}
+
+.att-btn.undo:hover:not(:disabled) {
+  border-color: #94A3B8;
+  color: var(--ink-2);
+  background: var(--surface-2);
+}
+
+.att-btn:disabled { opacity: 0.6; cursor: not-allowed }
+
+@media (max-width: 760px) {
+  .att-session { flex-wrap: wrap }
+  .att-session-count { width: auto; text-align: left }
+
+  .att-row { flex-wrap: wrap }
+  .att-who { flex-basis: calc(100% - 110px) }
+  .att-flags { align-items: flex-start }
+  .att-btn { width: 100%; }
+}
+
+/* ── The ticket desk ───────────────────────────────────────────────────────
+   Above everything, because it is the first thing that happens when somebody
+   walks in: a parent shows a QR or reads six characters out, and staff want
+   the answer before the next family reaches the table. */
+
+.att-desk {
+  background: #fff;
+  border: 1px solid var(--border-c);
+  border-radius: var(--r-lg);
+  padding: 16px 18px;
+  margin-bottom: 18px;
+}
+
+.att-desk-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 12px;
+  color: var(--accent);
+}
+
+.att-desk-head strong {
+  display: block;
+  font-family: var(--font-h);
+  font-size: 0.98rem;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.att-desk-head span {
+  font-size: 0.81rem;
+  color: var(--ink-4);
+}
+
+.att-desk-form {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+/* The code is read off a screen or a scanner, so the characters have to be
+   unambiguous and wide enough to check at a glance. */
+.att-code {
+  flex: 1;
+  min-width: 180px;
+  max-width: 280px;
+  height: 46px;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 1.22rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.att-desk-form .btn { height: 46px }
+
+.att-desk-miss {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  padding: 11px 13px;
+  border-radius: var(--r-md);
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #991B1B;
+  font-size: 0.86rem;
+}
+
+.att-desk-hit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 13px;
+  padding: 14px 15px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--accent);
+  background: var(--accent-pale);
+}
+
+.att-desk-hit.done {
+  border-color: #CBD5E1;
+  background: var(--surface-2);
+}
+
+.att-desk-hit-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  min-width: 0;
+  flex: 1;
+}
+
+.att-desk-hit-main strong {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.att-desk-hit-main > div > span {
+  display: block;
+  font-size: 0.84rem;
+  color: var(--ink-3);
+}
+
+.att-desk-hit-ws {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+  color: var(--ink-4) !important;
+  font-size: 0.8rem !important;
+}
+
+.att-desk-hit-side {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+}

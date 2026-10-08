@@ -238,11 +238,36 @@ export const AGE_PRESETS = [
 /** Room sizes Sprouty actually runs. */
 export const CAPACITY_PRESETS = [8, 10, 12, 16, 20, 24, 30] as const;
 
+/*
+ * Four or five to a row, because these sit in a half-width field: six wrap
+ * to a second ragged line and the chips end up louder than the input they
+ * are meant to serve.
+ */
+
 /** Workshop fees, and free. */
-export const WORKSHOP_PRICE_PRESETS = [0, 120000, 160000, 180000, 220000, 280000] as const;
+export const WORKSHOP_PRICE_PRESETS = [0, 120000, 160000, 180000, 220000] as const;
 
 /** Kit prices, around the ones already in the catalogue. */
-export const PRODUCT_PRICE_PRESETS = [120000, 160000, 180000, 220000, 290000, 350000] as const;
+export const PRODUCT_PRICE_PRESETS = [120000, 160000, 220000, 290000] as const;
 
 /** What a Smart build usually adds on top. */
 export const SMART_DELTA_PRESETS = [50000, 80000, 100000, 150000] as const;
+
+/**
+ * Round numbers just above a price, for the struck-through "was" figure.
+ *
+ * The step has to scale with the price or the suggestions collapse into
+ * each other: rounding every multiple of a 20.000đ kit to the nearest
+ * 10.000 gave 30.000 three times over, and the row showed one chip.
+ */
+export function roundUpAbove(price: number, count = 3): number[] {
+  if (!price) return [];
+  const step = price < 50000 ? 1000 : price < 200000 ? 5000 : 10000;
+  const out: number[] = [];
+  for (const factor of [1.15, 1.25, 1.4, 1.6, 1.8]) {
+    const value = Math.round((price * factor) / step) * step;
+    if (value > price && !out.includes(value)) out.push(value);
+    if (out.length === count) break;
+  }
+  return out;
+}

@@ -201,6 +201,23 @@ export const API = {
     },
   },
 
+  // The door: employees own this, so it sits beside the customer calls
+  // rather than under admin.
+  attendance: {
+    day(date)                     { return _fetch('/admin/attendance?' + new URLSearchParams({ date })); },
+    register(workshopId)          { return _fetch(`/admin/attendance/${workshopId}`); },
+    lookup(code)                  { return _fetch('/admin/attendance/lookup?' + new URLSearchParams({ code })); },
+    checkIn(workshopId, regId, attendedCount = undefined) {
+      return _fetch(`/admin/attendance/${workshopId}/${regId}`, {
+        method: 'POST',
+        body: JSON.stringify({ attendedCount }),
+      });
+    },
+    undo(workshopId, regId) {
+      return _fetch(`/admin/attendance/${workshopId}/${regId}`, { method: 'DELETE' });
+    },
+  },
+
   admin: {
     users: {
       list(params = {}) { return _fetch('/admin/users?' + new URLSearchParams(params)); },
