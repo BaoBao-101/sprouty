@@ -342,7 +342,12 @@ export function ProductManager() {
       </Panel>
 
       {editorOpen && isAdmin && (
-        <ProductEditor editing={editing} onClose={() => setEditorOpen(false)} onSaved={load} />
+        <ProductEditor
+          editing={editing}
+          collections={raw?.collections || []}
+          onClose={() => setEditorOpen(false)}
+          onSaved={load}
+        />
       )}
 
       {/* Standalone video manager, for employees who cannot open the editor. */}

@@ -129,7 +129,7 @@ export default async function adminProductRoutes(fastify) {
     const or = searchOr(req.query.search, ['name', 'description', 'speciesKey']);
     if (or) where.OR = or;
 
-    const [products, total, statusCounts, categoryRows] = await Promise.all([
+    const [products, total, statusCounts, categoryRows, collectionRows] = await Promise.all([
       fastify.prisma.product.findMany({
         where,
         orderBy: { id: 'asc' },
@@ -139,6 +139,9 @@ export default async function adminProductRoutes(fastify) {
       fastify.prisma.product.count({ where }),
       fastify.prisma.product.groupBy({ by: ['status'], _count: { _all: true } }),
       fastify.prisma.product.groupBy({ by: ['category'], _count: { _all: true } }),
+      // Offered back to the editor so a new product joins an existing group
+      // instead of inventing a near-duplicate spelling of one.
+      fastify.prisma.product.groupBy({ by: ['collection'], _count: { _all: true } }),
     ]);
 
     return {
@@ -147,6 +150,10 @@ export default async function adminProductRoutes(fastify) {
       categories: categoryRows
         .filter((r) => r.category)
         .map((r) => ({ value: r.category, count: r._count._all })),
+      collections: collectionRows
+        .filter((r) => r.collection)
+        .map((r) => ({ value: r.collection, count: r._count._all }))
+        .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value)),
     };
   });
 

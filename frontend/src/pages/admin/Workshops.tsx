@@ -21,6 +21,14 @@ import { formatWorkshopWhen } from '@/types/workshop';
 import { showToast } from '@/services/toast';
 import { AdminIcon } from '@/components/icons/AdminIcon';
 import { usePagedList } from '@/components/admin/usePagedList';
+import {
+  AGE_PRESETS,
+  CAPACITY_PRESETS,
+  ComboField,
+  MoneyInput,
+  PresetChips,
+  WORKSHOP_PRICE_PRESETS,
+} from '@/components/admin/fields';
 
 interface WorkshopRow {
   id: string;
@@ -389,6 +397,12 @@ export default function Workshops() {
   const pastCount = counts.past || 0;
   const allCount = counts.all || 0;
 
+  // The studios already in use, offered to the editor so a session joins one
+  // rather than spawning a near-duplicate spelling of it.
+  const locationOptions = (stats?.byLocation || [])
+    .filter((row) => row.location)
+    .map((row) => ({ value: row.location, count: row.workshopCount }));
+
   const totals = stats?.totals;
   const loading = state === 'loading';
 
@@ -721,7 +735,7 @@ export default function Workshops() {
           </div>
 
           <div className="field-grid">
-            <label className="field">
+            <div className="field">
               <span className="field-label">
                 Sức chứa <span className="req">*</span>
               </span>
@@ -733,46 +747,61 @@ export default function Workshops() {
                 value={form.capacity}
                 onChange={(e) => set('capacity')(e.target.value)}
               />
-              <span className="field-hint">Số bé tối đa nhận đăng ký</span>
-            </label>
-
-            <label className="field">
-              <span className="field-label">Học phí (đ)</span>
-              <input
-                className="form-input"
-                type="number"
-                min={0}
-                step={1000}
-                value={form.price}
-                onChange={(e) => set('price')(e.target.value)}
+              {/* The room sizes Sprouty actually runs, so the usual case is
+                  one click rather than a typed number. */}
+              <PresetChips
+                options={CAPACITY_PRESETS}
+                value={form.capacity}
+                onPick={set('capacity')}
+                format={(n) => `${n} bé`}
               />
-              <span className="field-hint">Nhập 0 nếu buổi học miễn phí</span>
-            </label>
+              <span className="field-hint">Số bé tối đa nhận đăng ký</span>
+            </div>
+
+            <div className="field">
+              <span className="field-label">Học phí</span>
+              <MoneyInput
+                value={form.price}
+                onChange={set('price')}
+                placeholder="0"
+                suggestions={WORKSHOP_PRICE_PRESETS}
+              />
+              <span className="field-hint">Chọn “Miễn phí” nếu buổi học không thu tiền</span>
+            </div>
           </div>
 
-          <label className="field">
+          <div className="field">
             <span className="field-label">
               Địa điểm <span className="req">*</span>
             </span>
+            {/* The studios already running sessions. Typed freely, the same
+                room ends up spelled three ways and the location report splits
+                it into three. */}
+            <ComboField
+              value={form.location}
+              onChange={set('location')}
+              options={locationOptions}
+              placeholder="VD: Sprouty Studio – TP.HCM"
+              emptyHint="Chưa có địa điểm nào — gõ để thêm địa điểm đầu tiên."
+            />
+          </div>
+
+          <div className="field">
+            <span className="field-label">Độ tuổi phù hợp</span>
             <input
               className="form-input"
-              placeholder="VD: Sprouty Studio – TP.HCM"
-              value={form.location}
-              onChange={(e) => set('location')(e.target.value)}
+              placeholder="VD: 4–8 tuổi"
+              value={form.ageRange}
+              onChange={(e) => set('ageRange')(e.target.value)}
             />
-          </label>
-
-          <div className="field-grid">
-            <label className="field">
-              <span className="field-label">Độ tuổi phù hợp</span>
-              <input
-                className="form-input"
-                placeholder="VD: 4–8 tuổi"
-                value={form.ageRange}
-                onChange={(e) => set('ageRange')(e.target.value)}
-              />
-            </label>
-
+            {/* One spelling of each band. The shop groups by this exact
+                string, so a hyphen where the others use an en dash shows up
+                in the filter list as a second, near-identical option. */}
+            <PresetChips
+              options={AGE_PRESETS}
+              value={form.ageRange}
+              onPick={set('ageRange')}
+            />
           </div>
 
           {/* A real upload. This was a text box for a URL, which meant an admin

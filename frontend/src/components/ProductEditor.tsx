@@ -6,6 +6,14 @@ import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { formatPrice } from '@/types/product';
 import { AdminIcon, type AdminIconName } from '@/components/icons/AdminIcon';
+import {
+  AGE_PRESETS,
+  ComboField,
+  MoneyInput,
+  PresetChips,
+  PRODUCT_PRICE_PRESETS,
+  SMART_DELTA_PRESETS,
+} from '@/components/admin/fields';
 
 export interface AdminProduct {
   id: number;
@@ -213,10 +221,14 @@ function ImageRow({
 
 export function ProductEditor({
   editing,
+  collections = [],
   onClose,
   onSaved,
 }: {
   editing: AdminProduct | null;
+  /** The groups already in the catalogue, passed down rather than fetched
+      again — the list page has just asked for exactly this. */
+  collections?: Array<{ value: string; count: number }>;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -257,6 +269,16 @@ export function ProductEditor({
   const oldPrice = parseInt(form.oldPrice, 10) || 0;
   const smartDelta = parseInt(form.smartPriceDelta, 10) || 0;
   const discount = oldPrice > price && price > 0 ? Math.round((1 - price / oldPrice) * 100) : 0;
+
+  // Offered as the "before discount" figure: the round numbers just above
+  // the asking price, which is what a strike-through price almost always is.
+  // Typing one out by hand is the part nobody enjoys.
+  const roundUpSuggestions = useMemo(() => {
+    if (!price) return [];
+    return [1.15, 1.25, 1.4, 1.6]
+      .map((factor) => Math.round((price * factor) / 10000) * 10000)
+      .filter((n, i, all) => n > price && all.indexOf(n) === i);
+  }, [price]);
 
   const imageCount = form.images.filter((u) => u.trim()).length;
   const includeCount = form.includes.filter((i) => i.trim()).length;
@@ -412,7 +434,7 @@ export function ProductEditor({
                     </select>
                   </label>
 
-                  <label className="field">
+                  <div className="field">
                     <span className="field-label">
                       Độ tuổi <span className="req">*</span>
                     </span>
@@ -422,7 +444,14 @@ export function ProductEditor({
                       value={form.ageRange}
                       onChange={(e) => set('ageRange')(e.target.value)}
                     />
-                  </label>
+                    {/* The shop filters on this exact string, so the bands
+                        have to be spelled one way to stay one band. */}
+                    <PresetChips
+                      options={AGE_PRESETS}
+                      value={form.ageRange}
+                      onPick={set('ageRange')}
+                    />
+                  </div>
                 </div>
 
                 {/* Which plant this kit grows into. It is a visual choice, not a
@@ -484,18 +513,23 @@ export function ProductEditor({
                 )}
 
 
-                <label className="field">
+                <div className="field">
                   <span className="field-label">
                     Bộ sưu tập <span className="req">*</span>
                   </span>
-                  <input
-                    className="form-input"
-                    placeholder="VD: Sprouty Starter"
+                  {/* The groups already in the catalogue. A collection only
+                      groups anything if everyone spells it identically, and a
+                      plain text box guarantees that eventually somebody will
+                      not — leaving two groups of one product each. */}
+                  <ComboField
                     value={form.collection}
-                    onChange={(e) => set('collection')(e.target.value)}
+                    onChange={set('collection')}
+                    options={collections}
+                    placeholder="VD: Sprouty Starter"
+                    emptyHint="Chưa có bộ sưu tập nào — gõ để tạo nhóm đầu tiên."
                   />
                   <span className="field-hint">Nhóm sản phẩm lại với nhau trên cửa hàng</span>
-                </label>
+                </div>
 
                 <label className="field">
                   <span className="field-label">
@@ -521,37 +555,33 @@ export function ProductEditor({
                 <div className="field-grid">
                   {/* "Giá gốc" read as a cost/wholesale price, and "giá gạch ngang" reads as
                       the discounted one. "Giá trước giảm" cannot be taken for either. */}
-                  <label className="field">
+                  <div className="field">
                     <span className="field-label">
-                      Giá bán (đ) <span className="req">*</span>
+                      Giá bán <span className="req">*</span>
                     </span>
-                    <input
-                      className="form-input"
-                      type="number"
-                      min={1000}
+                    <MoneyInput
                       value={form.price}
-                      onChange={(e) => set('price')(e.target.value)}
+                      onChange={set('price')}
+                      placeholder="0"
+                      suggestions={PRODUCT_PRICE_PRESETS}
                     />
-                    <span className="field-hint">
-                      {price ? `Số tiền khách thực trả: ${formatPrice(price)}` : 'Số tiền khách thực trả'}
-                    </span>
-                  </label>
+                    <span className="field-hint">Số tiền khách thực trả</span>
+                  </div>
 
-                  <label className="field">
-                    <span className="field-label">Giá trước giảm (đ)</span>
-                    <input
-                      className="form-input"
-                      type="number"
-                      min={1000}
+                  <div className="field">
+                    <span className="field-label">Giá trước giảm</span>
+                    <MoneyInput
                       value={form.oldPrice}
-                      onChange={(e) => set('oldPrice')(e.target.value)}
+                      onChange={set('oldPrice')}
+                      placeholder="0"
+                      suggestions={roundUpSuggestions}
                     />
                     <span className="field-hint">
                       {discount
                         ? `Hiện gạch ngang, gắn nhãn −${discount}%`
-                        : 'Giá niêm yết cũ, hiện gạch ngang cạnh giá bán. Để trống nếu không giảm giá.'}
+                        : 'Giá niêm yết cũ, gạch ngang cạnh giá bán. Để trống nếu không giảm.'}
                     </span>
-                  </label>
+                  </div>
                 </div>
 
                 {/* Both numbers side by side, exactly as the shop renders them —
@@ -570,13 +600,12 @@ export function ProductEditor({
                 )}
 
                 <label className="field">
-                  <span className="field-label">Phụ phí bản Smart / IoT (đ)</span>
-                  <input
-                    className="form-input"
-                    type="number"
-                    min={1000}
+                  <span className="field-label">Phụ phí bản Smart / IoT</span>
+                  <MoneyInput
                     value={form.smartPriceDelta}
-                    onChange={(e) => set('smartPriceDelta')(e.target.value)}
+                    onChange={set('smartPriceDelta')}
+                    placeholder="0"
+                    suggestions={SMART_DELTA_PRESETS}
                   />
                   <span className="field-hint">
                     {smartDelta

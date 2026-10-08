@@ -698,3 +698,161 @@
   height: 34px;
   color: var(--ink-3);
 }
+
+/* ── Fields that do the typing for you ─────────────────────────────────────
+   Chips under a field, a grouped money box, and a text box backed by the
+   values already in use. See components/admin/fields.tsx for why each one
+   exists. */
+
+.staff-root .preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.staff-root .preset-chip {
+  padding: 5px 11px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border-c);
+  background: #fff;
+  color: var(--ink-3);
+  font-family: var(--font-h);
+  font-size: 0.76rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.staff-root .preset-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-pale);
+}
+
+.staff-root .preset-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ── Money ─────────────────────────────────────────────────────────────── */
+
+.staff-root .money-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.staff-root .money-input .form-input {
+  width: 100%;
+  padding-right: 32px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.staff-root .money-suffix {
+  position: absolute;
+  right: 12px;
+  color: var(--ink-4);
+  font-size: 0.86rem;
+  pointer-events: none;
+}
+
+/* ── Pick one, or type your own ────────────────────────────────────────── */
+
+.staff-root .combo-field {
+  position: relative;
+}
+
+.staff-root .combo-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.staff-root .combo-input .form-input {
+  width: 100%;
+  padding-right: 38px;
+}
+
+.staff-root .combo-toggle {
+  position: absolute;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink-4);
+  cursor: pointer;
+}
+
+.staff-root .combo-toggle:hover { background: var(--cream-2); color: var(--ink-2) }
+
+.staff-root .combo-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 212px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--border-c);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-lg);
+}
+
+.staff-root .combo-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  text-align: left;
+  font-size: 0.86rem;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.staff-root .combo-option:hover { background: var(--cream-2) }
+
+.staff-root .combo-option.active {
+  background: var(--accent-pale);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.staff-root .combo-option em {
+  flex: none;
+  font-style: normal;
+  font-size: 0.74rem;
+  color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+}
+
+.staff-root .combo-empty {
+  padding: 10px;
+  font-size: 0.82rem;
+  color: var(--ink-4);
+}
+
+.staff-root .combo-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  color: var(--accent);
+}
