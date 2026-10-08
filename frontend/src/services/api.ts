@@ -60,16 +60,25 @@ async function _fetch(path: string, options: RequestInit = {}): Promise<any> {
     throw err;
   }
 
-  // 5xx upstream failure (e.g. 502/503/504 when backend container is down)
-  if (res.status >= 502 && res.status <= 504) {
+  // Parse first: whether the API is reachable is answered by what came back,
+  // not by the status code alone.
+  let data;
+  try { data = await res.json(); } catch { data = null; }
+
+  // The banner means "we cannot reach the server", so it has to be driven by
+  // that and nothing else. A 502 carrying a JSON message came *from* the API,
+  // which is therefore up — it is one feature failing, usually an upstream the
+  // API itself depends on. The AI assistant running out of provider credit was
+  // enough to put a site-wide "đang bảo trì" banner over a perfectly healthy
+  // shop, which is both wrong and alarming.
+  const apiAnswered = data !== null && typeof data === 'object';
+  if (res.status >= 502 && res.status <= 504 && !apiAnswered) {
     _showApiDownBanner();
-  } else if (res.ok) {
+  } else if (res.ok || apiAnswered) {
     _hideApiDownBanner();
   }
 
-  // Parse response
-  let data;
-  try { data = await res.json(); } catch { data = {}; }
+  if (data === null) data = {};
 
   if (!res.ok) {
     const err = new Error(data.message || `HTTP ${res.status}`) as ApiError;

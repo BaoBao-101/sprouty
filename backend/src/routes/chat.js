@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { requireAuth, requireCsrf } from '../middleware/rbac.js';
 import { hasEntitlement } from '../services/access.js';
-import { callAi, SPROUTY_SYSTEM, missingProviderKey, supportsImages } from '../services/ai.js';
+import { callAi, classifyAiError, SPROUTY_SYSTEM, missingProviderKey, supportsImages } from '../services/ai.js';
 import { advance, plantDetailDto, plantPromptContext } from '../services/plants.js';
 
 const chatSchema = z.object({
@@ -110,7 +110,10 @@ export default async function chatRoute(fastify) {
       const reply_text = await callAi({ messages, system: enrichedSystem, imageDataUrl });
       return { reply: reply_text };
     } catch (err) {
-      fastify.log.error({ err }, 'Chat error');
+      // Say which of the three fixable causes it was, so a dead assistant
+      // does not need diagnosing from scratch every time.
+      const cause = classifyAiError(err);
+      fastify.log.error({ err, aiCause: cause.kind, fix: cause.hint }, 'Chat error');
       return reply.code(502).send({ message: 'Dịch vụ AI tạm thời không khả dụng. Thử lại sau.' });
     }
   });

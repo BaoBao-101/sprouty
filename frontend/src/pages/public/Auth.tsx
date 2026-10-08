@@ -198,13 +198,6 @@ export default function Auth({ mode }: { mode: Mode }) {
             </Link>
           </div>
 
-          {next && (
-            <p className="auth-next-note">
-              <SproutyIcon name="info" size={16} />
-              Đăng nhập xong bạn sẽ quay lại trang vừa rồi.
-            </p>
-          )}
-
           <form onSubmit={submit} noValidate>
             {mode === 'register' && (
               <label className="auth-field">

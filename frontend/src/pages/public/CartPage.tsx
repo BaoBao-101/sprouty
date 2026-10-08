@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { loginHref } from '@/services/auth-nav';
+import { LoginRequiredDialog, type LoginGate } from '@/components/LoginRequiredDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { API } from '@/services/api';
@@ -213,10 +213,18 @@ export default function CartPage() {
   // product is ever introduced again.
   const needsAddress = false;
 
+  // Asked before the redirect rather than after it: a checkout that silently
+  // turns into a login form reads as the basket having been lost.
+  const [gate, setGate] = useState<LoginGate | null>(null);
+
   function checkout() {
     if (!isLoggedIn) {
-      showToast('Vui lòng đăng nhập để đặt hàng');
-      navigate(loginHref());
+      setGate({
+        action: 'đặt hàng',
+        icon: 'cart',
+        reassurance: 'Giỏ hàng của bạn được giữ nguyên.',
+        next: '/cart',
+      });
       return;
     }
     setShippingOpen(true);
@@ -316,6 +324,8 @@ export default function CartPage() {
           </div>
         )}
       </div>
+
+      <LoginRequiredDialog gate={gate} onClose={() => setGate(null)} />
 
       {shippingOpen && (
         <ShippingModal

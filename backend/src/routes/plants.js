@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { requireAuth, requireCsrf } from '../middleware/rbac.js';
 import { AppError } from '../utils/errors.js';
 import { noHtml, parseOrThrow } from '../utils/validation.js';
-import { callAi, SPROUTY_SYSTEM, missingProviderKey } from '../services/ai.js';
+import { callAi, classifyAiError, SPROUTY_SYSTEM, missingProviderKey } from '../services/ai.js';
 import { CARE_ACTIONS, DEVICES, STAGES } from '../services/plant-sim.js';
 import {
   advance,
@@ -238,7 +238,10 @@ CÁCH TRẢ LỜI:
         stageLabel: detail.stageLabel,
       };
     } catch (err) {
-      fastify.log.error({ err }, 'Plant coach error');
+      // Say which of the three fixable causes it was, so a dead assistant
+      // does not need diagnosing from scratch every time.
+      const cause = classifyAiError(err);
+      fastify.log.error({ err, aiCause: cause.kind, fix: cause.hint }, 'Plant coach error');
       return reply.code(502).send({ message: 'Dịch vụ AI tạm thời không khả dụng. Thử lại sau.' });
     }
   });

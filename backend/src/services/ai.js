@@ -177,6 +177,29 @@ async function callOllama(messages, systemPrompt) {
 }
 
 /**
+ * Classifies why a provider call failed, for the operator's log.
+ *
+ * "AI provider error" told whoever was on call nothing, so diagnosing a dead
+ * assistant meant finding the key, finding the model name and calling the
+ * provider by hand. These are the three answers that need different actions,
+ * and the provider says which one it is — it just says it in a sentence rather
+ * than a code.
+ */
+export function classifyAiError(err) {
+  const text = String(err?.message || '').toLowerCase();
+  if (/credit|quota|billing|exceeded|insufficient|depleted|payment/.test(text)) {
+    return { kind: 'billing', hint: 'Tài khoản AI hết hạn mức hoặc hết tiền — nạp thêm hoặc đổi nhà cung cấp.' };
+  }
+  if (/no longer available|not found|unsupported|does not exist|deprecat/.test(text)) {
+    return { kind: 'model', hint: 'AI_MODEL không còn tồn tại — bỏ biến này để dùng alias mặc định.' };
+  }
+  if (/api key|unauthenticated|unauthorized|permission|invalid.*key|forbidden/.test(text)) {
+    return { kind: 'auth', hint: 'Khoá API sai hoặc bị thu hồi.' };
+  }
+  return { kind: 'unknown', hint: 'Lỗi từ nhà cung cấp AI.' };
+}
+
+/**
  * Sends a conversation to whichever provider is configured and returns the
  * reply text. Throws on provider failure; callers map that to a 502.
  */

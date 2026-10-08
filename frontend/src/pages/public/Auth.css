@@ -222,23 +222,6 @@
   box-shadow: var(--sh-sm);
 }
 
-.auth-next-note {
-  --icon-accent: var(--cobalt);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 16px;
-  padding: 10px 13px;
-  border-radius: var(--r-md);
-  background: var(--cobalt-bg);
-  border: 1.5px solid #A5DEF8;
-  color: #0C6A95;
-  font-size: .84rem;
-  line-height: 1.5;
-}
-
-.auth-next-note svg { flex: none }
-
 .auth-field { display: block; margin-bottom: 15px }
 
 .auth-field > span {

@@ -7,7 +7,7 @@ import { API } from '@/services/api';
 import { formatPrice } from '@/types/product';
 import { formatWorkshopWhen, type PublicWorkshop } from '@/types/workshop';
 import { useAuth } from '@/contexts/AuthContext';
-import { loginHref } from '@/services/auth-nav';
+import { LoginRequiredDialog, type LoginGate } from '@/components/LoginRequiredDialog';
 import './Workshop.css';
 
 export default function Workshop() {
@@ -31,9 +31,16 @@ export default function Workshop() {
    * have been taken, and reopening the dialog on a full session would be worse
    * than letting them choose again from a current list.
    */
+  const [gate, setGate] = useState<LoginGate | null>(null);
+
   function startBooking(workshop: PublicWorkshop) {
     if (!isLoggedIn) {
-      routeTo(loginHref('/workshop'));
+      setGate({
+        action: 'đăng ký workshop',
+        icon: 'ticket',
+        reassurance: 'Chỗ chỉ được giữ sau khi bạn đăng ký xong.',
+        next: '/workshop',
+      });
       return;
     }
     setBooking(workshop);
@@ -443,6 +450,8 @@ export default function Workshop() {
           </div>
         </div>
       </section>
+
+      <LoginRequiredDialog gate={gate} onClose={() => setGate(null)} />
 
       {booking && (
         <WorkshopRegisterModal
