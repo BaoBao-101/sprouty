@@ -881,3 +881,173 @@
 @media (max-width: 760px) {
   .adm-modal .field-grid { grid-template-columns: minmax(0, 1fr) }
 }
+
+/* ── Choosing products for an article ──────────────────────────────────────
+   The list is a scroller inside a dialog that also scrolls, which is what made
+   the bottom card look sliced rather than scrollable. Framing it fixes that:
+   the cut lands inside a bordered box with a fade over it, which reads as
+   "there is more", and the search stays pinned to the top of that box. */
+
+.staff-root .picker-chosen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.staff-root .picker-chosen-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px 5px 11px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--accent);
+  background: var(--accent-pale);
+  color: var(--accent);
+  font-family: var(--font-h);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.staff-root .picker-chosen-chip:hover {
+  background: #DCFCE7;
+}
+
+.staff-root .picker-clear {
+  border: none;
+  background: none;
+  color: var(--ink-4);
+  font-size: 0.78rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.staff-root .picker-clear:hover { color: var(--rose) }
+
+.staff-root .picker-box {
+  border: 1px solid var(--border-c);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.staff-root .picker-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  background: #fff;
+  border-bottom: 1px solid var(--border-c);
+}
+
+.staff-root .picker-search > svg:first-child {
+  position: absolute;
+  left: 20px;
+  color: var(--ink-4);
+  pointer-events: none;
+}
+
+.staff-root .picker-search .form-input {
+  width: 100%;
+  height: 36px;
+  padding-left: 34px;
+  padding-right: 32px;
+  border-color: transparent;
+  background: var(--cream-2);
+}
+
+.staff-root .picker-search .form-input:focus {
+  background: #fff;
+  border-color: var(--accent);
+}
+
+.staff-root .picker-search-clear {
+  position: absolute;
+  right: 18px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--border-c);
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+/* The grid itself: two compact columns, its own scroll, nothing sliced. */
+.staff-root .blog-product-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px;
+  max-height: 290px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: #CBD5E1 transparent;
+}
+
+.staff-root .blog-product-picker::-webkit-scrollbar { width: 9px }
+
+.staff-root .blog-product-picker::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: var(--r-full);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.staff-root .blog-product-option {
+  gap: 9px;
+  padding: 9px 11px;
+  border: 1px solid var(--border-c);
+  border-radius: var(--r-md);
+  background: #fff;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.staff-root .blog-product-option:hover { border-color: #94A3B8 }
+
+.staff-root .blog-product-option.selected {
+  border-color: var(--accent);
+  background: var(--accent-pale);
+}
+
+.staff-root .blog-product-option input { accent-color: var(--accent) }
+
+/* A product that cannot be picked should look it, not just refuse the click. */
+.staff-root .blog-product-option:has(input:disabled) {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.staff-root .blog-product-name {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.staff-root .blog-product-price {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.staff-root .blog-product-meta {
+  font-size: 0.74rem;
+  color: var(--ink-4);
+}
+
+.staff-root .picker-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 34px 16px;
+  color: var(--ink-4);
+  font-size: 0.84rem;
+}

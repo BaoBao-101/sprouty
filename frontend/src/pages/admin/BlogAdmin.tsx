@@ -89,7 +89,6 @@ export default function BlogAdmin() {
 
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
-
   useEffect(() => {
     API.admin.products
       .list()
@@ -104,6 +103,17 @@ export default function BlogAdmin() {
     setCoverPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [coverFile]);
+
+  // The chosen products, kept in the order the article will list them. The
+  // picker scrolls, so without this a selection made at the top is invisible
+  // by the time you reach the bottom.
+  const chosenProducts = useMemo(
+    () =>
+      selectedProductIds
+        .map((id) => products.find((p) => p.id === id))
+        .filter((p): p is Product => Boolean(p)),
+    [selectedProductIds, products],
+  );
 
   const visibleProducts = useMemo(() => {
     const q = productQuery.trim().toLowerCase();
@@ -246,7 +256,6 @@ export default function BlogAdmin() {
       checked ? [...new Set([...list, id])] : list.filter((x) => x !== id),
     );
   }
-
 
   const filters: Array<FilterOption<Filter>> = [
     { value: '', label: 'Tất cả', count: posts.length },
@@ -498,54 +507,101 @@ export default function BlogAdmin() {
                 </span>
               )}
             </span>
-            <span className="field-hint" style={{ marginBottom: 8 }}>
+            <span className="field-hint" style={{ marginBottom: 10 }}>
               Hiện ở cuối bài viết. Chỉ chọn được sản phẩm đang bán.
             </span>
-            <input
-              className="form-input"
-              placeholder="Tìm sản phẩm…"
-              style={{ marginBottom: 10 }}
-              value={productQuery}
-              onChange={(e) => setProductQuery(e.target.value)}
-            />
-            {visibleProducts.length === 0 ? (
-              <div className="panel-empty">Không tìm thấy sản phẩm nào.</div>
-            ) : (
-              <div className="blog-product-picker">
-                {visibleProducts.map((product) => {
-                  const selected = selectedProductIds.includes(product.id);
-                  const unpublished = product.status !== 'published';
-                  return (
-                    <label
-                      key={product.id}
-                      className={`blog-product-option${selected ? ' selected' : ''}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selected}
-                        disabled={unpublished}
-                        onChange={(e) => toggleProduct(product.id, e.target.checked)}
-                      />
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div className="blog-product-head">
-                          <div className="blog-product-name">{product.name}</div>
-                          <div className="blog-product-price">{formatPrice(product.price)}</div>
-                        </div>
-                        <div className="blog-product-meta">
-                          {product.col} · {product.age}
-                          {unpublished && (
-                            <>
-                              {' · '}
-                              <Pill tone="grey">{STATUS_LABEL[product.status] ?? product.status}</Pill>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </label>
-                  );
-                })}
+
+            {/* Chosen first, as chips you can drop without hunting for the
+                row they came from. */}
+            {chosenProducts.length > 0 && (
+              <div className="picker-chosen">
+                {chosenProducts.map((product) => (
+                  <button
+                    type="button"
+                    key={product.id}
+                    className="picker-chosen-chip"
+                    onClick={() => toggleProduct(product.id, false)}
+                    title="Bỏ khỏi bài viết"
+                  >
+                    {product.name}
+                    <AdminIcon name="close" size={13} />
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className="picker-clear"
+                  onClick={() => setSelectedProductIds([])}
+                >
+                  Bỏ hết
+                </button>
               </div>
             )}
+
+            <div className="picker-box">
+              <div className="picker-search">
+                <AdminIcon name="search" size={16} />
+                <input
+                  className="form-input"
+                  placeholder="Tìm sản phẩm theo tên…"
+                  value={productQuery}
+                  onChange={(e) => setProductQuery(e.target.value)}
+                />
+                {productQuery && (
+                  <button
+                    type="button"
+                    className="picker-search-clear"
+                    onClick={() => setProductQuery('')}
+                    aria-label="Xoá tìm kiếm"
+                  >
+                    <AdminIcon name="close" size={13} />
+                  </button>
+                )}
+              </div>
+
+              {visibleProducts.length === 0 ? (
+                <div className="picker-empty">
+                  <AdminIcon name="products" size={22} />
+                  Không tìm thấy sản phẩm nào.
+                </div>
+              ) : (
+                <div className="blog-product-picker">
+                  {visibleProducts.map((product) => {
+                    const selected = selectedProductIds.includes(product.id);
+                    const unpublished = product.status !== 'published';
+                    return (
+                      <label
+                        key={product.id}
+                        className={`blog-product-option${selected ? ' selected' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          disabled={unpublished}
+                          onChange={(e) => toggleProduct(product.id, e.target.checked)}
+                        />
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div className="blog-product-head">
+                            <div className="blog-product-name">{product.name}</div>
+                            <div className="blog-product-price">{formatPrice(product.price)}</div>
+                          </div>
+                          <div className="blog-product-meta">
+                            {product.col} · {product.age}
+                            {unpublished && (
+                              <>
+                                {' · '}
+                                <Pill tone="grey">
+                                  {STATUS_LABEL[product.status] ?? product.status}
+                                </Pill>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           {formError && <div className="form-error">{formError}</div>}
