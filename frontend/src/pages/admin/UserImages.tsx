@@ -24,7 +24,7 @@ interface UserImage {
 
 type ImageStatus = 'active' | 'hidden' | 'deleted';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 const STATUS_LABEL: Record<string, string> = {
   active: 'Đang hiện',

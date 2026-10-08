@@ -261,6 +261,7 @@ export const API = {
       status(id, status) { return _fetch(`/admin/user-images/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }); },
     },
     workshops: {
+      list(params = {})  { return _fetch('/admin/workshops?' + new URLSearchParams(params)); },
       stats()            { return _fetch('/admin/workshops/stats'); },
       create(data)       { return _fetch('/admin/workshops', { method: 'POST', body: JSON.stringify(data) }); },
       update(id, data)   { return _fetch(`/admin/workshops/${id}`, { method: 'PUT', body: JSON.stringify(data) }); },

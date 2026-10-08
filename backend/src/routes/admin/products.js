@@ -117,7 +117,7 @@ export default async function adminProductRoutes(fastify) {
 
   // GET /api/v1/admin/products
   fastify.get('/products', { preHandler: [requireEmployee] }, async (req) => {
-    const paging = readPaging(req.query, { defaultLimit: 24 });
+    const paging = readPaging(req.query);
     const { status, category } = req.query;
 
     const where = {};

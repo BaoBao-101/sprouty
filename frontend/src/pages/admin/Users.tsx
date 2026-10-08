@@ -276,7 +276,7 @@ function ResetPasswordModal({ user, onClose }: { user: AdminUser; onClose: () =>
 
 type Filter = '' | Role | 'vip' | 'disabled';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 export default function Users() {
   const [users, setUsers] = useState<AdminUser[]>([]);

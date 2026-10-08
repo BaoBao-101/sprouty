@@ -31,7 +31,7 @@ interface AuditEntry {
   actor?: { id: string; name: string; email: string; role: string } | null;
 }
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 /**
  * Actions are dotted namespaces ("user.password.reset"). The prefix says which

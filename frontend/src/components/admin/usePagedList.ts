@@ -14,6 +14,9 @@ import type { LoadState } from '@/components/admin/ui';
  * parameters, and what comes back is one page of matches out of the whole
  * table.
  */
+/** Ten rows a page, the same everywhere, so no table is read differently. */
+export const ADMIN_PAGE_SIZE = 10;
+
 export interface PagedResult<T> {
   items: T[];
   state: LoadState;
@@ -37,7 +40,7 @@ export function usePagedList<T>(
   key: string,
   /** Filters and search, already narrowed to what the server understands. */
   params: Record<string, string>,
-  { limit = 20, errorText = 'Không tải được dữ liệu.' } = {},
+  { limit = ADMIN_PAGE_SIZE, errorText = 'Không tải được dữ liệu.' } = {},
 ): PagedResult<T> {
   const [items, setItems] = useState<T[]>([]);
   const [state, setState] = useState<LoadState>('loading');

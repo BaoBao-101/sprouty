@@ -8,10 +8,13 @@
  * hand-rolled copy of this, with its own defaults.
  */
 
+/** Ten rows a page across the admin, so every table is read the same way. */
+const DEFAULT_LIMIT = 10;
+
 /** Hard ceiling, so a crafted ?limit=100000 cannot be used to pull the table. */
 const MAX_LIMIT = 100;
 
-export function readPaging(query, { defaultLimit = 20 } = {}) {
+export function readPaging(query, { defaultLimit = DEFAULT_LIMIT } = {}) {
   const page = Math.max(1, Number.parseInt(query.page, 10) || 1);
   const limit = Math.min(MAX_LIMIT, Math.max(1, Number.parseInt(query.limit, 10) || defaultLimit));
   return { page, limit, skip: (page - 1) * limit, take: limit };

@@ -6,6 +6,50 @@ import { auditLog } from '../../services/audit.js';
 import { createAsset } from '../../services/storage/index.js';
 import { readPaging, paged, searchOr } from './paging.js';
 
+/** Seats, money and whether it has happened yet — the shape the table reads. */
+function enrichWorkshop(w, now) {
+  const taken = w.registrations.reduce((sum, r) => sum + r.childCount, 0);
+  return {
+    id: w.id,
+    title: w.title,
+    description: w.description,
+    imageUrl: w.imageUrl,
+    dateTime: w.dateTime,
+    endTime: w.endTime,
+    capacity: w.capacity,
+    location: w.location,
+    ageRange: w.ageRange,
+    price: w.price,
+    status: w.status,
+    registrations: taken,
+    bookingCount: w.registrations.length,
+    // Seats actually paid for, and money in the bank for this session — an
+    // onsite booking is only a promise until someone turns up.
+    paidSeats: w.registrations.reduce((sum, r) => sum + (r.paidAt ? r.childCount : 0), 0),
+    paidAmount: w.registrations.reduce((sum, r) => sum + (r.paidAt ? r.amount : 0), 0),
+    pctFull: w.capacity > 0 ? Math.round((taken / w.capacity) * 100) : 0,
+    // Measured against the end time where one is known, matching the public
+    // route — otherwise a session in progress reads as "đã diễn ra" here
+    // while it is still listed for customers.
+    upcoming: (w.endTime ?? w.dateTime) > now,
+  };
+}
+
+/**
+ * Prisma cannot express `COALESCE(endTime, dateTime) >= now`, so the two
+ * cases are spelled out. Using dateTime alone would file a session that is
+ * running right now under "đã diễn ra", which is not what the row says.
+ */
+function whenFilter(when, now) {
+  if (when === 'upcoming') {
+    return { OR: [{ endTime: { gte: now } }, { endTime: null, dateTime: { gte: now } }] };
+  }
+  if (when === 'past') {
+    return { OR: [{ endTime: { lt: now } }, { endTime: null, dateTime: { lt: now } }] };
+  }
+  return null;
+}
+
 const workshopSchema = z.object({
   title: noHtml('Tên workshop').and(
     z.string()
@@ -107,8 +151,8 @@ export default async function adminWorkshopRoutes(fastify) {
     if (or) where.OR = or;
 
     const now = new Date();
-    if (req.query.when === 'upcoming') where.dateTime = { gte: now };
-    if (req.query.when === 'past') where.dateTime = { lt: now };
+    const when = whenFilter(req.query.when, now);
+    if (when) Object.assign(where, when.OR ? { AND: [when] } : when);
 
     const [workshops, total, upcoming, past] = await Promise.all([
       fastify.prisma.workshop.findMany({
@@ -120,17 +164,19 @@ export default async function adminWorkshopRoutes(fastify) {
             select: { childCount: true, paidAt: true, amount: true },
           },
         },
+        // Newest first: a session next week is what staff came here for, and
+        // one from two years ago is not.
         orderBy: { dateTime: 'desc' },
         skip: paging.skip,
         take: paging.take,
       }),
       fastify.prisma.workshop.count({ where }),
-      fastify.prisma.workshop.count({ where: { dateTime: { gte: now } } }),
-      fastify.prisma.workshop.count({ where: { dateTime: { lt: now } } }),
+      fastify.prisma.workshop.count({ where: whenFilter('upcoming', now) }),
+      fastify.prisma.workshop.count({ where: whenFilter('past', now) }),
     ]);
 
     return {
-      ...paged(workshops, total, paging, 'workshops'),
+      ...paged(workshops.map((w) => enrichWorkshop(w, now)), total, paging, 'workshops'),
       counts: { upcoming, past, all: upcoming + past },
     };
   });
@@ -171,33 +217,7 @@ export default async function adminWorkshopRoutes(fastify) {
     ]);
 
     const now = new Date();
-    const enrichedWorkshops = workshops.map(w => {
-      const taken = w.registrations.reduce((sum, r) => sum + r.childCount, 0);
-      return {
-        id: w.id,
-        title: w.title,
-        description: w.description,
-        imageUrl: w.imageUrl,
-        dateTime: w.dateTime,
-        endTime: w.endTime,
-        capacity: w.capacity,
-        location: w.location,
-        ageRange: w.ageRange,
-        price: w.price,
-        status: w.status,
-        registrations: taken,
-        bookingCount: w.registrations.length,
-        // Seats actually paid for, and money in the bank for this session —
-        // an onsite booking is only a promise until someone turns up.
-        paidSeats: w.registrations.reduce((sum, r) => sum + (r.paidAt ? r.childCount : 0), 0),
-        paidAmount: w.registrations.reduce((sum, r) => sum + (r.paidAt ? r.amount : 0), 0),
-        pctFull: w.capacity > 0 ? Math.round((taken / w.capacity) * 100) : 0,
-        // Measured against the end time where one is known, matching the public
-        // route — otherwise a session in progress reads as "đã diễn ra" here
-        // while it is still listed for customers.
-        upcoming: (w.endTime ?? w.dateTime) > now,
-      };
-    });
+    const enrichedWorkshops = workshops.map((w) => enrichWorkshop(w, now));
 
     return {
       workshops: enrichedWorkshops,

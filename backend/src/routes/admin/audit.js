@@ -16,7 +16,7 @@ export default async function adminAuditRoutes(fastify) {
   fastify.get('/audit-logs', { preHandler: [requireAdmin] }, async (req) => {
     const { action, actorUserId, targetType, page = '1', limit = '25' } = req.query;
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
-    const pageSize = Math.min(100, Math.max(1, parseInt(limit, 10) || 25));
+    const pageSize = Math.min(100, Math.max(1, parseInt(limit, 10) || 10));
 
     const where = {};
     // `action` is a dotted namespace ("user.password.reset"), so a prefix match

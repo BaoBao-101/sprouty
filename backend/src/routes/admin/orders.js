@@ -11,7 +11,7 @@ const updateStatusSchema = z.object({
 export default async function adminOrderRoutes(fastify) {
   // GET /api/v1/admin/orders
   fastify.get('/orders', { preHandler: [requireEmployee] }, async (req) => {
-    const { status, search, page = '1', limit = '20' } = req.query;
+    const { status, search, page = '1', limit = '10' } = req.query;
     const pageNum = Math.max(1, parseInt(page, 10));
     const pageSize = Math.min(100, Math.max(1, parseInt(limit, 10)));
 

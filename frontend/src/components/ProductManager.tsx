@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ProductEditor, type AdminProduct } from './ProductEditor';
 import { VideoPanel } from './VideoPanel';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,6 +6,21 @@ import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { formatPrice } from '@/types/product';
 import { AdminIcon } from '@/components/icons/AdminIcon';
+import {
+  FilterPills,
+  Modal,
+  PageHeader,
+  Pagination,
+  Panel,
+  Pill,
+  SearchBox,
+  StatCard,
+  StatGrid,
+  TableStates,
+  Toolbar,
+  type FilterOption,
+} from '@/components/admin/ui';
+import { usePagedList } from '@/components/admin/usePagedList';
 
 /**
  * The product catalogue, shared by the admin and employee areas.
@@ -21,10 +36,16 @@ const STATUS_LABEL: Record<string, string> = {
   archived: 'Lưu trữ',
 };
 
-const STATUS_PILL: Record<string, string> = {
-  published: 'pill-pub',
-  draft: 'pill-draft',
-  archived: 'pill-arch',
+const STATUS_TONE: Record<string, string> = {
+  published: 'green',
+  draft: 'amber',
+  archived: 'grey',
+};
+
+const CATEGORY_LABEL: Record<string, string> = {
+  kit: 'Kit trồng cây',
+  book: 'Hướng dẫn chăm cây',
+  membership: 'Gói thành viên',
 };
 
 function ProductRow({
@@ -47,7 +68,7 @@ function ProductRow({
   async function remove() {
     if (
       !confirm(
-        `Xóa sản phẩm "${product.name}"?\n\nNếu sản phẩm đã có trong đơn hàng, nó sẽ được chuyển sang Lưu trữ thay vì xoá hẳn.`,
+        `Xoá sản phẩm “${product.name}”?\n\nNếu sản phẩm đã có trong đơn hàng, nó sẽ được chuyển sang Lưu trữ thay vì xoá hẳn.`,
       )
     )
       return;
@@ -55,7 +76,7 @@ function ProductRow({
     setDeleting(true);
     try {
       const result = await API.admin.products.remove(product.id);
-      showToast(result.message || 'Đã xóa sản phẩm', 'success');
+      showToast(result.message || 'Đã xoá sản phẩm', 'success');
       onDeleted();
     } catch (err: any) {
       showToast(`Lỗi: ${err?.message}`, 'error');
@@ -67,43 +88,61 @@ function ProductRow({
     <tr className={deleting ? 'row-busy' : undefined}>
       <td>
         {imageFailed || !firstImage ? (
-          <div className="prod-img prod-img-fallback">{product.emoji || <AdminIcon name="products" size={22} />}</div>
+          <div className="prod-img prod-img-fallback">
+            {product.emoji || <AdminIcon name="products" size={20} />}
+          </div>
         ) : (
           <img className="prod-img" src={firstImage} alt="" onError={() => setImageFailed(true)} />
         )}
       </td>
+
       <td>
         <div style={{ fontWeight: 600 }}>{product.name}</div>
-        <div className="admin-cell-sub">{product.collection}</div>
+        <div className="admin-cell-sub">
+          #{product.id}
+          {product.collection ? ` · ${product.collection}` : ''}
+          {product.speciesKey ? ` · giống ${product.speciesKey}` : ''}
+        </div>
       </td>
-      <td style={{ fontSize: '.8rem' }}>
-        {product.category === 'kit' ? 'Kit trồng cây' : 'Hướng dẫn chăm cây'}
+
+      <td style={{ fontSize: '.82rem' }}>
+        {CATEGORY_LABEL[product.category] ?? product.category}
       </td>
-      <td>
+
+      <td className="ad-num">
         <div className="admin-money">{formatPrice(product.price)}</div>
         {!!product.oldPrice && product.oldPrice > product.price && (
           <div className="prod-old-price">{formatPrice(product.oldPrice)}</div>
         )}
       </td>
-      <td style={{ fontSize: '.8rem' }}>{product.ageRange}</td>
+
+      <td style={{ fontSize: '.82rem' }}>{product.ageRange || '—'}</td>
+
       <td>
-        <span className={`pill ${STATUS_PILL[product.status] ?? ''}`}>
+        <Pill tone={STATUS_TONE[product.status] ?? 'grey'}>
           {STATUS_LABEL[product.status] ?? product.status}
-        </span>
+        </Pill>
       </td>
+
       <td>
-        <div className="admin-inline-actions">
+        <div className="ad-row-actions">
           {canEdit && (
-            <button className="act-btn act-edit" onClick={onEdit}>
-              Sửa
+            <button className="ad-icon-btn" onClick={onEdit} title="Sửa sản phẩm" aria-label="Sửa sản phẩm">
+              <AdminIcon name="edit" size={16} />
             </button>
           )}
-          <button className="act-btn act-edit" onClick={onVideos}>
-            Video
+          <button className="ad-icon-btn" onClick={onVideos} title="Video hướng dẫn" aria-label="Video hướng dẫn">
+            <AdminIcon name="video" size={16} />
           </button>
           {canEdit && (
-            <button className="act-btn act-del" onClick={remove} disabled={deleting}>
-              {deleting ? 'Đang xoá...' : 'Xóa'}
+            <button
+              className="ad-icon-btn danger"
+              onClick={remove}
+              disabled={deleting}
+              title="Xoá sản phẩm"
+              aria-label="Xoá sản phẩm"
+            >
+              <AdminIcon name="trash" size={16} />
             </button>
           )}
         </div>
@@ -114,53 +153,108 @@ function ProductRow({
 
 export function ProductManager() {
   const { isAdmin } = useAuth();
-  const [products, setProducts] = useState<AdminProduct[]>([]);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [error, setError] = useState('');
+
+  const [status, setStatus] = useState('');
+  const [category, setCategory] = useState('');
+  const [search, setSearch] = useState('');
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<AdminProduct | null>(null);
   const [videoFor, setVideoFor] = useState<AdminProduct | null>(null);
 
-  const load = useCallback(() => {
-    setStatus('loading');
-    API.admin.products
-      .list()
-      .then((data: any) => {
-        setProducts(data.products || []);
-        setStatus('ready');
-      })
-      .catch((err: any) => {
-        setError(err?.message || 'Không tải được sản phẩm.');
-        setStatus('error');
-      });
-  }, []);
+  const {
+    items: products,
+    state,
+    error,
+    page,
+    pages,
+    total,
+    counts,
+    raw,
+    setPage,
+    reload: load,
+  } = usePagedList<AdminProduct>(
+    (params) => API.admin.products.list(params),
+    'products',
+    { status, category, search: search.trim() },
+    { errorText: 'Không tải được sản phẩm.' },
+  );
 
-  useEffect(load, [load]);
+  const published = counts.published || 0;
+  const draft = counts.draft || 0;
+  const archived = counts.archived || 0;
+  const all = published + draft + archived;
+
+  const statusFilters: Array<FilterOption<string>> = [
+    { value: '', label: 'Tất cả', count: all },
+    { value: 'published', label: 'Đang bán', count: published },
+    { value: 'draft', label: 'Bản nháp', count: draft },
+    { value: 'archived', label: 'Lưu trữ', count: archived },
+  ];
+
+  // Offered from what the catalogue actually contains, so a category nobody
+  // uses does not sit there as a filter that always returns nothing.
+  const categories: Array<{ value: string; count: number }> = raw?.categories || [];
+
+  const filtering = Boolean(status || category || search.trim());
 
   return (
     <>
-      <div className="page-header">
-        <div className="page-head" style={{ margin: 0 }}>
-          <h1>Quản lý sản phẩm</h1>
-          <p>
-            {isAdmin
-              ? 'Thêm, sửa và quản lý catalog sản phẩm'
-              : 'Xem catalog và quản lý video hướng dẫn'}
-          </p>
-        </div>
-        {isAdmin && (
-          <button
-            className="btn btn-primary"
-            onClick={() => {
-              setEditing(null);
-              setEditorOpen(true);
-            }}
-          >
-            + Thêm sản phẩm
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title="Sản phẩm"
+        subtitle={
+          isAdmin
+            ? 'Thêm, sửa và quản lý catalog sản phẩm bán trên web'
+            : 'Xem catalog và quản lý video hướng dẫn'
+        }
+        actions={
+          isAdmin && (
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                setEditing(null);
+                setEditorOpen(true);
+              }}
+            >
+              <AdminIcon name="plus" size={17} />
+              Thêm sản phẩm
+            </button>
+          )
+        }
+      />
+
+      <StatGrid>
+        <StatCard
+          icon={<AdminIcon name="products" />}
+          tone="orange"
+          loading={state === 'loading'}
+          value={all}
+          label="Tổng sản phẩm"
+        />
+        <StatCard
+          icon={<AdminIcon name="check" />}
+          tone="green"
+          loading={state === 'loading'}
+          value={published}
+          label="Đang bán"
+          hint="Khách nhìn thấy trên shop"
+        />
+        <StatCard
+          icon={<AdminIcon name="edit" />}
+          tone="amber"
+          loading={state === 'loading'}
+          value={draft}
+          label="Bản nháp"
+          hint="Chưa lên shop"
+        />
+        <StatCard
+          icon={<AdminIcon name="layers" />}
+          tone="blue"
+          loading={state === 'loading'}
+          value={archived}
+          label="Lưu trữ"
+        />
+      </StatGrid>
 
       {!isAdmin && (
         <div className="panel-note" style={{ marginBottom: 16 }}>
@@ -169,44 +263,66 @@ export function ProductManager() {
         </div>
       )}
 
-      <div className="admin-card">
-        <div style={{ overflowX: 'auto' }}>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Ảnh</th>
-                <th>Tên sản phẩm</th>
-                <th>Danh mục</th>
-                <th>Giá</th>
-                <th>Độ tuổi</th>
-                <th>Trạng thái</th>
-                <th>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {status === 'loading' && (
-                <tr>
-                  <td colSpan={7} className="admin-cell-empty">
-                    Đang tải...
-                  </td>
-                </tr>
-              )}
-              {status === 'error' && (
-                <tr>
-                  <td colSpan={7} className="admin-cell-error">
-                    {error}
-                  </td>
-                </tr>
-              )}
-              {status === 'ready' && products.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="admin-cell-empty">
-                    Chưa có sản phẩm nào.
-                  </td>
-                </tr>
-              )}
+      <Toolbar>
+        <FilterPills options={statusFilters} value={status} onChange={setStatus} />
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          {categories.length > 1 && (
+            <select
+              className="form-select"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              aria-label="Lọc theo danh mục"
+              style={{ height: 38 }}
+            >
+              <option value="">Mọi danh mục</option>
+              {categories.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {CATEGORY_LABEL[c.value] ?? c.value} ({c.count})
+                </option>
+              ))}
+            </select>
+          )}
+          <SearchBox
+            value={search}
+            placeholder="Tìm theo tên, mô tả hoặc giống cây…"
+            onChange={setSearch}
+          />
+        </div>
+      </Toolbar>
 
-              {products.map((product) => (
+      <Panel flush>
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th style={{ width: 72 }}>Ảnh</th>
+              <th>Sản phẩm</th>
+              <th>Danh mục</th>
+              <th className="ad-num">Giá</th>
+              <th>Độ tuổi</th>
+              <th>Trạng thái</th>
+              <th style={{ width: 118 }}>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            <TableStates
+              state={state}
+              error={error}
+              isEmpty={products.length === 0}
+              columns={7}
+              emptyIcon={<AdminIcon name="products" size={24} />}
+              emptyTitle={filtering ? 'Không tìm thấy sản phẩm nào' : 'Chưa có sản phẩm'}
+              emptyHint={
+                filtering
+                  ? 'Thử bỏ bộ lọc hoặc đổi từ khoá.'
+                  : isAdmin
+                    ? 'Bấm “Thêm sản phẩm” để tạo sản phẩm đầu tiên.'
+                    : undefined
+              }
+              onRetry={load}
+            />
+
+            {state === 'ready' &&
+              products.map((product) => (
                 <ProductRow
                   key={product.id}
                   product={product}
@@ -219,10 +335,11 @@ export function ProductManager() {
                   onDeleted={load}
                 />
               ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+          </tbody>
+        </table>
+
+        <Pagination page={page} pages={pages} total={total} unit="sản phẩm" onChange={setPage} />
+      </Panel>
 
       {editorOpen && isAdmin && (
         <ProductEditor editing={editing} onClose={() => setEditorOpen(false)} onSaved={load} />
@@ -230,34 +347,19 @@ export function ProductManager() {
 
       {/* Standalone video manager, for employees who cannot open the editor. */}
       {videoFor && (
-        <div
-          className="adm-modal open"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setVideoFor(null);
-          }}
+        <Modal
+          title="Video hướng dẫn"
+          subtitle={videoFor.name}
+          width={760}
+          onClose={() => setVideoFor(null)}
+          footer={
+            <button className="btn btn-ghost" onClick={() => setVideoFor(null)}>
+              Đóng
+            </button>
+          }
         >
-          <div className="adm-modal-box editor-box">
-            <div className="editor-head">
-              <div>
-                <h2 className="adm-modal-title" style={{ margin: 0 }}>
-                  Video hướng dẫn
-                </h2>
-                <p className="editor-sub">{videoFor.name}</p>
-              </div>
-              <button className="adm-modal-close" onClick={() => setVideoFor(null)} aria-label="Đóng">
-                <AdminIcon name="close" size={18} />
-              </button>
-            </div>
-            <div className="editor-body">
-              <VideoPanel productId={videoFor.id} productName={videoFor.name} />
-            </div>
-            <div className="editor-foot">
-              <button className="btn btn-ghost" onClick={() => setVideoFor(null)}>
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
+          <VideoPanel productId={videoFor.id} productName={videoFor.name} />
+        </Modal>
       )}
     </>
   );

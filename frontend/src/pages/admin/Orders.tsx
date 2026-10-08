@@ -26,7 +26,7 @@ import {
 import { formatPrice } from '@/types/product';
 import { AdminIcon } from '@/components/icons/AdminIcon';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 const STATUS_TONE: Record<OrderStatus, string> = {
   pending: 'amber',

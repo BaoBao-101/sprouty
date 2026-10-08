@@ -10,6 +10,8 @@ import {
   StatCard,
   StatGrid,
   TableStates,
+  Pagination,
+  SearchBox,
   Toolbar,
   type FilterOption,
   type LoadState,
@@ -18,6 +20,7 @@ import { API } from '@/services/api';
 import { formatWorkshopWhen } from '@/types/workshop';
 import { showToast } from '@/services/toast';
 import { AdminIcon } from '@/components/icons/AdminIcon';
+import { usePagedList } from '@/components/admin/usePagedList';
 
 interface WorkshopRow {
   id: string;
@@ -138,9 +141,29 @@ type Filter = '' | 'upcoming' | 'past';
 
 export default function Workshops() {
   const [stats, setStats] = useState<Stats | null>(null);
-  const [state, setState] = useState<LoadState>('loading');
-  const [error, setError] = useState('');
+  const [statsError, setStatsError] = useState('');
   const [filter, setFilter] = useState<Filter>('');
+  const [search, setSearch] = useState('');
+
+  // Two sources on purpose. The table is one page of rows that match the
+  // filter; the tiles and the per-location breakdown are totals over every
+  // workshop, and a headline that counted only the page would be a lie.
+  const {
+    items: visible,
+    state,
+    error,
+    page,
+    pages,
+    total,
+    counts,
+    setPage,
+    reload: reloadList,
+  } = usePagedList<WorkshopRow>(
+    (params) => API.admin.workshops.list(params),
+    'workshops',
+    { when: filter, search: search.trim() },
+    { errorText: 'Không tải được workshop.' },
+  );
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -154,21 +177,25 @@ export default function Workshops() {
   const [regState, setRegState] = useState<LoadState>('loading');
   const [regError, setRegError] = useState('');
 
-  const load = useCallback(() => {
-    setState('loading');
+  const loadStats = useCallback(() => {
     API.admin.workshops
       .stats()
       .then((data: any) => {
         setStats(data);
-        setState('ready');
+        setStatsError('');
       })
       .catch((err: any) => {
-        setError(err?.message || 'Không tải được số liệu.');
-        setState('error');
+        setStatsError(err?.message || 'Không tải được số liệu.');
       });
   }, []);
 
-  useEffect(load, [load]);
+  useEffect(loadStats, [loadStats]);
+
+  // Anything that changes a workshop changes both halves of the screen.
+  const load = useCallback(() => {
+    reloadList();
+    loadStats();
+  }, [reloadList, loadStats]);
 
   const set = (key: keyof typeof EMPTY_FORM) => (value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -358,14 +385,9 @@ export default function Workshops() {
     }
   }
 
-  const all = stats?.workshops || [];
-  const upcomingCount = all.filter((w) => w.upcoming).length;
-
-  const visible = useMemo(() => {
-    if (filter === 'upcoming') return all.filter((w) => w.upcoming);
-    if (filter === 'past') return all.filter((w) => !w.upcoming);
-    return all;
-  }, [all, filter]);
+  const upcomingCount = counts.upcoming || 0;
+  const pastCount = counts.past || 0;
+  const allCount = counts.all || 0;
 
   const totals = stats?.totals;
   const loading = state === 'loading';
@@ -377,9 +399,9 @@ export default function Workshops() {
       : 0;
 
   const filters: Array<FilterOption<Filter>> = [
-    { value: '', label: 'Tất cả', count: all.length },
+    { value: '', label: 'Tất cả', count: allCount },
     { value: 'upcoming', label: 'Sắp tới', count: upcomingCount },
-    { value: 'past', label: 'Đã diễn ra', count: all.length - upcomingCount },
+    { value: 'past', label: 'Đã diễn ra', count: pastCount },
   ];
 
   return (
@@ -393,6 +415,17 @@ export default function Workshops() {
           </button>
         }
       />
+
+      {/* The tiles come from a second request; if only that one fails the
+          table is still usable, so say so rather than blanking the page. */}
+      {statsError && (
+        <div className="panel-note" style={{ marginBottom: 16 }}>
+          <AdminIcon name="alert" size={16} /> Không tải được số liệu tổng: {statsError}{' '}
+          <button className="btn btn-ghost btn-sm" onClick={loadStats}>
+            Thử lại
+          </button>
+        </div>
+      )}
 
       <StatGrid>
         <StatCard
@@ -429,6 +462,11 @@ export default function Workshops() {
 
       <Toolbar>
         <FilterPills options={filters} value={filter} onChange={(next) => setFilter(next)} />
+        <SearchBox
+          value={search}
+          placeholder="Tìm theo tên buổi hoặc địa điểm…"
+          onChange={setSearch}
+        />
       </Toolbar>
 
       <Panel title="Danh sách workshop" flush>
@@ -449,9 +487,11 @@ export default function Workshops() {
               isEmpty={visible.length === 0}
               columns={5}
               emptyIcon={<AdminIcon name="workshop" size={24} />}
-              emptyTitle={filter ? 'Không có buổi nào' : 'Chưa có workshop'}
+              emptyTitle={filter || search ? 'Không có buổi nào' : 'Chưa có workshop'}
               emptyHint={
-                filter ? 'Thử chọn bộ lọc khác.' : 'Bấm “Tạo workshop” để mở buổi đầu tiên.'
+                filter || search
+                  ? 'Thử bỏ bộ lọc hoặc đổi từ khoá.'
+                  : 'Bấm “Tạo workshop” để mở buổi đầu tiên.'
               }
               onRetry={load}
             />
@@ -529,6 +569,8 @@ export default function Workshops() {
               ))}
           </tbody>
         </table>
+
+        <Pagination page={page} pages={pages} total={total} unit="buổi" onChange={setPage} />
       </Panel>
 
       <Panel title="Theo địa điểm" flush>
