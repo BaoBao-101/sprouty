@@ -36,6 +36,38 @@ import { assetAccessGuard } from './middleware/assetGuard.js';
 
 const isProd = process.env.NODE_ENV === 'production';
 
+/**
+ * Where the uploaded-asset static mount lives, as a route path.
+ *
+ * PUBLIC_ASSET_BASE_URL does two jobs: it prefixes the URLs written into asset
+ * records, and it was passed straight to @fastify/static as the mount prefix.
+ * Those are only the same string when the API and the files share an origin.
+ *
+ * A split deployment — frontend on a CDN, API on its own host — has to set it to
+ * a full URL like https://api.example.com/uploads so clients can resolve the
+ * files. Fastify then refused the prefix at boot ("The first character of a path
+ * should be / or *") and the whole server crash-looped, taking down an API that
+ * had nothing to do with uploads.
+ *
+ * So the mount takes the path and nothing else. services/storage/localStorage.js
+ * still uses the whole value for the URLs it hands out, which is the job that
+ * actually needs the origin.
+ */
+function assetMountPath() {
+  const raw = process.env.PUBLIC_ASSET_BASE_URL || '/uploads';
+  let path = raw;
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      path = new URL(raw).pathname;
+    } catch {
+      path = '/uploads';
+    }
+  }
+  if (!path.startsWith('/')) path = `/${path}`;
+  // @fastify/static wants a trailing slash on the prefix.
+  return path.replace(/\/?$/, '/');
+}
+
 if (isProd && !process.env.COOKIE_SECRET) {
   console.error('FATAL: COOKIE_SECRET must be set in production.');
   process.exit(1);
@@ -138,7 +170,7 @@ if ((process.env.ASSET_STORAGE_PROVIDER || 'local') === 'local') {
     scope.addHook('preHandler', assetAccessGuard);
     await scope.register(fastifyStatic, {
       root: localUploadRoot(),
-      prefix: (process.env.PUBLIC_ASSET_BASE_URL || '/uploads').replace(/\/?$/, '/'),
+      prefix: assetMountPath(),
       decorateReply: false,
     });
   });
