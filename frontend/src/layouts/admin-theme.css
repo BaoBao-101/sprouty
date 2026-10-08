@@ -856,3 +856,28 @@
   margin-top: 6px;
   color: var(--accent);
 }
+
+/* ── Dialogs ───────────────────────────────────────────────────────────────
+   Wider than the 600px the old rule set. These forms put two fields on a row
+   and now carry chips under each one; at 560 the chips wrapped to three lines
+   and the dialog turned into a column of scrolling. */
+
+.staff-root .adm-modal-box,
+.adm-modal .adm-modal-box {
+  max-width: 880px;
+}
+
+.adm-modal .adm-modal-box.editor-box {
+  max-width: 1000px;
+}
+
+/* Two columns stay two columns while there is room for them. */
+.adm-modal .field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 760px) {
+  .adm-modal .field-grid { grid-template-columns: minmax(0, 1fr) }
+}

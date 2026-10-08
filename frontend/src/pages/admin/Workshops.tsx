@@ -628,7 +628,7 @@ export default function Workshops() {
               ? 'Khách đã đăng ký sẽ thấy thông tin mới ngay'
               : 'Buổi mới hiện trên trang Workshop công khai ngay sau khi tạo'
           }
-          width={560}
+          width={880}
           onClose={() => setEditorOpen(false)}
           footer={
             <>
@@ -879,7 +879,7 @@ export default function Workshops() {
         <Modal
           title="Danh sách đăng ký"
           subtitle={`${viewing.title} · ${viewing.registrations}/${viewing.capacity} chỗ`}
-          width={620}
+          width={940}
           onClose={() => setViewing(null)}
           footer={
             <button className="btn btn-ghost" onClick={() => setViewing(null)}>
