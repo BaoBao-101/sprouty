@@ -1,8 +1,14 @@
+/**
+ * The assistant at full size: the same conversation the bubble shows, plus
+ * the photo and voice input there is no room for in a floating panel.
+ */
+
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { loginHref } from '@/services/auth-nav';
 import { useAuth } from '@/contexts/AuthContext';
-import { API } from '@/services/api';
+import { useAiChat } from '@/contexts/AiChatContext';
+import { renderMarkup } from '@/services/ai-markup';
 import { showToast } from '@/services/toast';
 
 const PROMPTS = [
@@ -14,37 +20,11 @@ const PROMPTS = [
   '🧸 Kit có an toàn cho bé 4 tuổi?',
 ];
 
-interface Message {
-  role: 'user' | 'ai';
-  text: string;
-  imageUrl?: string;
-  time: string;
-}
-
-/** The model answers in a light markdown; render only the markup we allow. */
-function renderMarkup(text: string) {
-  const escaped = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-  return escaped
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/(^|\n)[*-] /g, '$1• ')
-    .replace(/\n/g, '<br>');
-}
-
-function now() {
-  return new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-}
-
 export function AiChat() {
-  const { user, isLoggedIn } = useAuth();
+  const { isLoggedIn } = useAuth();
+  const { messages, typing, locked, send, clear } = useAiChat();
 
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [history, setHistory] = useState<Array<{ role: string; content: string }>>([]);
   const [input, setInput] = useState('');
-  const [typing, setTyping] = useState(false);
-  const [locked, setLocked] = useState(false);
   const [image, setImage] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
@@ -52,26 +32,6 @@ export function AiChat() {
   const fileInput = useRef<HTMLInputElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const recognition = useRef<any>(null);
-
-  // The assistant can be gated behind a redeem code; staff always get through.
-  useEffect(() => {
-    if (!isLoggedIn) {
-      setLocked(false);
-      return;
-    }
-    let cancelled = false;
-    API.redeem
-      .entitlements()
-      .then((state: any) => {
-        if (cancelled) return;
-        const isStaff = user?.role === 'employee' || user?.role === 'admin';
-        setLocked(!!state.aiRequiresEntitlement && !state.features?.ai_assistant && !isStaff);
-      })
-      .catch(() => !cancelled && setLocked(false));
-    return () => {
-      cancelled = true;
-    };
-  }, [isLoggedIn, user]);
 
   useEffect(() => {
     const el = scroller.current;
@@ -94,39 +54,16 @@ export function AiChat() {
     if (fileInput.current) fileInput.current.value = '';
   }
 
-  async function send() {
-    if (locked) {
-      showToast('Nhập mã kích hoạt để dùng trợ lý AI', 'error');
-      return;
-    }
+  function submit() {
     const question = input.trim();
     if (!question && !image) return;
-
     setInput('');
-    setMessages((m) => [
-      ...m,
-      { role: 'user', text: question, imageUrl: imageUrl ?? undefined, time: now() },
-    ]);
-    const nextHistory = [...history, { role: 'user', content: question }];
-    setHistory(nextHistory);
+    // A URL of its own, deliberately never revoked. The preview URL dies with
+    // the preview, and the message outlives this page now - it is in the shared
+    // thread, so the bubble re-renders it after a navigation that unmounted us.
+    const attached = image ? URL.createObjectURL(image) : undefined;
     clearImage();
-    setTyping(true);
-
-    // The system prompt used to be built here and sent along, which meant any
-    // caller could replace it (finding F-07). The server builds it now, from
-    // the session and its own catalogue query — it knows both better than we do.
-    try {
-      const { reply } = await API.chat.send(nextHistory.slice(-6));
-      setHistory((h) => [...h, { role: 'assistant', content: reply }]);
-      setMessages((m) => [...m, { role: 'ai', text: reply, time: now() }]);
-    } catch {
-      setMessages((m) => [
-        ...m,
-        { role: 'ai', text: 'Xin lỗi, có lỗi kết nối. Vui lòng thử lại sau!', time: now() },
-      ]);
-    } finally {
-      setTyping(false);
-    }
+    void send(question, attached);
   }
 
   function toggleVoice() {
@@ -177,7 +114,7 @@ export function AiChat() {
 
         {!isLoggedIn && (
           <div className="ai-sb-login">
-            <p>Đăng nhập để upload ảnh và dùng giọng nói</p>
+            <p>Đăng nhập để trò chuyện, gửi ảnh và dùng giọng nói</p>
             <button className="btn btn-primary btn-block btn-sm" onClick={() => { window.location.href = loginHref(); }}>
               Đăng nhập
             </button>
@@ -208,10 +145,7 @@ export function AiChat() {
           <button
             className="btn btn-ghost btn-sm"
             title="Xoá lịch sử"
-            onClick={() => {
-              setMessages([]);
-              setHistory([]);
-            }}
+            onClick={clear}
           >
             🗑 Xoá
           </button>
@@ -272,7 +206,7 @@ export function AiChat() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) send();
+                  if (e.key === 'Enter' && !e.shiftKey) submit();
                 }}
               />
               <button
@@ -292,7 +226,7 @@ export function AiChat() {
                 🎙
               </button>
             </div>
-            <button className="send-btn" title="Gửi" disabled={locked || typing} onClick={send}>
+            <button className="send-btn" title="Gửi" disabled={locked || typing} onClick={submit}>
               ➤
             </button>
           </div>

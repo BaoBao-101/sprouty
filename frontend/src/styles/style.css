@@ -229,7 +229,8 @@ strong{color:var(--ink-2)}
 @media(max-height:820px){.modal{padding:22px 28px}.modal-subtitle{margin-bottom:16px}}
 
 /* ── Toast ─────────────────────────────────────────────── */
-.toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px}
+/* Clear of the floating assistant, which parks in the same corner. */
+.toast-container{position:fixed;bottom:98px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px}
 .toast{background:var(--ink);color:#fff;border-radius:var(--r-full);padding:12px 22px;font-family:var(--font-h);font-size:.88rem;font-weight:600;box-shadow:var(--sh-xl);animation:toastIn .3s var(--ease)}
 .toast.success{background:var(--green)}
 .toast.error{background:var(--rose)}

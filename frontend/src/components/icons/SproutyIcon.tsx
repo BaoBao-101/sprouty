@@ -25,7 +25,8 @@ export type IconName =
   // interface
   | 'clock' | 'gift' | 'ticket' | 'check' | 'lock' | 'battery' | 'plus' | 'trophy'
   | 'heart' | 'bolt' | 'info' | 'bell' | 'chat' | 'sparkle' | 'chart' | 'pot'
-  | 'moon' | 'arrow-right' | 'arrow-down' | 'pencil' | 'trash' | 'cart' | 'album' | 'warning';
+  | 'moon' | 'arrow-right' | 'arrow-down' | 'close' | 'pencil' | 'trash' | 'cart' | 'album'
+  | 'warning';
 
 interface Props {
   name: IconName;
@@ -450,6 +451,12 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <circle cx="12" cy="12" r="8.6" {...fillProps(0.24)} />
       <path d="M12 7.6v8.6" {...S} />
       <path d="m8 12.4 4 4 4-4" {...S} />
+    </>
+  ),
+  close: (
+    <>
+      <circle cx="12" cy="12" r="8.8" {...fillProps(0.22)} />
+      <path d="m8.4 8.4 7.2 7.2M15.6 8.4l-7.2 7.2" {...S} />
     </>
   ),
   warning: (

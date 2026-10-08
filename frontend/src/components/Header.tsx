@@ -4,11 +4,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { loginHref } from '@/services/auth-nav';
 
+// The assistant is no longer a place you go: it floats on every page as
+// AiBubble, so a link up here would only send you away from whatever raised
+// the question. /ai still exists, and the bubble links to it.
 const LINKS = [
   { to: '/', label: 'Trang chủ', end: true },
   { to: '/shop', label: 'Sản phẩm' },
   { to: '/workshop', label: 'Workshop' },
-  { to: '/ai', label: 'Trợ lý AI' },
   { to: '/blog', label: 'Blog' },
   { to: '/about', label: 'Giới thiệu' },
   { to: '/vip', label: 'VIP' },
