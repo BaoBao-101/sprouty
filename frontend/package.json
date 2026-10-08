@@ -7,7 +7,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "smoke": "vite build --ssr src/smoke.tsx --outDir .smoke --logLevel error && node .smoke/smoke.js"
+    "smoke": "vite build --ssr src/smoke.tsx --outDir .smoke --logLevel error && node .smoke/smoke.js",
+    "fonts": "node scripts/fetch-fonts.cjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",

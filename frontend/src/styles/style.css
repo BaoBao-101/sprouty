@@ -3,11 +3,7 @@
    Preserves the existing layout system with Sprouty identity.
    ═══════════════════════════════════════════════════════ */
 
-@font-face{font-family:Comfortaa;src:url('/assets/fonts/Comfortaa-VariableFont_wght.ttf') format('truetype');font-weight:300 700;font-style:normal;font-display:swap}
-@font-face{font-family:Baloo;src:url('/assets/fonts/Baloo-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
-@font-face{font-family:'Avenir Next LT Pro';src:url('/assets/fonts/AvenirNextLTPro-Light.otf') format('opentype');font-weight:300;font-style:normal;font-display:swap}
-@font-face{font-family:'Avenir Next LT Pro';src:url('/assets/fonts/AvenirNextLTPro-Medium.otf') format('opentype');font-weight:500;font-style:normal;font-display:swap}
-@font-face{font-family:'Avenir Next LT Pro';src:url('/assets/fonts/AvenirNextLTPro-Bold.otf') format('opentype');font-weight:700;font-style:normal;font-display:swap}
+@import './fonts.css';
 
 /* ── CSS Variables ──────────────────────────────────── */
 :root {
@@ -56,10 +52,13 @@
   --bg-alt:  #F8FCF5;
   --card:    #FFFFFF;
   --border-c:#E7EBDD;
-  --font-display:'Baloo', 'Comfortaa', system-ui, sans-serif;
-  --font-h:      'Avenir Next LT Pro', 'Comfortaa', system-ui, sans-serif;
-  --font-body:   'Avenir Next LT Pro', 'Comfortaa', system-ui, sans-serif;
-  --font-hand:   'Comfortaa', system-ui, sans-serif;
+  /* Display keeps the rounded, playful voice the brand had; body and UI
+     swap to a face drawn for Vietnamese, which is what the old pair could
+     not do at small sizes. See styles/fonts.css. */
+  --font-display:'Baloo 2', 'Be Vietnam Pro', system-ui, sans-serif;
+  --font-h:      'Be Vietnam Pro', system-ui, sans-serif;
+  --font-body:   'Be Vietnam Pro', system-ui, sans-serif;
+  --font-hand:   'Baloo 2', system-ui, sans-serif;
   --r-sm:  6px;  --r-md: 10px; --r-lg: 16px;
   --r-xl:  24px; --r-2xl: 36px; --r-full: 999px;
   --sh-sm: 0 1px 3px rgba(32,52,36,.1),0 1px 2px rgba(32,52,36,.06);
@@ -85,7 +84,7 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 /* Avenir Next LT Pro ("nội dung phụ") tracks ~10-15% tighter than default;
    inherits everywhere except elements below that set their own explicit
    letter-spacing (uppercase label tracking etc. is untouched). */
-body{font-family:var(--font-body);font-size:15.5px;line-height:1.72;color:var(--ink-2);background:var(--cream);letter-spacing:-.015em;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:hidden}
+body{font-family:var(--font-body);font-size:15.5px;line-height:1.7;color:var(--ink-2);background:var(--cream);letter-spacing:0;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:hidden}
 img{display:block;max-width:100%}
 a{color:var(--primary-500);text-decoration:none}
 a:hover{color:var(--primary-600)}
@@ -95,12 +94,12 @@ input,textarea,select{font-family:var(--font-body)}
 /* ── Typography ─────────────────────────────────────── */
 /* Baloo display text needs a little positive tracking for Vietnamese readability. */
 h1,h2,h3,h4,h5{color:var(--ink)}
-h1,h2,h3{font-family:var(--font-display);letter-spacing:.012em}
+h1,h2,h3{font-family:var(--font-display);letter-spacing:0;line-height:1.28}
 h1{font-size:clamp(1.85rem,4.8vw,3rem);font-weight:700;line-height:1.17}
 h2{font-size:clamp(1.38rem,3.2vw,2rem);font-weight:600;line-height:1.27}
 h3{font-size:clamp(1.06rem,2vw,1.36rem);font-weight:600;line-height:1.33}
-h4{font-size:.97rem;font-weight:700;font-family:var(--font-h);line-height:1.45;letter-spacing:-.015em}
-h5{font-size:.88rem;font-weight:700;font-family:var(--font-h);letter-spacing:-.015em}
+h4{font-size:.97rem;font-weight:700;font-family:var(--font-h);line-height:1.45}
+h5{font-size:.88rem;font-weight:700;font-family:var(--font-h)}
 p{color:var(--ink-3);font-size:.94rem;line-height:1.75}
 strong{color:var(--ink-2)}
 .lead{font-size:1.02rem;line-height:1.8;color:var(--ink-3)}
