@@ -5,6 +5,7 @@ import { WorkshopRegisterModal } from '@/components/WorkshopRegisterModal';
 import { FAQS, LB_IMAGES } from '@/data/workshop';
 import { API } from '@/services/api';
 import { formatPrice } from '@/types/product';
+import { SproutyIcon } from '@/components/icons/SproutyIcon';
 import { formatWorkshopWhen, type PublicWorkshop } from '@/types/workshop';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoginRequiredDialog, type LoginGate } from '@/components/LoginRequiredDialog';
@@ -279,47 +280,83 @@ export default function Workshop() {
                     {w.imageUrl ? (
                       <img src={w.imageUrl} alt={w.title} loading="lazy" />
                     ) : (
-                      <div className="schedule-photo-empty">🎪</div>
+                      <div className="schedule-photo-empty">
+                        <SproutyIcon name="ticket" size={30} />
+                      </div>
+                    )}
+                    {!w.isFull && w.seatsLeft <= 3 && (
+                      <span className="schedule-flag">Sắp hết chỗ</span>
                     )}
                   </div>
+
                   <div className="schedule-header">
-                    <div className="schedule-date">📅 {formatWorkshopWhen(w)}</div>
                     <div className="schedule-title">{w.title}</div>
                   </div>
+
                   <div className="schedule-body">
+                    {/* The four things a parent decides on, each on its own
+                        line with its own label. They used to be tags in a row
+                        and a line of grey text under a progress bar, which
+                        made the address — the thing you have to drive to —
+                        the smallest type on the card. */}
+                    <dl className="schedule-facts">
+                      <div>
+                        <dt>
+                          <SproutyIcon name="clock" size={16} /> Thời gian
+                        </dt>
+                        <dd>{formatWorkshopWhen(w)}</dd>
+                      </div>
+                      <div>
+                        <dt>
+                          <SproutyIcon name="pot" size={16} /> Địa điểm
+                        </dt>
+                        <dd>{w.location}</dd>
+                      </div>
+                      {w.ageRange && (
+                        <div>
+                          <dt>
+                            <SproutyIcon name="heart" size={16} /> Phù hợp
+                          </dt>
+                          <dd>{w.ageRange}</dd>
+                        </div>
+                      )}
+                    </dl>
+
                     {w.description && <p className="schedule-detail">{w.description}</p>}
-                    <div className="schedule-tags">
-                      {w.ageRange && <span className="tag">{w.ageRange}</span>}
-                      <span className="tag green">{formatPrice(w.price)}</span>
-                      <span className={`tag${w.isFull ? ' rose' : ''}`}>
-                        {w.isFull ? 'Hết chỗ' : `${w.seatsLeft} chỗ còn`}
-                      </span>
-                    </div>
-                    <div style={{ marginBottom: 14 }}>
+
+                    <div className="schedule-seats">
                       <div className="schedule-bar">
                         <div
+                          className="schedule-bar-fill"
                           style={{
-                            height: '100%',
                             width: `${pct}%`,
                             background: pct > 80 ? 'var(--rose)' : 'var(--green)',
-                            borderRadius: 2,
-                            transition: 'width .4s',
                           }}
                         />
                       </div>
                       <div className="schedule-taken">
-                        {w.seatsTaken}/{w.capacity} đã đăng ký · 📍 {w.location}
+                        {w.isFull ? (
+                          <strong className="is-full">Đã kín chỗ</strong>
+                        ) : (
+                          <>
+                            <strong>Còn {w.seatsLeft} chỗ</strong> trên tổng {w.capacity}
+                          </>
+                        )}
                       </div>
                     </div>
+
                     <div className="schedule-footer">
-                      <span className="workshop-price">{formatPrice(w.price)}</span>
+                      <span className="workshop-price">
+                        {w.price > 0 ? formatPrice(w.price) : 'Miễn phí'}
+                        <em>mỗi bé</em>
+                      </span>
                       <button
-                        className="btn btn-primary btn-sm"
+                        className="btn btn-primary"
                         disabled={w.isFull}
-                        style={w.isFull ? { opacity: 0.5 } : undefined}
                         onClick={() => startBooking(w)}
                       >
-                        {w.isFull ? 'Hết chỗ' : 'Đăng ký →'}
+                        {w.isFull ? 'Hết chỗ' : 'Đăng ký cho bé'}
+                        {!w.isFull && <SproutyIcon name="arrow-right" size={17} />}
                       </button>
                     </div>
                   </div>

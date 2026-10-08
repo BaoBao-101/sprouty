@@ -499,43 +499,88 @@ export default function PaymentPage() {
               <div className="pay-summary">
                 {payment ? (
                   <>
-                    <h3>Chuyển khoản</h3>
+                    {/* Written as a procedure, numbered, because that is what
+                        somebody about to move their own money wants: not a
+                        panel of facts to assemble into one, but the order to
+                        do things in and what happens after the last step. */}
+                    <h3>Chuyển khoản để hoàn tất</h3>
 
-                    <div className="pay-figure">
-                      <span className="pay-figure-label">Số tiền cần chuyển</span>
-                      <strong className="pay-figure-amount">{formatPrice(payment.amount)}</strong>
+                    <div className="pay-amount">
+                      <span>Số tiền cần chuyển</span>
+                      <strong>{formatPrice(payment.amount)}</strong>
                     </div>
 
-                    <div className="pay-figure">
-                      <span className="pay-figure-label">Nội dung chuyển khoản</span>
-                      <div className="pay-figure-memo">
-                        <code>{payment.memo}</code>
-                        <button
-                          className="copy-btn"
-                          type="button"
-                          onClick={() => copy(payment.memo)}
-                        >
-                          📋
-                        </button>
-                      </div>
-                      <span className="pay-figure-hint">
-                        Giữ nguyên nội dung này — hệ thống dựa vào đó để nhận đúng đơn của bạn.
-                      </span>
-                    </div>
+                    <ol className="pay-steps">
+                      <li>
+                        <div className="pay-step-head">
+                          <span className="pay-step-n">1</span>
+                          <h4>Quét mã QR bằng app ngân hàng</h4>
+                        </div>
+                        <p className="pay-step-note">
+                          Cách nhanh nhất — số tiền và nội dung được điền sẵn, không phải gõ gì.
+                        </p>
+                        <div className="sum-qr">
+                          <img src={payment.qrUrl} alt="Mã QR thanh toán" />
+                        </div>
+                      </li>
 
-                    <div className="sum-qr">
-                      <img src={payment.qrUrl} alt="Mã QR thanh toán" />
-                      <span>Quét để điền sẵn số tiền và nội dung</span>
-                    </div>
+                      <li>
+                        <div className="pay-step-head">
+                          <span className="pay-step-n">2</span>
+                          <h4>Hoặc chuyển khoản thủ công</h4>
+                        </div>
+                        <div className="pay-bank">
+                          <Row label="Ngân hàng" value={payment.bankCode} />
+                          <Row label="Số tài khoản" value={payment.accountNumber} copyable />
+                          <Row label="Chủ tài khoản" value={payment.accountName} />
+                        </div>
 
-                    <Row label="Ngân hàng" value={payment.bankCode} />
-                    <Row label="Số tài khoản" value={payment.accountNumber} copyable />
-                    <Row label="Chủ tài khoản" value={payment.accountName} />
+                        {/* The single point of failure on this page: a memo
+                            typed over by hand arrives as money nobody can
+                            match to an order. It is the loudest thing here
+                            for that reason, not for emphasis. */}
+                        <div className="pay-memo">
+                          <span className="pay-memo-label">
+                            <SproutyIcon name="warning" size={15} /> Nội dung chuyển khoản —
+                            bắt buộc giữ nguyên
+                          </span>
+                          <div className="pay-memo-row">
+                            <code>{payment.memo}</code>
+                            <button
+                              className="copy-btn"
+                              type="button"
+                              title="Sao chép nội dung"
+                              onClick={() => copy(payment.memo)}
+                            >
+                              <SproutyIcon name="album" size={16} />
+                              Sao chép
+                            </button>
+                          </div>
+                          <span className="pay-memo-hint">
+                            Sửa hay viết thêm vào dòng này thì hệ thống không nhận ra đơn của
+                            bạn, và tiền sẽ phải đối soát thủ công.
+                          </span>
+                        </div>
+                      </li>
 
-                    <div className="pay-warn">
-                      <span className="spinner" /> Trang sẽ tự cập nhật khi nhận được thanh toán.
-                      {hint && <> {hint}</>}
-                    </div>
+                      <li>
+                        <div className="pay-step-head">
+                          <span className="pay-step-n">3</span>
+                          <h4>Chờ trên trang này</h4>
+                        </div>
+                        <div className="pay-waiting">
+                          <span className="spinner" />
+                          <div>
+                            <strong>Trang tự cập nhật khi ngân hàng báo có.</strong>
+                            <span>
+                              Thường trong vòng một phút. Không cần bấm gì, cũng đừng chuyển
+                              thêm lần nữa.
+                              {hint && <> {hint}</>}
+                            </span>
+                          </div>
+                        </div>
+                      </li>
+                    </ol>
                   </>
                 ) : (
                   <>

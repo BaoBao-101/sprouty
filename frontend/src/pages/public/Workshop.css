@@ -286,3 +286,97 @@
 }
 
 .ws-total-saved { color: var(--primary-600) !important; font-weight: 700 }
+
+/* ── Schedule card ─────────────────────────────────────────────────────────
+   Rebuilt around what a parent actually decides on. The address used to be the
+   smallest type on the card, tucked after a seat count under a progress bar —
+   and it is the thing you have to drive to. Each fact now has its own line and
+   its own label. */
+
+.schedule-photo { position: relative }
+
+.schedule-flag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 5px 11px;
+  border-radius: var(--r-full);
+  background: var(--rose);
+  color: #fff;
+  font-family: var(--font-h);
+  font-size: 0.74rem;
+  font-weight: 800;
+  box-shadow: var(--sh-md);
+}
+
+.schedule-facts {
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.schedule-facts > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.schedule-facts dt {
+  --icon-accent: var(--primary-300);
+  flex: none;
+  width: 108px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-h);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-4);
+}
+
+.schedule-facts dd {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.schedule-seats { margin-bottom: 14px }
+
+.schedule-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s;
+}
+
+.schedule-taken {
+  margin-top: 6px;
+  font-size: 0.82rem;
+  color: var(--ink-4);
+}
+
+.schedule-taken strong { color: var(--ink-2) }
+.schedule-taken .is-full { color: var(--rose) }
+
+.schedule-footer .workshop-price {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.schedule-footer .workshop-price em {
+  font-style: normal;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--ink-4);
+}
+
+@media (max-width: 420px) {
+  .schedule-facts > div { flex-direction: column; gap: 2px }
+  .schedule-facts dt { width: auto }
+}

@@ -328,3 +328,175 @@
 }
 
 .code-card-cta.is-done:hover { background: var(--primary-700); border-color: var(--primary-700); color: #fff }
+
+/* ── Paying, as a procedure ────────────────────────────────────────────────
+   This is the one page on the site where an adult moves their own money, and
+   the panel used to be a stack of facts they had to assemble into an order of
+   operations themselves. Numbered steps, the amount unmissable, and the memo
+   — the single thing that breaks the whole flow if it is edited — louder than
+   anything else here. */
+
+.pay-amount {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  border-radius: var(--r-lg);
+  background: var(--primary-100);
+  border: 2px solid var(--primary-300);
+}
+
+.pay-amount > span {
+  font-family: var(--font-h);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--primary-700);
+}
+
+.pay-amount strong {
+  font-family: var(--font-display);
+  font-size: 1.85rem;
+  line-height: 1.1;
+  color: var(--primary-700);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.pay-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pay-step-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+
+.pay-step-n {
+  flex: none;
+  width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--primary-500);
+  color: #fff;
+  font-family: var(--font-h);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.pay-step-head h4 {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.pay-step-note {
+  margin: 0 0 10px 37px;
+  font-size: 0.84rem;
+  line-height: 1.6;
+  color: var(--ink-4);
+}
+
+.pay-steps .sum-qr,
+.pay-bank {
+  margin-left: 37px;
+}
+
+/* ── The memo ──────────────────────────────────────────────────────────── */
+
+.pay-memo {
+  margin: 14px 0 0 37px;
+  padding: 13px 15px;
+  border-radius: var(--r-lg);
+  background: #FFF7ED;
+  border: 2px solid var(--accent-orange-soft);
+}
+
+.pay-memo-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-h);
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--terracotta);
+  margin-bottom: 8px;
+}
+
+.pay-memo-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+/* Monospace and spaced: this gets copied by eye as often as by button, and a
+   transposed character is a payment nobody can match. */
+.pay-memo-row code {
+  flex: 1;
+  min-width: 150px;
+  padding: 10px 13px;
+  border-radius: var(--r-md);
+  background: #fff;
+  border: 1.5px solid var(--accent-orange-soft);
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+
+.pay-memo-hint {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+
+/* ── Waiting ───────────────────────────────────────────────────────────── */
+
+.pay-waiting {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-left: 37px;
+  padding: 13px 15px;
+  border-radius: var(--r-lg);
+  background: var(--cream-2);
+  border: 1.5px solid var(--parchment-2);
+}
+
+.pay-waiting strong {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
+.pay-waiting span {
+  font-size: 0.83rem;
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+
+@media (max-width: 520px) {
+  .pay-steps .sum-qr,
+  .pay-bank,
+  .pay-memo,
+  .pay-waiting,
+  .pay-step-note {
+    margin-left: 0;
+  }
+}
