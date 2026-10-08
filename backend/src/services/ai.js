@@ -18,6 +18,9 @@ const OPENAI_KEY = process.env.OPENAI_API_KEY || process.env.AI_API_KEY || '';
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
 const GEMINI_KEY = process.env.GEMINI_API_KEY || '';
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+// Any OpenAI-compatible service is reached by pointing this at it and setting
+// AI_API_KEY — Groq, OpenRouter, Together, a self-hosted gateway. That is how
+// the free providers are used; there is no separate adapter for each one.
 const AI_ENDPOINT = process.env.AI_ENDPOINT || 'https://api.openai.com/v1/chat/completions';
 
 // Each provider has its own model naming scheme — an unset AI_MODEL must
@@ -51,7 +54,23 @@ export function missingProviderKey() {
   return OPENAI_KEY ? null : 'OPENAI_API_KEY';
 }
 
+/**
+ * Whether this deployment can be sent a picture.
+ *
+ * Provider alone is not the answer any more. The OpenAI path is how every
+ * OpenAI-compatible service is reached — Groq, OpenRouter and the rest — and
+ * most of their free text models have no vision at all. Guessing "yes" there
+ * turns the album's "AI gợi ý caption" button into an error the customer
+ * cannot do anything about.
+ *
+ * AI_SUPPORTS_IMAGES is the override: set it to false on a text-only model and
+ * the caption button is refused cleanly with an explanation instead.
+ */
 export function supportsImages() {
+  const override = (process.env.AI_SUPPORTS_IMAGES || '').trim().toLowerCase();
+  if (override === 'false' || override === '0') return false;
+  if (override === 'true' || override === '1') return true;
+  // Ollama's HTTP shape here carries no image field at all.
   return PROVIDER !== 'ollama';
 }
 
