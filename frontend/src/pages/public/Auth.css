@@ -1,0 +1,288 @@
+/* Đăng nhập / Đăng ký.
+   A two-panel page: brand on the left, form on the right. The page stands on
+   its own — no site header or footer — so there is nothing to click except
+   signing in or going back. */
+
+.auth-page {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  background: var(--cream);
+}
+
+/* ── Brand panel ───────────────────────────────────────────────────────────── */
+
+.auth-aside {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+  padding: 40px 36px;
+  color: #fff;
+  overflow: hidden;
+  background:
+    radial-gradient(90% 60% at 20% 10%, rgba(255, 255, 255, .16) 0%, transparent 60%),
+    linear-gradient(160deg, var(--primary-700) 0%, var(--primary-500) 58%, #4FB86A 100%);
+}
+
+.auth-aside::before {
+  content: '';
+  position: absolute;
+  inset: auto -80px -90px -60px;
+  height: 320px;
+  border-radius: 48% 52% 44% 56%;
+  background: #fff;
+  opacity: .07;
+}
+
+.auth-logo {
+  position: absolute;
+  top: 32px;
+  left: 36px;
+}
+
+.auth-logo img {
+  height: 42px;
+  width: auto;
+  /* The logo is dark green on transparent; invert it onto the green panel. */
+  filter: brightness(0) invert(1);
+  opacity: .95;
+}
+
+.auth-aside-art {
+  position: relative;
+  align-self: center;
+  padding: 8px;
+  border-radius: var(--r-2xl);
+  background: rgba(255, 255, 255, .95);
+  border: 3px solid rgba(255, 255, 255, .5);
+  box-shadow: var(--sh-lg);
+}
+
+.auth-aside-art svg { display: block; border-radius: var(--r-xl) }
+
+.auth-aside h2 {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: #fff;
+  margin: 6px 0 0;
+  letter-spacing: -.02em;
+  line-height: 1.25;
+}
+
+.auth-aside ul {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auth-aside li {
+  --icon-accent: var(--primary-300);
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: .93rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, .94);
+}
+
+.auth-aside li svg { flex: none; margin-top: 1px }
+
+/* ── Form panel ────────────────────────────────────────────────────────────── */
+
+.auth-main {
+  display: grid;
+  place-items: center;
+  padding: 40px 24px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 430px;
+}
+
+.auth-back {
+  --icon-accent: var(--ink-5);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 22px;
+  font-size: .86rem;
+  font-weight: 600;
+  color: var(--ink-4);
+  transition: color .2s;
+}
+
+.auth-back svg { transform: rotate(180deg) }
+.auth-back:hover { color: var(--ink-2) }
+
+.auth-head h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3.6vw, 2.1rem);
+  color: var(--ink);
+  margin: 0 0 6px;
+  letter-spacing: -.02em;
+}
+
+.auth-head p {
+  margin: 0 0 20px;
+  color: var(--ink-4);
+  font-size: .93rem;
+  line-height: 1.6;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  margin-bottom: 20px;
+  border-radius: var(--r-full);
+  background: var(--cream-2);
+  border: 2px solid var(--parchment-2);
+}
+
+.auth-tabs a {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: var(--r-full);
+  text-align: center;
+  font-size: .92rem;
+  font-weight: 700;
+  color: var(--ink-3);
+  transition: background .2s, color .2s, box-shadow .2s;
+}
+
+.auth-tabs a:hover { color: var(--ink) }
+
+.auth-tabs a.active {
+  background: var(--surface);
+  color: var(--primary-700);
+  box-shadow: var(--sh-sm);
+}
+
+.auth-next-note {
+  --icon-accent: var(--cobalt);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 13px;
+  border-radius: var(--r-md);
+  background: var(--cobalt-bg);
+  border: 1.5px solid #A5DEF8;
+  color: #0C6A95;
+  font-size: .84rem;
+  line-height: 1.5;
+}
+
+.auth-field { display: block; margin-bottom: 15px }
+
+.auth-field > span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: .87rem;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.auth-field i { font-style: normal; color: var(--rose) }
+
+.auth-field .form-input { height: 48px }
+
+.auth-pass { position: relative }
+.auth-pass .form-input { padding-right: 62px }
+
+.auth-pass-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  padding: 6px 11px;
+  border-radius: var(--r-full);
+  border: none;
+  background: var(--cream-2);
+  color: var(--ink-3);
+  font-size: .8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .2s, color .2s;
+}
+
+.auth-pass-toggle:hover { background: var(--parchment); color: var(--ink) }
+
+.auth-error {
+  --icon-accent: var(--rose);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 11px 13px;
+  border-radius: var(--r-md);
+  background: #FFF1F2;
+  border: 1.5px solid var(--pink);
+  color: #B01435;
+  font-size: .87rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.auth-error svg { flex: none; margin-top: 1px }
+
+.auth-submit {
+  --icon-accent: #fff;
+  width: 100%;
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+  border-radius: var(--r-full);
+  border: 3px solid var(--orange);
+  background: var(--orange);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 1.04rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .2s, transform .2s var(--ease), box-shadow .2s;
+}
+
+.auth-submit:hover:not(:disabled) {
+  background: var(--terracotta);
+  border-color: var(--terracotta);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(232, 93, 4, .3);
+}
+
+.auth-submit:disabled { opacity: .65; cursor: not-allowed }
+
+.auth-switch {
+  margin: 18px 0 0;
+  text-align: center;
+  font-size: .89rem;
+  color: var(--ink-4);
+}
+
+.auth-switch a { font-weight: 700; text-decoration: underline }
+
+/* ── Responsive ────────────────────────────────────────────────────────────── */
+
+@media (max-width: 860px) {
+  /* The brand panel would push the form below the fold, so it goes away and
+     the logo moves into the form column. */
+  .auth-page { grid-template-columns: minmax(0, 1fr) }
+  .auth-aside { display: none }
+  .auth-main { padding: 28px 20px 48px }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-submit, .auth-back, .auth-tabs a { transition: none }
+  .auth-submit:hover:not(:disabled) { transform: none }
+}

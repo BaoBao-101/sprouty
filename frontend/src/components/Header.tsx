@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
-import { requireLogin } from './LoginModal';
+import { loginHref } from '@/services/auth-nav';
 
 const LINKS = [
   { to: '/', label: 'Trang chủ', end: true },
@@ -117,7 +117,7 @@ export function Header() {
                 <span className="nav-user-name">{user!.name.split(' ').slice(-1)[0]}</span>
               </button>
             ) : (
-              <button className="btn-login" onClick={() => requireLogin()}>
+              <button className="btn-login" onClick={() => navigate(loginHref())}>
                 Đăng nhập
               </button>
             )}
@@ -155,7 +155,7 @@ export function Header() {
             className="btn-login"
             style={{ width: '100%', textAlign: 'center' }}
             onClick={() => {
-              requireLogin();
+              navigate(loginHref());
               setDrawerOpen(false);
             }}
           >

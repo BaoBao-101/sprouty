@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { requireLogin } from '@/components/LoginModal';
+import { loginHref } from '@/services/auth-nav';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { API } from '@/services/api';
@@ -59,7 +59,7 @@ export default function Vip() {
 
   function upgrade(planId: number) {
     if (!isLoggedIn) {
-      requireLogin();
+      navigate(loginHref());
       return;
     }
     add(planId, 1);

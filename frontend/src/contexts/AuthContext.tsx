@@ -19,7 +19,7 @@ interface AuthValue {
   isAdmin: boolean;
   /** Resolves with the signed-in user so the caller can route by role. */
   login: (email: string, password: string) => Promise<User>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
   setUser: (user: User | null) => void;
 }
@@ -77,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async register(name, email, password) {
         const data = await API.auth.register(name, email, password);
         setUser(data.user);
+        return data.user as User;
       },
 
       async logout() {

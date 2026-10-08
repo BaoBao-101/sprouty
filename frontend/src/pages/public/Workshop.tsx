@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCallback, useEffect, useState } from 'react';
 import { Lightbox } from '@/components/Lightbox';
 import { WorkshopRegisterModal } from '@/components/WorkshopRegisterModal';
@@ -6,6 +6,8 @@ import { FAQS, LB_IMAGES } from '@/data/workshop';
 import { API } from '@/services/api';
 import { formatPrice } from '@/types/product';
 import { formatWorkshopWhen, type PublicWorkshop } from '@/types/workshop';
+import { useAuth } from '@/contexts/AuthContext';
+import { loginHref } from '@/services/auth-nav';
 import './Workshop.css';
 
 export default function Workshop() {
@@ -17,6 +19,25 @@ export default function Workshop() {
   const [workshops, setWorkshops] = useState<PublicWorkshop[]>([]);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [booking, setBooking] = useState<PublicWorkshop | null>(null);
+  const { isLoggedIn } = useAuth();
+  const routeTo = useNavigate();
+
+  /**
+   * Booking needs an account, so a signed-out visitor goes to sign in first
+   * rather than filling in a form the server will refuse. `next` brings them
+   * back to this page afterwards.
+   *
+   * The seat they picked is not carried across: by the time they return it may
+   * have been taken, and reopening the dialog on a full session would be worse
+   * than letting them choose again from a current list.
+   */
+  function startBooking(workshop: PublicWorkshop) {
+    if (!isLoggedIn) {
+      routeTo(loginHref('/workshop'));
+      return;
+    }
+    setBooking(workshop);
+  }
 
   const load = useCallback(() => {
     setState('loading');
@@ -289,7 +310,7 @@ export default function Workshop() {
                         className="btn btn-primary btn-sm"
                         disabled={w.isFull}
                         style={w.isFull ? { opacity: 0.5 } : undefined}
-                        onClick={() => setBooking(w)}
+                        onClick={() => startBooking(w)}
                       >
                         {w.isFull ? 'Hết chỗ' : 'Đăng ký →'}
                       </button>
@@ -381,7 +402,7 @@ export default function Workshop() {
                     className="ws-pick"
                     key={w.id}
                     disabled={w.isFull}
-                    onClick={() => setBooking(w)}
+                    onClick={() => startBooking(w)}
                   >
                     <span className="ws-pick-emoji">🎪</span>
                     <span className="ws-pick-main">

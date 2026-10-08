@@ -4,7 +4,6 @@ import { PublicLayout } from '@/layouts/PublicLayout';
 import { AdminLayout } from '@/layouts/AdminLayout';
 import { EmployeeLayout } from '@/layouts/EmployeeLayout';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { LoginModal } from '@/components/LoginModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 // Public
@@ -23,6 +22,7 @@ const Contact = lazy(() => import('@/pages/public/Contact'));
 const Returns = lazy(() => import('@/pages/public/Returns'));
 const Privacy = lazy(() => import('@/pages/public/Privacy'));
 const Vip = lazy(() => import('@/pages/public/Vip'));
+const Auth = lazy(() => import('@/pages/public/Auth'));
 
 // Signed-in customer
 const Account = lazy(() => import('@/pages/public/Account'));
@@ -106,13 +106,15 @@ export function App() {
   return (
     <>
       <ScrollToTop />
-      <LoginModal />
       <ErrorBoundary>
       <Suspense fallback={<Loading />}>
         <Routes>
           {Object.entries(LEGACY_REDIRECTS).map(([from, to]) => (
             <Route key={from} path={from} element={<Navigate to={to} replace />} />
           ))}
+
+          <Route path="/login" element={<Auth mode="login" />} />
+          <Route path="/register" element={<Auth mode="register" />} />
 
           <Route element={<PublicLayout />}>
             <Route index element={<Home />} />

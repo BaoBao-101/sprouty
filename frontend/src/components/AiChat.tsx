@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { requireLogin } from './LoginModal';
+import { loginHref } from '@/services/auth-nav';
 import { useAuth } from '@/contexts/AuthContext';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
@@ -130,7 +130,7 @@ export function AiChat() {
   }
 
   function toggleVoice() {
-    if (!isLoggedIn) return requireLogin();
+    if (!isLoggedIn) { window.location.href = loginHref(); return; }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -178,7 +178,7 @@ export function AiChat() {
         {!isLoggedIn && (
           <div className="ai-sb-login">
             <p>Đăng nhập để upload ảnh và dùng giọng nói</p>
-            <button className="btn btn-primary btn-block btn-sm" onClick={() => requireLogin()}>
+            <button className="btn btn-primary btn-block btn-sm" onClick={() => { window.location.href = loginHref(); }}>
               Đăng nhập
             </button>
           </div>
@@ -279,7 +279,7 @@ export function AiChat() {
                 className="ic-btn ic-img"
                 title="Gửi ảnh"
                 disabled={!isLoggedIn}
-                onClick={() => (isLoggedIn ? fileInput.current?.click() : requireLogin())}
+                onClick={() => { if (isLoggedIn) fileInput.current?.click(); else window.location.href = loginHref(); }}
               >
                 📎
               </button>

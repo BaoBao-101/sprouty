@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { requireLogin } from '@/components/LoginModal';
+import { loginHref } from '@/services/auth-nav';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { API } from '@/services/api';
@@ -216,7 +216,7 @@ export default function CartPage() {
   function checkout() {
     if (!isLoggedIn) {
       showToast('Vui lòng đăng nhập để đặt hàng');
-      requireLogin();
+      navigate(loginHref());
       return;
     }
     setShippingOpen(true);

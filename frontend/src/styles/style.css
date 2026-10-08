@@ -1680,3 +1680,14 @@ input[type="range"]::-webkit-slider-thumb:hover { transform:scale(1.2) }
 
 /* ── Added during the React rewrite ─────────────────────────── */
 .msg-image { max-width: 160px; border-radius: var(--r-sm); margin-bottom: 6px; display: block }
+
+/* ── Route gate (ProtectedRoute) ──────────────────────────────────────────── */
+.route-gate { text-align:center; padding:90px 20px; --icon-accent:var(--primary-300) }
+.route-gate-icon {
+  width:76px; height:76px; margin:0 auto 16px; display:grid; place-items:center;
+  border-radius:28px; background:var(--cream-2); border:2.5px solid var(--parchment-2);
+  color:var(--ink-4); transform:rotate(-4deg);
+}
+.route-gate-icon.denied { --icon-accent:var(--rose); background:#FFF1F2; border-color:var(--pink); color:var(--rose) }
+.route-gate h2 { font-family:var(--font-display); font-size:1.3rem; color:var(--ink); margin-bottom:8px }
+.route-gate p { color:var(--ink-3); max-width:44ch; margin:0 auto 20px; line-height:1.65 }

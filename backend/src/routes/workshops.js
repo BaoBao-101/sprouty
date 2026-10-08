@@ -221,19 +221,16 @@ export default async function workshopRoutes(fastify) {
   });
 
   // POST /api/v1/workshops/register
+  // Booking requires an account.
+  //
+  // Guests used to be able to book, which left a seat nobody could manage: the
+  // customer had no way to see it, cancel it, or fetch the transfer details
+  // again, and a paid booking could not be tied to the person who paid. Every
+  // seat now belongs to an account, so "Workshop của tôi" is complete and the
+  // free-seat reward has an owner to debit.
   fastify.post('/workshops/register', {
     config: { rateLimit: { max: 5, timeWindow: '10 minutes' } },
-    preHandler: [async (req) => {
-      // Authenticated registrations bind to req.user.id, so they need CSRF
-      // protection. Guest registrations have no session credential to abuse.
-      if (req.user) {
-        const token = req.headers['x-csrf-token'];
-        const expected = req.session?.data?.csrfToken;
-        if (!token || token !== expected) {
-          throw new AppError('CSRF token không hợp lệ.', 403);
-        }
-      }
-    }],
+    preHandler: [requireAuth, requireCsrf],
   }, async (req, reply) => {
     const parsed = regSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -246,11 +243,6 @@ export default async function workshopRoutes(fastify) {
     } = parsed.data;
 
     if (useReward) {
-      if (!req.user) {
-        return reply.code(401).send({
-          message: 'Đăng nhập để dùng suất workshop miễn phí của bạn.',
-        });
-      }
       // Checked here for a clear message before any seat arithmetic; the claim
       // itself is guarded again inside the transaction below, which is what
       // actually stops two bookings spending one reward.
@@ -292,21 +284,16 @@ export default async function workshopRoutes(fastify) {
       paymentMethod,
       amount: fullAmount - discount,
     };
-    if (req.user) {
-      data.userId = req.user.id;
-      // Still record the contact details typed on the form: the parent booking
-      // may not be the account holder, and staff ring the number given here.
-      data.guestName = guestName || req.user.name;
-      data.guestPhone = guestPhone || null;
-      data.guestEmail = guestEmail || req.user.email;
-    } else {
-      if (!guestName || !guestPhone) {
-        return reply.code(400).send({ message: 'Vui lòng nhập tên và số điện thoại.' });
-      }
-      data.guestName = guestName;
-      data.guestPhone = guestPhone;
-      data.guestEmail = guestEmail || null;
+    data.userId = req.user.id;
+    // The contact details typed on the form are still recorded separately from
+    // the account: the parent booking may not be the account holder, and staff
+    // ring the number given here rather than the one on the profile.
+    if (!guestPhone) {
+      return reply.code(400).send({ message: 'Vui lòng nhập số điện thoại liên hệ.' });
     }
+    data.guestName = guestName || req.user.name;
+    data.guestPhone = guestPhone;
+    data.guestEmail = guestEmail || req.user.email;
 
     // Booking more than once for the same session is allowed: a parent may come
     // back to add another child, or book for a friend's family. Capacity is
