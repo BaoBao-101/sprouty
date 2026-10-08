@@ -23,6 +23,7 @@ import {
   formatCountdown,
   metricBand,
   type CareSlot,
+  type CoachMessage,
   type PlantDetail as PlantDetailType,
   type PlantDevice,
   type PlantEvent,
@@ -289,6 +290,9 @@ function DeviceCard({
   );
 }
 
+/** Openers for a child who has not thought of a question yet. */
+const QUICK_ASKS = ['Tại sao lá bị vàng?', 'Bao lâu nữa cây lớn?', 'Nên bật thiết bị nào?'];
+
 export default function PlantDetail() {
   const { plantId = '' } = useParams();
   const navigate = useNavigate();
@@ -306,15 +310,33 @@ export default function PlantDetail() {
   // Opens by itself on a first visit; the "?" button brings it back after that.
   const [guideOpen, closeGuide, openGuide] = useGuideFirstRun();
 
-  const [coach, setCoach] = useState('');
+  // The thread lives on the server, so it survives a reload and follows the
+  // child from the tablet to the phone. Mirrored here so an optimistic question
+  // can appear the moment it is asked.
+  const [messages, setMessages] = useState<CoachMessage[]>([]);
   const [coachBusy, setCoachBusy] = useState(false);
   const [question, setQuestion] = useState('');
-  const coachRef = useRef<HTMLDivElement>(null);
+  const threadRef = useRef<HTMLDivElement>(null);
+  // Whether the thread is parked on the newest turn. Kept in a ref for the
+  // effect to read without re-subscribing, and in state for the pill to show.
+  const stuckToEnd = useRef(true);
+  const settled = useRef(false);
+  const [atBottom, setAtBottom] = useState(true);
+  // The journal is history, so it stays shut until someone wants it. A care
+  // action that adds a line opens it, which is how the growth it earned gets
+  // seen without a click.
+  const [logOpen, setLogOpen] = useState(false);
 
   const apply = useCallback((detail: PlantDetailType, events: PlantEvent[] = []) => {
     setPlant(detail);
     setFetchedAt(Date.now());
-    if (events.length) setFeed((prev) => [...events, ...prev].slice(0, 12));
+    // The server's copy is the truth; replacing wholesale also drops any
+    // optimistic question whose request failed.
+    if (detail.coachMessages) setMessages(detail.coachMessages);
+    if (events.length) {
+      setFeed((prev) => [...events, ...prev].slice(0, 12));
+      setLogOpen(true);
+    }
   }, []);
 
   const load = useCallback(async () => {
@@ -333,6 +355,31 @@ export default function PlantDetail() {
     void load();
   }, [load]);
 
+  const scrollThread = useCallback((behavior: ScrollBehavior = 'auto') => {
+    const el = threadRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+    stuckToEnd.current = true;
+    setAtBottom(true);
+  }, []);
+
+  function onThreadScroll() {
+    const el = threadRef.current;
+    if (!el) return;
+    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+    stuckToEnd.current = near;
+    setAtBottom(near);
+  }
+
+  // Follow the conversation as it grows — but only while the reader is
+  // already at the end. Someone re-reading an older answer should not have
+  // the thread pulled out from under them; they get the jump pill instead.
+  useEffect(() => {
+    if (!stuckToEnd.current) return;
+    scrollThread(settled.current ? 'smooth' : 'auto');
+    settled.current = true;
+  }, [messages, coachBusy, scrollThread]);
+
   // Coming back to the tab after a while: the plant has moved on.
   useEffect(() => {
     const onVisible = () => {
@@ -349,8 +396,9 @@ export default function PlantDetail() {
       const data = await API.plants.care(plantId, action);
       apply(data.plant, data.messages || []);
       const gained = data.growth > 0;
-      const headline = (data.messages || []).find((m: PlantEvent) => m.level === 'warn')
-        ?? (data.messages || [])[0];
+      const headline =
+        (data.messages || []).find((m: PlantEvent) => m.level === 'warn') ??
+        (data.messages || [])[0];
       showToast(
         headline?.text || (gained ? `+${data.growth} điểm phát triển` : 'Đã chăm cây'),
         headline?.level === 'warn' ? 'error' : 'success',
@@ -385,16 +433,49 @@ export default function PlantDetail() {
   }
 
   async function askCoach(text?: string) {
+    if (coachBusy) return;
+    const asked = text?.trim() || 'Cây của mình giờ thế nào, mình nên làm gì tiếp theo?';
+
+    // Show the question straight away. Waiting for the round trip makes the
+    // thread look like it swallowed what was typed.
+    const pending: CoachMessage = {
+      id: `pending-${Date.now()}`,
+      role: 'user',
+      content: asked,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, pending]);
+    setQuestion('');
     setCoachBusy(true);
+
     try {
       const data = await API.plants.coach(plantId, text);
-      setCoach(data.reply);
-      setQuestion('');
-      coachRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `reply-${Date.now()}`,
+          role: 'assistant',
+          content: data.reply,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
     } catch (err: any) {
+      // Take the question back out: it was never recorded, and leaving it in
+      // the thread would imply Plant Buddy chose not to answer.
+      setMessages((prev) => prev.filter((m) => m.id !== pending.id));
       showToast(err?.message || 'Plant Buddy đang nghỉ một chút, thử lại sau nhé.', 'error');
     } finally {
       setCoachBusy(false);
+    }
+  }
+
+  async function clearCoach() {
+    if (!confirm('Xoá toàn bộ lịch sử trò chuyện với Plant Buddy?')) return;
+    try {
+      await API.plants.clearCoach(plantId);
+      setMessages([]);
+    } catch (err: any) {
+      showToast(err?.message || 'Không xoá được lịch sử.', 'error');
     }
   }
 
@@ -432,9 +513,17 @@ export default function PlantDetail() {
       {/* ── Header ───────────────────────────────────────────────────────── */}
       <div className="pd-hero" style={{ ['--plant-bg' as string]: plant.bgColor || '#F0FDF4' }}>
         <div className="container">
-          <div className="breadcrumb pd-crumb">
-            <Link to="/">Trang chủ</Link> › <Link to="/my-plants">Cây của tôi</Link> ›{' '}
-            <span>{plant.nickname}</span>
+          <div className="pd-hero-top">
+            <div className="breadcrumb pd-crumb">
+              <Link to="/">Trang chủ</Link> › <Link to="/my-plants">Cây của tôi</Link> ›{' '}
+              <span>{plant.nickname}</span>
+            </div>
+
+            <Link to={`/tree?id=${plant.productId}`} className="pd-hero-album">
+              <SproutyIcon name="album" size={19} />
+              Album kỷ niệm
+              <SproutyIcon name="arrow-right" size={16} />
+            </Link>
           </div>
 
           <div className="pd-hero-grid">
@@ -570,7 +659,9 @@ export default function PlantDetail() {
                   ? `Bạn đã thu hoạch ${plant.harvestLabel} từ cây này!`
                   : plant.nextStep.label || 'Cây đang tự lớn'}
               </strong>
-              <p>{harvested ? 'Mở một bộ kit mới để bắt đầu một cây khác nhé.' : plant.nextStep.why}</p>
+              <p>
+                {harvested ? 'Mở một bộ kit mới để bắt đầu một cây khác nhé.' : plant.nextStep.why}
+              </p>
             </div>
             {!harvested && recommended && (
               <button
@@ -649,8 +740,8 @@ export default function PlantDetail() {
                     Xanh là cây đang vui, vàng là cây hơi mệt, đỏ là cây cần bạn giúp ngay.
                     <br />
                     <span className="pd-panel-fine">
-                      Chặng này cây thích đất ẩm {plant.idealMoisture[0]}–{plant.idealMoisture[1]}% và
-                      nhiệt độ {plant.idealTemp[0]}–{plant.idealTemp[1]}°C.
+                      Chặng này cây thích đất ẩm {plant.idealMoisture[0]}–{plant.idealMoisture[1]}%
+                      và nhiệt độ {plant.idealTemp[0]}–{plant.idealTemp[1]}°C.
                     </span>
                   </p>
                 </div>
@@ -662,7 +753,9 @@ export default function PlantDetail() {
                     label="Nước trong đất"
                     ideal={plant.idealMoisture}
                     value={plant.moisture}
-                    band={metricBand(plant.moisture, plant.idealMoisture) as 'good' | 'warn' | 'bad'}
+                    band={
+                      metricBand(plant.moisture, plant.idealMoisture) as 'good' | 'warn' | 'bad'
+                    }
                   />
                   <MetricRing
                     icon="thermo"
@@ -671,14 +764,23 @@ export default function PlantDetail() {
                     unit="°C"
                     ideal={plant.idealTemp}
                     value={plant.environment.temperature}
-                    band={metricBand(plant.environment.temperature, plant.idealTemp) as 'good' | 'warn' | 'bad'}
+                    band={
+                      metricBand(plant.environment.temperature, plant.idealTemp) as
+                        'good' | 'warn' | 'bad'
+                    }
                   />
                   <MetricRing
                     icon="light"
                     kind="light"
                     label="Ánh sáng"
                     value={plant.environment.light}
-                    band={plant.environment.light > 35 ? 'good' : plant.environment.isDay ? 'warn' : 'good'}
+                    band={
+                      plant.environment.light > 35
+                        ? 'good'
+                        : plant.environment.isDay
+                          ? 'warn'
+                          : 'good'
+                    }
                   />
                   <MetricRing
                     icon="nutrient"
@@ -722,129 +824,214 @@ export default function PlantDetail() {
                   ))}
                 </div>
               </div>
+
+              {/* ── Journal ────────────────────────────────────────────── */}
+              <div className={`pd-panel pd-log${logOpen ? ' open' : ''}`}>
+                <button
+                  className="pd-log-toggle"
+                  aria-expanded={logOpen}
+                  onClick={() => setLogOpen((open) => !open)}
+                >
+                  <SproutyIcon name="clock" size={20} />
+                  <span>
+                    <strong>Nhật ký</strong>
+                    <em>
+                      {plant.history.length > 0
+                        ? `${plant.history.length} việc bạn đã làm cho cây`
+                        : 'Chưa có việc chăm cây nào được ghi lại'}
+                    </em>
+                  </span>
+                  {!logOpen && feed.length > 0 && <i className="pd-log-dot" />}
+                  <SproutyIcon name="arrow-down" size={18} className="pd-log-chevron" />
+                </button>
+
+                {logOpen && (
+                  <div className="pd-log-body">
+                    {feed.length > 0 && (
+                      <ul className="feed-list">
+                        {feed.map((event, i) => (
+                          <li key={i} className={`feed-item feed-${event.level}`}>
+                            <SproutyIcon
+                              name={
+                                event.level === 'warn'
+                                  ? 'warning'
+                                  : event.level === 'good'
+                                    ? 'check'
+                                    : 'info'
+                              }
+                              size={16}
+                            />
+                            {event.text}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    <ul className="history-list">
+                      {plant.history.length === 0 && (
+                        <li className="history-empty">Chưa có việc chăm cây nào được ghi lại.</li>
+                      )}
+                      {plant.history.map((entry) => (
+                        <li key={entry.id} className={entry.warned ? 'warned' : ''}>
+                          <span className="history-icon">
+                            <SproutyIcon name={entry.icon} size={17} />
+                          </span>
+                          <div>
+                            <strong>{entry.label}</strong>
+                            <span>
+                              {new Date(entry.createdAt).toLocaleString('vi-VN', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                              {' · '}
+                              {entry.stageLabel}
+                            </span>
+                          </div>
+                          {entry.growth > 0 && <em className="history-growth">+{entry.growth}</em>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
 
+            {/* Plant Buddy is pinned to the viewport rather than left to scroll
+                away with the page: the questions a child asks are about the
+                numbers in the left column, so both have to be readable at the
+                same moment. Pinning is also what earns the thread its own
+                scrollbar — a panel that never leaves the screen cannot strand
+                the wheel the way a mid-page scroller does. */}
             <aside className="pd-col-side">
-              {/* ── Plant Buddy ────────────────────────────────────────── */}
-              <div className="pd-panel coach-panel" ref={coachRef}>
-                <div className="coach-head">
+              <div className="pd-panel coach-panel">
+                <header className="coach-head">
                   <span className="coach-avatar">
                     <SproutyIcon name="chat" size={24} />
                   </span>
-                  <div>
+                  <div className="coach-who">
                     <strong>Plant Buddy</strong>
-                    <span>Trợ lý chăm cây của bạn</span>
+                    <span className={`coach-status${coachBusy ? ' busy' : ''}`}>
+                      <i />
+                      {coachBusy ? 'đang xem cây…' : 'đang chờ bạn hỏi'}
+                    </span>
                   </div>
-                </div>
-
-                <div className="coach-body">
-                  {coach ? (
-                    <p className="coach-reply">{coach}</p>
-                  ) : (
-                    <p className="coach-idle">
-                      Bấm “Hỏi Plant Buddy” để nhận hướng dẫn cho đúng tình trạng cây lúc này.
-                    </p>
-                  )}
-                </div>
-
-                <button
-                  className="btn btn-primary btn-block coach-ask"
-                  disabled={coachBusy}
-                  onClick={() => askCoach()}
-                >
-                  {coachBusy ? 'Đang xem cây...' : 'Hỏi Plant Buddy'}
-                  {!coachBusy && <SproutyIcon name="sparkle" size={18} />}
-                </button>
-
-                <div className="coach-quick">
-                  {['Tại sao lá bị vàng?', 'Bao lâu nữa cây lớn?', 'Nên bật thiết bị nào?'].map((q) => (
-                    <button key={q} disabled={coachBusy} onClick={() => askCoach(q)}>
-                      {q}
+                  {messages.length > 0 && (
+                    <button
+                      className="coach-clear"
+                      title="Xoá lịch sử trò chuyện"
+                      aria-label="Xoá lịch sử trò chuyện"
+                      onClick={clearCoach}
+                    >
+                      <SproutyIcon name="trash" size={16} />
                     </button>
-                  ))}
-                </div>
-
-                <div className="coach-input">
-                  <input
-                    className="form-input"
-                    placeholder="Hỏi điều bạn thắc mắc..."
-                    maxLength={600}
-                    value={question}
-                    onChange={(e) => setQuestion(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && question.trim()) void askCoach(question.trim());
-                    }}
-                  />
-                  <button
-                    aria-label="Gửi câu hỏi"
-                    disabled={coachBusy || !question.trim()}
-                    onClick={() => askCoach(question.trim())}
-                  >
-                    <SproutyIcon name="arrow-right" size={18} />
-                  </button>
-                </div>
-              </div>
-
-              {/* ── Album link ─────────────────────────────────────────── */}
-              <Link to={`/tree?id=${plant.productId}`} className="pd-album">
-                <span>
-                  <SproutyIcon name="album" size={22} />
-                </span>
-                <div>
-                  <strong>Album kỷ niệm</strong>
-                  <p>Lưu ảnh và video từng chặng của {plant.nickname} lên Cây Kỷ Niệm.</p>
-                </div>
-                <SproutyIcon name="arrow-right" size={18} />
-              </Link>
-
-              {/* ── What happened ──────────────────────────────────────── */}
-              <div className="pd-panel">
-                <div className="pd-panel-head compact">
-                  <h2>
-                    <SproutyIcon name="clock" size={20} /> Nhật ký
-                  </h2>
-                </div>
-
-                {feed.length > 0 && (
-                  <ul className="feed-list">
-                    {feed.map((event, i) => (
-                      <li key={i} className={`feed-item feed-${event.level}`}>
-                        <SproutyIcon
-                          name={event.level === 'warn' ? 'warning' : event.level === 'good' ? 'check' : 'info'}
-                          size={16}
-                        />
-                        {event.text}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                <ul className="history-list">
-                  {plant.history.length === 0 && (
-                    <li className="history-empty">Chưa có việc chăm cây nào được ghi lại.</li>
                   )}
-                  {plant.history.map((entry) => (
-                    <li key={entry.id} className={entry.warned ? 'warned' : ''}>
-                      <span className="history-icon">
-                        <SproutyIcon name={entry.icon} size={17} />
+                </header>
+
+                {/* The thread. Every turn stays, so a child can scroll back to
+                    what they were told — and the server replays it to the model,
+                    so a follow-up like "tại sao?" has something to refer to. */}
+                <div className="coach-thread" ref={threadRef} onScroll={onThreadScroll}>
+                  {messages.length === 0 && !coachBusy && (
+                    <div className="coach-empty">
+                      <span className="coach-empty-icon">
+                        <SproutyIcon name="sprout" size={30} />
                       </span>
-                      <div>
-                        <strong>{entry.label}</strong>
-                        <span>
-                          {new Date(entry.createdAt).toLocaleString('vi-VN', {
-                            day: '2-digit',
-                            month: '2-digit',
+                      <p>
+                        Chào bạn! Mình là <b>Plant Buddy</b>. Mình nhìn được hết cảm biến của{' '}
+                        {plant.nickname} và sẽ nói cho bạn biết cây đang cần gì.
+                      </p>
+                      <button className="coach-ask" onClick={() => askCoach()}>
+                        <SproutyIcon name="sparkle" size={18} />
+                        Xem cây giúp mình
+                      </button>
+                    </div>
+                  )}
+
+                  {messages.map((m) => (
+                    <div key={m.id} className={`coach-msg coach-msg-${m.role}`}>
+                      {m.role === 'assistant' && (
+                        <span className="coach-msg-avatar">
+                          <SproutyIcon name="sprout" size={16} />
+                        </span>
+                      )}
+                      <div className="coach-bubble">
+                        <p>{m.content}</p>
+                        <time>
+                          {new Date(m.createdAt).toLocaleTimeString('vi-VN', {
                             hour: '2-digit',
                             minute: '2-digit',
                           })}
-                          {' · '}
-                          {entry.stageLabel}
-                        </span>
+                        </time>
                       </div>
-                      {entry.growth > 0 && <em className="history-growth">+{entry.growth}</em>}
-                    </li>
+                    </div>
                   ))}
-                </ul>
+
+                  {coachBusy && (
+                    <div className="coach-msg coach-msg-assistant">
+                      <span className="coach-msg-avatar">
+                        <SproutyIcon name="sprout" size={16} />
+                      </span>
+                      <div
+                        className="coach-bubble coach-typing"
+                        aria-label="Plant Buddy đang trả lời"
+                      >
+                        <i />
+                        <i />
+                        <i />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Only while the reader has scrolled away from the newest turn;
+                    the alternative is yanking the thread down under them. */}
+                {!atBottom && messages.length > 0 && (
+                  <button className="coach-jump" onClick={() => scrollThread('smooth')}>
+                    <SproutyIcon name="arrow-down" size={15} />
+                    Câu trả lời mới nhất
+                  </button>
+                )}
+
+                <div className="coach-foot">
+                  {/* One row that scrolls sideways, not a block that wraps: the
+                      composer below it must keep the same place on screen no
+                      matter how many suggestions fit the width. */}
+                  <div className="coach-quick">
+                    {messages.length > 0 && (
+                      <button className="lead" disabled={coachBusy} onClick={() => askCoach()}>
+                        <SproutyIcon name="sparkle" size={14} />
+                        Xem cây giúp mình
+                      </button>
+                    )}
+                    {QUICK_ASKS.map((q) => (
+                      <button key={q} disabled={coachBusy} onClick={() => askCoach(q)}>
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="coach-input">
+                    <input
+                      className="form-input"
+                      placeholder="Hỏi điều bạn thắc mắc…"
+                      maxLength={600}
+                      value={question}
+                      onChange={(e) => setQuestion(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && question.trim()) void askCoach(question.trim());
+                      }}
+                    />
+                    <button
+                      aria-label="Gửi câu hỏi"
+                      disabled={coachBusy || !question.trim()}
+                      onClick={() => askCoach(question.trim())}
+                    >
+                      <SproutyIcon name="arrow-right" size={18} />
+                    </button>
+                  </div>
+                </div>
               </div>
             </aside>
           </div>

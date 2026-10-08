@@ -25,7 +25,7 @@ export type IconName =
   // interface
   | 'clock' | 'gift' | 'ticket' | 'check' | 'lock' | 'battery' | 'plus' | 'trophy'
   | 'heart' | 'bolt' | 'info' | 'bell' | 'chat' | 'sparkle' | 'chart' | 'pot'
-  | 'moon' | 'arrow-right' | 'pencil' | 'cart' | 'album' | 'warning';
+  | 'moon' | 'arrow-right' | 'arrow-down' | 'pencil' | 'trash' | 'cart' | 'album' | 'warning';
 
 interface Props {
   name: IconName;
@@ -432,6 +432,24 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <rect x="3.6" y="4.4" width="16.8" height="15.2" rx="2.4" {...S} />
       <path d="M3.6 16 8.4 11l3.4 3.4 3-2.8 5.6 5" {...S} strokeWidth={1.8} />
       <circle cx="15" cy="8.8" r="1.6" fill={ACCENT} stroke="none" />
+    </>
+  ),
+  // Throwing a conversation away is a real deletion, so it gets the bin
+  // everyone already reads as that — chunky lid, no cleverness.
+  trash: (
+    <>
+      <path d="M5.8 7.6h12.4l-1 11.6a2.1 2.1 0 0 1-2.1 1.9H8.9a2.1 2.1 0 0 1-2.1-1.9L5.8 7.6Z" {...fillProps(0.26)} />
+      <path d="M5.8 7.6h12.4l-1 11.6a2.1 2.1 0 0 1-2.1 1.9H8.9a2.1 2.1 0 0 1-2.1-1.9L5.8 7.6Z" {...S} />
+      <path d="M3.6 7.6h16.8" {...S} />
+      <path d="M9.4 7.6V5.4a1.5 1.5 0 0 1 1.5-1.5h2.2a1.5 1.5 0 0 1 1.5 1.5v2.2" {...S} />
+      <path d="M10.4 11.4v5.6M13.6 11.4v5.6" {...S} strokeWidth={1.7} />
+    </>
+  ),
+  'arrow-down': (
+    <>
+      <circle cx="12" cy="12" r="8.6" {...fillProps(0.24)} />
+      <path d="M12 7.6v8.6" {...S} />
+      <path d="m8 12.4 4 4 4-4" {...S} />
     </>
   ),
   warning: (
