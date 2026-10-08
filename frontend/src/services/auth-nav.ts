@@ -12,7 +12,14 @@ export function loginHref(next?: string, mode: 'login' | 'register' = 'login') {
   const target = next ?? (typeof window !== 'undefined'
     ? window.location.pathname + window.location.search
     : '');
-  // The sign-in page itself is never worth returning to.
-  const usable = target && !target.startsWith('/login') && !target.startsWith('/register');
-  return `/${mode}${usable ? `?next=${encodeURIComponent(target)}` : ''}`;
+  // A `next` is only worth carrying when it says something the default does
+  // not. Returning to the sign-in page is nonsense, and `next=/` just spelled
+  // the home page out in the address bar as `?next=%2F` — noise on screen that
+  // changed nothing about where anyone landed.
+  const pointless =
+    !target ||
+    target === '/' ||
+    target.startsWith('/login') ||
+    target.startsWith('/register');
+  return `/${mode}${pointless ? '' : `?next=${encodeURIComponent(target)}`}`;
 }

@@ -27,7 +27,7 @@ import './Auth.css';
 type Mode = 'login' | 'register';
 
 /** What the brand panel says, so the two views do not read identically. */
-const PITCH: Record<Mode, { title: string; lines: string[] }> = {
+const PITCH: Record<Mode, { title: string; lines: string[]; foot: string }> = {
   login: {
     title: 'Vườn của bé đang đợi',
     lines: [
@@ -35,14 +35,16 @@ const PITCH: Record<Mode, { title: string; lines: string[] }> = {
       'Chăm cây và đọc cảm biến',
       'Nhận gợi ý từ Plant Buddy',
     ],
+    foot: 'Cây vẫn lớn theo thời gian thật kể cả khi bạn không mở trang.',
   },
   register: {
     title: 'Bắt đầu vườn đầu tiên',
     lines: [
-      'Nuôi cây mô phỏng từ hạt tới ngày thu hoạch',
-      'Thiết bị IoT ảo mở dần theo từng chặng',
-      'Mua 3 sản phẩm — tặng 1 buổi workshop',
+      'Nuôi cây từ hạt tới ngày thu hoạch',
+      'Mở dần 8 thiết bị IoT ảo',
+      'Mua 3 sản phẩm — tặng 1 workshop',
     ],
+    foot: 'Miễn phí tạo tài khoản. Không cần thẻ, không giao hàng.',
   },
 };
 
@@ -128,24 +130,39 @@ export default function Auth({ mode }: { mode: Mode }) {
           <img src="/assets/images/logo.png" alt="Sprouty" />
         </Link>
 
-        <div className="auth-aside-art">
-          <PlantArt stage="vegetative" progress={70} health={96} size={210} />
-        </div>
+        <div className="auth-aside-inner">
+          <div className="auth-aside-art">
+            <PlantArt
+              stage={mode === 'login' ? 'fruiting' : 'sprout'}
+              progress={mode === 'login' ? 70 : 55}
+              health={96}
+              form="bush"
+              fruitShape="round"
+              size={230}
+            />
+          </div>
 
-        <h2>{pitch.title}</h2>
-        <ul>
-          {pitch.lines.map((line) => (
-            <li key={line}>
-              <SproutyIcon name="check" size={18} />
-              {line}
-            </li>
-          ))}
-        </ul>
+          <h2>{pitch.title}</h2>
+          <ul>
+            {pitch.lines.map((line) => (
+              <li key={line}>
+                <SproutyIcon name="check" size={18} />
+                {line}
+              </li>
+            ))}
+          </ul>
+
+          <p className="auth-aside-foot">{pitch.foot}</p>
+        </div>
       </aside>
 
       {/* Form side */}
       <main className="auth-main">
         <div className="auth-card">
+          <Link to="/" className="auth-card-logo">
+            <img src="/assets/images/logo.png" alt="Sprouty" />
+          </Link>
+
           <Link to="/" className="auth-back">
             <SproutyIcon name="arrow-right" size={16} />
             Về trang chủ

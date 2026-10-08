@@ -1,6 +1,7 @@
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { SproutyIcon } from '@/components/icons/SproutyIcon';
+import { loginHref } from '@/services/auth-nav';
 
 /**
  * Gates a branch of the route tree. Note this is a convenience for the user,
@@ -29,8 +30,9 @@ export function ProtectedRoute({ role }: { role?: 'employee' | 'admin' }) {
   }
 
   if (!isLoggedIn) {
-    const next = encodeURIComponent(location.pathname + location.search);
-    return <Navigate to={`/login?next=${next}`} replace />;
+    // Shared with every other entry point, so the rule about which targets are
+    // worth carrying lives in exactly one place.
+    return <Navigate to={loginHref(location.pathname + location.search)} replace />;
   }
 
   // Signed in, but not as the right kind of account. This is a different
