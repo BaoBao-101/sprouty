@@ -16,7 +16,14 @@ import { canAccessProductFeature } from '../services/access.js';
  */
 
 /** Kinds anyone may fetch — these are already shown on public pages. */
-const PUBLIC_KINDS = new Set(['blog_cover', 'blog_inline', 'workshop_cover']);
+const PUBLIC_KINDS = new Set([
+  'blog_cover',
+  'blog_inline',
+  'workshop_cover',
+  // A product photo is the shop listing. It has to be readable by a visitor
+  // who has not signed in, or the catalogue renders as broken images.
+  'product_image',
+]);
 
 /** Kinds gated by the same entitlement as their metadata endpoint. */
 const FEATURE_BY_KIND = {

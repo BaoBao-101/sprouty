@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { SproutyIcon } from '@/components/icons/SproutyIcon';
 import type { SpeciesOption } from '@/types/plant';
 import { VideoPanel } from './VideoPanel';
@@ -117,26 +117,87 @@ function ImageRow({
   canRemove: boolean;
 }) {
   const [broken, setBroken] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
   const trimmed = value.trim();
 
+  // Uploading before the product exists is deliberate: the admin picks the
+  // photo while filling in the form, so there is no product id to attach it
+  // to yet. The server stores the file and hands back a URL, which is what
+  // gets saved with the rest of the fields.
+  async function upload(file: File) {
+    if (!file.type.startsWith('image/')) {
+      showToast('Chỉ nhận file ảnh.', 'error');
+      return;
+    }
+    setBusy(true);
+    try {
+      const body = new FormData();
+      body.append('file', file);
+      const { url } = await API.admin.products.uploadImage(body);
+      setBroken(false);
+      onChange(url);
+    } catch (err: any) {
+      showToast(err?.message || 'Không tải được ảnh lên.', 'error');
+    } finally {
+      setBusy(false);
+      if (fileInput.current) fileInput.current.value = '';
+    }
+  }
+
   return (
-    <div className="repeat-row">
+    <div className="repeat-row image-row">
       <div className="repeat-preview">
         {trimmed && !broken ? (
           <img src={trimmed} alt="" onError={() => setBroken(true)} />
         ) : (
-          <span>{trimmed ? '⚠️' : '🖼'}</span>
+          <AdminIcon name={trimmed ? 'alert' : 'images'} size={20} />
         )}
       </div>
-      <input
-        className="form-input"
-        placeholder="/assets/images/products/ten-anh.png"
-        value={value}
-        onChange={(e) => {
-          setBroken(false);
-          onChange(e.target.value);
-        }}
-      />
+
+      <div className="image-row-main">
+        <div className="image-row-actions">
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            disabled={busy}
+            onClick={() => fileInput.current?.click()}
+          >
+            <AdminIcon name="upload" size={15} />
+            {busy ? 'Đang tải lên…' : trimmed ? 'Đổi ảnh' : 'Chọn ảnh từ máy'}
+          </button>
+          {trimmed && !busy && (
+            <a className="image-row-link" href={trimmed} target="_blank" rel="noreferrer">
+              Xem ảnh
+              <AdminIcon name="external" size={13} />
+            </a>
+          )}
+        </div>
+
+        {/* Still editable by hand: the catalogue that shipped with the site
+            points at /assets paths nobody uploaded through here. */}
+        <input
+          className="form-input image-row-url"
+          placeholder="hoặc dán đường dẫn /assets/… hay https://…"
+          value={value}
+          onChange={(e) => {
+            setBroken(false);
+            onChange(e.target.value);
+          }}
+        />
+
+        <input
+          ref={fileInput}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void upload(file);
+          }}
+        />
+      </div>
+
       <button
         type="button"
         className="repeat-remove"
@@ -144,7 +205,7 @@ function ImageRow({
         disabled={!canRemove}
         title="Bỏ ảnh này"
       >
-        ✕
+        <AdminIcon name="close" size={15} />
       </button>
     </div>
   );
@@ -583,8 +644,9 @@ export function ProductEditor({
             {tab === 'images' && (
               <>
                 <div className="panel-note">
-                  Ảnh đầu tiên là ảnh chính hiển thị trên cửa hàng. Đường dẫn bắt đầu bằng{' '}
-                  <code>/assets/</code> hoặc <code>https://</code>.
+                  Ảnh đầu tiên là ảnh chính hiển thị trên cửa hàng. Chọn ảnh từ máy, hoặc dán
+                  sẵn một đường dẫn {' '}
+                  <code>/assets/</code> hay <code>https://</code> nếu đã có.
                 </div>
 
                 {form.images.map((url, i) => (
@@ -604,7 +666,8 @@ export function ProductEditor({
                   className="btn btn-ghost btn-sm"
                   onClick={() => set('images')([...form.images, ''])}
                 >
-                  + Thêm ảnh
+                  <AdminIcon name="plus" size={15} />
+                  Thêm ảnh
                 </button>
               </>
             )}

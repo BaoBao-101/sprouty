@@ -657,3 +657,44 @@
 .staff-root .editor-step.active .editor-step-icon {
   color: var(--accent);
 }
+
+/* ── Picking a product photo ───────────────────────────────────────────────
+   The field used to be a text box you typed a path into, which meant the file
+   had to reach the server some other way first. It uploads now; the path box
+   stays because the catalogue that shipped with the site points at /assets
+   paths nobody uploaded through here. */
+
+.staff-root .image-row {
+  align-items: flex-start;
+}
+
+.staff-root .image-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.staff-root .image-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.staff-root .image-row-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--ink-4);
+}
+
+.staff-root .image-row-link:hover { color: var(--accent) }
+
+.staff-root .image-row-url {
+  font-size: 0.8rem;
+  height: 34px;
+  color: var(--ink-3);
+}

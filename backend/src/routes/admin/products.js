@@ -3,6 +3,9 @@ import { AppError } from '../../utils/errors.js';
 import { requireEmployee, requireCsrf, requireAdmin } from '../../middleware/rbac.js';
 import { isSpeciesKey, speciesCatalog } from '../../services/plant-sim.js';
 import { readPaging, paged, searchOr } from './paging.js';
+import { multipartFields } from '../../utils/validation.js';
+import { createAsset } from '../../services/storage/index.js';
+import { auditLog } from '../../services/audit.js';
 
 // Reject any string containing HTML angle brackets — defense-in-depth against stored XSS.
 const noHtml = (label) => z.string().refine(
@@ -188,6 +191,27 @@ export default async function adminProductRoutes(fastify) {
   }));
 
   // POST /api/v1/admin/products
+  // POST /api/v1/admin/products/images — upload a photo and get its URL back.
+  //
+  // Separate from the product record on purpose: an admin picks the photo
+  // while filling in a product that does not exist yet, so there is no id to
+  // attach it to. The URL returned goes into the form and is saved with the
+  // rest of the fields. Mirrors /admin/workshop-images and /admin/blog-images.
+  fastify.post('/products/images', { preHandler: writeAuth }, async (req, reply) => {
+    const { file } = await multipartFields(req);
+    const asset = await createAsset(fastify.prisma, {
+      ownerUserId: req.user.id,
+      kind: 'product_image',
+      file,
+      category: 'image',
+    });
+    await auditLog(fastify.prisma, req.user.id, 'product.image.upload', 'Asset', asset.id, {
+      originalName: asset.originalName,
+    });
+    reply.code(201);
+    return { url: asset.url, originalName: asset.originalName, sizeBytes: asset.sizeBytes };
+  });
+
   fastify.post('/products', { preHandler: writeAuth }, async (req, reply) => {
     const parsed = productSchema.safeParse(req.body);
     if (!parsed.success) {

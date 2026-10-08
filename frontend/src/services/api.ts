@@ -216,6 +216,8 @@ export const API = {
       list(params = {})   { return _fetch('/admin/products?' + new URLSearchParams(params)); },
       /** The plant species an admin can put a kit on sale as. */
       species()           { return _fetch('/admin/products/species'); },
+      /** Uploads one photo and returns its URL, before the product exists. */
+      uploadImage(form)   { return _fetch('/admin/products/images', { method: 'POST', body: form }); },
       sales()             { return _fetch('/admin/products/sales'); },
       create(d)           { return _fetch('/admin/products', { method: 'POST', body: JSON.stringify(d) }); },
       update(id, d)       { return _fetch(`/admin/products/${id}`, { method: 'PUT', body: JSON.stringify(d) }); },
