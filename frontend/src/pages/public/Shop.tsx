@@ -330,7 +330,7 @@ export default function Shop() {
             <Link to="/">Trang chủ</Link> › Cửa hàng
           </div>
           <h1>Cửa hàng Sprouty</h1>
-          <p>Cây mô phỏng, thiết bị IoT ảo và gói VIP Garden cho cả gia đình.</p>
+          <p>Bộ kit cây mô phỏng và thiết bị IoT ảo cho cả gia đình.</p>
         </div>
       </div>
 

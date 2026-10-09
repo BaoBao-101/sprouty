@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { AppError } from '../../utils/errors.js';
 import { requireEmployee, requireCsrf } from '../../middleware/rbac.js';
 import { auditLog } from '../../services/audit.js';
+import { syncMembership } from '../../services/membership.js';
 import { syncWorkshopRewards } from '../../services/rewards.js';
 
 const updateStatusSchema = z.object({
@@ -75,6 +76,10 @@ export default async function adminOrderRoutes(fastify) {
       data: { status: parsed.data.status },
     });
 
+    // Cancelling a paid VIP order takes its days back off the account, and
+    // un-cancelling one puts them back.
+    await syncMembership(fastify.prisma, updated.id);
+
     return { order: updated };
   });
 
@@ -123,6 +128,7 @@ export default async function adminOrderRoutes(fastify) {
       fastify.log.error({ err, orderId: order.id }, 'Reward sync after manual payment failed');
       return null;
     });
+    await syncMembership(fastify.prisma, order.id);
 
     return {
       order: updated,

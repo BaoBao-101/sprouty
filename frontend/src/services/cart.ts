@@ -32,6 +32,10 @@ function load() {
   } catch {
     items = [];
   }
+  // A VIP plan put in the cart before it moved to its own checkout. The
+  // order route refuses it now, so leaving it there would block the kits
+  // next to it from being bought at all.
+  items = items.filter((x) => x.cat !== 'membership');
 }
 
 function save() {
@@ -95,6 +99,10 @@ export const Cart = {
     const source = product || catalog[id];
     if (!source) {
       showToast('Không tìm thấy sản phẩm', 'error');
+      return;
+    }
+    if ((source.cat || source.category) === 'membership') {
+      showToast('Gói VIP được mua riêng ở trang VIP Garden.', 'error');
       return;
     }
     if (variant === 'smart' && (source.smartDelta ?? source.smartPriceDelta) == null) {

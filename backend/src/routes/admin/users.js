@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { AppError } from '../../utils/errors.js';
 import { requireAdmin, requireCsrf } from '../../middleware/rbac.js';
 import { isVipUser } from '../../services/access.js';
+import { recomputeVipUntil, syncMembership, tierOf } from '../../services/membership.js';
 import { passwordSchema } from '../../utils/password.js';
 
 const createUserSchema = z.object({
@@ -41,22 +42,13 @@ export default async function adminUserRoutes(fastify) {
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const pageSize = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
 
-    // VIP is derived from a paid membership order, not a column, so the ids have
-    // to be resolved before the page query — filtering after it would only
-    // filter the 20 rows in hand.
-    const vipRows = await fastify.prisma.orderItem.findMany({
-      where: {
-        product: { category: 'membership' },
-        order: { paidAt: { not: null }, status: { not: 'cancelled' } },
-      },
-      select: { order: { select: { userId: true } } },
-    });
-    const vipUserIds = new Set(vipRows.map(r => r.order.userId).filter(Boolean));
-
+    // VIP is the account's vipUntil (services/membership.js), so it filters
+    // like any other column and an expired plan drops out on its own.
+    const now = new Date();
     const where = {};
     if (role) where.role = String(role);
     if (status) where.status = String(status);
-    if (vip === '1' || vip === 'true') where.id = { in: [...vipUserIds] };
+    if (vip === '1' || vip === 'true') where.vipUntil = { gt: now };
     if (search) {
       where.OR = [
         { name: { contains: String(search), mode: 'insensitive' } },
@@ -67,7 +59,7 @@ export default async function adminUserRoutes(fastify) {
     const [users, total, roleCounts] = await Promise.all([
       fastify.prisma.user.findMany({
         where,
-        select: { id: true, email: true, name: true, role: true, status: true, createdAt: true },
+        select: { id: true, email: true, name: true, role: true, status: true, createdAt: true, vipUntil: true },
         orderBy: { createdAt: 'desc' },
         skip: (pageNum - 1) * pageSize,
         take: pageSize,
@@ -80,17 +72,20 @@ export default async function adminUserRoutes(fastify) {
 
     const counts = { customer: 0, employee: 0, admin: 0 };
     for (const row of roleCounts) counts[row.role] = row._count._all;
-    const disabledCount = await fastify.prisma.user.count({ where: { status: 'disabled' } });
+    const [disabledCount, vipCount] = await Promise.all([
+      fastify.prisma.user.count({ where: { status: 'disabled' } }),
+      fastify.prisma.user.count({ where: { vipUntil: { gt: now } } }),
+    ]);
 
     return {
-      users: users.map(u => ({ ...u, isVip: vipUserIds.has(u.id) })),
+      users: users.map(({ vipUntil, ...u }) => ({ ...u, ...tierOf({ vipUntil }, now) })),
       total,
       page: pageNum,
       limit: pageSize,
       pages: Math.ceil(total / pageSize),
       counts: {
         ...counts,
-        vip: vipUserIds.size,
+        vip: vipCount,
         disabled: disabledCount,
         all: counts.customer + counts.employee + counts.admin,
       },
@@ -134,10 +129,10 @@ export default async function adminUserRoutes(fastify) {
     return { message: `Đã đặt lại mật khẩu cho ${target.name}. Mọi phiên đăng nhập của họ đã bị đăng xuất.` };
   });
 
-  // POST /api/v1/admin/users/:id/grant-vip — manual-test helper: books a paid
-  // order for a membership product on the user's behalf, since VIP status is
-  // derived purely from "has a paid membership order" (see isVipUser in
-  // services/access.js) rather than a separate flag on User.
+  // POST /api/v1/admin/users/:id/grant-vip — books a paid order for the
+  // cheapest plan on the user's behalf. Through an order rather than by
+  // writing vipUntil directly, so the days come from the same replay as a
+  // purchase (services/membership.js) and a later recompute cannot erase them.
   fastify.post('/users/:id/grant-vip', { preHandler: auth }, async (req, reply) => {
     const target = await fastify.prisma.user.findUnique({ where: { id: req.params.id } });
     if (!target) return reply.code(404).send({ message: 'Không tìm thấy người dùng.' });
@@ -156,15 +151,16 @@ export default async function adminUserRoutes(fastify) {
       data: {
         userId: target.id,
         total: membership.price,
-        status: 'processing',
+        status: 'delivered',
         paidAt: new Date(),
         shippingName: target.name,
-        shippingPhone: '0000000000',
-        shippingAddress: 'Cấp bởi admin để test — không giao hàng thật.',
+        shippingPhone: '',
+        shippingAddress: 'Cấp bởi admin — gói thành viên, không giao hàng.',
         note: 'admin.grant_vip',
         items: { create: [{ productId: membership.id, qty: 1, unitPrice: membership.price }] },
       },
     });
+    const vipUntil = await syncMembership(fastify.prisma, order.id);
 
     await logAudit(fastify.prisma, req.user.id, 'user.grant_vip', 'User', target.id, {
       orderId: order.id,
@@ -172,7 +168,8 @@ export default async function adminUserRoutes(fastify) {
       productName: membership.name,
     });
 
-    return { message: `Đã cấp VIP cho ${target.name} (${membership.name}).`, orderId: order.id };
+    const until = vipUntil ? ` — đến ${vipUntil.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}` : '';
+    return { message: `Đã cấp VIP cho ${target.name} (${membership.name})${until}.`, orderId: order.id, vipUntil };
   });
 
   // DELETE /api/v1/admin/users/:id/grant-vip — revoke: cancel every paid
@@ -190,6 +187,10 @@ export default async function adminUserRoutes(fastify) {
       },
       data: { status: 'cancelled' },
     });
+
+    // Replayed rather than nulled, so the account ends up exactly where its
+    // remaining orders put it — which, with every one cancelled, is regular.
+    await recomputeVipUntil(fastify.prisma, target.id);
 
     await logAudit(fastify.prisma, req.user.id, 'user.revoke_vip', 'User', target.id, { ordersCancelled: count });
 

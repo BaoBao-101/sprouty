@@ -25,8 +25,13 @@ interface AdminUser {
   role: 'customer' | 'employee' | 'admin';
   status: 'active' | 'disabled';
   isVip?: boolean;
+  /** When VIP runs out — or ran out, if vipExpired. */
+  vipUntil?: string | null;
+  vipExpired?: boolean;
   createdAt: string;
 }
+
+const vipDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString('vi-VN') : '');
 
 type Role = AdminUser['role'];
 
@@ -371,7 +376,11 @@ export default function Users() {
   }
 
   function revokeVip(user: AdminUser) {
-    if (!confirm('Thu hồi VIP của người dùng này? Giới hạn lá kỷ niệm sẽ về lại mức thường (10).'))
+    if (
+      !confirm(
+        'Thu hồi VIP của người dùng này? Các đơn gói VIP đã thanh toán sẽ bị huỷ và tài khoản về hạng Thường (giới hạn 10 lá kỷ niệm).',
+      )
+    )
       return;
     run(user, async () => {
       const { message } = await API.admin.users.revokeVip(user.id);
@@ -477,12 +486,17 @@ export default function Users() {
                         <div className="ad-cell-main">
                           {user.name}
                           {user.isVip && (
-                            <span className="usr-vip" title="Khách VIP">
+                            <span className="usr-vip" title={`Khách VIP đến ${vipDate(user.vipUntil)}`}>
                               <AdminIcon name="star" size={14} />
                             </span>
                           )}
                         </div>
                         <div className="ad-cell-sub">{user.email}</div>
+                        {user.isVip ? (
+                          <div className="usr-tier is-vip">VIP đến {vipDate(user.vipUntil)}</div>
+                        ) : user.vipExpired ? (
+                          <div className="usr-tier">VIP hết hạn {vipDate(user.vipUntil)}</div>
+                        ) : null}
                       </div>
                     </div>
                   </td>

@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, type User } from '@/contexts/AuthContext';
+import { formatVipDate, vipDaysLeft } from '@/services/membership';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { SproutyIcon } from '@/components/icons/SproutyIcon';
 import { Pager } from '@/components/Pager';
 import {
   formatOrderDate,
+  isVipOrder,
   ORDER_STATUS_CLASS,
   ORDER_STATUS_VN,
   shortOrderId,
@@ -30,6 +32,65 @@ const TRACK_STEPS = [
   { key: 'activate', label: 'Kích hoạt cây', icon: 'sprout' as const },
 ];
 
+/** A VIP order has no step after paying: the payment is the upgrade. */
+const VIP_TRACK_STEPS = [
+  { key: 'placed', label: 'Đặt gói', icon: 'cart' as const },
+  { key: 'paid', label: 'Thanh toán', icon: 'ticket' as const },
+  { key: 'vip', label: 'Lên VIP', icon: 'sparkle' as const },
+];
+
+const ROLE_VN: Record<User['role'], string> = {
+  customer: 'Khách hàng',
+  employee: 'Nhân viên',
+  admin: 'Quản trị viên',
+};
+
+/**
+ * Thường or VIP, and what to do about it. Above the tabs because it is the
+ * account's standing, not something filed under one of them.
+ */
+function TierBand({ user }: { user: User }) {
+  if (user.isVip) {
+    return (
+      <div className="tier-band is-vip">
+        <span className="tier-band-icon">
+          <img src="/assets/images/sprouty-icons/VIP.png" alt="" />
+        </span>
+        <div className="tier-band-text">
+          <strong>Thành viên VIP Garden</strong>
+          <span>
+            Còn {vipDaysLeft(user.vipUntil)} ngày · hết hạn {formatVipDate(user.vipUntil)}
+          </span>
+        </div>
+        <Link className="tier-band-cta" to="/vip">
+          Gia hạn
+          <SproutyIcon name="arrow-right" size={16} />
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`tier-band${user.vipExpired ? ' is-expired' : ''}`}>
+      <span className="tier-band-icon">
+        <SproutyIcon name="sprout" size={22} />
+      </span>
+      <div className="tier-band-text">
+        <strong>Tài khoản Thường</strong>
+        <span>
+          {user.vipExpired
+            ? `Gói VIP đã hết hạn ngày ${formatVipDate(user.vipUntil)}.`
+            : 'Lên VIP Garden để có 25 lá kỷ niệm mỗi kit, hiệu ứng theo mùa và AI recap hằng tháng.'}
+        </span>
+      </div>
+      <Link className="tier-band-cta" to="/vip">
+        {user.vipExpired ? 'Gia hạn VIP' : 'Nâng cấp VIP'}
+        <SproutyIcon name="arrow-right" size={16} />
+      </Link>
+    </div>
+  );
+}
+
 function OrderTrack({ order }: { order: Order }) {
   if (order.status === 'cancelled') {
     return (
@@ -42,17 +103,19 @@ function OrderTrack({ order }: { order: Order }) {
 
   const paid = Boolean(order.paidAt);
   const codes = order.redeemCodes || [];
+  const vip = isVipOrder(order);
   // The last step is the customer's move, so it completes when they make
   // it. Without this it sat as "current" forever — a plant could be three
   // weeks grown and the order still showed activation as pending.
-  const activated = codes.length > 0 && codes.every((c) => c.redeemed);
+  // A VIP order has no such move: paying switched it on.
+  const activated = vip ? paid : codes.length > 0 && codes.every((c) => c.redeemed);
 
   // Step 0 is always behind us; paying lights step 1 and opens step 2.
   const reached = activated ? 3 : paid ? 2 : 1;
 
   return (
     <div className="otrack">
-      {TRACK_STEPS.map((step, i) => (
+      {(vip ? VIP_TRACK_STEPS : TRACK_STEPS).map((step, i) => (
         <div className="otrack-step" key={step.key}>
           {i > 0 && <span className={`otrack-line${i <= reached ? ' done' : ''}`} />}
           <span className={`otrack-dot${i < reached ? ' done' : i === reached ? ' current' : ''}`}>
@@ -107,7 +170,7 @@ function RedeemCodeList({ codes }: { codes: RedeemCode[] }) {
             {code.redeemed && (
               <span className="ocode-used-note">
                 <SproutyIcon name="check" size={14} />
-                Đã kích hoạt
+                {code.kind === 'membership' ? 'Đã kích hoạt gói thành viên' : 'Đã kích hoạt'}
                 {code.plantNickname && <> thành “{code.plantNickname}”</>}
                 {code.activatedAt && (
                   <> · {new Date(code.activatedAt).toLocaleDateString('vi-VN')}</>
@@ -116,7 +179,15 @@ function RedeemCodeList({ codes }: { codes: RedeemCode[] }) {
             )}
           </div>
           <div className="ocode-actions">
-            {code.redeemed ? (
+            {code.redeemed && code.kind === 'membership' ? (
+              // Nothing to open: the membership is a set of features on the
+              // account, not a page. A "Xem cây" link here led to a garden
+              // that does not contain it.
+              <Link className="ocode-go" to="/vip">
+                Xem quyền lợi
+                <SproutyIcon name="arrow-right" size={16} />
+              </Link>
+            ) : code.redeemed ? (
               <Link className="ocode-go" to={code.plantId ? `/plant/${code.plantId}` : '/my-plants'}>
                 Xem cây
                 <SproutyIcon name="arrow-right" size={16} />
@@ -143,6 +214,7 @@ function OrderCard({ order, onCancelled }: { order: Order; onCancelled: () => vo
   const [cancelling, setCancelling] = useState(false);
   const canAct = order.status === 'pending';
   const codes = order.redeemCodes || [];
+  const vip = isVipOrder(order);
 
   async function cancel() {
     if (!confirm('Bạn chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác.')) return;
@@ -157,7 +229,7 @@ function OrderCard({ order, onCancelled }: { order: Order; onCancelled: () => vo
   }
 
   return (
-    <article className={`ocard${canAct ? ' is-pending' : ''}`}>
+    <article className={`ocard${canAct ? ' is-pending' : ''}${vip ? ' is-vip' : ''}`}>
       <header className="ocard-top">
         <div className="ocard-id">
           <strong>#{shortOrderId(order.id)}</strong>
@@ -172,7 +244,11 @@ function OrderCard({ order, onCancelled }: { order: Order; onCancelled: () => vo
         {order.items.map((item, i) => (
           <div className="oitem" key={i}>
             <span className="oitem-thumb">
-              <SproutyIcon name="pot" size={20} />
+              {vip ? (
+                <img src="/assets/images/sprouty-icons/VIP.png" alt="" />
+              ) : (
+                <SproutyIcon name="pot" size={20} />
+              )}
             </span>
             <span className="oitem-name">
               {item.product?.name || 'Sản phẩm'}
@@ -185,17 +261,25 @@ function OrderCard({ order, onCancelled }: { order: Order; onCancelled: () => vo
       </div>
 
       <div className="ocard-sum">
-        <div className="ocard-buyer">
-          <span>{order.shippingName}</span>
-          <em>{order.shippingPhone}</em>
-        </div>
+        {vip ? (
+          // Nobody to deliver to: say what the order did instead.
+          <div className="ocard-buyer">
+            <span>Gói thành viên VIP Garden</span>
+            <em>{order.paidAt ? 'Đã tự động nâng cấp tài khoản' : 'Tự lên VIP khi thanh toán xong'}</em>
+          </div>
+        ) : (
+          <div className="ocard-buyer">
+            <span>{order.shippingName}</span>
+            <em>{order.shippingPhone}</em>
+          </div>
+        )}
         <div className="ocard-total">
           <span>Tổng cộng</span>
           <strong>{formatPrice(order.total)}</strong>
         </div>
       </div>
 
-      {order.note && (
+      {order.note && !vip && (
         <p className="ocard-note">
           <SproutyIcon name="pencil" size={15} />
           {order.note}
@@ -345,7 +429,14 @@ function ChangePassword() {
 }
 
 export default function Account() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
+
+  // The tier may have changed since the session was read — a VIP payment in
+  // another tab, or a plan that ran out overnight.
+  useEffect(() => {
+    void refreshUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [tab, setTab] = useState<'orders' | 'profile'>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -412,6 +503,11 @@ export default function Account() {
               <div>
                 <h1>{user?.name || 'Tài khoản của tôi'}</h1>
                 <p>{user?.email}</p>
+                {user?.role === 'customer' && (
+                  <span className={`acc-tier${user.isVip ? ' is-vip' : ''}`}>
+                    {user.isVip ? 'VIP Garden' : 'Tài khoản Thường'}
+                  </span>
+                )}
               </div>
             </div>
             <div className="acc-hero-stats">
@@ -433,6 +529,8 @@ export default function Account() {
       </div>
 
       <div className="container acc-body">
+        {user?.role === 'customer' && <TierBand user={user} />}
+
         {/* A segmented control. These used to be two stacked links that read as
             list rows, so nothing about them said "pick one of these". */}
         <nav className="acc-tabs" role="tablist">
@@ -530,8 +628,16 @@ export default function Account() {
               </div>
               <div className="profile-cell">
                 <div className="profile-label">Vai trò</div>
-                <div className="profile-value" style={{ textTransform: 'capitalize' }}>
-                  {user.role}
+                <div className="profile-value">{ROLE_VN[user.role] ?? user.role}</div>
+              </div>
+              <div className="profile-cell">
+                <div className="profile-label">Hạng tài khoản</div>
+                <div className="profile-value">
+                  {user.isVip
+                    ? `VIP Garden — đến ${formatVipDate(user.vipUntil)}`
+                    : user.vipExpired
+                      ? `Thường (VIP hết hạn ${formatVipDate(user.vipUntil)})`
+                      : 'Thường'}
                 </div>
               </div>
             </div>

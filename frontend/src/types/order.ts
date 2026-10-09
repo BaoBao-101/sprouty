@@ -7,7 +7,27 @@ export interface OrderItem {
   /** 'standard' | 'smart' — which variant was bought, when one was offered. */
   variant?: string | null;
   /** The server selects images for this endpoint; the type never said so. */
-  product?: { name?: string; emoji?: string; images?: string[] };
+  product?: {
+    name?: string;
+    emoji?: string;
+    images?: string[];
+    category?: string;
+    /** Days one unit of a VIP plan lasts. */
+    membershipDays?: number | null;
+  };
+}
+
+/**
+ * The account's tier as the order endpoint reports it alongside a VIP order,
+ * so the payment page can say how long the upgrade lasts.
+ */
+export interface MembershipInfo {
+  /** Days this order adds. */
+  days: number;
+  tier: 'regular' | 'vip';
+  isVip: boolean;
+  vipUntil: string | null;
+  vipExpired: boolean;
 }
 
 export interface RedeemCode {
@@ -16,7 +36,13 @@ export interface RedeemCode {
   productName?: string;
   /** Entitlements the code unlocks; the payment page lists them. */
   features?: string[];
-  /** True once this code has produced a plant — the code is then spent. */
+  /**
+   * A kit grows a plant; a membership grants features and nothing grows.
+   * The two need different buttons — offering "gieo hạt" for a membership
+   * promised a plant that could never exist.
+   */
+  kind?: 'kit' | 'membership';
+  /** True once the code is spent: the plant exists, or the membership is active. */
   redeemed?: boolean;
   plantId?: string | null;
   plantNickname?: string | null;
@@ -72,6 +98,16 @@ export function formatOrderDate(value: string) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+/**
+ * A VIP Garden purchase: bought on /vip, paid on its own, and switched on by
+ * the payment rather than by a code. Every screen that shows an order needs
+ * to tell these apart — there is nothing to activate and nothing to deliver.
+ */
+export function isVipOrder(order: Pick<Order, 'items'>) {
+  const items = order.items || [];
+  return items.length > 0 && items.every((i) => i.product?.category === 'membership');
 }
 
 /** Last 8 characters, as shown to customers and staff. */

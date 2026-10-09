@@ -652,3 +652,77 @@
   background: rgba(255, 255, 255, 0.26);
   color: #fff;
 }
+
+/* ── Account tier: Thường or VIP Garden ────────────────────────────────── */
+
+.acc-tier {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 6px;
+  padding: 3px 11px;
+  border-radius: var(--r-full);
+  background: rgba(255, 255, 255, .16);
+  border: 1.5px solid rgba(255, 255, 255, .35);
+  color: #fff;
+  font-family: var(--font-h);
+  font-size: .74rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.acc-tier.is-vip { background: #FEF3C7; border-color: #FCD34D; color: #92400E }
+
+.tier-band {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  border: 1.5px solid var(--parchment-2);
+}
+.tier-band.is-vip { background: linear-gradient(135deg, #FFFBEB, #FEF3C7); border-color: #FCD34D }
+.tier-band.is-expired { border-color: #FECACA }
+
+.tier-band-icon {
+  flex: 0 0 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--sage-lt);
+  color: var(--primary-600);
+}
+.tier-band.is-vip .tier-band-icon { background: #fff }
+.tier-band-icon img { width: 28px; height: 28px; object-fit: contain }
+
+.tier-band-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px }
+.tier-band-text strong { font-family: var(--font-h); font-size: .98rem; color: var(--ink) }
+.tier-band.is-vip .tier-band-text strong { color: #78350F }
+.tier-band-text span { font-size: .86rem; color: var(--ink-4); line-height: 1.5 }
+.tier-band.is-vip .tier-band-text span { color: #92400E }
+
+.tier-band-cta {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: var(--r-full);
+  background: var(--primary-600);
+  color: #fff;
+  font-family: var(--font-h);
+  font-size: .86rem;
+  font-weight: 700;
+}
+.tier-band-cta:hover { color: #fff; filter: brightness(1.06) }
+.tier-band.is-vip .tier-band-cta { background: #B45309 }
+
+@media (max-width: 560px) {
+  .tier-band { flex-wrap: wrap }
+  .tier-band-cta { width: 100%; justify-content: center }
+}
+
+.ocard.is-vip .oitem-thumb { background: #FEF3C7 }
+.ocard.is-vip .oitem-thumb img { width: 22px; height: 22px; object-fit: contain }

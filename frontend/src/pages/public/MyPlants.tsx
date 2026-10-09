@@ -80,14 +80,15 @@ function ActivateDialog({
     setBusy(true);
     try {
       const data = await API.plants.activate(clean, nickname.trim() || undefined);
-      if (data.created) {
-        showToast('Hạt đã được gieo! Cùng chăm cây nhé.', 'success');
-      } else {
-        showToast('Cây này đã được kích hoạt trước đó.');
-      }
+      showToast(data.message || 'Đã kích hoạt mã.', 'success');
       setCode('');
       setNickname('');
-      onActivated(data.plant.id);
+
+      // A membership code grants features and plants nothing, so there is
+      // no plant page to go to. This used to read data.plant.id regardless
+      // and throw on a code that had, in fact, worked.
+      if (data.plant?.id) onActivated(data.plant.id);
+      else onClose();
     } catch (err: any) {
       setError(err?.message || 'Không kích hoạt được mã này.');
     } finally {

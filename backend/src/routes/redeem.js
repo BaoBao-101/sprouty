@@ -26,9 +26,12 @@ export default async function redeemRoutes(fastify) {
     });
 
     return {
-      message: result.plantCreated
-        ? 'Đã kích hoạt mã — cây của bạn đã được gieo hạt!'
-        : 'Đã kích hoạt mã.',
+      message: result.alreadyRedeemed
+        ? 'Mã này đã được kích hoạt cho tài khoản của bạn rồi.'
+        : result.plantCreated
+          ? 'Đã kích hoạt mã — cây của bạn đã được gieo hạt!'
+          : 'Đã kích hoạt mã.',
+      alreadyRedeemed: result.alreadyRedeemed,
       features: result.features,
       productId: result.productId,
       entitlements: result.entitlements,

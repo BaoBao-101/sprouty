@@ -88,7 +88,7 @@ export const sessionPlugin = fp(async (fastify) => {
     const session = await fastify.prisma.session.findFirst({
       where: { id: sessionId },
       include: {
-        user: { select: { id: true, email: true, name: true, role: true, status: true } },
+        user: { select: { id: true, email: true, name: true, role: true, status: true, vipUntil: true } },
       },
     });
 

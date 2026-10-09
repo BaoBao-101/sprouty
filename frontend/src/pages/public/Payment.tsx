@@ -10,7 +10,15 @@ import {
   type AddressParts,
 } from '@/components/AddressFields';
 import { refreshRewards } from '@/components/PromoBanner';
-import { ORDER_STATUS_VN, shortOrderId, type Order } from '@/types/order';
+import { useAuth } from '@/contexts/AuthContext';
+import { formatVipDate, planLength, vipDaysLeft } from '@/services/membership';
+import {
+  isVipOrder,
+  ORDER_STATUS_VN,
+  shortOrderId,
+  type MembershipInfo,
+  type Order,
+} from '@/types/order';
 import { formatPrice } from '@/types/product';
 import './Payment.css';
 
@@ -228,6 +236,48 @@ function ContactBlock({ order, onSaved }: { order: Order; onSaved: () => void })
   );
 }
 
+/**
+ * Where a shop order asks who to contact, a VIP order says what happens once
+ * it is paid. There is nobody to deliver to and no address to check; the
+ * question a parent has instead is "what do I get, and do I have to do
+ * anything after paying?" — and the answer to the second is no.
+ */
+function VipAfterPay({ membership }: { membership: MembershipInfo | null }) {
+  const days = membership?.days || 0;
+  // Renewing early adds on to the end; otherwise the clock starts now.
+  const from =
+    membership?.isVip && membership.vipUntil ? new Date(membership.vipUntil).getTime() : Date.now();
+  const until = days ? new Date(from + days * 86_400_000).toISOString() : null;
+
+  return (
+    <div className="ord-ship ord-vip">
+      <span className="ord-ship-label">Sau khi thanh toán</span>
+      <ul className="ord-vip-list">
+        <li>
+          <SproutyIcon name="check" size={17} />
+          <span>
+            Tài khoản <b>tự động lên VIP</b> ngay khi tiền về — không cần nhập mã kích hoạt.
+          </span>
+        </li>
+        {days > 0 && (
+          <li>
+            <SproutyIcon name="check" size={17} />
+            <span>
+              Thời hạn <b>{planLength(days)}</b>
+              {until && <> — đến khoảng ngày <b>{formatVipDate(until)}</b></>}
+              {membership?.isVip && ', nối tiếp hạn VIP hiện tại'}.
+            </span>
+          </li>
+        )}
+        <li>
+          <SproutyIcon name="check" size={17} />
+          <span>Không giao hàng — mọi quyền lợi nằm trên tài khoản của bạn.</span>
+        </li>
+      </ul>
+    </div>
+  );
+}
+
 export default function PaymentPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -235,6 +285,13 @@ export default function PaymentPage() {
 
   const [order, setOrder] = useState<(Order & { redeemCodes?: PurchaseCode[] }) | null>(null);
   const [payment, setPayment] = useState<Payment | null>(null);
+  /** The account's tier, sent with a VIP order. */
+  const [membership, setMembership] = useState<MembershipInfo | null>(null);
+  const { refreshUser } = useAuth();
+  // Read through a ref so a changed session does not restart the polling
+  // loop below, whose callback would otherwise depend on it.
+  const refreshUserRef = useRef(refreshUser);
+  refreshUserRef.current = refreshUser;
   const [phase, setPhase] = useState<Phase>('loading');
   const [hint, setHint] = useState('');
   /** Server-decided: this deployment will credit a payment nobody made. */
@@ -255,6 +312,7 @@ export default function PaymentPage() {
       const {
         order: fetched,
         payment: fetchedPayment,
+        membership: fetchedMembership,
         canSimulatePayment,
       } = await API.orders.get(orderId);
       if (!fetched) {
@@ -263,6 +321,7 @@ export default function PaymentPage() {
       }
       setOrder(fetched);
       setPayment(fetchedPayment || null);
+      setMembership(fetchedMembership || null);
       setCanSimulate(Boolean(canSimulatePayment));
       setPhase('ready');
       setHint('');
@@ -271,8 +330,14 @@ export default function PaymentPage() {
       // progress shown elsewhere is not a purchase behind.
       if (fetched.paidAt && !celebrated.current) {
         celebrated.current = true;
-        showToast('Thanh toán thành công! Mã kích hoạt đã sẵn sàng.', 'success');
-        refreshRewards();
+        if (isVipOrder(fetched)) {
+          showToast('Thanh toán thành công! Tài khoản đã được nâng cấp VIP Garden.', 'success');
+          // So the header's badge flips without a reload.
+          void refreshUserRef.current();
+        } else {
+          showToast('Thanh toán thành công! Mã kích hoạt đã sẵn sàng.', 'success');
+          refreshRewards();
+        }
       }
 
       return fetched.status === 'pending' ? ('continue' as const) : ('stop' as const);
@@ -352,11 +417,17 @@ export default function PaymentPage() {
     setActivating(code);
     try {
       const data = await API.plants.activate(code);
-      showToast(
-        data.created ? 'Hạt đã được gieo!' : 'Cây này đã được kích hoạt trước đó.',
-        'success',
-      );
-      navigate(`/plant/${data.plant.id}`);
+      showToast(data.message || 'Đã kích hoạt mã.', 'success');
+
+      // A membership has no plant to open. Reload the order instead, so the
+      // card turns into its "đã kích hoạt" state rather than offering the
+      // same button again.
+      if (data.plant?.id) {
+        navigate(`/plant/${data.plant.id}`);
+      } else {
+        setActivating('');
+        refresh();
+      }
     } catch (err: any) {
       showToast(err?.message || 'Không kích hoạt được mã này.', 'error');
       setActivating('');
@@ -365,15 +436,18 @@ export default function PaymentPage() {
 
   const isPending = order?.status === 'pending';
   const codes = order?.redeemCodes || [];
+  const vip = order ? isVipOrder(order) : false;
 
   return (
     <>
       <div className="pay-hero">
         <div className="container">
           <div className="breadcrumb pay-hero-crumb">
-            <Link to="/">Trang chủ</Link> › <Link to="/account">Tài khoản</Link> › Thanh toán
+            <Link to="/">Trang chủ</Link> ›{' '}
+            {vip ? <Link to="/vip">VIP Garden</Link> : <Link to="/account">Tài khoản</Link>}{" "}
+            › Thanh toán
           </div>
-          <h1>Thanh toán đơn hàng</h1>
+          <h1>{vip ? 'Thanh toán gói VIP Garden' : 'Thanh toán đơn hàng'}</h1>
           <p>
             {phase === 'loading'
               ? 'Đang tải…'
@@ -432,7 +506,7 @@ export default function PaymentPage() {
                 // column — a customer checks what they bought before they check
                 // where to send the payment.
                 <>
-                  <h2>Đơn hàng của bạn</h2>
+                  <h2>{vip ? 'Gói VIP của bạn' : 'Đơn hàng của bạn'}</h2>
 
                   {/* The order code is read out to support and typed into a
                       bank memo, so it gets monospace and a line of its own
@@ -489,9 +563,41 @@ export default function PaymentPage() {
                       </div>
                     </div>
 
-                    <ContactBlock order={order} onSaved={refresh} />
+                    {vip ? (
+                      <VipAfterPay membership={membership} />
+                    ) : (
+                      <ContactBlock order={order} onSaved={refresh} />
+                    )}
                   </div>
                 </>
+              ) : vip && order.status !== 'cancelled' ? (
+                <div className="pay-result">
+                  <div className="pay-result-badge is-vip">
+                    <img src="/assets/images/sprouty-icons/VIP.png" alt="" />
+                  </div>
+                  <h2 className="is-good">Đã nâng cấp VIP Garden!</h2>
+                  <p className="pay-result-sub">
+                    Thanh toán đã được ghi nhận và tài khoản của bạn đã tự động lên VIP — không cần
+                    nhập mã nào cả.
+                  </p>
+
+                  {membership?.isVip && (
+                    <div className="vip-done">
+                      <span className="vip-done-label">Thành viên VIP đến</span>
+                      <strong>{formatVipDate(membership.vipUntil)}</strong>
+                      <em>Còn {vipDaysLeft(membership.vipUntil)} ngày</em>
+                    </div>
+                  )}
+
+                  <div className="pay-actions is-center">
+                    <Link to="/vip" className="btn btn-primary btn-lg">
+                      Xem quyền lợi VIP
+                    </Link>
+                    <Link to="/my-plants" className="btn btn-outline btn-lg">
+                      Tới vườn của tôi
+                    </Link>
+                  </div>
+                </div>
               ) : (
                 <div className="pay-result">
                   <div className={`pay-result-badge${order.status === 'cancelled' ? ' bad' : ''}`}>
@@ -507,7 +613,7 @@ export default function PaymentPage() {
                     {order.status === 'cancelled'
                       ? `Đơn hàng ${shortOrderId(order.id)} đã bị hủy. Vui lòng liên hệ Sprouty nếu bạn cần hỗ trợ.`
                       : codes.length > 0
-                        ? 'Mã kích hoạt của bạn đã sẵn sàng ngay bên dưới — bấm một nút là hạt được gieo.'
+                        ? 'Mã kích hoạt của bạn đã sẵn sàng ngay bên dưới — bấm một nút là kích hoạt xong.'
                         : `Đơn hàng ${shortOrderId(order.id)} đã được ghi nhận.`}
                   </p>
 
@@ -536,7 +642,12 @@ export default function PaymentPage() {
 
                           {/* Coming back to this page after activating must not
                               offer the same code again — it can only fail. */}
-                          {code.redeemed ? (
+                          {code.redeemed && code.kind === 'membership' ? (
+                            <div className="code-card-cta is-done is-static">
+                              <SproutyIcon name="check" size={19} />
+                              Đã kích hoạt gói thành viên
+                            </div>
+                          ) : code.redeemed ? (
                             <Link
                               className="code-card-cta is-done"
                               to={code.plantId ? `/plant/${code.plantId}` : '/my-plants'}
@@ -552,8 +663,10 @@ export default function PaymentPage() {
                               onClick={() => activateNow(code.code)}
                             >
                               {activating === code.code
-                                ? 'Đang gieo hạt…'
-                                : 'Kích hoạt & gieo hạt ngay'}
+                                ? 'Đang kích hoạt…'
+                                : code.kind === 'membership'
+                                  ? 'Kích hoạt gói thành viên'
+                                  : 'Kích hoạt & gieo hạt ngay'}
                               {activating !== code.code && (
                                 <SproutyIcon name="arrow-right" size={19} />
                               )}
@@ -562,7 +675,9 @@ export default function PaymentPage() {
 
                           <p className="code-card-note">
                             {code.redeemed ? (
-                              'Mã này đã được dùng để gieo cây.'
+                              code.kind === 'membership'
+                                ? 'Quyền lợi thành viên đang có hiệu lực trên tài khoản của bạn.'
+                                : 'Mã này đã được dùng để gieo cây.'
                             ) : (
                               <>
                                 Mã cũng luôn xem lại được trong{' '}
@@ -695,15 +810,19 @@ export default function PaymentPage() {
                     <span className="pay-devbox-tag">Chế độ thử nghiệm</span>
                     <p>
                       Máy chủ này đang bật <code>ALLOW_FAKE_PAYMENTS</code>. Bấm nút dưới để ghi
-                      nhận đơn là đã thanh toán mà không cần chuyển khoản thật, rồi nhận mã kích
-                      hoạt ngay.
+                      nhận đơn là đã thanh toán mà không cần chuyển khoản thật,
+                      {vip ? ' tài khoản sẽ lên VIP ngay.' : ' rồi nhận mã kích hoạt ngay.'}
                     </p>
                     <button
                       className="pay-devbox-btn"
                       disabled={simulating}
                       onClick={simulatePayment}
                     >
-                      {simulating ? 'Đang ghi nhận…' : 'Thanh toán thử & lấy mã ngay'}
+                      {simulating
+                        ? 'Đang ghi nhận…'
+                        : vip
+                          ? 'Thanh toán thử & lên VIP ngay'
+                          : 'Thanh toán thử & lấy mã ngay'}
                     </button>
                   </div>
                 )}

@@ -54,6 +54,20 @@ export async function redeemCode(prisma, userId, code, { ip = null, nickname = n
       const userUses = await tx.redeemCodeRedemption.count({
         where: { redeemCodeId: found.id, userId },
       });
+
+      // This account already spent it. That is not a failure — the
+      // entitlements are theirs and, for a kit, so is the plant — and
+      // answering "hết lượt" to the person who used the last turn sends
+      // them looking for a fault that is not there. The use counter is
+      // left alone, so this cannot be used to redeem twice.
+      //
+      // Only when they have no turns left: a promotional code that allows
+      // several uses per account still counts each one normally.
+      const exhausted = found.maxUses !== null && found.usedCount >= found.maxUses;
+      if (userUses > 0 && (exhausted || userUses >= found.perUserLimit)) {
+        return { redeemCode: found, alreadyRedeemed: true, entitlements: [] };
+      }
+
       assertCodeUsable(found, userUses);
       if (found.maxUses !== null) {
         const updated = await tx.redeemCode.updateMany({
@@ -102,11 +116,13 @@ export async function redeemCode(prisma, userId, code, { ip = null, nickname = n
     throw err;
   }
 
-  await auditLog(prisma, userId, 'redeem_code.redeem', 'RedeemCode', result.redeemCode.id, {
-    redemptionId: result.redemption.id,
-    features: result.redeemCode.features,
-    productId: result.redeemCode.productId,
-  });
+  if (!result.alreadyRedeemed) {
+    await auditLog(prisma, userId, 'redeem_code.redeem', 'RedeemCode', result.redeemCode.id, {
+      redemptionId: result.redemption.id,
+      features: result.redeemCode.features,
+      productId: result.redeemCode.productId,
+    });
+  }
 
   // A code tied to a kit is what activates a plant. One tied to no product (a
   // promotional AI-assistant code, say) grants its features and nothing more.
@@ -138,5 +154,9 @@ export async function redeemCode(prisma, userId, code, { ip = null, nickname = n
     entitlements: result.entitlements,
     plant,
     plantCreated,
+    // True when this account had already redeemed the code. For a kit the
+    // plant above is still returned — createPlantForProduct hands back the
+    // existing one — so the caller can take them straight to it.
+    alreadyRedeemed: Boolean(result.alreadyRedeemed),
   };
 }

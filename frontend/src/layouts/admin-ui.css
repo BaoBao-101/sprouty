@@ -709,3 +709,7 @@
 /* Recording a payment by hand — distinct from the shipping-stage buttons. */
 .act-btn.act-paid { border-color:var(--primary-500); color:var(--primary-600) }
 .act-btn.act-paid:hover:not(:disabled) { background:var(--primary-100) }
+
+/* Expiry under the e-mail, so "VIP" is never read without "until when". */
+.usr-tier { margin-top: 3px; font-size: .74rem; font-weight: 600; color: var(--ink-4) }
+.usr-tier.is-vip { color: #B45309 }

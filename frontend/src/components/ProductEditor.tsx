@@ -23,7 +23,9 @@ export interface AdminProduct {
   price: number;
   oldPrice?: number | null;
   smartPriceDelta?: number | null;
-  category: 'kit' | 'book';
+  category: 'kit' | 'book' | 'membership';
+  /** Days one purchase of a VIP plan lasts; null on anything else. */
+  membershipDays?: number | null;
   /** Which plant a kit grows in the simulation; null on a non-kit. */
   speciesKey?: string | null;
   ageRange: string;
@@ -37,6 +39,15 @@ export interface AdminProduct {
 }
 
 type TabKey = 'basic' | 'pricing' | 'images' | 'includes' | 'videos';
+
+/** The lengths a VIP plan is normally sold in. */
+const PLAN_DAY_PRESETS = [30, 90, 180, 365] as const;
+const PLAN_DAY_LABEL: Record<number, string> = {
+  30: '1 tháng',
+  90: '3 tháng',
+  180: '6 tháng',
+  365: '1 năm',
+};
 
 const TABS: Array<{ key: TabKey; label: string; icon: AdminIconName }> = [
   { key: 'basic', label: 'Thông tin', icon: 'blog' },
@@ -69,6 +80,7 @@ const EMPTY: FormState = {
   price: '',
   oldPrice: '',
   smartPriceDelta: '',
+  membershipDays: '30',
   emoji: '',
   badge: '',
   status: 'published',
@@ -86,6 +98,7 @@ interface FormState {
   price: string;
   oldPrice: string;
   smartPriceDelta: string;
+  membershipDays: string;
   emoji: string;
   badge: string;
   status: string;
@@ -106,6 +119,7 @@ function toForm(product: AdminProduct): FormState {
     price: String(product.price),
     oldPrice: product.oldPrice ? String(product.oldPrice) : '',
     smartPriceDelta: product.smartPriceDelta ? String(product.smartPriceDelta) : '',
+    membershipDays: product.membershipDays ? String(product.membershipDays) : '30',
     emoji: product.emoji || '',
     badge: product.badge || '',
     status: product.status,
@@ -269,6 +283,8 @@ export function ProductEditor({
   const price = parseInt(form.price, 10) || 0;
   const oldPrice = parseInt(form.oldPrice, 10) || 0;
   const smartDelta = parseInt(form.smartPriceDelta, 10) || 0;
+  const isPlan = form.category === 'membership';
+  const planDays = parseInt(form.membershipDays, 10) || 0;
   const discount = oldPrice > price && price > 0 ? Math.round((1 - price / oldPrice) * 100) : 0;
 
   // The round numbers just above the asking price, which is what a
@@ -286,8 +302,9 @@ export function ProductEditor({
     if (form.description.trim().length < 10) return { tab: 'basic', message: 'Mô tả phải có ít nhất 10 ký tự.' };
     if (!price) return { tab: 'pricing', message: 'Nhập giá bán lớn hơn 0.' };
     if (oldPrice && oldPrice <= price) return { tab: "pricing", message: "Giá trước giảm phải lớn hơn giá bán." };
+    if (isPlan && planDays < 1) return { tab: 'pricing', message: 'Nhập thời hạn gói VIP (số ngày).' };
     return null;
-  }, [form, price, oldPrice]);
+  }, [form, price, oldPrice, isPlan, planDays]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -309,7 +326,9 @@ export function ProductEditor({
       description: form.description.trim(),
       price,
       oldPrice: oldPrice || null,
-      smartPriceDelta: smartDelta || null,
+      // A plan has no Smart variant, and only a plan has a length.
+      smartPriceDelta: isPlan ? null : smartDelta || null,
+      membershipDays: isPlan ? planDays : null,
       emoji: form.emoji.trim() || '🎨',
       badge: form.badge || null,
       images: form.images.map((u) => u.trim()).filter(Boolean),
@@ -426,7 +445,14 @@ export function ProductEditor({
                     >
                       <option value="kit">Kit trồng cây</option>
                       <option value="book">Hướng dẫn chăm cây</option>
+                      <option value="membership">Gói thành viên VIP</option>
                     </select>
+                    {isPlan && (
+                      <span className="field-hint">
+                        Chỉ bán ở trang VIP, không hiện trên cửa hàng. Khách thanh toán xong là
+                        tài khoản tự lên VIP.
+                      </span>
+                    )}
                   </label>
 
                   <div className="field">
@@ -594,20 +620,48 @@ export function ProductEditor({
                   </div>
                 )}
 
-                <label className="field">
-                  <span className="field-label">Phụ phí bản Smart / IoT</span>
-                  <MoneyInput
-                    value={form.smartPriceDelta}
-                    onChange={set('smartPriceDelta')}
-                    placeholder="0"
-                    suggestions={SMART_DELTA_PRESETS}
-                  />
-                  <span className="field-hint">
-                    {smartDelta
-                      ? `Bản Smart sẽ có giá ${formatPrice(price + smartDelta)}`
-                      : 'Để trống nếu sản phẩm không có bản Smart'}
-                  </span>
-                </label>
+                {isPlan ? (
+                  // What the customer is paying for is time, so the length
+                  // sits where a kit's Smart surcharge would.
+                  <div className="field">
+                    <span className="field-label">
+                      Thời hạn mỗi lần mua <span className="req">*</span>
+                    </span>
+                    <input
+                      className="form-input"
+                      inputMode="numeric"
+                      placeholder="30"
+                      value={form.membershipDays}
+                      onChange={(e) => set('membershipDays')(e.target.value.replace(/\D/g, ''))}
+                    />
+                    <PresetChips
+                      options={PLAN_DAY_PRESETS}
+                      value={form.membershipDays}
+                      onPick={set('membershipDays')}
+                      format={(d) => PLAN_DAY_LABEL[d] ?? `${d} ngày`}
+                    />
+                    <span className="field-hint">
+                      {planDays
+                        ? `Mỗi lần mua cộng thêm ${planDays} ngày VIP — mua khi còn hạn thì nối tiếp, không mất ngày.`
+                        : 'Số ngày VIP khách nhận được mỗi lần thanh toán gói này.'}
+                    </span>
+                  </div>
+                ) : (
+                  <label className="field">
+                    <span className="field-label">Phụ phí bản Smart / IoT</span>
+                    <MoneyInput
+                      value={form.smartPriceDelta}
+                      onChange={set('smartPriceDelta')}
+                      placeholder="0"
+                      suggestions={SMART_DELTA_PRESETS}
+                    />
+                    <span className="field-hint">
+                      {smartDelta
+                        ? `Bản Smart sẽ có giá ${formatPrice(price + smartDelta)}`
+                        : 'Để trống nếu sản phẩm không có bản Smart'}
+                    </span>
+                  </label>
+                )}
 
                 <div className="field-grid">
                   <label className="field">

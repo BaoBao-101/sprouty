@@ -199,7 +199,7 @@ export default function Home() {
               <span className="age-range">Phụ huynh</span>
               <p className="age-sub">Lưu ảnh, video, nhật ký và những câu nói nhỏ của con thành một Cây Kỷ Niệm riêng tư cho gia đình.</p>
             </div>
-            <div className="age-card" onClick={() => navigate('/shop?age=10-12')}>
+            <div className="age-card" onClick={() => navigate('/vip')}>
               <div className="age-icon-wrap coral"><span className="age-em" style={{ margin: "0" }}>✨</span></div>
               <span className="age-range">VIP Garden</span>
               <p className="age-sub">Mở khóa hiệu ứng ban đêm, cây vàng, Plant Buddies hiếm và nhật ký AI hàng tháng.</p>

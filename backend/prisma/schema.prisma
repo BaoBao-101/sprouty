@@ -93,6 +93,11 @@ model User {
   // Per-account brute-force lockout state (see routes/auth.js login handler).
   failedLoginAttempts Int      @default(0)
   lockedUntil         DateTime?
+  // VIP Garden runs until this moment. Recomputed from the paid, uncancelled
+  // membership orders (services/membership.js) whenever one changes, so it is
+  // a cache of those orders rather than a second source of truth. Null, or a
+  // date in the past, is the regular tier.
+  vipUntil            DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -129,6 +134,9 @@ model Product {
   // Null falls back to matching the product name, which is how the kits that
   // predate this column keep their species without a backfill.
   speciesKey  String?
+  // How long one unit of a membership product lasts. Only meaningful for
+  // category "membership"; null elsewhere.
+  membershipDays Int?
   ageRange    String
   collection  String
   emoji       String        @default("🎨")

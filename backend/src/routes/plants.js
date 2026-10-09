@@ -68,21 +68,32 @@ export default async function plantRoutes(fastify) {
     });
 
     if (!result.plant) {
-      // The code was valid but carried no kit. Say so plainly rather than
-      // sending them to a plant page that does not exist.
-      return reply.code(422).send({
-        message: 'Mã này không gắn với bộ kit trồng cây nào, nên chưa gieo được cây. '
-          + 'Các quyền lợi của mã đã được kích hoạt cho tài khoản bạn.',
+      // A code with no kit behind it — a VIP membership, a promotional AI
+      // code. Its entitlements were just granted, so this is a success.
+      //
+      // It used to answer 422. The redemption had already happened and
+      // spent the code's only use, so the customer saw a red error for
+      // something that worked, tried again, and got "hết lượt" — which
+      // made a successful purchase look broken twice over.
+      return {
+        kind: 'membership',
+        created: false,
+        alreadyRedeemed: result.alreadyRedeemed,
         features: result.features,
-      });
+        message: result.alreadyRedeemed
+          ? 'Mã này đã được kích hoạt cho tài khoản của bạn rồi — quyền lợi vẫn đang dùng được.'
+          : 'Đã kích hoạt quyền lợi thành viên cho tài khoản của bạn.',
+      };
     }
 
     reply.code(result.plantCreated ? 201 : 200);
     return {
+      kind: 'kit',
       message: result.plantCreated
         ? 'Kích hoạt thành công — hạt đã được gieo!'
-        : 'Cây này đã được kích hoạt trước đó.',
+        : 'Bạn đã kích hoạt mã này rồi — đây là cây của bạn.',
       created: result.plantCreated,
+      alreadyRedeemed: result.alreadyRedeemed,
       plant: plantCardDto(result.plant),
     };
   });

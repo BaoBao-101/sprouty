@@ -4,6 +4,17 @@ import { AppError } from '../utils/errors.js';
 import { requireAuth, requireCsrf } from '../middleware/rbac.js';
 import { passwordSchema } from '../utils/password.js';
 import { auditLog } from '../services/audit.js';
+import { tierOf } from '../services/membership.js';
+
+/**
+ * The signed-in user as the client sees it. The tier rides along so the
+ * header and account page can show "Thường" or "VIP" without a second call.
+ * vipUntil itself is replaced by tierOf's ISO string and flags.
+ */
+function publicUser(user) {
+  const { vipUntil, ...rest } = user;
+  return { ...rest, ...tierOf({ vipUntil }) };
+}
 
 // Per-account brute-force lockout, independent of the per-IP rate limit — this
 // is what blunts a distributed (many-IP) guessing attack against one account.
@@ -42,7 +53,7 @@ export default async function authRoutes(fastify) {
   // GET /api/v1/auth/me
   fastify.get('/me', async (req) => {
     if (!req.user) return { user: null };
-    return { user: req.user };
+    return { user: publicUser(req.user) };
   });
 
   // GET /api/v1/auth/csrf — return CSRF token for current session
@@ -89,7 +100,7 @@ export default async function authRoutes(fastify) {
 
     const { csrfToken } = await fastify.setSession(req, reply, user.id);
     return {
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      user: publicUser({ id: user.id, email: user.email, name: user.name, role: user.role, vipUntil: user.vipUntil }),
       csrfToken,
     };
   });
@@ -118,7 +129,7 @@ export default async function authRoutes(fastify) {
     const { csrfToken } = await fastify.setSession(req, reply, user.id);
     reply.code(201);
     return {
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      user: publicUser({ id: user.id, email: user.email, name: user.name, role: user.role, vipUntil: user.vipUntil }),
       csrfToken,
     };
   });

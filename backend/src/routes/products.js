@@ -33,7 +33,12 @@ export default async function productRoutes(fastify) {
   fastify.get('/products', async (req) => {
     const { category, search, badge, species } = req.query;
     const where = { status: 'published' };
+    // VIP is not a shop product any more: it is bought on /vip, which asks
+    // for it by name. Left in the default list it showed up in the shop,
+    // the related-products row and search, each with an add-to-cart button
+    // the order route now refuses.
     if (category) where.category = category;
+    else where.category = { not: 'membership' };
     if (badge) where.badge = badge;
     if (search) {
       where.OR = [

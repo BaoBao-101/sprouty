@@ -41,3 +41,72 @@
 .vip-plans-msg.error { color: var(--rose) }
 .vip-chip-icon { width: 16px; height: 16px; object-fit: contain; vertical-align: middle; margin-right: 4px }
 .vip-btn-icon { width: 16px; height: 16px; object-fit: contain; vertical-align: middle; margin-right: 6px }
+
+/* ── Own checkout: status, pending order, how it works ─────────────────── */
+.vip-hero-kicker {
+  display:inline-flex; align-items:center; gap:8px; margin-bottom:12px;
+  font-family:var(--font-h); font-size:.8rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+  color:#FCD34D;
+}
+.vip-hero-kicker img { width:20px; height:20px; object-fit:contain }
+.vip-hero h1 { font-size:clamp(1.6rem, 3.4vw, 2.3rem) }
+
+.vip-status {
+  display:inline-flex; align-items:center; gap:14px; margin-top:22px; text-align:left;
+  background:rgba(255,255,255,.1); border:1.5px solid rgba(255,255,255,.22);
+  border-radius:var(--r-xl); padding:12px 20px 12px 12px; max-width:100%;
+}
+.vip-status.is-vip { background:rgba(252,211,77,.16); border-color:rgba(252,211,77,.55) }
+.vip-status.is-expired { border-color:rgba(254,202,202,.5) }
+.vip-status-icon {
+  flex:0 0 44px; height:44px; border-radius:50%; display:grid; place-items:center;
+  background:rgba(255,255,255,.14); color:#fff;
+}
+.vip-status-icon img { width:26px; height:26px; object-fit:contain }
+.vip-status-text { display:flex; flex-direction:column; gap:2px; min-width:0 }
+.vip-status-text strong { font-family:var(--font-h); font-size:.98rem; color:#fff }
+.vip-status-text em { font-style:normal; font-size:.86rem; color:rgba(255,255,255,.78) }
+
+.vip-body { padding:32px 0 8px }
+
+.vip-pending {
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  background:#FFFBEB; border:1.5px solid #FCD34D; border-radius:var(--r-xl);
+  padding:14px 18px; margin-bottom:24px; color:#92400E;
+}
+.vip-pending-text { flex:1 1 240px; display:flex; flex-direction:column; gap:2px; min-width:0 }
+.vip-pending-text strong { font-family:var(--font-h); color:#78350F }
+.vip-pending-text span { font-size:.88rem }
+.vip-pending .btn { display:inline-flex; align-items:center; gap:8px }
+
+.vip-how {
+  list-style:none; margin:0 0 28px; padding:0;
+  display:grid; grid-template-columns:repeat(3, 1fr); gap:14px;
+}
+.vip-how li {
+  display:flex; align-items:flex-start; gap:12px;
+  background:var(--surface); border:1.5px solid var(--parchment-2); border-radius:var(--r-xl);
+  padding:14px 16px;
+}
+.vip-how-n {
+  flex:0 0 30px; height:30px; border-radius:50%; display:grid; place-items:center;
+  background:#FEF3C7; color:#92400E; font-family:var(--font-h); font-weight:800;
+}
+.vip-how li div { display:flex; flex-direction:column; gap:2px; min-width:0 }
+.vip-how strong { font-family:var(--font-h); font-size:.94rem; color:var(--ink) }
+.vip-how span { font-size:.84rem; color:var(--ink-4) }
+
+.vip-plans { margin-bottom:36px }
+.vip-plan-card .btn { display:inline-flex; align-items:center; justify-content:center }
+.vip-plan-note { margin:12px 0 0; font-size:.82rem; color:var(--ink-4) }
+.vip-compare { margin:0 0 56px }
+.vip-col h3 { display:flex; align-items:center; gap:8px }
+.vip-col-icon { width:20px; height:20px; object-fit:contain }
+
+@media (max-width:768px) {
+  .vip-how { grid-template-columns:1fr }
+  .vip-status { padding-right:14px }
+}
+
+/* The artwork is decoration; at 4:3 it pushed the price below the fold. */
+.vip-plan-img { aspect-ratio:16/9 }

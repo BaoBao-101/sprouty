@@ -324,6 +324,17 @@ export const API = {
     remove(id)             { return _fetch(`/my-images/${id}`, { method: 'DELETE' }); },
   },
 
+  // VIP Garden, bought on /vip and nowhere else. Paying the order this
+  // creates is the upgrade; there is no code to enter afterwards.
+  membership: {
+    plans()           { return _fetch('/membership/plans'); },
+    /** Tier, expiry, and an unpaid VIP order if one is waiting. */
+    mine()            { return _fetch('/me/membership'); },
+    checkout(productId) {
+      return _fetch('/membership/checkout', { method: 'POST', body: JSON.stringify({ productId }) });
+    },
+  },
+
   redeem: {
     apply(code, nickname?) {
       return _fetch('/redeem', { method: 'POST', body: JSON.stringify({ code, nickname }) });

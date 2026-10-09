@@ -39,9 +39,18 @@ const productSchema = z.object({
     .int('Phụ phí Smart phải là số nguyên.')
     .positive('Phụ phí Smart phải lớn hơn 0.')
     .nullable().optional(),
-  category: z.enum(['kit', 'book'], {
-    errorMap: () => ({ message: 'Danh mục phải là "kit" hoặc "book".' }),
+  // 'membership' is a VIP Garden plan. It was missing here, so the two plans
+  // that exist could not be saved from the admin at all — any edit was
+  // refused for a category the product already had.
+  category: z.enum(['kit', 'book', 'membership'], {
+    errorMap: () => ({ message: 'Danh mục phải là bộ kit, sách hoặc gói thành viên.' }),
   }),
+  // How long one purchase of a membership lasts. Ignored on anything else.
+  membershipDays: z.number({ invalid_type_error: 'Thời hạn gói phải là một số.' })
+    .int('Thời hạn gói phải là số ngày nguyên.')
+    .min(1, 'Thời hạn gói phải từ 1 ngày trở lên.')
+    .max(3660, 'Thời hạn gói tối đa 10 năm.')
+    .nullable().optional(),
   // Which plant a kit grows in the simulation. Validated against the catalogue
   // rather than accepted as free text: an unknown key would not fail here, it
   // would fail weeks later as a customer's plant quietly growing the generic
@@ -186,8 +195,10 @@ export default async function adminProductRoutes(fastify) {
    */
   function withSpeciesForCategory(data, effectiveCategory) {
     const category = effectiveCategory ?? data.category;
-    if (category && category !== 'kit') return { ...data, speciesKey: null };
-    return data;
+    // Same reasoning for a plan length on something that is not a plan.
+    const cleaned = category && category !== 'membership' ? { ...data, membershipDays: null } : data;
+    if (category && category !== 'kit') return { ...cleaned, speciesKey: null };
+    return cleaned;
   }
 
   // GET /api/v1/admin/products/species — what the product editor offers in its

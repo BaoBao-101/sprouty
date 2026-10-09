@@ -6,6 +6,12 @@ import { auditLog } from '../services/audit.js';
 import { syncWorkshopRewards } from '../services/rewards.js';
 import { reconcile, pollingConfigured } from '../services/sepay.js';
 import { paymentMemo } from '../services/payment-memo.js';
+import {
+  hasMembershipItem,
+  membershipDaysFor,
+  syncMembership,
+  tierOf,
+} from '../services/membership.js';
 
 /**
  * Whether this deployment will credit a payment nobody made.
@@ -22,7 +28,7 @@ export function fakePaymentsAllowed() {
 
 // Build the payment-instruction payload for an order. Returns null in dev when
 // SePay isn't configured, so the existing flow still works without payments.
-function buildPaymentInfo(order) {
+export function buildPaymentInfo(order) {
   const acc = process.env.SEPAY_ACCOUNT_NUMBER;
   const bank = process.env.SEPAY_BANK_CODE;
   const name = process.env.SEPAY_ACCOUNT_NAME;
@@ -183,6 +189,11 @@ async function ensurePurchaseRedeemCodes(prisma, order) {
   for (const item of order.items || []) {
     if (seen.has(item.productId)) continue;
     seen.add(item.productId);
+
+    // VIP is switched on by the payment itself (services/membership.js).
+    // Issuing a code for it asked the customer to activate something that
+    // was already active — or, before that, that nothing actually read.
+    if (item.product?.category === 'membership') continue;
     const plaintext = buildPurchaseRedeemCode(order.id, order.userId, item.productId);
     const codeHash = hashPurchaseCode(plaintext);
     const existing = await prisma.redeemCode.findUnique({ where: { codeHash } });
@@ -199,20 +210,42 @@ async function ensurePurchaseRedeemCodes(prisma, order) {
       },
     });
     const plant = plantByProduct.get(item.productId) || null;
+
+    // A kit code is spent when its plant exists; that is the thing the
+    // customer is offered a link to. A membership code has no plant, ever,
+    // so keying it on the plant left it looking unused forever — the
+    // "gieo hạt" button kept coming back after the membership was already
+    // active, and pressing it could only fail. Those are spent when this
+    // account has a redemption for them.
+    //
+    // An unknown category keeps the old plant-based reading rather than
+    // guessing, so a caller that did not select it behaves as before.
+    const category = item.product?.category;
+    const isKit = category ? category === 'kit' : true;
+
+    let redemption = null;
+    if (!isKit && redeemCode.usedCount > 0) {
+      redemption = await prisma.redeemCodeRedemption.findFirst({
+        where: { redeemCodeId: redeemCode.id, userId: order.userId },
+        select: { redeemedAt: true },
+      });
+    }
+
     codes.push({
       code: plaintext,
       productId: item.productId,
       productName: item.product?.name || null,
+      kind: isKit ? 'kit' : 'membership',
       features: redeemCode.features,
       usedCount: redeemCode.usedCount,
       maxUses: redeemCode.maxUses,
       status: redeemCode.status,
       // So the orders page can say "đã kích hoạt" and link to the plant,
       // instead of offering an activate button for a code that is spent.
-      redeemed: Boolean(plant),
+      redeemed: isKit ? Boolean(plant) : Boolean(redemption),
       plantId: plant?.id || null,
       plantNickname: plant?.nickname || null,
-      activatedAt: plant?.activatedAt || null,
+      activatedAt: isKit ? plant?.activatedAt || null : redemption?.redeemedAt || null,
     });
   }
   return codes;
@@ -244,6 +277,16 @@ export default async function orderRoutes(fastify) {
 
     if (products.length !== uniqueProductIds.length) {
       throw new AppError('Một số sản phẩm không tồn tại hoặc đã ngừng bán.', 400);
+    }
+
+    // VIP has its own checkout on /vip (routes/membership.js). Sold from the
+    // cart it rode along with the kits, came back as a code, and needed a
+    // second step to switch on; bought there, paying is the upgrade.
+    if (products.some((p) => p.category === 'membership')) {
+      throw new AppError(
+        'Gói VIP Garden được mua riêng ở trang VIP. Vui lòng xoá gói này khỏi giỏ hàng.',
+        400,
+      );
     }
 
     const productMap = new Map(products.map(p => [p.id, p]));
@@ -306,7 +349,7 @@ export default async function orderRoutes(fastify) {
         where,
         include: {
           items: {
-            include: { product: { select: { id: true, name: true, emoji: true, images: true, category: true } } },
+            include: { product: { select: { id: true, name: true, emoji: true, images: true, category: true, membershipDays: true } } },
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -358,7 +401,7 @@ export default async function orderRoutes(fastify) {
       where: { id: req.params.id, userId: req.user.id },
       include: {
         items: {
-          include: { product: { select: { id: true, name: true, emoji: true, images: true, category: true } } },
+          include: { product: { select: { id: true, name: true, emoji: true, images: true, category: true, membershipDays: true } } },
         },
       },
     });
@@ -367,9 +410,28 @@ export default async function orderRoutes(fastify) {
     const payment = order.status === 'pending' ? buildPaymentInfo(order) : null;
     const redeemCodes = await ensurePurchaseRedeemCodes(fastify.prisma, order);
     await settleIfNothingToShip(fastify.prisma, order);
+
+    // A VIP order answers with the account's tier, so the page that just
+    // watched the money land can say "VIP đến ngày …" without a second call.
+    // It also re-runs the grant: idempotent, and the safety net for a
+    // payment path that failed to (see services/membership.js).
+    let membership = null;
+    if (hasMembershipItem(order)) {
+      if (order.paidAt) await syncMembership(fastify.prisma, order.id);
+      const user = await fastify.prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { vipUntil: true },
+      });
+      const days = order.items
+        .filter((i) => i.product?.category === 'membership')
+        .reduce((sum, i) => sum + membershipDaysFor(i.product) * i.qty, 0);
+      membership = { days, ...tierOf(user) };
+    }
+
     return {
       order: { ...order, redeemCodes },
       payment,
+      membership,
       // Whether the payment page should offer the "pay without paying" button.
       // Decided here rather than from a build-time flag on the client, so the
       // button cannot appear against a server that would refuse it.
@@ -424,7 +486,7 @@ export default async function orderRoutes(fastify) {
         shippingPhone: parsed.data.shippingPhone.trim(),
         shippingAddress,
       },
-      include: { items: { include: { product: { select: { id: true, name: true, emoji: true, images: true, category: true } } } } },
+      include: { items: { include: { product: { select: { id: true, name: true, emoji: true, images: true, category: true, membershipDays: true } } } } },
     });
 
     return { order: updated, message: 'Đã cập nhật thông tin giao hàng.' };
@@ -444,7 +506,7 @@ export default async function orderRoutes(fastify) {
       data: { status: 'cancelled' },
       include: {
         items: {
-          include: { product: { select: { id: true, name: true, emoji: true, images: true, category: true } } },
+          include: { product: { select: { id: true, name: true, emoji: true, images: true, category: true, membershipDays: true } } },
         },
       },
     });
@@ -486,7 +548,7 @@ export default async function orderRoutes(fastify) {
       where: { id: order.id },
       data: { paidAt: new Date(), status: 'processing' },
       include: {
-        items: { include: { product: { select: { id: true, name: true, emoji: true, images: true, category: true } } } },
+        items: { include: { product: { select: { id: true, name: true, emoji: true, images: true, category: true, membershipDays: true } } } },
       },
     });
 
@@ -495,6 +557,7 @@ export default async function orderRoutes(fastify) {
       fake: true,
       ip: req.ip,
     });
+    await syncMembership(fastify.prisma, order.id);
 
     // Same downstream work the webhook does, so a simulated payment exercises
     // the real path rather than a shortcut through it.

@@ -1146,3 +1146,42 @@
     grid-row: auto;
   }
 }
+
+/* A membership's "done" state is a statement, not a link: there is no page
+   for a set of account features. It keeps the done styling without looking
+   pressable. */
+.code-card-cta.is-static {
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ── VIP Garden orders ─────────────────────────────────────────────────── */
+
+/* In place of the contact block: what paying does, since there is nothing to
+   deliver and nothing to activate afterwards. */
+.ord-vip { background: #FFFBEB; border: 1.5px solid #FDE68A }
+.ord-vip .ord-ship-label { color: #92400E }
+.ord-vip-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px }
+.ord-vip-list li { display: flex; gap: 10px; align-items: flex-start; line-height: 1.55; color: var(--ink-2) }
+.ord-vip-list li > svg { flex: 0 0 auto; margin-top: 3px; color: var(--primary-600) }
+.ord-vip-list b { color: var(--ink) }
+
+.pay-result-badge.is-vip { background: #FEF3C7; border-color: #FCD34D }
+.pay-result-badge.is-vip img { width: 48px; height: 48px; object-fit: contain; transform: rotate(4deg) }
+
+.vip-done {
+  margin: 22px auto 0;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 16px 20px;
+  border-radius: var(--r-xl);
+  background: linear-gradient(135deg, #FFFBEB, #FEF3C7);
+  border: 1.5px solid #FCD34D;
+}
+.vip-done-label { font-size: .74rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #92400E }
+.vip-done strong { font-family: var(--font-display); font-size: 1.7rem; color: #78350F; line-height: 1.2 }
+.vip-done em { font-style: normal; font-size: .86rem; color: #92400E }
+.pay-actions.is-center { justify-content: center }

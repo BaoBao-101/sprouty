@@ -3,6 +3,9 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { loginHref } from '@/services/auth-nav';
+import { tierLabel } from '@/services/membership';
+
+const ROLE_VN = { customer: 'Khách hàng', employee: 'Nhân viên', admin: 'Quản trị viên' } as const;
 
 // The assistant is no longer a place you go: it floats on every page as
 // AiBubble, so a link up here would only send you away from whatever raised
@@ -51,6 +54,15 @@ function UserMenu({ onClose }: { onClose: () => void }) {
     },
     { label: '📦 Đơn hàng của tôi', onClick: () => go('/account') },
     { label: '🎪 Workshop của tôi', onClick: () => go('/my-workshops') },
+    {
+      label: (
+        <>
+          <img src="/assets/images/sprouty-icons/VIP.png" alt="" className="menu-item-icon" />
+          {user.isVip ? 'Gói VIP của tôi' : 'Nâng cấp VIP'}
+        </>
+      ),
+      onClick: () => go('/vip'),
+    },
     ...(isEmployee ? [{ label: '👷 Cổng nhân viên', onClick: () => go('/employee/orders') }] : []),
     ...(isAdmin ? [{ label: '⚙️ Quản trị', onClick: () => go('/admin') }] : []),
     {
@@ -67,7 +79,13 @@ function UserMenu({ onClose }: { onClose: () => void }) {
       <div className="user-menu-head">
         <strong>{user.name}</strong>
         <div className="user-menu-email">{user.email}</div>
-        <div className="user-menu-role">{user.role}</div>
+        {/* A customer's standing is their tier; staff have a role instead.
+            This used to print the raw role key — "customer" — in English. */}
+        {user.role === 'customer' ? (
+          <div className={`user-menu-tier${user.isVip ? ' is-vip' : ''}`}>{tierLabel(user)}</div>
+        ) : (
+          <div className="user-menu-role">{ROLE_VN[user.role] ?? user.role}</div>
+        )}
       </div>
       {items.map((item, i) => (
         <div key={i} className="user-menu-item" onClick={item.onClick}>
@@ -114,8 +132,17 @@ export function Header() {
             </button>
 
             {isLoggedIn ? (
-              <button className="nav-user visible" onClick={() => setMenuOpen((v) => !v)}>
-                <span className="nav-user-avatar">{user!.name.charAt(0).toUpperCase()}</span>
+              <button
+                className={`nav-user visible${user!.isVip ? ' is-vip' : ''}`}
+                onClick={() => setMenuOpen((v) => !v)}
+                title={user!.isVip ? 'Thành viên VIP Garden' : undefined}
+              >
+                <span className="nav-user-avatar">
+                  {user!.name.charAt(0).toUpperCase()}
+                  {user!.isVip && (
+                    <img className="nav-user-vip" src="/assets/images/sprouty-icons/VIP.png" alt="VIP" />
+                  )}
+                </span>
                 <span className="nav-user-name">{user!.name.split(' ').slice(-1)[0]}</span>
               </button>
             ) : (

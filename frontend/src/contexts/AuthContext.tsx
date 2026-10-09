@@ -8,6 +8,12 @@ export interface User {
   email: string;
   role: 'customer' | 'employee' | 'admin';
   status?: string;
+  /** Account tier. 'vip' while vipUntil is in the future. */
+  tier?: 'regular' | 'vip';
+  isVip?: boolean;
+  vipUntil?: string | null;
+  /** Was VIP, has run out — worded differently from never having been. */
+  vipExpired?: boolean;
 }
 
 interface AuthValue {
@@ -22,6 +28,12 @@ interface AuthValue {
   register: (name: string, email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
   setUser: (user: User | null) => void;
+  /**
+   * Re-reads the session. The tier changes underneath a signed-in user —
+   * a VIP payment lands, a plan runs out — and the header should not wait
+   * for a page reload to notice.
+   */
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
@@ -103,6 +115,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
 
       setUser,
+
+      async refreshUser() {
+        try {
+          const data = await API.auth.me();
+          setUser(data.user || null);
+        } catch {
+          /* Keep what we have; a blip should not sign anyone out. */
+        }
+      },
     }),
     [user, ready],
   );

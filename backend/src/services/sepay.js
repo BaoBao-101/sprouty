@@ -1,5 +1,6 @@
 import { syncWorkshopRewards } from './rewards.js';
 import { paymentSuffix } from './payment-memo.js';
+import { syncMembership } from './membership.js';
 
 /**
  * Crediting a bank transfer, and asking SePay what has arrived.
@@ -201,6 +202,13 @@ export async function applyTransaction(fastify, tx) {
     // payment into an error SePay keeps retrying.
     await syncWorkshopRewards(fastify.prisma, candidate.userId).catch((err) => {
       fastify.log.error({ err, orderId: updated.id }, 'Reward sync after payment failed');
+    });
+
+    // A VIP order upgrades the account the moment it is paid — no code to
+    // type in afterwards. Same swallow-and-log rule as the reward: the order
+    // page re-runs it on its next poll, so a failure here only delays it.
+    await syncMembership(fastify.prisma, updated.id).catch((err) => {
+      fastify.log.error({ err, orderId: updated.id }, 'VIP sync after payment failed');
     });
 
     return { ok: true, orderId: updated.id };
