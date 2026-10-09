@@ -35,6 +35,16 @@ export function joinAddress(parts: AddressParts) {
     .join(', ');
 }
 
+/**
+ * The country, when somebody typed it.
+ *
+ * Left in, it is read as the province and shifts every other part down a
+ * place: the real province lands in the ward box, and saving writes the
+ * whole thing back one level out — which is how an address grows a second
+ * copy of its own city on the end.
+ */
+const COUNTRY = /^(việt ?nam|vietnam|vn)$/i;
+
 /** Written before the 2025 reform, these carry a level that no longer exists. */
 const OLD_DISTRICT = /^(quận|huyện|thị xã|thị trấn|tp\.?|thành phố)\s/i;
 
@@ -56,9 +66,11 @@ export function splitAddress(value: string): AddressParts {
     .map((p) => p.trim())
     .filter(Boolean);
 
+  while (parts.length && COUNTRY.test(parts[parts.length - 1])) parts.pop();
+
   // Too few parts to divide with any confidence: put it all in the free-form
   // box rather than guessing which piece is which.
-  if (parts.length < 3) return { ...EMPTY_ADDRESS, street: value || '' };
+  if (parts.length < 3) return { ...EMPTY_ADDRESS, street: parts.join(', ') || value || '' };
 
   const province = parts.pop() as string;
 

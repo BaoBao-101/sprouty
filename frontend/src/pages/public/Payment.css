@@ -933,3 +933,216 @@
   .pay-steps { grid-template-columns: minmax(0, 1fr) }
   .pay-steps .sum-qr { max-width: 230px }
 }
+
+/* ── Two columns of comparable weight ──────────────────────────────────────
+   The order was pinned at 360px against a flexible payment column, so on a
+   wide screen it stayed a narrow strip while the other half kept growing.
+   That is what squeezed the edit form: two address boxes side by side inside
+   360px leave each about twenty characters, and the saved address wrapped to
+   three lines under its own label.
+
+   Proportional now, with the payment side keeping a slight edge because it
+   carries two sub-columns of its own. */
+
+.pay-layout.paying {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 26px;
+}
+
+/* ── The edit form, with room ──────────────────────────────────────────── */
+
+.ord-ship.editing {
+  padding: 16px;
+}
+
+.ord-ship-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 12px;
+}
+
+.ord-ship.editing .form-input {
+  height: 42px;
+  font-size: 0.9rem;
+}
+
+.ord-ship.editing .addr-fields {
+  margin-top: 12px;
+}
+
+.ord-ship-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+/* Below this the two columns stop helping: an address box wants the width
+   more than the layout wants a second column. */
+@media (max-width: 1080px) {
+  .pay-layout.paying { grid-template-columns: minmax(0, 1fr) }
+  .pay-layout.paying .pay-card { position: static }
+}
+
+@media (max-width: 620px) {
+  .ord-ship-grid { grid-template-columns: minmax(0, 1fr) }
+}
+
+/* ── Two bands, not two columns ────────────────────────────────────────────
+   Side by side, each section was a tall narrow strip: the order could not fit
+   two address boxes on a row, and the transfer panel had to choose between a
+   readable QR and readable bank details. Full width each, stacked, and the
+   content inside goes across instead of down. */
+
+.pay-layout,
+.pay-layout.paying {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 22px;
+}
+
+/* Nothing to stick to any more — both bands scroll together. */
+.pay-layout.paying .pay-card {
+  position: static;
+}
+
+/* ── The order band ────────────────────────────────────────────────────── */
+
+.ord-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 24px 32px;
+  align-items: start;
+}
+
+.ord-lines { min-width: 0 }
+
+.ord-total {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 2px solid var(--parchment-2);
+}
+
+/* No longer a footnote under the items — it is the column beside them. */
+.ord-ship { margin-top: 0 }
+
+/* ── The transfer band ─────────────────────────────────────────────────── */
+
+/* Three steps across, now that there is width for them. The QR keeps a fixed
+   share, the bank details take what is left, and waiting runs underneath
+   both because it follows whichever of the two you used. */
+.pay-steps {
+  grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
+  gap: 24px 36px;
+}
+
+.pay-amount {
+  max-width: 420px;
+}
+
+@media (max-width: 920px) {
+  .ord-body { grid-template-columns: minmax(0, 1fr) }
+  .pay-steps { grid-template-columns: minmax(0, 1fr) }
+  .pay-steps .sum-qr { max-width: 240px }
+  .pay-amount { max-width: none }
+}
+
+/* ── Bank details across, not down ─────────────────────────────────────────
+   Stacked, these three facts left most of a thousand-pixel band empty and
+   pushed the copy button to the far edge, a hand's width from the number it
+   copies. Three short values side by side fill the row they are given, and
+   the button sits against its own value. */
+
+.pay-bank {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0 28px;
+  align-items: stretch;
+  padding: 14px 18px;
+}
+
+.pay-bank .pay-row {
+  padding: 0;
+  border-bottom: none;
+}
+
+/* A divider between columns reads better than one under each row, now that
+   they are columns. */
+.pay-bank .pay-row + .pay-row {
+  padding-left: 28px;
+  border-left: 1.5px solid var(--parchment-2);
+}
+
+.pay-row .val-row {
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+/* ── The memo ──────────────────────────────────────────────────────────── */
+
+/* The code is sixteen characters; a box the width of the band made it look
+   like a paragraph field and left the button stranded. */
+.pay-memo-row code {
+  flex: 0 1 auto;
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.pay-memo-row {
+  justify-content: flex-start;
+}
+
+@media (max-width: 760px) {
+  .pay-bank {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .pay-bank .pay-row + .pay-row {
+    padding-left: 0;
+    padding-top: 12px;
+    border-left: none;
+    border-top: 1.5px solid var(--parchment-2);
+  }
+
+  .pay-memo-row code { max-width: none }
+}
+
+/* ── Filling the gap beside the QR ─────────────────────────────────────────
+   A QR is a tall square and the transfer details are a short block, so the
+   right half ran out of content halfway down and left a hole the size of the
+   code itself. Waiting moves up into it: the QR holds the left column for
+   both rows, and steps 2 and 3 stack down the right. */
+
+.pay-steps {
+  align-items: start;
+}
+
+.pay-steps > li:nth-child(1) {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+
+.pay-steps > li:nth-child(2) {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.pay-steps > li:nth-child(3) {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+/* The waiting strip no longer runs the width of the panel, so its indent can
+   go — it is a column now, not a footnote under one. */
+.pay-steps > li:nth-child(3) .pay-waiting {
+  margin-left: 37px;
+}
+
+@media (max-width: 920px) {
+  .pay-steps > li:nth-child(1),
+  .pay-steps > li:nth-child(2),
+  .pay-steps > li:nth-child(3) {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}

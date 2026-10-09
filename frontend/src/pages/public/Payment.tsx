@@ -69,12 +69,7 @@ function Row({ label, value, copyable }: { label: string; value?: string; copyab
       <span className="val-row">
         <span className="val">{value || '—'}</span>
         {copyable && value && (
-          <button
-            className="copy-btn"
-            type="button"
-            title="Sao chép"
-            onClick={() => copy(value)}
-          >
+          <button className="copy-btn" type="button" title="Sao chép" onClick={() => copy(value)}>
             <SproutyIcon name="album" size={14} />
             Sao chép
           </button>
@@ -215,7 +210,11 @@ function ContactBlock({ order, onSaved }: { order: Order; onSaved: () => void })
         <AddressFields value={address} onChange={setAddress} required={false} />
       </div>
 
-      {error && <div className="form-error mb-12" style={{ marginTop: 10 }}>{error}</div>}
+      {error && (
+        <div className="form-error mb-12" style={{ marginTop: 10 }}>
+          {error}
+        </div>
+      )}
 
       <div className="ord-ship-actions">
         <button className="btn btn-ghost btn-sm" onClick={() => setEditing(false)} disabled={busy}>
@@ -234,7 +233,7 @@ export default function PaymentPage() {
   const navigate = useNavigate();
   const orderId = (searchParams.get('orderId') || '').trim();
 
-  const [order, setOrder] = useState<Order & { redeemCodes?: PurchaseCode[] } | null>(null);
+  const [order, setOrder] = useState<(Order & { redeemCodes?: PurchaseCode[] }) | null>(null);
   const [payment, setPayment] = useState<Payment | null>(null);
   const [phase, setPhase] = useState<Phase>('loading');
   const [hint, setHint] = useState('');
@@ -253,8 +252,11 @@ export default function PaymentPage() {
       return 'stop' as const;
     }
     try {
-      const { order: fetched, payment: fetchedPayment, canSimulatePayment } =
-        await API.orders.get(orderId);
+      const {
+        order: fetched,
+        payment: fetchedPayment,
+        canSimulatePayment,
+      } = await API.orders.get(orderId);
       if (!fetched) {
         setPhase('notfound');
         return 'stop' as const;
@@ -350,7 +352,10 @@ export default function PaymentPage() {
     setActivating(code);
     try {
       const data = await API.plants.activate(code);
-      showToast(data.created ? 'Hạt đã được gieo!' : 'Cây này đã được kích hoạt trước đó.', 'success');
+      showToast(
+        data.created ? 'Hạt đã được gieo!' : 'Cây này đã được kích hoạt trước đó.',
+        'success',
+      );
       navigate(`/plant/${data.plant.id}`);
     } catch (err: any) {
       showToast(err?.message || 'Không kích hoạt được mã này.', 'error');
@@ -445,46 +450,55 @@ export default function PaymentPage() {
                   {/* The real product photo, not an emoji. This is the only
                       place a customer confirms they are paying for the thing
                       they meant to buy, and a 📦 confirms nothing. */}
-                  <div className="ord-items">
-                    {order.items?.map((item, i) => (
-                      <div className="ord-item" key={i}>
-                        <span className="ord-item-thumb">
-                          {item.product?.images?.[0] ? (
-                            <img src={item.product.images[0]} alt="" />
-                          ) : (
-                            <span>{item.product?.emoji || '🌱'}</span>
-                          )}
-                          {item.qty > 1 && <em className="ord-item-qty">{item.qty}</em>}
-                        </span>
+                  <div className="ord-body">
+                    <div className="ord-lines">
+                      <div className="ord-items">
+                        {order.items?.map((item, i) => (
+                          <div className="ord-item" key={i}>
+                            <span className="ord-item-thumb">
+                              {item.product?.images?.[0] ? (
+                                <img src={item.product.images[0]} alt="" />
+                              ) : (
+                                <span>{item.product?.emoji || '🌱'}</span>
+                              )}
+                              {item.qty > 1 && <em className="ord-item-qty">{item.qty}</em>}
+                            </span>
 
-                        <span className="ord-item-main">
-                          <span className="ord-item-name">{item.product?.name || 'Sản phẩm'}</span>
-                          <span className="ord-item-sub">
-                            {item.variant === 'smart' && (
-                              <b className="ord-item-variant">Bản Smart</b>
-                            )}
-                            {formatPrice(item.unitPrice)}
-                            {item.qty > 1 && ` × ${item.qty}`}
-                          </span>
-                          <span className="ord-item-line">
-                            {formatPrice(item.unitPrice * item.qty)}
-                          </span>
-                        </span>
+                            <span className="ord-item-main">
+                              <span className="ord-item-name">
+                                {item.product?.name || 'Sản phẩm'}
+                              </span>
+                              <span className="ord-item-sub">
+                                {item.variant === 'smart' && (
+                                  <b className="ord-item-variant">Bản Smart</b>
+                                )}
+                                {formatPrice(item.unitPrice)}
+                                {item.qty > 1 && ` × ${item.qty}`}
+                              </span>
+                              <span className="ord-item-line">
+                                {formatPrice(item.unitPrice * item.qty)}
+                              </span>
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
 
-                  <div className="ord-total">
-                    <span>Tổng cộng</span>
-                    <strong>{formatPrice(order.total)}</strong>
-                  </div>
+                      <div className="ord-total">
+                        <span>Tổng cộng</span>
+                        <strong>{formatPrice(order.total)}</strong>
+                      </div>
+                    </div>
 
-                  <ContactBlock order={order} onSaved={refresh} />
+                    <ContactBlock order={order} onSaved={refresh} />
+                  </div>
                 </>
               ) : (
                 <div className="pay-result">
                   <div className={`pay-result-badge${order.status === 'cancelled' ? ' bad' : ''}`}>
-                    <SproutyIcon name={order.status === 'cancelled' ? 'warning' : 'check'} size={44} />
+                    <SproutyIcon
+                      name={order.status === 'cancelled' ? 'warning' : 'check'}
+                      size={44}
+                    />
                   </div>
                   <h2 className={order.status === 'cancelled' ? 'is-bad' : 'is-good'}>
                     {order.status === 'cancelled' ? 'Đơn hàng đã bị hủy' : 'Thanh toán thành công!'}
@@ -537,15 +551,24 @@ export default function PaymentPage() {
                               disabled={Boolean(activating)}
                               onClick={() => activateNow(code.code)}
                             >
-                              {activating === code.code ? 'Đang gieo hạt…' : 'Kích hoạt & gieo hạt ngay'}
-                              {activating !== code.code && <SproutyIcon name="arrow-right" size={19} />}
+                              {activating === code.code
+                                ? 'Đang gieo hạt…'
+                                : 'Kích hoạt & gieo hạt ngay'}
+                              {activating !== code.code && (
+                                <SproutyIcon name="arrow-right" size={19} />
+                              )}
                             </button>
                           )}
 
                           <p className="code-card-note">
-                            {code.redeemed
-                              ? 'Mã này đã được dùng để gieo cây.'
-                              : <>Mã cũng luôn xem lại được trong <Link to="/account">Đơn hàng của tôi</Link>.</>}
+                            {code.redeemed ? (
+                              'Mã này đã được dùng để gieo cây.'
+                            ) : (
+                              <>
+                                Mã cũng luôn xem lại được trong{' '}
+                                <Link to="/account">Đơn hàng của tôi</Link>.
+                              </>
+                            )}
                           </p>
                         </div>
                       ))}
@@ -612,8 +635,8 @@ export default function PaymentPage() {
                             for that reason, not for emphasis. */}
                         <div className="pay-memo">
                           <span className="pay-memo-label">
-                            <SproutyIcon name="warning" size={15} /> Nội dung chuyển khoản —
-                            bắt buộc giữ nguyên
+                            <SproutyIcon name="warning" size={15} /> Nội dung chuyển khoản — bắt
+                            buộc giữ nguyên
                           </span>
                           <div className="pay-memo-row">
                             <code>{payment.memo}</code>
@@ -628,8 +651,8 @@ export default function PaymentPage() {
                             </button>
                           </div>
                           <span className="pay-memo-hint">
-                            Sửa hay viết thêm vào dòng này thì hệ thống không nhận ra đơn của
-                            bạn, và tiền sẽ phải đối soát thủ công.
+                            Sửa hay viết thêm vào dòng này thì hệ thống không nhận ra đơn của bạn,
+                            và tiền sẽ phải đối soát thủ công.
                           </span>
                         </div>
                       </li>
@@ -644,8 +667,8 @@ export default function PaymentPage() {
                           <div>
                             <strong>Trang tự cập nhật khi ngân hàng báo có.</strong>
                             <span>
-                              Thường trong vòng một phút. Không cần bấm gì, cũng đừng chuyển
-                              thêm lần nữa.
+                              Thường trong vòng một phút. Không cần bấm gì, cũng đừng chuyển thêm
+                              lần nữa.
                               {hint && <> {hint}</>}
                             </span>
                           </div>
