@@ -10,7 +10,7 @@
  * which of their plants is thirsty without opening any of them.
  */
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { API } from '@/services/api';
@@ -20,7 +20,9 @@ import { PlantArt } from '@/components/PlantArt';
 import { PromoBanner, refreshRewards } from '@/components/PromoBanner';
 import { Pager } from '@/components/Pager';
 import type { PlantCard, PlantEvent } from '@/types/plant';
+import type { PotKey, SceneKey } from '@/components/garden-looks';
 import './MyPlants.css';
+const PlantThumbnail3D = lazy(() => import('@/components/PlantThumbnail3D'));
 
 interface Alert extends PlantEvent {
   plantId: string;
@@ -181,13 +183,16 @@ function StageTrack({ plant }: { plant: PlantCard }) {
   );
 }
 
-function PlantGridCard({ plant, urgent }: { plant: PlantCard; urgent?: Alert[] }) {
+/** The account's chosen scene and pot, so the cards match the garden. */
+type GardenLook = { scene: SceneKey; decoration: PotKey };
+
+function PlantGridCard({ plant, urgent, look }: { plant: PlantCard; urgent?: Alert[]; look?: GardenLook }) {
   const done = Boolean(plant.harvestedAt);
 
   return (
     <Link to={`/plant/${plant.id}`} className={`plant-card${done ? ' harvested' : ''}`}>
-      <div className="pc-stage-art" style={{ background: plant.bgColor || 'var(--sage-bg)' }}>
-        <PlantArt
+      <div className="pc-stage-art">
+        <Suspense fallback={<div className="pc-model-preview" />}><PlantThumbnail3D
           stage={plant.stage}
           progress={plant.stageProgress}
           health={plant.health}
@@ -195,8 +200,9 @@ function PlantGridCard({ plant, urgent }: { plant: PlantCard; urgent?: Alert[] }
           fruitShape={plant.fruitShape}
           fruitColor={plant.fruitColor}
           flowerColor={plant.flowerColor}
-          size={168}
-        />
+          scene={look?.scene}
+          decoration={look?.decoration}
+        /></Suspense>
         <span className={`pc-health pc-health-${plant.healthState.id}`}>
           <SproutyIcon name="heart" size={15} />
           {plant.healthState.label}
@@ -224,8 +230,6 @@ function PlantGridCard({ plant, urgent }: { plant: PlantCard; urgent?: Alert[] }
           </span>
         </div>
 
-        <StageTrack plant={plant} />
-
         <div className="pc-bar">
           <div className="pc-bar-fill" style={{ width: `${Math.round(plant.stageProgress)}%` }} />
         </div>
@@ -236,18 +240,21 @@ function PlantGridCard({ plant, urgent }: { plant: PlantCard; urgent?: Alert[] }
             className={`pc-metric ${plant.moisture < 35 ? 'bad' : plant.moisture > 85 ? 'warn' : 'good'}`}
           >
             <SproutyIcon name="moisture" size={16} />
+            <small>Độ ẩm</small>
             {Math.round(plant.moisture)}%
           </span>
           <span
             className={`pc-metric ${plant.nutrient < 30 ? 'bad' : plant.nutrient < 45 ? 'warn' : 'good'}`}
           >
             <SproutyIcon name="nutrient" size={16} />
+            <small>Dinh dưỡng</small>
             {Math.round(plant.nutrient)}%
           </span>
           <span
             className={`pc-metric ${plant.pestRisk > 55 ? 'bad' : plant.pestRisk > 40 ? 'warn' : 'good'}`}
           >
             <SproutyIcon name="pest" size={16} />
+            <small>Sâu bệnh</small>
             {Math.round(plant.pestRisk)}%
           </span>
           {plant.careStreak > 0 && (
@@ -287,6 +294,19 @@ export default function MyPlants() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
+  const [look, setLook] = useState<GardenLook | undefined>();
+
+  // A VIP garden's scene and pot show on every card, not only inside a plant.
+  useEffect(() => {
+    let active = true;
+    API.garden
+      .benefits()
+      .then((data: GardenLook) => active && setLook({ scene: data.scene, decoration: data.decoration }))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -417,7 +437,7 @@ export default function MyPlants() {
               </h2>
               <div className="plants-grid">
                 {visibleGrowing.map((plant) => (
-                  <PlantGridCard key={plant.id} plant={plant} urgent={alertsByPlant[plant.id]} />
+                  <PlantGridCard key={plant.id} plant={plant} urgent={alertsByPlant[plant.id]} look={look} />
                 ))}
               </div>
 
@@ -438,7 +458,7 @@ export default function MyPlants() {
               </h2>
               <div className="plants-grid">
                 {visibleHarvested.map((plant) => (
-                  <PlantGridCard key={plant.id} plant={plant} />
+                  <PlantGridCard key={plant.id} plant={plant} look={look} />
                 ))}
               </div>
 

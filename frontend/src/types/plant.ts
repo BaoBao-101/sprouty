@@ -140,6 +140,7 @@ export interface PlantDetail extends PlantCard {
   harvestLabel: string;
   needsPollination: boolean;
   stageStory: string;
+  cultivation?: { name: string; sow: string; support: string; mature: string };
   idealMoisture: [number, number];
   idealTemp: [number, number];
   environment: PlantEnvironment;

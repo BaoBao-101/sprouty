@@ -1,3 +1,4 @@
+import { VipBenefits } from '@/components/VipBenefits';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { loginHref } from '@/services/auth-nav';
@@ -258,35 +259,7 @@ export default function Vip() {
             })}
           </div>
 
-          <div className="vip-compare">
-            <div className="vip-col">
-              <h3>
-                <SproutyIcon name="sprout" size={20} /> Thường
-              </h3>
-              <ul className="vip-feat-list">
-                <li><span className="yes">✓</span> Tối đa <strong>10 lá</strong> kỷ niệm mỗi kit</li>
-                <li><span className="yes">✓</span> Upload ảnh &amp; video kỷ niệm</li>
-                <li><span className="yes">✓</span> Plant Buddy AI phản hồi mỗi lần thêm lá</li>
-                <li><span className="no">✕</span> Night Mode &amp; hiệu ứng theo mùa</li>
-                <li><span className="no">✕</span> Plant Buddies hiếm</li>
-                <li><span className="no">✕</span> AI recap hàng tháng</li>
-              </ul>
-            </div>
-            <div className="vip-col vip-highlight">
-              <h3>
-                <img src="/assets/images/sprouty-icons/VIP.png" alt="" className="vip-col-icon" />
-                VIP Garden
-              </h3>
-              <ul className="vip-feat-list">
-                <li><span className="yes">✓</span> Tối đa <strong>25 lá</strong> kỷ niệm mỗi kit</li>
-                <li><span className="yes">✓</span> Upload ảnh &amp; video kỷ niệm</li>
-                <li><span className="yes">✓</span> Plant Buddy AI phản hồi mỗi lần thêm lá</li>
-                <li><span className="yes">✓</span> Night Mode &amp; hiệu ứng theo mùa</li>
-                <li><span className="yes">✓</span> Plant Buddies hiếm</li>
-                <li><span className="yes">✓</span> AI recap hàng tháng + ưu tiên hỗ trợ</li>
-              </ul>
-            </div>
-          </div>
+          <VipBenefits />
         </div>
       </section>
     </>

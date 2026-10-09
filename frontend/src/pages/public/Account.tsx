@@ -80,7 +80,7 @@ function TierBand({ user }: { user: User }) {
         <span>
           {user.vipExpired
             ? `Gói VIP đã hết hạn ngày ${formatVipDate(user.vipUntil)}.`
-            : 'Lên VIP Garden để có 25 lá kỷ niệm mỗi kit, hiệu ứng theo mùa và AI recap hằng tháng.'}
+            : 'Lên VIP Garden để lưu ảnh/video kỷ niệm và hỏi Plant Buddy AI không giới hạn, cùng bộ trang trí khu vườn.'}
         </span>
       </div>
       <Link className="tier-band-cta" to="/vip">

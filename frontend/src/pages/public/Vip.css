@@ -110,3 +110,12 @@
 
 /* The artwork is decoration; at 4:3 it pushed the price below the fold. */
 .vip-plan-img { aspect-ratio:16/9 }
+.vip-rights { margin-top: 40px; }
+.vip-rights > p { margin: 12px 0 24px; color: #647961; line-height: 1.7; }
+.vip-table-scroll { overflow-x: auto; border: 1px solid #dbe5d5; border-radius: 18px; }
+.vip-rights-table { width: 100%; border-collapse: collapse; background: #fff; text-align: left; }
+.vip-rights-table th, .vip-rights-table td { padding: 17px 22px; border-bottom: 1px solid #e8eddf; min-width: 155px; }
+.vip-rights-table thead { background: #f2f6ec; }
+.vip-rights-table td:last-child, .vip-rights-table th:last-child { background: #fffaec; }
+.vip-rights-table tbody th { font-weight: 500; }
+.vip-rules { margin-top: 22px; display: grid; gap: 14px; color: #526650; line-height: 1.7; font-size: 14px; }

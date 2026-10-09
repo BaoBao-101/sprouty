@@ -16,6 +16,8 @@
  */
 
 import { PlantBody, type FruitShape, type PlantForm } from '@/components/PlantForms';
+import type { PotKey } from './garden-looks';
+import { useId } from 'react';
 
 export type PlantStageId =
   | 'seed' | 'sprout' | 'seedling' | 'vegetative' | 'budding' | 'flowering' | 'fruiting' | 'mature';
@@ -40,9 +42,19 @@ interface Props {
   flowerColor?: string;
   /** Night dims the scene, matching the light sensor. */
   isNight?: boolean;
+  autumn?: boolean;
+  decoration?: PotKey;
   size?: number;
   className?: string;
 }
+
+/** Body colour of each pot, matching the 3D ones in plant-pots.ts. */
+const POT_FILL: Record<PotKey, string> = {
+  plain: '#C96A32',
+  terracotta: '#9E4A2A',
+  ceramic: '#6FA79A',
+  porcelain: '#EEF2FA',
+};
 
 /** Continuous 0–7.99 position along the journey, for smooth in-between growth. */
 function growthPosition(stage: PlantStageId, progress: number) {
@@ -65,9 +77,13 @@ export function PlantArt({
   fruitColor = '#E8503A',
   flowerColor = '#FFC83D',
   isNight = false,
+  autumn = false,
+  decoration = 'plain',
   size = 260,
   className,
 }: Props) {
+  const artId = useId().replace(/:/g, '');
+  const ref = (name: string) => `url(#${artId}-${name})`;
   const pos = growthPosition(stage, progress);
   const vigour = Math.min(1, Math.max(0, (health - 10) / 80));
 
@@ -105,46 +121,46 @@ export function PlantArt({
       aria-label={`Cây ở giai đoạn ${stage}, sức khoẻ ${Math.round(health)}%`}
     >
       <defs>
-        <linearGradient id="pa-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={isNight ? '#27365B' : '#A6D8F5'} />
-          <stop offset="62%" stopColor={isNight ? '#3B4C78' : '#CDE9F8'} />
+        <linearGradient id={`${artId}-pa-sky`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={isNight ? '#27365B' : autumn ? '#E5C89F' : '#B7D7D2'} />
+          <stop offset="62%" stopColor={isNight ? '#3B4C78' : autumn ? '#F2E0C0' : '#DFEBDF'} />
           <stop offset="100%" stopColor={isNight ? '#4A5B88' : '#E6F4FB'} />
         </linearGradient>
-        <linearGradient id="pa-leaf" x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id={`${artId}-pa-leaf`} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor={leafLight} />
           <stop offset="100%" stopColor={leafDark} />
         </linearGradient>
-        <linearGradient id="pa-ground" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`${artId}-pa-ground`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={isNight ? '#3E4668' : '#F2E3BE'} />
           <stop offset="100%" stopColor={isNight ? '#333A58' : '#E6D3A6'} />
         </linearGradient>
-        <radialGradient id="pa-glow" cx="50%" cy="50%" r="50%">
+        <radialGradient id={`${artId}-pa-glow`} cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor={isNight ? '#FFF0B8' : '#FFE9A0'} stopOpacity={isNight ? 0.3 : 0.7} />
           <stop offset="100%" stopColor={isNight ? '#FFF0B8' : '#FFE9A0'} stopOpacity="0" />
         </radialGradient>
         {/* Keeps the scene inside the card's rounded corners without needing a
             rounded rect behind every single layer. */}
-        <clipPath id="pa-frame">
+        <clipPath id={`${artId}-pa-frame`}>
           <rect x="0" y="0" width="300" height="300" rx="28" />
         </clipPath>
       </defs>
 
-      <g clipPath="url(#pa-frame)">
+      <g clipPath={ref('pa-frame')}>
         {/* ── Sky ─────────────────────────────────────────────────────────── */}
-        <rect x="0" y="0" width="300" height="300" fill="url(#pa-sky)" />
+        <rect x="0" y="0" width="300" height="300" fill={ref('pa-sky')} />
 
         {/* ── Sun / moon ──────────────────────────────────────────────────── */}
-        <circle cx="236" cy="58" r="52" fill="url(#pa-glow)" />
+        <circle cx="236" cy="58" r="52" fill={ref('pa-glow')} />
         {isNight ? (
           <>
             {/* Crescent, cut by a second circle rather than drawn as a path, so
                 the curve stays true at any size. */}
-            <mask id="pa-moon">
+            <mask id={`${artId}-pa-moon`}>
               <rect x="0" y="0" width="300" height="300" fill="#000" />
               <circle cx="236" cy="58" r="21" fill="#fff" />
               <circle cx="246" cy="49" r="18" fill="#000" />
             </mask>
-            <circle cx="236" cy="58" r="21" fill="#FFF0B8" mask="url(#pa-moon)" />
+            <circle cx="236" cy="58" r="21" fill="#FFF0B8" mask={ref('pa-moon')} />
             <g fill="#FFFBEA">
               <circle cx="54" cy="46" r="2.4" opacity="0.9" />
               <circle cx="92" cy="28" r="1.7" opacity="0.75" />
@@ -204,7 +220,7 @@ export function PlantArt({
         />
 
         {/* ── Ground ──────────────────────────────────────────────────────── */}
-        <rect x="-10" y="242" width="320" height="70" fill="url(#pa-ground)" />
+        <rect x="-10" y="242" width="320" height="70" fill={ref('pa-ground')} />
 
         {/* ── Bushes, behind the pot ──────────────────────────────────────── */}
         <g fill={isNight ? '#2C4C3C' : '#AED99B'}>
@@ -229,10 +245,16 @@ export function PlantArt({
 
         {/* Wide shallow bowl: a lighter rim across the top, a tapering body
             below it, matching the reference illustration. */}
-        <path d="M70 254h160l-14 34a12 12 0 0 1-11.9 9.6H95.9A12 12 0 0 1 84 288L70 254Z" fill="#C96A32" />
+        <path d="M70 254h160l-14 34a12 12 0 0 1-11.9 9.6H95.9A12 12 0 0 1 84 288L70 254Z" fill={POT_FILL[decoration] ?? POT_FILL.plain} />
         <path d="M84 254h132l-11 28a10 10 0 0 1-9.9 8H105a10 10 0 0 1-9.9-8L84 254Z" fill="#E08445" opacity="0.55" />
         <rect x="60" y="236" width="180" height="20" rx="10" fill="#F0A952" />
         <rect x="60" y="236" width="180" height="9" rx="4.5" fill="#F7BE72" />
+        {decoration !== 'plain' && <g stroke={decoration === 'ceramic' ? '#E9F3DF' : decoration === 'porcelain' ? '#2D4F9E' : '#914B2E'} strokeWidth="2" opacity=".8">
+          {[94, 116, 138, 160, 182, 204].map(x => <path key={x} d={`M${x} 266 q-6 8 0 16 q6-8 0-16`} fill="none" />)}
+        </g>}
+        {autumn && <g fill="#BC773D" opacity=".8">
+          {[30, 65, 238, 266].map((x, i) => <ellipse key={x} cx={x} cy={265 + i % 2 * 12} rx="9" ry="4" transform={`rotate(${i * 28} ${x} ${265 + i % 2 * 12})`} />)}
+        </g>}
 
         {/* Soil inside the bowl. */}
         <path
@@ -280,7 +302,7 @@ export function PlantArt({
       {/* The harvest ribbon, once the journey is finished */}
       {isMature && (
         <g transform="translate(150 36)">
-          <rect x="-56" y="-16" width="112" height="32" rx="16" fill="#FFC83D" stroke="#E2A41C" strokeWidth="3" />
+          <rect x="-66" y="-16" width="132" height="32" rx="16" fill="#F4DE99" stroke="#BDA05B" strokeWidth="1.5" />
           <text
             textAnchor="middle"
             y="6"
@@ -289,7 +311,7 @@ export function PlantArt({
             fill="#6B4A00"
             fontFamily="inherit"
           >
-            Đã chín!
+            Sẵn thu hoạch
           </text>
         </g>
       )}

@@ -9,6 +9,7 @@ import { renderToString } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { CartProvider } from '@/contexts/CartContext';
+import { AiChatProvider } from '@/contexts/AiChatContext';
 import type { ComponentType } from 'react';
 
 const modules = import.meta.glob<{ default: ComponentType }>('./pages/**/*.tsx', { eager: true });
@@ -26,7 +27,9 @@ for (const [file, mod] of Object.entries(modules)) {
       <MemoryRouter>
         <AuthProvider>
           <CartProvider>
-            <Page />
+            <AiChatProvider>
+              {file.endsWith('/Auth.tsx') ? <Page {...({ mode: 'login' } as any)} /> : <Page />}
+            </AiChatProvider>
           </CartProvider>
         </AuthProvider>
       </MemoryRouter>,

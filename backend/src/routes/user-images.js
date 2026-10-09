@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { leafLimit } from '../services/benefits.js';
 import { requireAuth, requireCsrf } from '../middleware/rbac.js';
 import { AppError } from '../utils/errors.js';
 import { intParam, multipartFields, noHtml, parseOrThrow } from '../utils/validation.js';
@@ -11,11 +12,7 @@ const updateSchema = z.object({
   note: noHtml('Ghi chú').and(z.string().max(1000)).optional().nullable(),
 });
 
-// Cây Kỷ Niệm caps leaves (photos/videos) per kit so storage doesn't grow
-// unbounded — VIP (bought VIP Garden Monthly/Annual) gets a higher cap.
-// Keep in sync with pages/tree.html and pages/my-products.html.
-const MAX_LEAVES_STANDARD = 10;
-const MAX_LEAVES_VIP = 25;
+// The shared leafLimit policy returns null for unlimited active VIP albums.
 
 // Guards against accidental-upload spam: a user can remove (and re-upload
 // a replacement) at most this many leaves per kit — soft-deleted rows are
@@ -23,7 +20,7 @@ const MAX_LEAVES_VIP = 25;
 const MAX_REMOVALS_PER_PRODUCT = 5;
 
 async function maxLeavesFor(prisma, userId) {
-  return (await isVipUser(prisma, userId)) ? MAX_LEAVES_VIP : MAX_LEAVES_STANDARD;
+  return leafLimit(await isVipUser(prisma, userId));
 }
 
 async function removalsUsedFor(prisma, userId, productId) {
@@ -120,7 +117,7 @@ export default async function userImageRoutes(fastify) {
     const existingCount = await fastify.prisma.userProductImage.count({
       where: { userId: req.user.id, productId, status: { not: 'deleted' } },
     });
-    if (existingCount >= maxLeaves) {
+    if (maxLeaves !== null && existingCount >= maxLeaves) {
       throw new AppError(`Cây đã đủ ${maxLeaves} lá kỷ niệm rồi — hãy xoá bớt ảnh/video cũ nếu muốn thêm mới.`, 409);
     }
     const { file, fields } = await multipartFields(req);

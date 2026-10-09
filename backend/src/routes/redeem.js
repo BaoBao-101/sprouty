@@ -55,7 +55,8 @@ export default async function redeemRoutes(fastify) {
       entitlements,
       features,
       isVip,
-      aiRequiresEntitlement: process.env.AI_REQUIRES_ENTITLEMENT === 'true',
+      // All signed-in accounts receive a daily allowance; VIP increases it.
+      aiRequiresEntitlement: false,
     };
   });
 }

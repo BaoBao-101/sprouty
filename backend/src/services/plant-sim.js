@@ -30,6 +30,8 @@
  * Speeds the whole simulation up for development and demos. 1 is real time: a
  * cooldown measured in hours is hours. 24 makes an hour pass in a minute.
  */
+import { SPECIES_CARE } from './species-care.js';
+
 export function timeScale() {
   const raw = Number(process.env.PLANT_TIME_SCALE || 1);
   if (!Number.isFinite(raw) || raw <= 0) return 1;
@@ -106,8 +108,17 @@ const STAGE_DRY_FACTOR = {
   mature: 0.9,
 };
 
-export function stageMeta(stageId) {
-  return STAGES[STAGE_INDEX.get(stageId) ?? 0];
+export function stageMeta(stageId, product = null) {
+  const base = STAGES[STAGE_INDEX.get(stageId) ?? 0];
+  const profile = SPECIES_CARE[speciesFor(product).key];
+  if (!profile) return base;
+  const young = ['seed', 'sprout'].includes(stageId);
+  return { ...base,
+    growthNeeded: base.growthNeeded * profile.pace,
+    idealMoisture: young ? [profile.moisture[0] + 8, Math.min(85, profile.moisture[1] + 8)] : profile.moisture,
+    idealTemp: profile.temp,
+    story: young ? profile.sow : profile[stageId] || profile.support,
+  };
 }
 
 export function stageIndex(stageId) {
@@ -609,7 +620,7 @@ export function tick(plant, { now = new Date(), devices = {}, product = null } =
     elapsed += slice;
 
     const env = environmentAt(plant.id, sliceAt, devices);
-    const stage = stageMeta(state.stage);
+    const stage = stageMeta(state.stage, product);
 
     // Soil dries faster when it is hot and bright.
     //
@@ -695,7 +706,7 @@ export function tick(plant, { now = new Date(), devices = {}, product = null } =
 
     // Advance as many stages as the accumulated progress covers.
     while (state.stageProgress >= 100 && state.stage !== 'mature') {
-      const from = stageMeta(state.stage);
+      const from = stageMeta(state.stage, product);
       const next = STAGES[stageIndex(state.stage) + 1];
       // Carry the surplus over rather than discarding it, so a plant read late
       // is not quietly robbed of the growth it had already earned.
@@ -703,7 +714,7 @@ export function tick(plant, { now = new Date(), devices = {}, product = null } =
       state.stage = next.id;
       state.stageProgress = next.id === 'mature'
         ? 100
-        : clamp((carry * from.growthNeeded) / (stageMeta(next.id).growthNeeded || 1), 0, 99);
+        : clamp((carry * from.growthNeeded) / (stageMeta(next.id, product).growthNeeded || 1), 0, 99);
       stagesCrossed.push(next.id);
     }
   }
@@ -759,7 +770,7 @@ export function tick(plant, { now = new Date(), devices = {}, product = null } =
 export function applyCare(actionId, state, env, product = null) {
   const meta = careMeta(actionId);
   if (!meta) return null;
-  const stage = stageMeta(state.stage);
+  const stage = stageMeta(state.stage, product);
   const result = meta.payout(state, stage, env) || { growth: 0, deltas: {} };
 
   const next = { ...state };
@@ -774,13 +785,13 @@ export function applyCare(actionId, state, env, product = null) {
     next.growthPoints = round1(next.growthPoints + growth);
     next.stageProgress += (growth / stage.growthNeeded) * 100;
     while (next.stageProgress >= 100 && next.stage !== 'mature') {
-      const from = stageMeta(next.stage);
+      const from = stageMeta(next.stage, product);
       const upcoming = STAGES[stageIndex(next.stage) + 1];
       const carry = next.stageProgress - 100;
       next.stage = upcoming.id;
       next.stageProgress = upcoming.id === 'mature'
         ? 100
-        : clamp((carry * from.growthNeeded) / (stageMeta(upcoming.id).growthNeeded || 1), 0, 99);
+        : clamp((carry * from.growthNeeded) / (stageMeta(upcoming.id, product).growthNeeded || 1), 0, 99);
       stagesCrossed.push(upcoming.id);
     }
   }
@@ -807,7 +818,7 @@ export function applyCare(actionId, state, env, product = null) {
  * never contradict each other.
  */
 export function nextStepFor(state, env, availability, product = null) {
-  const stage = stageMeta(state.stage);
+  const stage = stageMeta(state.stage, product);
   const ready = (id) => availability[id]?.ready;
   const candidates = [];
 

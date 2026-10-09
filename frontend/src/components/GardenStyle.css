@@ -1,0 +1,123 @@
+/* Góc vườn: the scene and pot picker under the 3D model. */
+
+.garden-style {
+  width: 100%;
+  margin: 24px 0 0;
+  padding: 16px 20px;
+  box-sizing: border-box;
+  background: #fffdf7;
+  border: 1px solid #dce5d6;
+  border-radius: 20px;
+  color: #294730;
+  text-align: left;
+  display: grid;
+  gap: 12px;
+}
+/* A VIP garden looks like one before anything is picked. */
+.garden-style.is-vip {
+  background: linear-gradient(135deg, #fffdf5 0%, #fff7df 100%);
+  border-color: #f0d68a;
+  box-shadow: 0 8px 28px rgba(214, 160, 40, .12);
+}
+
+/* Title and one line of explanation on the same row. */
+.gs-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px }
+.gs-head p { font-size: 12.5px; line-height: 1.5; color: #617160; margin: 0 }
+.gs-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px }
+.gs-title strong { font-size: 16px }
+.gs-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+  background: #eef4e8; border: 1px solid #d6e3cc; color: #4d6a4f; white-space: nowrap;
+}
+.gs-badge.is-vip { background: #fff2c9; border-color: #ecc965; color: #7a5410 }
+.gs-badge img { width: 14px; height: 14px; object-fit: contain }
+.gs-saved { font-size: 12px; font-weight: 700; color: #2e8447 }
+
+/* Scenes and pots side by side: the panel is a strip under the model, not a page of its own. */
+.gs-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 24px }
+.gs-group { display: grid; gap: 7px; min-width: 0 }
+.gs-group-label { font-size: 13px; font-weight: 700; color: #36533c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.gs-group-label em { font-style: normal; font-weight: 500; color: #7a8878; margin-left: 6px }
+.gs-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px }
+
+.gs-tile {
+  display: flex; flex-direction: column; gap: 4px; min-width: 0;
+  padding: 5px 5px 7px; border-radius: 12px; text-align: left;
+  background: #fff; border: 1.5px solid #dfe7da; color: inherit; font: inherit;
+  cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.gs-tile:hover:not(:disabled) { border-color: #a9c79f; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(41, 71, 48, .08) }
+.gs-tile:focus-visible { outline: 3px solid #c4dfaf; outline-offset: 2px }
+.gs-tile:disabled { cursor: progress; opacity: .75 }
+.gs-tile.is-vip:hover:not(:disabled) { border-color: #e7c35d }
+.gs-tile.is-selected { border-color: #2e8447; box-shadow: 0 0 0 2px rgba(46, 132, 71, .18) }
+.gs-tile.is-vip.is-selected { border-color: #d9a520; box-shadow: 0 0 0 2px rgba(217, 165, 32, .25) }
+.gs-tile.is-preview { border-color: #e7a02d; border-style: dashed; box-shadow: 0 0 0 2px rgba(231, 160, 45, .2) }
+
+.gs-tile-art {
+  position: relative; display: block; overflow: hidden;
+  border-radius: 8px; aspect-ratio: 16 / 10; background: #f3f0e6;
+}
+.gs-tile-art svg { display: block; width: 100%; height: 100% }
+.gs-tile-tag {
+  position: absolute; top: 4px; right: 4px;
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 1px 6px; border-radius: 20px;
+  background: #fff6d6; color: #7a5410; font-size: 10px; font-weight: 800; letter-spacing: .03em;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .15);
+}
+.gs-tile-tag.is-locked { background: rgba(32, 36, 48, .78); color: #fff }
+.gs-tile-tag img { width: 12px; height: 12px; object-fit: contain }
+.gs-tile-tag svg { width: 11px; height: 11px }
+.gs-tile-check {
+  position: absolute; left: 4px; bottom: 4px;
+  padding: 1px 7px; border-radius: 20px; font-size: 10.5px; font-weight: 800;
+  background: #2e8447; color: #fff;
+}
+.gs-tile.is-vip.is-selected .gs-tile-check { background: #c08a12 }
+.gs-tile.is-preview .gs-tile-check { background: #e08a1e }
+
+/* Up to two lines: "Đất nung khắc vân" cut to "Đất nung khắc v…" says less than it should. */
+.gs-tile-label {
+  font-size: 12px; font-weight: 700; line-height: 1.3; color: #294730; padding: 0 2px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+.gs-trying {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px;
+  padding: 12px 14px; border-radius: 12px;
+  background: #fff4dc; border: 1px solid #f1cf86; color: #6e4b0d; font-size: 13px; line-height: 1.5;
+}
+.gs-trying span { flex: 1 1 280px; min-width: 0 }
+.gs-trying-actions { display: flex; gap: 8px; flex-wrap: wrap }
+.gs-cta {
+  display: inline-flex; align-items: center; padding: 8px 14px; border-radius: 20px;
+  background: #b45309; color: #fff !important; font-size: 13px; font-weight: 700; text-decoration: none;
+}
+.gs-cta:hover { filter: brightness(1.07) }
+.gs-ghost {
+  padding: 8px 14px; border-radius: 20px; border: 1px solid #e3c68a;
+  background: #fff; color: #6e4b0d; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+
+.garden-style .garden-style-usage {
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 20px;
+  margin: 0; padding-top: 10px; border-top: 1px solid #e4e9dc; font-size: 12px; color: #617160;
+}
+.garden-style-usage strong { color: #36533c; font-weight: 600 }
+.gs-more { color: #377448; font-size: 13px; font-weight: 600 }
+.garden-style [role=alert] { color: #a83c32; margin: 0; font-size: 13px }
+
+@media (max-width: 960px) {
+  .gs-body { grid-template-columns: minmax(0, 1fr) }
+}
+@media (max-width: 480px) {
+  .garden-style { padding: 14px; border-radius: 16px }
+  .gs-grid { gap: 6px }
+  .gs-tile-label { font-size: 11px }
+  /* Tiles are thumbnail-sized here: the tag keeps its icon and drops the word. */
+  .gs-tile-tag { font-size: 0; gap: 0; padding: 3px; top: 3px; right: 3px }
+  .gs-tile-check { font-size: 9.5px; padding: 0 5px; left: 3px; bottom: 3px }
+  .gs-group-label em { display: block; margin: 2px 0 0; white-space: normal }
+}

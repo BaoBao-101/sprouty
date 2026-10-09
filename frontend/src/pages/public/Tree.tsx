@@ -22,7 +22,7 @@ interface Leaf {
 /** What GET /my-products/:id/images returns, now that it describes a journey. */
 interface AlbumData {
   images: Leaf[];
-  maxLeaves: number;
+  maxLeaves: number | null;
   removalsUsed: number;
   removalsMax: number;
   product: { id: number; name: string } | null;
@@ -326,7 +326,7 @@ export default function Tree() {
 
   const [album, setAlbum] = useState<AlbumData | null>(null);
   const [leaves, setLeaves] = useState<Leaf[]>([]);
-  const [maxLeaves, setMaxLeaves] = useState(DEFAULT_MAX_LEAVES);
+  const [maxLeaves, setMaxLeaves] = useState<number | null>(DEFAULT_MAX_LEAVES);
   const [removalsUsed, setRemovalsUsed] = useState(0);
   const [removalsMax, setRemovalsMax] = useState(5);
   const [loading, setLoading] = useState(true);
@@ -346,7 +346,7 @@ export default function Tree() {
       .then((data: AlbumData) => {
         setAlbum(data);
         setLeaves(data.images || []);
-        if (data.maxLeaves) setMaxLeaves(data.maxLeaves);
+        if (data.maxLeaves !== undefined) setMaxLeaves(data.maxLeaves);
         if (typeof data.removalsUsed === 'number') setRemovalsUsed(data.removalsUsed);
         if (typeof data.removalsMax === 'number') setRemovalsMax(data.removalsMax);
       })
@@ -359,7 +359,7 @@ export default function Tree() {
 
   useEffect(loadLeaves, [loadLeaves]);
 
-  const full = leaves.length >= maxLeaves;
+  const full = maxLeaves !== null && leaves.length >= maxLeaves;
   const species = album?.species;
   const plant = album?.plant;
   const title = plant?.nickname || album?.product?.name || 'Album kỷ niệm';
@@ -450,7 +450,7 @@ export default function Tree() {
               <div className="album-hero-meta">
                 <span className="album-count">
                   <SproutyIcon name="album" size={16} />
-                  {leaves.length}/{maxLeaves} khoảnh khắc
+                  {leaves.length}{maxLeaves === null ? ' · Không giới hạn' : `/${maxLeaves}`} khoảnh khắc
                 </span>
                 {plant && (
                   <Link to={`/plant/${plant.id}`} className="album-back-plant">

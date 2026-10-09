@@ -680,3 +680,31 @@
   .activate-overlay .activate-fields { grid-template-columns: minmax(0, 1fr) }
   .activate-overlay .activate-submit { width: 100%; justify-content: center }
 }
+
+/* Botanical garden cards */
+.plants-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+.plant-card { border: 1px solid #d6e1d0; border-radius: 22px; box-shadow: 0 3px 12px #233d2410; }
+.plant-card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px #233d2418; }
+.plant-card:focus-visible { outline: 3px solid #458658; outline-offset: 4px; }
+.pc-stage-art { padding: 0; background: #e5ebdd; border-bottom: 1px solid #d6e1d0; }
+.pc-model-preview { width: 100%; aspect-ratio: 3 / 2; display: grid; place-items: center; overflow: hidden; }
+.pc-model-preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.pc-model-preview > svg { max-height: 100%; }
+.pc-health, .pc-done-flag { font-size: 11px; border-width: 1px; padding: 6px 9px; }
+.pc-body { display: flex; flex-direction: column; flex: 1; padding: 20px; }
+.pc-title-row { align-items: flex-start; flex-direction: column; gap: 3px; margin-bottom: 16px; }
+.pc-title-row h3 { max-width: 100%; font-size: 1.18rem; }
+.pc-species, .pc-stage-count, .pc-bar-label { color: #687964; }
+.pc-stage-pill { background: #edf3e8; border-radius: 7px; font-size: 12px; padding: 5px 8px; }
+.pc-bar { height: 6px; border: 0; background: #edf1e8; margin-top: 3px; }
+.pc-bar-fill { background: #689954; }
+.pc-bar-label { font-size: 11px; margin: 7px 0 16px; }
+.pc-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.pc-metric { display: grid; grid-template-columns: 16px 1fr; gap: 4px; padding: 8px; border: 1px solid #e0e7d9; border-radius: 9px; font-size: 13px; }
+.pc-metric small { grid-column: 1 / -1; grid-row: 1; font-size: 10px; font-weight: 500; }
+.pc-metric.streak { grid-column: 1 / -1; display: flex; border: 0; background: transparent; padding: 3px 0; font-size: 11px; }
+.pc-open { display: flex; justify-content: space-between; padding-top: 14px; margin-top: auto; border-top: 1px solid #e8ede2; color: #356744; font-size: 13px; }
+.pc-alert { font-size: 12px; }
+@media (max-width: 980px) { .plants-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 580px) { .plants-grid { grid-template-columns: minmax(0, 1fr); gap: 18px; } .pc-body { padding: 18px; } }
+@media (prefers-reduced-motion: reduce) { .plant-card, .pc-bar-fill { transition: none; } .plant-card:hover { transform: none; } }

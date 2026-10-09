@@ -1,6 +1,6 @@
 import { z } from 'zod';
+import { reserveAi } from '../services/benefits.js';
 import { requireAuth, requireCsrf } from '../middleware/rbac.js';
-import { hasEntitlement } from '../services/access.js';
 import { callAi, classifyAiError, SPROUTY_SYSTEM, missingProviderKey, supportsImages } from '../services/ai.js';
 import { advance, plantDetailDto, plantPromptContext } from '../services/plants.js';
 
@@ -31,13 +31,6 @@ export default async function chatRoute(fastify) {
     preHandler: [requireAuth, requireCsrf],
     config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
   }, async (req, reply) => {
-    if (process.env.AI_REQUIRES_ENTITLEMENT === 'true') {
-      const allowed = await hasEntitlement(fastify.prisma, req.user.id, 'ai_assistant');
-      if (!allowed && !['employee', 'admin'].includes(req.user.role)) {
-        return reply.code(403).send({ message: 'Nhập mã kích hoạt để sử dụng trợ lý AI.' });
-      }
-    }
-
     const parsed = chatSchema.safeParse(req.body);
     if (!parsed.success) {
       return reply.code(400).send({ message: parsed.error.errors[0]?.message || 'Dữ liệu không hợp lệ.' });
@@ -106,10 +99,12 @@ export default async function chatRoute(fastify) {
 
     const enrichedSystem = SPROUTY_SYSTEM + whoLine + contextText + plantText;
 
+    const releaseAi = await reserveAi(fastify.prisma, req.user.id);
     try {
       const reply_text = await callAi({ messages, system: enrichedSystem, imageDataUrl });
       return { reply: reply_text };
     } catch (err) {
+      await releaseAi().catch((error) => req.log.error(error, 'AI quota refund failed'));
       // Say which of the three fixable causes it was, so a dead assistant
       // does not need diagnosing from scratch every time.
       const cause = classifyAiError(err);

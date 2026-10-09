@@ -48,12 +48,13 @@ function Leaf({ len, dark, width = 0.42 }: { len: number; dark: string; width?: 
     <>
       <path
         d={`M0 0 C ${len * 0.5} ${-len * width}, ${len * 0.9} ${-len * width * 0.42}, ${len} 0 C ${len * 0.9} ${len * width * 0.42}, ${len * 0.5} ${len * width}, 0 0 Z`}
-        fill="url(#pa-leaf)"
+        fill={dark}
         stroke={dark}
-        strokeWidth="3"
+        strokeWidth="1.2"
         strokeLinejoin="round"
       />
-      <path d={`M3 0 H ${len - 5}`} stroke={dark} strokeWidth="2" opacity="0.55" strokeLinecap="round" />
+      <path d={`M3 0 H ${len - 5}`} stroke="#C4DE9F" strokeWidth="1" opacity="0.7" strokeLinecap="round" />
+      {[.3, .5, .7].map(t => <path key={t} d={`M${len*t} 0 l${len*.12} ${-len*width*.45} M${len*t} 0 l${len*.12} ${len*width*.45}`} stroke="#C4DE9F" strokeWidth=".7" opacity=".45" />)}
     </>
   );
 }
@@ -114,8 +115,13 @@ function Fruit({
 /** Tomato, pepper and anything unclassified: a bush with fruit at the sides. */
 function BushForm(p: BodyProps) {
   const { soilY, stemHeight, stemTop, leafCount, leafScale, leafDark, stemColor, vigour, mix, leafAngle } = p;
+  const tomato = p.fruitShape === 'round';
   return (
     <>
+      {tomato && p.pos >= 2 && <g stroke="#AC9670" fill="none">
+        <path d={`M130 ${soilY} L130 ${stemTop - 12}`} strokeWidth="4" />
+        {[.35, .7].map(t => <path key={t} d={`M128 ${soilY - stemHeight*t} Q141 ${soilY-stemHeight*t+5} 153 ${soilY-stemHeight*t}`} stroke="#9C8859" strokeWidth="2" />)}
+      </g>}
       <path
         d={`M150 ${soilY} C 146 ${soilY - stemHeight * 0.4}, 154 ${soilY - stemHeight * 0.7}, 150 ${stemTop}`}
         stroke={stemColor}
@@ -131,8 +137,15 @@ function BushForm(p: BodyProps) {
         const len = (30 + i * 3.4) * leafScale;
         const droop = (1 - vigour) * 26 * (angle > 0 ? 1 : -1);
         return (
-          <g key={i} transform={`translate(150 ${y}) rotate(${angle + droop})`}>
-            <Leaf len={len} dark={leafDark} />
+          <g key={i} transform={`translate(150 ${y}) scale(${i % 2 === 0 ? -1 : 1} 1) rotate(${-25 + Math.abs(droop)})`}>
+            <path d={`M0 0 Q${len*.6} -5 ${len} 0`} stroke={stemColor} strokeWidth="2.2" fill="none" />
+            {tomato && p.pos >= 2 ? <>
+              {[.32, .58, .8].map(t => <g key={t} transform={`translate(${len*t} 0)`}>
+                <g transform="rotate(-48)"><Leaf len={len*.42} dark={leafDark} width={.5} /></g>
+                <g transform="rotate(48)"><Leaf len={len*.38} dark={leafDark} width={.5} /></g>
+              </g>)}
+              <g transform={`translate(${len*.9} 0)`}><Leaf len={len*.5} dark={leafDark} /></g>
+            </> : <Leaf len={len} dark={leafDark} width={.3} />}
           </g>
         );
       })}
@@ -143,33 +156,20 @@ function BushForm(p: BodyProps) {
         </g>
       ))}
 
-      {p.showFlowers && (
-        <g transform={`translate(150 ${stemTop - 2})`}>
-          {[0, 72, 144, 216, 288].map((deg) => {
-            const rad = (deg * Math.PI) / 180;
-            return (
-              <ellipse
-                key={deg}
-                cx={Math.cos(rad) * 13}
-                cy={Math.sin(rad) * 13}
-                rx="10"
-                ry="8"
-                fill={p.flowerColor}
-                stroke={mix(p.flowerColor, '#8A5A00', 0.45)}
-                strokeWidth="2.8"
-                transform={`rotate(${deg} ${Math.cos(rad) * 13} ${Math.sin(rad) * 13})`}
-              />
-            );
-          })}
-          <circle r="7.5" fill="#F5D98A" stroke="#C79A3C" strokeWidth="2.6" />
-        </g>
-      )}
+      {p.showFlowers && [-1, 1].map((side, i) => <g key={side} transform={`translate(${150+side*24} ${stemTop+24+i*16})`}>
+        <path d={`M${-side*24} -12 Q${-side*10} -14 0 0`} fill="none" stroke={stemColor} strokeWidth="2" />
+        {[0, 1, 2].slice(0, tomato ? 3 : 1).map(n => <g key={n} transform={`translate(${n*9} ${n%2*8})`}>
+          <path d="M0 -7 L2 -2 L7 -2 L3 1 L4 6 L0 3 L-4 6 L-3 1 L-7 -2 L-2 -2 Z" fill={p.flowerColor} stroke="#958548" strokeWidth=".7" />
+          <circle r="1.6" fill="#C5A538" />
+        </g>)}
+      </g>)}
 
       {p.showFruit && [-1, 1].map((side, i) => {
         const r = 9 + Math.min(7, (p.pos - 6) * 5.5) + (p.isMature ? 2 : 0);
         return (
           <g key={side} transform={`translate(${150 + side * 30} ${stemTop + 42 + i * 14})`}>
-            <Fruit shape={p.fruitShape} r={r} color={p.fruitColor} mix={mix} />
+            <path d="M0 -26 Q-10 -20 0 -12" stroke={stemColor} strokeWidth="2" fill="none" />
+            <Fruit shape={p.fruitShape} r={r} color={mix('#79A454', p.fruitColor, Math.min(1, Math.max(0, (p.pos-6)*.8)))} mix={mix} />
           </g>
         );
       })}
@@ -218,8 +218,12 @@ function VineForm(p: BodyProps) {
         const len = (24 + i * 2.4) * leafScale;
         const droop = (1 - vigour) * 22 * side;
         return (
-          <g key={i} transform={`translate(${x} ${y}) rotate(${side * 34 + droop}) scale(${side} 1)`}>
+          <g key={i} transform={`translate(${x} ${y}) scale(${side} 1) rotate(${-30 + Math.abs(droop)})`}>
             <Leaf len={len} dark={leafDark} width={0.54} />
+            {p.pos >= 2 && <>
+              <g transform={`translate(${len*.35} 0) rotate(-55)`}><Leaf len={len*.7} dark={leafDark} width={.55} /></g>
+              <g transform={`translate(${len*.35} 0) rotate(55)`}><Leaf len={len*.65} dark={leafDark} width={.55} /></g>
+            </>}
           </g>
         );
       })}
@@ -350,9 +354,9 @@ function StalkForm(p: BodyProps) {
             <path
               d={`M0 0 C ${len * 0.45} ${-len * 0.2}, ${len * 0.8} ${droop * 0.3}, ${len} ${droop}
                   C ${len * 0.75} ${droop * 0.1}, ${len * 0.4} ${len * 0.12}, 0 ${7 + i * 0.4} Z`}
-              fill="url(#pa-leaf)"
+              fill={leafDark}
               stroke={leafDark}
-              strokeWidth="2.8"
+              strokeWidth="1.3"
               strokeLinejoin="round"
             />
           </g>
@@ -402,7 +406,7 @@ function HeadForm(p: BodyProps) {
   const headR = p.showFlowers ? 16 + Math.min(12, (p.pos - 5) * 7) : 0;
   // A heavy head tips forward, which is what a real sunflower does once the
   // seeds fill in.
-  const nod = p.showFruit ? 10 : 0;
+  const nod = p.showFruit ? 22 : 0;
 
   return (
     <>
@@ -421,7 +425,7 @@ function HeadForm(p: BodyProps) {
         const len = (30 + i * 3.6) * leafScale;
         const droop = (1 - vigour) * 26 * side;
         return (
-          <g key={i} transform={`translate(150 ${y}) rotate(${side * 26 + droop}) scale(${side} 1)`}>
+          <g key={i} transform={`translate(150 ${y}) scale(${side} 1) rotate(${-26 + Math.abs(droop)})`}>
             <Leaf len={len} dark={leafDark} width={0.56} />
           </g>
         );
@@ -445,7 +449,7 @@ function HeadForm(p: BodyProps) {
                 cy={Math.sin(rad) * headR * 0.92}
                 rx={headR * 0.46}
                 ry={headR * 0.22}
-                fill={p.flowerColor}
+                fill={p.showFruit ? mix(p.flowerColor, '#A88852', Math.min(1, (p.pos-6)*.7)) : p.flowerColor}
                 stroke={mix(p.flowerColor, '#8A5A00', 0.4)}
                 strokeWidth="2.4"
                 transform={`rotate(${deg} ${Math.cos(rad) * headR * 0.92} ${Math.sin(rad) * headR * 0.92})`}
@@ -469,7 +473,7 @@ function HeadForm(p: BodyProps) {
 /** Herbs: a low clump of many small leaves, harvested as leaves. */
 function LeafyForm(p: BodyProps) {
   const { soilY, stemHeight, leafCount, leafScale, leafDark, stemColor, vigour } = p;
-  const stems = Math.max(3, Math.min(7, leafCount + 1));
+  const stems = Math.max(1, Math.min(3, leafCount));
 
   return (
     <>
@@ -484,7 +488,7 @@ function LeafyForm(p: BodyProps) {
             {[0.45, 0.68, 0.88, 1].map((t, j) => (
               <g key={t} transform={`translate(0 ${-len * t})`}>
                 <g transform="rotate(-46)">
-                  <Leaf len={(10 + j * 2) * leafScale} dark={leafDark} width={0.6} />
+                  <Leaf len={(20 + j * 3) * leafScale} dark={leafDark} width={0.6} />
                 </g>
                 <g transform="rotate(46) scale(-1 1)">
                   <Leaf len={(10 + j * 2) * leafScale} dark={leafDark} width={0.6} />
@@ -495,12 +499,7 @@ function LeafyForm(p: BodyProps) {
         );
       })}
 
-      {/* Herbs bolt rather than fruit: small pale flower spikes at the end. */}
-      {p.showFlowers && [-1, 0, 1].map((side) => (
-        <g key={side} transform={`translate(${150 + side * 16} ${soilY - stemHeight - 6})`}>
-          <ellipse rx="4.5" ry="9" fill={p.flowerColor} stroke={leafDark} strokeWidth="2.2" />
-        </g>
-      ))}
+
     </>
   );
 }

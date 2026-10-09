@@ -1,3 +1,4 @@
+import { SPECIES_CARE } from './species-care.js';
 /**
  * Everything the virtual plant needs from the database.
  *
@@ -281,6 +282,10 @@ export async function performCare(prisma, userId, plantId, actionId, { now = new
 
   const { plant, events, newlyUnlocked } = await advance(prisma, loaded, now);
 
+  if (actionId === 'pollinate' && !speciesFor(plant.product).pollinate) {
+    throw new AppError('Giống cây này được thu lá hoặc củ, không cần thụ phấn trong chu kỳ này.', 409);
+  }
+
   if (plant.harvestedAt) {
     throw new AppError('Cây này đã được thu hoạch — hãy mở một cây mới nhé!', 409);
   }
@@ -556,7 +561,7 @@ export async function plantDetailDto(prisma, plant, { now = new Date() } = {}) {
   const product = plant.product || null;
   const env = environmentAt(plant.id, now, devices);
   const availability = await careAvailability(prisma, plant.id, plant.stage, now);
-  const stage = stageMeta(plant.stage);
+  const stage = stageMeta(plant.stage, product);
 
   const [readings, logs, coachMessages] = await Promise.all([
     prisma.plantSensorReading.findMany({
@@ -585,6 +590,7 @@ export async function plantDetailDto(prisma, plant, { now = new Date() } = {}) {
     harvestLabel: species.harvest,
     needsPollination: species.pollinate,
     stageStory: stage.story,
+    cultivation: SPECIES_CARE[species.key] || null,
     idealMoisture: stage.idealMoisture,
     idealTemp: stage.idealTemp,
     environment: env,
@@ -604,7 +610,7 @@ export async function plantDetailDto(prisma, plant, { now = new Date() } = {}) {
       id: s.id,
       label: stageLabel(s.id, product),
       icon: s.icon,
-      story: s.story,
+      story: stageMeta(s.id, product).story,
       reached: stageIndex(s.id) <= stageIndex(plant.stage),
       current: s.id === plant.stage,
     })),
@@ -632,7 +638,7 @@ export async function plantDetailDto(prisma, plant, { now = new Date() } = {}) {
         secondary: meta.reads === 'temperature' ? { label: 'Ẩm không khí', value: env.humidity, unit: '%' } : null,
       };
     }),
-    care: CARE_ACTIONS.map((action) => availability[action.id]),
+    care: CARE_ACTIONS.filter((action) => action.id !== 'pollinate' || species.pollinate).map((action) => availability[action.id]),
     readings,
     coachMessages: coachMessages.map((m) => ({
       id: m.id,

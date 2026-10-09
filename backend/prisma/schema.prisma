@@ -117,6 +117,23 @@ model User {
   blogPosts BlogPost[] @relation("BlogPostAuthor")
   plants VirtualPlant[]
   rewards Reward[]
+  aiUsage AiDailyUsage[]
+  gardenPreference GardenPreference?
+}
+
+model AiDailyUsage {
+  userId String
+  day String
+  used Int @default(0)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([userId, day])
+}
+
+model GardenPreference {
+  userId String @id
+  scene String @default("natural")
+  decoration String @default("plain")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Product {

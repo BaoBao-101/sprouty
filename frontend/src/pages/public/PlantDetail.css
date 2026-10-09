@@ -12,9 +12,7 @@
 /* ── Hero ──────────────────────────────────────────────────────────────────── */
 
 .pd-hero {
-  background:
-    radial-gradient(85% 120% at 85% 0%, var(--plant-bg, #F0FDF4) 0%, transparent 62%),
-    linear-gradient(140deg, var(--primary-700) 0%, var(--primary-600) 45%, #3F9E58 100%);
+  background: linear-gradient(120deg, #245d38 0%, #347c48 100%);
   padding: 26px 0 34px;
   color: #fff;
   position: relative;
@@ -87,6 +85,9 @@
 }
 
 .pd-art-pane svg { border-radius: var(--r-xl) }
+.pd-art-pane > svg { width: 100%; height: auto; display: block; }
+.pd-head-pane { min-width: 0; padding: 8px 0; }
+.pd-hero .pd-botanical { color: #36533c; margin-bottom: 0; border: 1px solid #dce5d6; border-radius: 14px; }
 
 .pd-clock {
   --icon-accent: var(--accent-yellow);
@@ -1580,3 +1581,8 @@
   .coach-quick button,
   .coach-input button { transition: none }
 }
+.pd-botanical { margin: 18px 0; padding: 16px 18px; border-left: 3px solid #88a976; background: #f6f7ee; border-radius: 0 12px 12px 0; }
+.pd-botanical summary { cursor: pointer; font-weight: 700; color: #37533a; }
+.pd-botanical em { display: block; margin-top: 12px; color: #728065; }
+.pd-botanical p { margin: 10px 0; line-height: 1.65; font-size: 14px; }
+.pd-botanical small { color: #6a7462; }

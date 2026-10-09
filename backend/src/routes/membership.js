@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { benefitsFor, saveGarden } from '../services/benefits.js';
 import { AppError } from '../utils/errors.js';
 import { requireAuth, requireCsrf } from '../middleware/rbac.js';
 import { auditLog } from '../services/audit.js';
@@ -40,6 +41,17 @@ function planDto(product) {
 }
 
 export default async function membershipRoutes(fastify) {
+  fastify.get('/me/benefits', { preHandler: [requireAuth] }, async (req) =>
+    benefitsFor(fastify.prisma, req.user.id));
+
+  fastify.put('/me/garden', { preHandler: [requireAuth, requireCsrf] }, async (req) => {
+    const parsed = z.object({
+      scene: z.enum(['natural', 'night', 'autumn', 'sakura']),
+      decoration: z.enum(['plain', 'terracotta', 'ceramic', 'porcelain']),
+    }).safeParse(req.body);
+    if (!parsed.success) throw new AppError('Lựa chọn khu vườn không hợp lệ.', 400);
+    return saveGarden(fastify.prisma, req.user.id, parsed.data);
+  });
   // GET /api/v1/membership/plans — public: the VIP page shows prices before
   // anyone signs in.
   fastify.get('/membership/plans', async () => {

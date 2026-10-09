@@ -12,12 +12,14 @@
  * moved on refresh would make the wait feel broken.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
-import { PlantArt } from '@/components/PlantArt';
+const PlantViewer3D = lazy(() => import('@/components/PlantViewer3D'));
+import { GardenStyle, type GardenBenefits } from '@/components/GardenStyle';
+import { sceneLook } from '@/components/garden-looks';
 import { PlantGuide, useGuideFirstRun } from '@/components/PlantGuide';
 import {
   formatCountdown,
@@ -303,6 +305,7 @@ export default function PlantDetail() {
   const [loading, setLoading] = useState(true);
   const [careBusy, setCareBusy] = useState<string | null>(null);
   const [deviceBusy, setDeviceBusy] = useState(false);
+  const [garden, setGarden] = useState<GardenBenefits | null>(null);
   const [feed, setFeed] = useState<PlantEvent[]>([]);
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
@@ -528,7 +531,7 @@ export default function PlantDetail() {
 
           <div className="pd-hero-grid">
             <div className="pd-art-pane">
-              <PlantArt
+              <Suspense fallback={<div className="plant-viewer-loading">Đang mở mô hình cây…</div>}><PlantViewer3D
                 stage={plant.stage}
                 progress={plant.stageProgress}
                 health={plant.health}
@@ -536,12 +539,17 @@ export default function PlantDetail() {
                 fruitShape={plant.fruitShape}
                 fruitColor={plant.fruitColor}
                 flowerColor={plant.flowerColor}
+                scene={garden?.scene ?? 'natural'}
                 isNight={!plant.environment.isDay}
-                size={300}
-              />
+                decoration={garden?.decoration}
+              /></Suspense>
               <div className="pd-clock">
-                <SproutyIcon name={plant.environment.isDay ? 'sun' : 'moon'} size={17} />
-                {plant.environment.isDay ? 'Ban ngày' : 'Ban đêm'} ·{' '}
+                <SproutyIcon name={garden?.scene === 'night' ? 'moon' : garden && garden.scene !== 'natural' ? 'sparkle' : plant.environment.isDay ? 'sun' : 'moon'} size={17} />
+                {/* A VIP scene is the same place at any hour, so the pill names
+                    the scene instead of claiming it is daytime under a night sky. */}
+                {garden && garden.scene !== 'natural'
+                  ? sceneLook(garden.scene).label
+                  : plant.environment.isDay ? 'Ban ngày' : 'Ban đêm'} ·{' '}
                 {String(Math.floor(plant.environment.hour)).padStart(2, '0')}:
                 {String(Math.round((plant.environment.hour % 1) * 60)).padStart(2, '0')}
               </div>
@@ -638,8 +646,13 @@ export default function PlantDetail() {
               </div>
 
               <p className="pd-story">{plant.stageStory}</p>
+              {plant.cultivation && <details className="pd-botanical"><summary>Hồ sơ giống · {plant.speciesLabel}</summary>
+                <em>{plant.cultivation.name}</em><p>{plant.cultivation.sow}</p><p>{plant.cultivation.support}</p>
+                <p>{plant.cultivation.mature}</p><small>Mô phỏng giáo dục: thời gian và thang độ ẩm được giản lược. Cây thật còn phụ thuộc giống, đất và khí hậu.</small>
+              </details>}
             </div>
           </div>
+          <GardenStyle onChange={setGarden} />
         </div>
       </div>
 

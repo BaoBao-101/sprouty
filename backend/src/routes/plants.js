@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { reserveAi } from '../services/benefits.js';
 import { requireAuth, requireCsrf } from '../middleware/rbac.js';
 import { AppError } from '../utils/errors.js';
 import { noHtml, parseOrThrow } from '../utils/validation.js';
@@ -244,6 +245,7 @@ CÁCH TRẢ LỜI:
     // "tại sao?" reached the model with nothing to refer back to.
     const prior = await coachHistory(fastify.prisma, plant.id);
 
+    const releaseAi = await reserveAi(fastify.prisma, req.user.id);
     try {
       const reply_text = await callAi({
         messages: [
@@ -266,6 +268,7 @@ CÁCH TRẢ LỜI:
         stageLabel: detail.stageLabel,
       };
     } catch (err) {
+      await releaseAi().catch((error) => req.log.error(error, 'AI quota refund failed'));
       // Say which of the three fixable causes it was, so a dead assistant
       // does not need diagnosing from scratch every time.
       const cause = classifyAiError(err);

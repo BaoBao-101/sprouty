@@ -91,6 +91,10 @@ async function _fetch(path: string, options: RequestInit = {}): Promise<any> {
 }
 
 export const API = {
+  garden: {
+    benefits() { return _fetch('/me/benefits'); },
+    save(value: { scene: string; decoration: string }) { return _fetch('/me/garden', { method: 'PUT', body: JSON.stringify(value) }); },
+  },
   auth: {
     me() { return _fetch('/auth/me'); },
 
