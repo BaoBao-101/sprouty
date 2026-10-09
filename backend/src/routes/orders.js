@@ -5,6 +5,7 @@ import { requireAuth, requireCsrf } from '../middleware/rbac.js';
 import { auditLog } from '../services/audit.js';
 import { syncWorkshopRewards } from '../services/rewards.js';
 import { reconcile, pollingConfigured } from '../services/sepay.js';
+import { paymentMemo } from '../services/payment-memo.js';
 
 /**
  * Whether this deployment will credit a payment nobody made.
@@ -26,7 +27,7 @@ function buildPaymentInfo(order) {
   const bank = process.env.SEPAY_BANK_CODE;
   const name = process.env.SEPAY_ACCOUNT_NAME;
   if (!acc || !bank) return null;
-  const memo = 'SPROUTY' + order.id.slice(-8).toUpperCase();
+  const memo = paymentMemo(bank, order.id);
   const qrUrl = `https://qr.sepay.vn/img?acc=${encodeURIComponent(acc)}&bank=${encodeURIComponent(bank)}&amount=${order.total}&des=${encodeURIComponent(memo)}`;
   return {
     qrUrl,

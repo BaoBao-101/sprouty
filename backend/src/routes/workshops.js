@@ -3,6 +3,7 @@ import { AppError } from '../utils/errors.js';
 import { requireAuth, requireCsrf } from '../middleware/rbac.js';
 import { ticketCode } from './admin/attendance.js';
 import { reconcile, pollingConfigured } from '../services/sepay.js';
+import { paymentMemo } from '../services/payment-memo.js';
 import {
   assertRewardAvailable,
   claimRewardsTx,
@@ -64,7 +65,7 @@ function buildWorkshopPayment(registration) {
   const bank = process.env.SEPAY_BANK_CODE;
   const name = process.env.SEPAY_ACCOUNT_NAME;
   if (!acc || !bank) return null;
-  const memo = 'SPROUTYWS' + registration.id.slice(-8).toUpperCase();
+  const memo = paymentMemo(bank, registration.id, true);
   return {
     qrUrl: `https://qr.sepay.vn/img?acc=${encodeURIComponent(acc)}&bank=${encodeURIComponent(bank)}&amount=${registration.amount}&des=${encodeURIComponent(memo)}`,
     bankCode: bank,

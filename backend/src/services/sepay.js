@@ -1,4 +1,5 @@
 import { syncWorkshopRewards } from './rewards.js';
+import { paymentSuffix } from './payment-memo.js';
 
 /**
  * Crediting a bank transfer, and asking SePay what has arrived.
@@ -26,7 +27,6 @@ import { syncWorkshopRewards } from './rewards.js';
  * suffix is the tail of the order id. SePay's dashboard regex extracts it into
  * `code`; we re-derive it from the raw content when that is not set.
  */
-const MEMO_RE = /SPROUTY([A-Z0-9]{6,16})/i;
 
 /** Keeps the poll off SePay's rate limit when several customers are waiting. */
 const MIN_POLL_GAP_MS = 4000;
@@ -130,11 +130,7 @@ export async function applyTransaction(fastify, tx) {
     return { ok: true, alreadyProcessed: true, registrationId: existingRegistration.id };
   }
 
-  let suffix = String(tx.code || '').trim();
-  if (!suffix) {
-    const m = String(tx.content || '').match(MEMO_RE);
-    if (m) suffix = m[1];
-  }
+  const suffix = paymentSuffix(tx.code, tx.content);
   if (!suffix) {
     fastify.log.info({ txId, content: tx.content }, 'SePay: no order code matched');
     return { ok: true, unmatched: true };
