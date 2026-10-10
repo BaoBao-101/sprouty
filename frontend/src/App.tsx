@@ -26,6 +26,7 @@ const Auth = lazy(() => import('@/pages/public/Auth'));
 
 // Signed-in customer
 const Account = lazy(() => import('@/pages/public/Account'));
+const Profile = lazy(() => import('@/pages/public/Profile'));
 const MyPlants = lazy(() => import('@/pages/public/MyPlants'));
 const PlantDetail = lazy(() => import('@/pages/public/PlantDetail'));
 const MyWorkshops = lazy(() => import('@/pages/public/MyWorkshops'));
@@ -136,6 +137,7 @@ export function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/payment" element={<Payment />} />
               <Route path="/account" element={<Account />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/my-plants" element={<MyPlants />} />
               <Route path="/plant/:plantId" element={<PlantDetail />} />
               {/* The kit used to be a physical thing you owned, so the page was

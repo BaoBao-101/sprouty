@@ -1,0 +1,18 @@
+/* "Thông tin tài khoản": same green band as the orders page, shorter. */
+
+.prof-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 26px 0 30px;
+  color: #fff;
+  background:
+    radial-gradient(85% 130% at 90% 0%, rgba(255, 255, 255, .16) 0%, transparent 60%),
+    linear-gradient(135deg, var(--primary-700) 0%, var(--primary-500) 62%, #4FB86A 100%);
+}
+.prof-hero-crumb,
+.prof-hero-crumb a { color: rgba(255, 255, 255, .84); font-size: .85rem }
+.prof-hero-crumb a:hover { color: #fff; text-decoration: underline }
+.prof-hero h1 { margin: 8px 0 4px; color: #fff; font-size: clamp(1.6rem, 3vw, 2.1rem) }
+.prof-hero p { margin: 0; color: rgba(255, 255, 255, .86) }
+
+.prof-body { padding: 24px 0 72px }

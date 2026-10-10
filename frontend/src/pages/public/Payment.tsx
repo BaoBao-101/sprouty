@@ -444,7 +444,7 @@ export default function PaymentPage() {
         <div className="container">
           <div className="breadcrumb pay-hero-crumb">
             <Link to="/">Trang chủ</Link> ›{' '}
-            {vip ? <Link to="/vip">VIP Garden</Link> : <Link to="/account">Tài khoản</Link>}{" "}
+            {vip ? <Link to="/vip">VIP Garden</Link> : <Link to="/account">Đơn hàng của tôi</Link>}{" "}
             › Thanh toán
           </div>
           <h1>{vip ? 'Thanh toán gói VIP Garden' : 'Thanh toán đơn hàng'}</h1>

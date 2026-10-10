@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth, type User } from '@/contexts/AuthContext';
-import { formatVipDate, vipDaysLeft } from '@/services/membership';
+import { useAuth } from '@/contexts/AuthContext';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { SproutyIcon } from '@/components/icons/SproutyIcon';
@@ -39,57 +38,6 @@ const VIP_TRACK_STEPS = [
   { key: 'vip', label: 'Lên VIP', icon: 'sparkle' as const },
 ];
 
-const ROLE_VN: Record<User['role'], string> = {
-  customer: 'Khách hàng',
-  employee: 'Nhân viên',
-  admin: 'Quản trị viên',
-};
-
-/**
- * Thường or VIP, and what to do about it. Above the tabs because it is the
- * account's standing, not something filed under one of them.
- */
-function TierBand({ user }: { user: User }) {
-  if (user.isVip) {
-    return (
-      <div className="tier-band is-vip">
-        <span className="tier-band-icon">
-          <img src="/assets/images/sprouty-icons/VIP.png" alt="" />
-        </span>
-        <div className="tier-band-text">
-          <strong>Thành viên VIP Garden</strong>
-          <span>
-            Còn {vipDaysLeft(user.vipUntil)} ngày · hết hạn {formatVipDate(user.vipUntil)}
-          </span>
-        </div>
-        <Link className="tier-band-cta" to="/vip">
-          Gia hạn
-          <SproutyIcon name="arrow-right" size={16} />
-        </Link>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`tier-band${user.vipExpired ? ' is-expired' : ''}`}>
-      <span className="tier-band-icon">
-        <SproutyIcon name="sprout" size={22} />
-      </span>
-      <div className="tier-band-text">
-        <strong>Tài khoản Thường</strong>
-        <span>
-          {user.vipExpired
-            ? `Gói VIP đã hết hạn ngày ${formatVipDate(user.vipUntil)}.`
-            : 'Lên VIP Garden để lưu ảnh/video kỷ niệm và hỏi Plant Buddy AI không giới hạn, cùng bộ trang trí khu vườn.'}
-        </span>
-      </div>
-      <Link className="tier-band-cta" to="/vip">
-        {user.vipExpired ? 'Gia hạn VIP' : 'Nâng cấp VIP'}
-        <SproutyIcon name="arrow-right" size={16} />
-      </Link>
-    </div>
-  );
-}
 
 function OrderTrack({ order }: { order: Order }) {
   if (order.status === 'cancelled') {
@@ -307,127 +255,6 @@ function OrderCard({ order, onCancelled }: { order: Order; onCancelled: () => vo
   );
 }
 
-/**
- * Changing your own password. There was no way to do this anywhere in the
- * product: whatever password you first chose was the one you kept, and a staff
- * account created by an admin was stuck on its temporary password forever.
- */
-function ChangePassword() {
-  const [open, setOpen] = useState(false);
-  const [current, setCurrent] = useState('');
-  const [next, setNext] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [show, setShow] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-
-  function reset() {
-    setCurrent('');
-    setNext('');
-    setConfirm('');
-    setError('');
-    setOpen(false);
-  }
-
-  async function submit() {
-    setError('');
-    if (!current) return setError('Nhập mật khẩu hiện tại.');
-    if (next.length < 6) return setError('Mật khẩu mới phải có ít nhất 6 ký tự.');
-    if (next !== confirm) return setError('Hai lần nhập mật khẩu mới không khớp.');
-    if (next === current) return setError('Mật khẩu mới phải khác mật khẩu hiện tại.');
-
-    setBusy(true);
-    try {
-      const { message } = await API.auth.changePassword(current, next);
-      showToast(message || 'Đã đổi mật khẩu', 'success');
-      reset();
-    } catch (err: any) {
-      setError(err?.message || 'Không đổi được mật khẩu.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (!open) {
-    return (
-      <div className="account-security">
-        <div>
-          <div className="account-security-title">Mật khẩu</div>
-          <div className="account-security-hint">
-            Đổi mật khẩu định kỳ để giữ tài khoản an toàn.
-          </div>
-        </div>
-        <button className="btn btn-ghost btn-sm" onClick={() => setOpen(true)}>
-          Đổi mật khẩu
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="account-security open">
-      <div className="account-security-title" style={{ marginBottom: 14 }}>
-        Đổi mật khẩu
-      </div>
-
-      <div className="form-group">
-        <label className="form-label">Mật khẩu hiện tại</label>
-        <input
-          className="form-input"
-          type={show ? 'text' : 'password'}
-          autoComplete="current-password"
-          value={current}
-          onChange={(e) => setCurrent(e.target.value)}
-        />
-      </div>
-
-      <div className="form-group">
-        <label className="form-label">Mật khẩu mới</label>
-        <input
-          className="form-input"
-          type={show ? 'text' : 'password'}
-          autoComplete="new-password"
-          placeholder="Tối thiểu 6 ký tự"
-          value={next}
-          onChange={(e) => setNext(e.target.value)}
-        />
-      </div>
-
-      <div className="form-group">
-        <label className="form-label">Nhập lại mật khẩu mới</label>
-        <input
-          className="form-input"
-          type={show ? 'text' : 'password'}
-          autoComplete="new-password"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && submit()}
-        />
-      </div>
-
-      <label className="account-security-show">
-        <input type="checkbox" checked={show} onChange={(e) => setShow(e.target.checked)} />
-        Hiện mật khẩu
-      </label>
-
-      {error && <div className="form-error mb-12">{error}</div>}
-
-      <div className="account-security-actions">
-        <button className="btn btn-ghost btn-sm" onClick={reset} disabled={busy}>
-          Hủy
-        </button>
-        <button className="btn btn-primary btn-sm" onClick={submit} disabled={busy}>
-          {busy ? 'Đang đổi…' : 'Đổi mật khẩu'}
-        </button>
-      </div>
-
-      <p className="account-security-hint" style={{ marginTop: 12 }}>
-        Sau khi đổi, các thiết bị khác đang đăng nhập tài khoản này sẽ bị đăng xuất.
-      </p>
-    </div>
-  );
-}
-
 export default function Account() {
   const { user, refreshUser } = useAuth();
 
@@ -437,7 +264,6 @@ export default function Account() {
     void refreshUser();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const [tab, setTab] = useState<'orders' | 'profile'>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -495,19 +321,16 @@ export default function Account() {
       <div className="acc-hero">
         <div className="container">
           <div className="breadcrumb acc-hero-crumb">
-            <Link to="/">Trang chủ</Link> › Tài khoản
+            <Link to="/">Trang chủ</Link> › Đơn hàng của tôi
           </div>
           <div className="acc-hero-row">
             <div className="acc-hero-id">
-              <span className="acc-avatar">{(user?.name || '?').trim().slice(0, 1).toUpperCase()}</span>
+              <span className="acc-avatar">
+                <SproutyIcon name="cart" size={28} />
+              </span>
               <div>
-                <h1>{user?.name || 'Tài khoản của tôi'}</h1>
-                <p>{user?.email}</p>
-                {user?.role === 'customer' && (
-                  <span className={`acc-tier${user.isVip ? ' is-vip' : ''}`}>
-                    {user.isVip ? 'VIP Garden' : 'Tài khoản Thường'}
-                  </span>
-                )}
+                <h1>Đơn hàng của tôi</h1>
+                <p>Theo dõi thanh toán, mã kích hoạt và trạng thái từng đơn.</p>
               </div>
             </div>
             <div className="acc-hero-stats">
@@ -529,122 +352,63 @@ export default function Account() {
       </div>
 
       <div className="container acc-body">
-        {user?.role === 'customer' && <TierBand user={user} />}
-
-        {/* A segmented control. These used to be two stacked links that read as
-            list rows, so nothing about them said "pick one of these". */}
-        <nav className="acc-tabs" role="tablist">
-          <button
-            role="tab"
-            aria-selected={tab === 'orders'}
-            className={tab === 'orders' ? 'active' : ''}
-            onClick={() => setTab('orders')}
-          >
-            <SproutyIcon name="cart" size={18} />
-            Đơn hàng
-            {orderCount > 0 && <em>{orderCount}</em>}
-          </button>
-          <button
-            role="tab"
-            aria-selected={tab === 'profile'}
-            className={tab === 'profile' ? 'active' : ''}
-            onClick={() => setTab('profile')}
-          >
-            <SproutyIcon name="heart" size={18} />
-            Thông tin
-          </button>
-        </nav>
-
-        {tab === 'orders' && (
-          <div className="acc-orders">
-            {/* Filter first: the question a parent opens this page with is
-                almost always "cái nào tôi chưa trả tiền?" */}
-            {orderCount > 0 && (
-              <div className="acc-filters" role="tablist">
-                {FILTERS.map((f) => {
-                  const n = f.value ? counts[f.value] || 0 : orderCount;
-                  if (f.value && n === 0) return null;
-                  return (
-                    <button
-                      key={f.value}
-                      role="tab"
-                      aria-selected={filter === f.value}
-                      className={filter === f.value ? 'active' : ''}
-                      onClick={() => pickFilter(f.value)}
-                    >
-                      {f.label}
-                      <em>{n}</em>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {loading && <p className="acc-muted">Đang tải đơn hàng…</p>}
-            {error && <div className="acc-error">{error}</div>}
-
-            {!loading && !error && orders.length === 0 && (
-              <div className="acc-empty">
-                <span className="acc-empty-icon">
-                  <SproutyIcon name="cart" size={38} />
-                </span>
-                <h3>{filter ? 'Không có đơn nào ở mục này' : 'Bạn chưa có đơn hàng nào'}</h3>
-                <p>
-                  {filter
-                    ? 'Chọn “Tất cả” để xem lại toàn bộ đơn hàng của bạn.'
-                    : 'Chọn một bộ kit, thanh toán xong là có mã kích hoạt để gieo hạt ngay.'}
-                </p>
-                {filter ? (
-                  <button className="btn btn-ghost btn-lg" onClick={() => pickFilter('')}>
-                    Xem tất cả đơn
+        <div className="acc-orders">
+          {/* Filter first: the question a parent opens this page with is
+              almost always "cái nào tôi chưa trả tiền?" */}
+          {orderCount > 0 && (
+            <div className="acc-filters" role="tablist">
+              {FILTERS.map((f) => {
+                const n = f.value ? counts[f.value] || 0 : orderCount;
+                if (f.value && n === 0) return null;
+                return (
+                  <button
+                    key={f.value}
+                    role="tab"
+                    aria-selected={filter === f.value}
+                    className={filter === f.value ? 'active' : ''}
+                    onClick={() => pickFilter(f.value)}
+                  >
+                    {f.label}
+                    <em>{n}</em>
                   </button>
-                ) : (
-                  <Link to="/shop" className="btn btn-primary btn-lg">
-                    Khám phá sản phẩm
-                    <SproutyIcon name="arrow-right" size={18} />
-                  </Link>
-                )}
-              </div>
-            )}
-
-            {orders.map((order) => (
-              <OrderCard key={order.id} order={order} onCancelled={loadOrders} />
-            ))}
-
-            <Pager page={page} pages={pages} total={total} unit="đơn hàng" onChange={setPage} />
-          </div>
-        )}
-
-        {tab === 'profile' && user && (
-          <div className="acc-profile">
-            <div className="profile-grid">
-              <div className="profile-cell">
-                <div className="profile-label">Họ tên</div>
-                <div className="profile-value">{user.name}</div>
-              </div>
-              <div className="profile-cell">
-                <div className="profile-label">Email</div>
-                <div className="profile-value">{user.email}</div>
-              </div>
-              <div className="profile-cell">
-                <div className="profile-label">Vai trò</div>
-                <div className="profile-value">{ROLE_VN[user.role] ?? user.role}</div>
-              </div>
-              <div className="profile-cell">
-                <div className="profile-label">Hạng tài khoản</div>
-                <div className="profile-value">
-                  {user.isVip
-                    ? `VIP Garden — đến ${formatVipDate(user.vipUntil)}`
-                    : user.vipExpired
-                      ? `Thường (VIP hết hạn ${formatVipDate(user.vipUntil)})`
-                      : 'Thường'}
-                </div>
-              </div>
+                );
+              })}
             </div>
+          )}
 
-            <ChangePassword />
-          </div>
-        )}
+          {loading && <p className="acc-muted">Đang tải đơn hàng…</p>}
+          {error && <div className="acc-error">{error}</div>}
+
+          {!loading && !error && orders.length === 0 && (
+            <div className="acc-empty">
+              <span className="acc-empty-icon">
+                <SproutyIcon name="cart" size={38} />
+              </span>
+              <h3>{filter ? 'Không có đơn nào ở mục này' : 'Bạn chưa có đơn hàng nào'}</h3>
+              <p>
+                {filter
+                  ? 'Chọn “Tất cả” để xem lại toàn bộ đơn hàng của bạn.'
+                  : 'Chọn một bộ kit, thanh toán xong là có mã kích hoạt để gieo hạt ngay.'}
+              </p>
+              {filter ? (
+                <button className="btn btn-ghost btn-lg" onClick={() => pickFilter('')}>
+                  Xem tất cả đơn
+                </button>
+              ) : (
+                <Link to="/shop" className="btn btn-primary btn-lg">
+                  Khám phá sản phẩm
+                  <SproutyIcon name="arrow-right" size={18} />
+                </Link>
+              )}
+            </div>
+          )}
+
+          {orders.map((order) => (
+            <OrderCard key={order.id} order={order} onCancelled={loadOrders} />
+          ))}
+
+          <Pager page={page} pages={pages} total={total} unit="đơn hàng" onChange={setPage} />
+        </div>
       </div>
     </>
   );

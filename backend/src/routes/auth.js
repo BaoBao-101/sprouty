@@ -42,6 +42,15 @@ const changePasswordSchema = z.object({
   newPassword: passwordSchema,
 });
 
+/** Your own display name. The e-mail is the login and stays as it is. */
+const profileSchema = z.object({
+  name: z.string()
+    .trim()
+    .min(2, 'Họ tên phải có ít nhất 2 ký tự.')
+    .max(100, 'Họ tên tối đa 100 ký tự.')
+    .refine((v) => !/[<>]/.test(v), { message: 'Họ tên không được chứa ký tự < hoặc >.' }),
+});
+
 const registerSchema = z.object({
   name: z.string().min(2, 'Tên phải có ít nhất 2 ký tự.').max(100)
     .refine(s => !/[<>]/.test(s), { message: 'Tên không được chứa ký tự < hoặc >.' }),
@@ -100,7 +109,7 @@ export default async function authRoutes(fastify) {
 
     const { csrfToken } = await fastify.setSession(req, reply, user.id);
     return {
-      user: publicUser({ id: user.id, email: user.email, name: user.name, role: user.role, vipUntil: user.vipUntil }),
+      user: publicUser({ id: user.id, email: user.email, name: user.name, role: user.role, vipUntil: user.vipUntil, createdAt: user.createdAt }),
       csrfToken,
     };
   });
@@ -129,7 +138,7 @@ export default async function authRoutes(fastify) {
     const { csrfToken } = await fastify.setSession(req, reply, user.id);
     reply.code(201);
     return {
-      user: publicUser({ id: user.id, email: user.email, name: user.name, role: user.role, vipUntil: user.vipUntil }),
+      user: publicUser({ id: user.id, email: user.email, name: user.name, role: user.role, vipUntil: user.vipUntil, createdAt: user.createdAt }),
       csrfToken,
     };
   });
@@ -138,6 +147,27 @@ export default async function authRoutes(fastify) {
   fastify.post('/logout', { preHandler: [requireAuth, requireCsrf] }, async (req, reply) => {
     await fastify.clearSession(req, reply);
     return { message: 'Đã đăng xuất.' };
+  });
+
+  // PATCH /api/v1/auth/profile — change your own name.
+  //
+  // The account page showed the name with no way to fix it; a typo made at
+  // sign-up was on every order and every greeting for good.
+  fastify.patch('/profile', { preHandler: [requireAuth, requireCsrf] }, async (req) => {
+    const parsed = profileSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new AppError(parsed.error.errors[0]?.message || 'Dữ liệu không hợp lệ.', 400);
+    }
+    const updated = await fastify.prisma.user.update({
+      where: { id: req.user.id },
+      data: { name: parsed.data.name },
+      select: { id: true, email: true, name: true, role: true, status: true, vipUntil: true, createdAt: true },
+    });
+    await auditLog(fastify.prisma, req.user.id, 'user.profile.update', 'User', req.user.id, {
+      from: req.user.name,
+      to: updated.name,
+    });
+    return { user: publicUser(updated), message: 'Đã cập nhật họ tên.' };
   });
 
   // POST /api/v1/auth/change-password — rotate your own password.

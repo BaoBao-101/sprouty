@@ -14,6 +14,8 @@ export interface User {
   vipUntil?: string | null;
   /** Was VIP, has run out — worded differently from never having been. */
   vipExpired?: boolean;
+  /** When the account was made, for "thành viên từ". */
+  createdAt?: string;
 }
 
 interface AuthValue {

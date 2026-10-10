@@ -141,6 +141,11 @@ export const API = {
   auth: {
     me() { return _fetch('/auth/me'); },
 
+    /** Your own display name. */
+    updateProfile(name: string) {
+      return _fetch('/auth/profile', { method: 'PATCH', body: JSON.stringify({ name }) });
+    },
+
     changePassword(currentPassword, newPassword) {
       return _fetch('/auth/change-password', {
         method: 'POST',

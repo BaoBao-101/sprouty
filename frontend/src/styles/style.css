@@ -1698,3 +1698,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform:scale(1.2) }
 .route-gate-icon.denied { --icon-accent:var(--rose); background:#FFF1F2; border-color:var(--pink); color:var(--rose) }
 .route-gate h2 { font-family:var(--font-display); font-size:1.3rem; color:var(--ink); margin-bottom:8px }
 .route-gate p { color:var(--ink-3); max-width:44ch; margin:0 auto 20px; line-height:1.65 }
+
+/* The name at the top of the account menu opens the profile page. */
+.user-menu-head.is-link{cursor:pointer;transition:background .15s}
+.user-menu-head.is-link:hover{background:var(--cream-2)}

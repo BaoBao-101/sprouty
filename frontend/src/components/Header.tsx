@@ -44,6 +44,7 @@ function UserMenu({ onClose }: { onClose: () => void }) {
   };
 
   const items: Array<{ label: React.ReactNode; onClick: () => void }> = [
+    { label: '👤 Thông tin tài khoản', onClick: () => go('/profile') },
     {
       label: (
         <>
@@ -76,7 +77,14 @@ function UserMenu({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="user-menu-popup" ref={ref}>
-      <div className="user-menu-head">
+      <div
+        className="user-menu-head is-link"
+        role="button"
+        tabIndex={0}
+        title="Xem thông tin tài khoản"
+        onClick={() => go('/profile')}
+        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && go('/profile')}
+      >
         <strong>{user.name}</strong>
         <div className="user-menu-email">{user.email}</div>
         {/* A customer's standing is their tier; staff have a role instead.
