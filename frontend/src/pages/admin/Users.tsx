@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   FilterPills,
   Modal,
@@ -14,6 +14,7 @@ import {
   type FilterOption,
   type LoadState,
 } from '@/components/admin/ui';
+import { useAuth } from '@/contexts/AuthContext';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { AdminIcon } from '@/components/icons/AdminIcon';
@@ -284,6 +285,8 @@ type Filter = '' | Role | 'vip' | 'disabled';
 const PAGE_SIZE = 10;
 
 export default function Users() {
+  const { user: currentUser } = useAuth();
+  const requestId = useRef(0);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [page, setPage] = useState(1);
@@ -301,6 +304,7 @@ export default function Users() {
   // Filtering happens on the server now that the list is paged — doing it here
   // would only ever filter the 20 rows currently in hand.
   const load = useCallback(() => {
+    const id = ++requestId.current;
     setState('loading');
     const params: Record<string, unknown> = { page, limit: PAGE_SIZE };
     if (search) params.search = search;
@@ -311,6 +315,7 @@ export default function Users() {
     API.admin.users
       .list(params)
       .then((data: any) => {
+        if (id !== requestId.current) return;
         setUsers(data.users || []);
         setCounts(data.counts || {});
         setPages(data.pages || 1);
@@ -318,6 +323,7 @@ export default function Users() {
         setState('ready');
       })
       .catch((err: any) => {
+        if (id !== requestId.current) return;
         setError(err?.message || 'Không tải được danh sách.');
         setState('error');
       });
@@ -339,9 +345,9 @@ export default function Users() {
 
   function changeRole(user: AdminUser, role: string) {
     if (
-      role === 'admin' &&
+      role !== user.role &&
       !confirm(
-        `Nâng ${user.name} lên quản trị viên?\n\nHọ sẽ sửa được sản phẩm, giá bán và toàn bộ tài khoản khác.`,
+        `Đổi ${user.name} sang ${ROLE_LABEL[role as Role]}?\n\nCác phiên đăng nhập sẽ bị thu hồi. Tài khoản chỉ được sử dụng chức năng của vai trò mới.`,
       )
     )
       return;
@@ -369,6 +375,7 @@ export default function Users() {
   }
 
   function grantVip(user: AdminUser) {
+    if (user.status !== 'active' || !confirm(`Cấp tặng VIP cho ${user.name}? Không ghi nhận doanh thu cho quyền lợi miễn phí này.`)) return;
     run(user, async () => {
       const { message } = await API.admin.users.grantVip(user.id);
       showToast(message, 'success');
@@ -378,7 +385,7 @@ export default function Users() {
   function revokeVip(user: AdminUser) {
     if (
       !confirm(
-        'Thu hồi VIP của người dùng này? Các đơn gói VIP đã thanh toán sẽ bị huỷ và tài khoản về hạng Thường (giới hạn 10 lá kỷ niệm).',
+        'Thu hồi phần VIP do quản trị viên cấp tặng? Các gói khách đã mua vẫn được giữ nguyên.',
       )
     )
       return;
@@ -403,7 +410,7 @@ export default function Users() {
     <>
       <PageHeader
         title="Quản lý người dùng"
-        subtitle="Vai trò, trạng thái đăng nhập và quyền VIP"
+        subtitle="Mỗi tài khoản có một vai trò riêng. VIP chỉ áp dụng cho khách hàng."
         actions={
           <button className="btn btn-primary" onClick={() => setAddOpen(true)}>
             + Thêm người dùng
@@ -416,14 +423,14 @@ export default function Users() {
           icon={<AdminIcon name="users" />}
           tone="blue"
           loading={state === 'loading'}
-          value={users.length}
+          value={counts.all ?? 0}
           label="Tổng tài khoản"
         />
         <StatCard
           icon={<AdminIcon name="settings" />}
           tone="orange"
           loading={state === 'loading'}
-          value={counts.employee + counts.admin}
+          value={(counts.employee ?? 0) + (counts.admin ?? 0)}
           label="Nhân sự"
           hint={`${counts.admin} quản trị · ${counts.employee} nhân viên`}
         />
@@ -504,7 +511,7 @@ export default function Users() {
                     <select
                       className="admin-mini-select"
                       value={user.role}
-                      disabled={busyId === user.id}
+                      disabled={busyId !== null || user.id === String(currentUser?.id)}
                       onChange={(e) => changeRole(user, e.target.value)}
                     >
                       {ROLES.map((r) => (
@@ -526,15 +533,15 @@ export default function Users() {
                     <div className="admin-inline-actions">
                       <button
                         className={`act-btn ${user.status === 'active' ? 'act-del' : 'act-edit'}`}
-                        disabled={busyId === user.id}
+                        disabled={busyId !== null || user.id === String(currentUser?.id)}
                         onClick={() => toggleStatus(user)}
                       >
                         {user.status === 'active' ? 'Vô hiệu' : 'Kích hoạt'}
                       </button>
-                      {user.isVip ? (
+                      {user.role === 'customer' && (user.isVip ? (
                         <button
                           className="act-btn act-del"
-                          disabled={busyId === user.id}
+                          disabled={busyId !== null || user.id === String(currentUser?.id)}
                           onClick={() => revokeVip(user)}
                         >
                           Thu hồi VIP
@@ -542,15 +549,16 @@ export default function Users() {
                       ) : (
                         <button
                           className="act-btn act-vip"
-                          disabled={busyId === user.id}
+                          disabled={busyId !== null || user.status !== 'active'}
+                          title={user.status !== 'active' ? 'Cần kích hoạt tài khoản trước khi cấp VIP' : 'Cấp tặng VIP'}
                           onClick={() => grantVip(user)}
                         >
                           <AdminIcon name="star" size={15} /> Cấp VIP
                         </button>
-                      )}
+                      ))}
                       <button
                         className="act-btn"
-                        disabled={busyId === user.id}
+                        disabled={busyId !== null || user.id === String(currentUser?.id)}
                         onClick={() => setResetting(user)}
                       >
                         <AdminIcon name="lock" size={15} /> Đặt lại mật khẩu

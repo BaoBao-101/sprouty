@@ -36,12 +36,6 @@ const STATUS_TONE: Record<OrderStatus, string> = {
   cancelled: 'rose',
 };
 
-/** The move staff make most often from each status, offered as one button. */
-const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
-  pending: 'processing',
-  processing: 'shipped',
-  shipped: 'delivered',
-};
 
 type Filter = '' | OrderStatus;
 
@@ -51,6 +45,7 @@ export default function Orders() {
   const [params, setParams] = useSearchParams();
   const filter = (params.get('status') || '') as Filter;
   const search = params.get('q') || '';
+  const payment = params.get('payment') === 'unpaid' ? 'unpaid' : '';
   const page = Math.max(1, parseInt(params.get('page') || '1', 10));
 
   const [orders, setOrders] = useState<Order[]>([]);
@@ -93,6 +88,7 @@ export default function Orders() {
     const query: Record<string, unknown> = { page, limit: PAGE_SIZE };
     if (filter) query.status = filter;
     if (search) query.search = search;
+    if (payment) query.payment = payment;
 
     API.admin.orders
       .list(query)
@@ -106,7 +102,7 @@ export default function Orders() {
         setError(err?.message || 'Không tải được đơn hàng.');
         setState('error');
       });
-  }, [page, filter, search]);
+  }, [page, filter, search, payment]);
 
   useEffect(load, [load]);
   useEffect(loadCounts, [loadCounts]);
@@ -134,22 +130,6 @@ export default function Orders() {
     }
   }
 
-  async function changeStatus(orderId: string, next: OrderStatus) {
-    setBusyId(orderId);
-    try {
-      await API.admin.orders.updateStatus(orderId, next);
-      showToast(`Đã chuyển sang “${ORDER_STATUS_VN[next]}”`, 'success');
-      setOrders((list) => list.map((o) => (o.id === orderId ? { ...o, status: next } : o)));
-      setDetail((current) => (current?.id === orderId ? { ...current, status: next } : current));
-      loadCounts();
-    } catch (err: any) {
-      showToast(`Lỗi: ${err?.message}`, 'error');
-      load();
-    } finally {
-      setBusyId(null);
-    }
-  }
-
   const filters: Array<FilterOption<Filter>> = [
     { value: '', label: 'Tất cả', count: countTotal },
     ...ORDER_STATUSES.map((s) => ({
@@ -163,7 +143,7 @@ export default function Orders() {
     <>
       <PageHeader
         title="Quản lý đơn hàng"
-        subtitle="Theo dõi và cập nhật trạng thái giao hàng"
+        subtitle="Giám sát đơn hàng và đối soát thanh toán; nhân viên xử lý giao hàng"
         actions={
           <button className="btn btn-ghost btn-sm" onClick={load} disabled={state === 'loading'}>
             <AdminIcon name="refresh" size={16} /> Làm mới
@@ -171,6 +151,10 @@ export default function Orders() {
         }
       />
 
+      {payment && <div className="panel-note" style={{ marginBottom: 16 }}>
+        Đang xem đơn chưa thanh toán, chưa hủy.{' '}
+        <button className="link-btn" onClick={() => patchParams({ payment: '', page: '' })}>Bỏ bộ lọc thanh toán</button>
+      </div>}
       <Toolbar>
         <FilterPills
           options={filters}
@@ -214,7 +198,6 @@ export default function Orders() {
             />
             {state === 'ready' &&
               orders.map((order) => {
-                const next = NEXT_STATUS[order.status];
                 return (
                   <tr
                     key={order.id}
@@ -259,29 +242,8 @@ export default function Orders() {
                             <AdminIcon name="sales" size={15} /> Đã thu tiền
                           </button>
                         )}
-                        {/* One click for the usual next step; the select stays
-                            for the exceptions (cancelling, correcting a slip). */}
-                        {next && (
-                          <button
-                            className="act-btn act-edit"
-                            disabled={busyId === order.id}
-                            onClick={() => changeStatus(order.id, next)}
-                          >
-                            → {ORDER_STATUS_VN[next]}
-                          </button>
-                        )}
-                        <select
-                          className="admin-mini-select"
-                          value={order.status}
-                          disabled={busyId === order.id}
-                          onChange={(e) => changeStatus(order.id, e.target.value as OrderStatus)}
-                        >
-                          {ORDER_STATUSES.map((s) => (
-                            <option value={s} key={s}>
-                              {ORDER_STATUS_VN[s]}
-                            </option>
-                          ))}
-                        </select>
+                        <button className="act-btn" onClick={() => setDetail(order)}>Xem chi tiết</button>
+
                       </div>
                     </td>
                   </tr>
@@ -346,19 +308,7 @@ export default function Orders() {
             </div>
           ))}
 
-          <div className="panel-subhead">Đổi trạng thái</div>
-          <div className="ad-pills">
-            {ORDER_STATUSES.map((s) => (
-              <button
-                key={s}
-                className={`ad-pill${detail.status === s ? ' active' : ''}`}
-                disabled={busyId === detail.id}
-                onClick={() => changeStatus(detail.id, s)}
-              >
-                {ORDER_STATUS_VN[s]}
-              </button>
-            ))}
-          </div>
+          <div className="panel-note">Nhân viên phụ trách cập nhật tiến độ giao hàng. Quản trị viên giám sát và đối soát thanh toán.</div>
         </Modal>
       )}
     </>

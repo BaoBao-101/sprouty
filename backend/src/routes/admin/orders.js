@@ -1,6 +1,7 @@
+import { allowedOrderTransitions } from '../../services/order-policy.js';
 import { z } from 'zod';
 import { AppError } from '../../utils/errors.js';
-import { requireEmployee, requireCsrf } from '../../middleware/rbac.js';
+import { requireEmployee, requireStaff, requireAdmin, requireCsrf } from '../../middleware/rbac.js';
 import { auditLog } from '../../services/audit.js';
 import { syncMembership } from '../../services/membership.js';
 import { syncWorkshopRewards } from '../../services/rewards.js';
@@ -11,15 +12,23 @@ const updateStatusSchema = z.object({
 
 export default async function adminOrderRoutes(fastify) {
   // GET /api/v1/admin/orders
-  fastify.get('/orders', { preHandler: [requireEmployee] }, async (req) => {
-    const { status, search, page = '1', limit = '10' } = req.query;
+  fastify.get('/orders', { preHandler: [requireStaff] }, async (req) => {
+    const { status, search, payment, page = '1', limit = '10' } = req.query;
     const pageNum = Math.max(1, parseInt(page, 10));
     const pageSize = Math.min(100, Math.max(1, parseInt(limit, 10)));
 
     const where = {};
     if (status) where.status = status;
+    if (payment === 'unpaid') {
+      where.paidAt = null;
+      where.AND = [
+        { status: { not: 'cancelled' } },
+        { OR: [{ note: null }, { note: { not: 'admin.grant_vip' } }] },
+      ];
+    }
     if (search) {
       where.OR = [
+        { id: { contains: search } },
         { shippingName: { contains: search, mode: 'insensitive' } },
         { shippingPhone: { contains: search } },
         { user: { email: { contains: search, mode: 'insensitive' } } },
@@ -47,7 +56,7 @@ export default async function adminOrderRoutes(fastify) {
 
   // GET /api/v1/admin/orders/counts — how many orders sit in each status, so the
   // filter tabs can show the size of each queue without one request per tab.
-  fastify.get('/orders/counts', { preHandler: [requireEmployee] }, async () => {
+  fastify.get('/orders/counts', { preHandler: [requireStaff] }, async () => {
     const rows = await fastify.prisma.order.groupBy({
       by: ['status'],
       _count: { _all: true },
@@ -71,10 +80,16 @@ export default async function adminOrderRoutes(fastify) {
     const order = await fastify.prisma.order.findUnique({ where: { id: req.params.id } });
     if (!order) return reply.code(404).send({ message: 'Không tìm thấy đơn hàng.' });
 
-    const updated = await fastify.prisma.order.update({
-      where: { id: req.params.id },
+    if (!allowedOrderTransitions(order).includes(parsed.data.status)) {
+      throw new AppError('Không thể chuyển trạng thái này. Đơn cần được đối soát thanh toán và xử lý đúng thứ tự.', 409);
+    }
+    const changed = await fastify.prisma.order.updateMany({
+      where: { id: order.id, status: order.status, paidAt: order.paidAt },
       data: { status: parsed.data.status },
     });
+    if (!changed.count) throw new AppError('Đơn hàng vừa thay đổi. Vui lòng tải lại.', 409);
+    const updated = await fastify.prisma.order.findUnique({ where: { id: order.id } });
+    await auditLog(fastify.prisma, req.user.id, 'order.status.updated', 'Order', order.id, { before: order.status, after: parsed.data.status });
 
     // Cancelling a paid VIP order takes its days back off the account, and
     // un-cancelling one puts them back.
@@ -94,7 +109,7 @@ export default async function adminOrderRoutes(fastify) {
   // This is not an edge case. A customer who mistypes the transfer reference,
   // pays in cash, or transfers from an account SePay does not watch, all end up
   // here, and until now there was no way to record any of them.
-  fastify.post('/orders/:id/mark-paid', { preHandler: [requireEmployee, requireCsrf] }, async (req, reply) => {
+  fastify.post('/orders/:id/mark-paid', { preHandler: [requireAdmin, requireCsrf] }, async (req, reply) => {
     const order = await fastify.prisma.order.findUnique({ where: { id: req.params.id } });
     if (!order) return reply.code(404).send({ message: 'Không tìm thấy đơn hàng.' });
     if (order.paidAt) {
@@ -104,8 +119,8 @@ export default async function adminOrderRoutes(fastify) {
       return reply.code(409).send({ message: 'Không thể ghi nhận thanh toán cho đơn đã huỷ.' });
     }
 
-    const updated = await fastify.prisma.order.update({
-      where: { id: order.id },
+    const changed = await fastify.prisma.order.updateMany({
+      where: { id: order.id, status: order.status, paidAt: null },
       data: {
         paidAt: new Date(),
         // Only nudge a pending order forward; an order already further along
@@ -113,6 +128,9 @@ export default async function adminOrderRoutes(fastify) {
         ...(order.status === 'pending' ? { status: 'processing' } : {}),
       },
     });
+
+    if (!changed.count) throw new AppError('Đơn hàng vừa thay đổi. Vui lòng tải lại.', 409);
+    const updated = await fastify.prisma.order.findUnique({ where: { id: order.id } });
 
     // sepayTransactionId stays null on purpose — no bank transaction backs this,
     // and the audit row records who vouched for it instead.

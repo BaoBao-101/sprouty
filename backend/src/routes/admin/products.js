@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { AppError } from '../../utils/errors.js';
-import { requireEmployee, requireCsrf, requireAdmin } from '../../middleware/rbac.js';
+import { requireStaff, requireCsrf, requireAdmin } from '../../middleware/rbac.js';
 import { isSpeciesKey, speciesCatalog } from '../../services/plant-sim.js';
 import { readPaging, paged, searchOr } from './paging.js';
 import { multipartFields } from '../../utils/validation.js';
@@ -128,7 +128,7 @@ export default async function adminProductRoutes(fastify) {
   const writeAuth = [requireAdmin, requireCsrf];
 
   // GET /api/v1/admin/products
-  fastify.get('/products', { preHandler: [requireEmployee] }, async (req) => {
+  fastify.get('/products', { preHandler: [requireStaff] }, async (req) => {
     const paging = readPaging(req.query);
     const { status, category } = req.query;
 
@@ -141,7 +141,10 @@ export default async function adminProductRoutes(fastify) {
     const [products, total, statusCounts, categoryRows, collectionRows] = await Promise.all([
       fastify.prisma.product.findMany({
         where,
-        orderBy: { id: 'asc' },
+        // Newest first: the product an admin just created is the one they
+        // want to check, and it used to land on the last page. id breaks ties
+        // between rows the seed created in the same instant.
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: paging.skip,
         take: paging.take,
       }),
@@ -167,7 +170,8 @@ export default async function adminProductRoutes(fastify) {
   });
 
   // GET /api/v1/admin/products/sales — lifetime sold qty + revenue per product,
-  // including products with zero sales. Cancelled orders are excluded.
+  // Paid, non-cancelled sales only. Complimentary VIP grants are not sales.
+  // Keep zero-sale products so the complete catalogue can be compared.
   fastify.get('/products/sales', { preHandler: [requireAdmin] }, async () => {
     const rows = await fastify.prisma.$queryRaw`
       SELECT
@@ -176,9 +180,9 @@ export default async function adminProductRoutes(fastify) {
         p.emoji AS "emoji",
         p.price::int AS "price",
         p.status AS "status",
-        COALESCE(SUM(oi.qty) FILTER (WHERE o.status != 'cancelled'), 0)::int AS "totalQty",
-        COALESCE(SUM(oi.qty * oi."unitPrice") FILTER (WHERE o.status != 'cancelled'), 0)::int AS "totalRevenue",
-        COUNT(DISTINCT o.id) FILTER (WHERE o.status != 'cancelled')::int AS "orderCount"
+        COALESCE(SUM(oi.qty) FILTER (WHERE o.status != 'cancelled' AND o."paidAt" IS NOT NULL AND o.note IS DISTINCT FROM 'admin.grant_vip'), 0)::int AS "totalQty",
+        COALESCE(SUM(oi.qty::numeric * oi."unitPrice") FILTER (WHERE o.status != 'cancelled' AND o."paidAt" IS NOT NULL AND o.note IS DISTINCT FROM 'admin.grant_vip'), 0)::double precision AS "totalRevenue",
+        COUNT(DISTINCT o.id) FILTER (WHERE o.status != 'cancelled' AND o."paidAt" IS NOT NULL AND o.note IS DISTINCT FROM 'admin.grant_vip')::int AS "orderCount"
       FROM "Product" p
       LEFT JOIN "OrderItem" oi ON oi."productId" = p.id
       LEFT JOIN "Order" o ON o.id = oi."orderId"
@@ -204,7 +208,7 @@ export default async function adminProductRoutes(fastify) {
   // GET /api/v1/admin/products/species — what the product editor offers in its
   // species picker, including how each one's journey reads, so an admin can see
   // that a carrot says "Phình củ" where a tomato says "Ra nụ" before committing.
-  fastify.get('/products/species', { preHandler: [requireEmployee] }, async () => ({
+  fastify.get('/products/species', { preHandler: [requireStaff] }, async () => ({
     species: speciesCatalog(),
   }));
 

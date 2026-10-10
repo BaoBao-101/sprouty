@@ -7,7 +7,7 @@
 
 import { z } from 'zod';
 import { reserveAi } from '../services/benefits.js';
-import { requireAuth, requireCsrf } from '../middleware/rbac.js';
+import { requireCustomer, requireCsrf } from '../middleware/rbac.js';
 import { AppError } from '../utils/errors.js';
 import { noHtml, parseOrThrow } from '../utils/validation.js';
 import { callAi, classifyAiError, SPROUTY_SYSTEM, missingProviderKey } from '../services/ai.js';
@@ -59,7 +59,7 @@ export default async function plantRoutes(fastify) {
   // Activation is where the new model starts: the order issues a code, and the
   // code is what turns a purchase into a plant.
   fastify.post('/me/plants/activate', {
-    preHandler: [requireAuth, requireCsrf],
+    preHandler: [requireCustomer, requireCsrf],
     config: { rateLimit: { max: 12, timeWindow: '10 minutes' } },
   }, async (req, reply) => {
     const { code, nickname } = parseOrThrow(activateSchema, req.body);
@@ -100,7 +100,7 @@ export default async function plantRoutes(fastify) {
   });
 
   // GET /api/v1/me/plants
-  fastify.get('/me/plants', { preHandler: [requireAuth] }, async (req) => {
+  fastify.get('/me/plants', { preHandler: [requireCustomer] }, async (req) => {
     const rows = await fastify.prisma.virtualPlant.findMany({
       where: { userId: req.user.id },
       include: {
@@ -128,7 +128,7 @@ export default async function plantRoutes(fastify) {
   });
 
   // GET /api/v1/me/plants/:plantId — the dashboard payload.
-  fastify.get('/me/plants/:plantId', { preHandler: [requireAuth] }, async (req) => {
+  fastify.get('/me/plants/:plantId', { preHandler: [requireCustomer] }, async (req) => {
     const row = await fastify.prisma.virtualPlant.findFirst({
       where: { id: req.params.plantId, userId: req.user.id },
       include: {
@@ -146,7 +146,7 @@ export default async function plantRoutes(fastify) {
 
   // POST /api/v1/me/plants/:plantId/care
   fastify.post('/me/plants/:plantId/care', {
-    preHandler: [requireAuth, requireCsrf],
+    preHandler: [requireCustomer, requireCsrf],
     // Generous, because the cooldown is the real limit; this only stops a
     // script from hammering the endpoint to find out what is off cooldown.
     config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
@@ -169,7 +169,7 @@ export default async function plantRoutes(fastify) {
 
   // PATCH /api/v1/me/plants/:plantId/devices — automation on or off.
   fastify.patch('/me/plants/:plantId/devices', {
-    preHandler: [requireAuth, requireCsrf],
+    preHandler: [requireCustomer, requireCsrf],
   }, async (req) => {
     const { type, autoMode } = parseOrThrow(deviceSchema, req.body);
     const result = await setDeviceAuto(
@@ -182,7 +182,7 @@ export default async function plantRoutes(fastify) {
   });
 
   // PATCH /api/v1/me/plants/:plantId — rename.
-  fastify.patch('/me/plants/:plantId', { preHandler: [requireAuth, requireCsrf] }, async (req) => {
+  fastify.patch('/me/plants/:plantId', { preHandler: [requireCustomer, requireCsrf] }, async (req) => {
     const { nickname } = parseOrThrow(renameSchema, req.body);
     const plant = await renamePlant(fastify.prisma, req.user.id, req.params.plantId, nickname.trim());
     return { message: 'Đã đổi tên cây.', plant: plantCardDto(plant) };
@@ -196,7 +196,7 @@ export default async function plantRoutes(fastify) {
   // that recommended something other than the highlighted button would read as
   // the site arguing with itself.
   fastify.post('/me/plants/:plantId/coach', {
-    preHandler: [requireAuth, requireCsrf],
+    preHandler: [requireCustomer, requireCsrf],
     config: { rateLimit: { max: 15, timeWindow: '1 minute' } },
   }, async (req, reply) => {
     const { question } = parseOrThrow(coachSchema, req.body);
@@ -279,7 +279,7 @@ CÁCH TRẢ LỜI:
 
   // DELETE /api/v1/me/plants/:plantId/coach — start the thread over.
   fastify.delete('/me/plants/:plantId/coach', {
-    preHandler: [requireAuth, requireCsrf],
+    preHandler: [requireCustomer, requireCsrf],
   }, async (req) => {
     await clearCoachHistory(fastify.prisma, req.user.id, req.params.plantId);
     return { message: 'Đã xoá lịch sử trò chuyện.' };
@@ -289,7 +289,7 @@ CÁCH TRẢ LỜI:
   //
   // Syncing on read is what makes a missed payment webhook self-heal: the
   // reward is minted the next time the customer looks, rather than being lost.
-  fastify.get('/me/rewards', { preHandler: [requireAuth] }, async (req) => {
+  fastify.get('/me/rewards', { preHandler: [requireCustomer] }, async (req) => {
     return syncWorkshopRewards(fastify.prisma, req.user.id);
   });
 

@@ -9,6 +9,7 @@ import './Tree.css';
 
 interface Leaf {
   id: string;
+  status?: 'active' | 'hidden' | 'deleted';
   url: string;
   title?: string;
   note?: string;
@@ -269,7 +270,9 @@ function LeafModal({
         </button>
 
         <div className="leaf-media-frame">
-          {failed ? (
+          {leaf.status === 'hidden' ? (
+            <p style={{ padding: 24, textAlign: 'center', color: 'var(--ink-4)' }}>Nội dung này đã được quản trị viên ẩn. Bạn vẫn có thể sửa ghi chú hoặc gỡ khoảnh khắc khỏi album.</p>
+          ) : failed ? (
             <p style={{ padding: 20, textAlign: 'center', color: 'var(--ink-4)' }}>
               Không tải được nội dung này.
             </p>
@@ -515,7 +518,9 @@ export default function Tree() {
                 {group.items.map((leaf) => (
                   <button className="album-item" key={leaf.id} onClick={() => setOpenLeaf(leaf)}>
                     <span className="album-item-media">
-                      {isVideo(leaf) ? (
+                      {leaf.status === 'hidden' ? (
+                        <span style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 20, color: 'var(--ink-4)' }}>Nội dung đã được quản trị viên ẩn</span>
+                      ) : isVideo(leaf) ? (
                         <>
                           <video src={leaf.url} muted />
                           <span className="album-item-play">

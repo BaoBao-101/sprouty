@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { StaffPasswordModal } from '@/components/StaffPasswordModal';
 // Both staff areas render this shell, so it is where their stylesheets belong.
 // They used to be imported by AdminLayout alone, even though the employee pages
 // reuse the same tables, panels and modals.
@@ -31,8 +32,8 @@ export interface SidebarGroup {
  */
 export function StaffSidebar({ subtitle, groups }: { subtitle: string; groups: SidebarGroup[] }) {
   const { logout } = useAuth();
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
   const close = () => setOpen(false);
 
@@ -68,19 +69,10 @@ export function StaffSidebar({ subtitle, groups }: { subtitle: string; groups: S
             </div>
           ))}
 
-          <span className="sb-group">Hệ thống</span>
-          <a
-            href="/"
-            onClick={(e) => {
-              e.preventDefault();
-              close();
-              navigate('/');
-            }}
-          >
-            <span className="sb-ico">
-              <AdminIcon name="home" size={19} />
-            </span>
-            Trang chủ
+          <span className="sb-group">Tài khoản</span>
+          <a href="#change-password" onClick={e => { e.preventDefault(); close(); setPasswordOpen(true); }}>
+            <span className="sb-ico"><AdminIcon name="lock" size={19} /></span>
+            Đổi mật khẩu
           </a>
         </nav>
 
@@ -101,6 +93,7 @@ export function StaffSidebar({ subtitle, groups }: { subtitle: string; groups: S
           </a>
         </div>
       </aside>
+      {passwordOpen && <StaffPasswordModal onClose={() => setPasswordOpen(false)} />}
     </>
   );
 }

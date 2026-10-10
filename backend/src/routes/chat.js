@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { reserveAi } from '../services/benefits.js';
-import { requireAuth, requireCsrf } from '../middleware/rbac.js';
+import { requireCustomer, requireCsrf } from '../middleware/rbac.js';
 import { callAi, classifyAiError, SPROUTY_SYSTEM, missingProviderKey, supportsImages } from '../services/ai.js';
 import { advance, plantDetailDto, plantPromptContext } from '../services/plants.js';
 
@@ -28,7 +28,7 @@ const chatSchema = z.object({
 
 export default async function chatRoute(fastify) {
   fastify.post('/chat', {
-    preHandler: [requireAuth, requireCsrf],
+    preHandler: [requireCustomer, requireCsrf],
     config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
   }, async (req, reply) => {
     const parsed = chatSchema.safeParse(req.body);

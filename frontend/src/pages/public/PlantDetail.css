@@ -1586,3 +1586,13 @@
 .pd-botanical em { display: block; margin-top: 12px; color: #728065; }
 .pd-botanical p { margin: 10px 0; line-height: 1.65; font-size: 14px; }
 .pd-botanical small { color: #6a7462; }
+
+/* The video fold: the player needs a little air under the divider. */
+.pd-videos .pd-log-body { padding-top: 18px }
+
+/* Guide and videos side by side under the name. */
+.pd-guide-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px }
+.pd-guide-row .pd-guide-btn { margin-bottom: 0 }
+
+/* Scrolled to from the hero: clear the sticky header. */
+.pd-videos { scroll-margin-top: 110px }

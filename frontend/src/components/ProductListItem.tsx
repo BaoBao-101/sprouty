@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
 import { productImage, productFallbackImage } from '@/services/products';
@@ -10,6 +10,9 @@ export function ProductListItem({ product }: { product: Product }) {
   const { add } = useCart();
   const [src, setSrc] = useState(() => productImage(product));
   const [imageFailed, setImageFailed] = useState(false);
+
+  const primary = productImage(product);
+  useEffect(() => { setSrc(primary); setImageFailed(false); }, [product.id, primary]);
 
   function handleImageError() {
     const fallback = productFallbackImage(product);

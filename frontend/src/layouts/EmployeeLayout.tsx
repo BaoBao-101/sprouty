@@ -1,10 +1,8 @@
 import { Outlet } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { StaffSidebar, type SidebarGroup } from './StaffSidebar';
 import { AdminIcon } from '@/components/icons/AdminIcon';
 
 export function EmployeeLayout() {
-  const { isAdmin } = useAuth();
 
   const groups: SidebarGroup[] = [
     {
@@ -19,16 +17,6 @@ export function EmployeeLayout() {
         },
       ],
     },
-    ...(isAdmin
-      ? [
-          {
-            title: 'Khác',
-            items: [
-              { to: '/admin', label: 'Trang quản trị', icon: <AdminIcon name="settings" size={19} /> },
-            ],
-          },
-        ]
-      : []),
   ];
 
   return (

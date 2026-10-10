@@ -37,20 +37,7 @@ export function normalizeProduct(p: any): Product {
   };
 }
 
-/**
- * Product artwork lives under /assets/images/products. Entries that point at the
- * uploads directory ("product-images") are user uploads and are used as-is; the
- * rest fall back to the bundled SVG named after the product id.
- */
-export function productImage(p: Product) {
-  const first = p.images?.[0];
-  if (first && !first.includes('product-images')) return first.startsWith('/') ? first : '/' + first;
-  return `/assets/images/products/kit-${p.id}.svg`;
-}
-
-export function productFallbackImage(p: Product) {
-  return `/assets/images/products/kit-${p.id}.svg`;
-}
+export { productImage, productFallbackImage, productGalleryImages } from './product-images';
 
 /** The species the shop can filter by, with a count of kits for each. */
 export async function fetchSpeciesFilters() {

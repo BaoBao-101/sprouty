@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import {
+  allowedOrderTransitions,
   ORDER_STATUS_VN,
   ORDER_STATUSES,
   shortOrderId,
@@ -78,7 +79,7 @@ export default function EmployeeOrders() {
       <div className="page-header">
         <div className="page-head" style={{ margin: 0 }}>
           <h1>Quản lý đơn hàng</h1>
-          <p>Xem và cập nhật trạng thái đơn hàng</p>
+          <p>Giao hàng theo thứ tự sau khi quản trị viên đối soát thanh toán.</p>
         </div>
         <div className="search-box">
           <input
@@ -158,9 +159,10 @@ export default function EmployeeOrders() {
                   <select
                     className="status-select"
                     value={order.status}
+                    disabled={allowedOrderTransitions(order).length === 0}
                     onChange={(e) => changeStatus(order.id, e.target.value as OrderStatus)}
                   >
-                    {ORDER_STATUSES.map((s) => (
+                    {[order.status, ...allowedOrderTransitions(order)].map((s) => (
                       <option value={s} key={s}>
                         {ORDER_STATUS_VN[s]}
                       </option>

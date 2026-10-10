@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { SproutyIcon } from '@/components/icons/SproutyIcon';
 import type { SpeciesOption } from '@/types/plant';
 import { VideoPanel } from './VideoPanel';
+import { IncludesEditor } from './admin/IncludesEditor';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { formatPrice } from '@/types/product';
@@ -53,9 +54,18 @@ const TABS: Array<{ key: TabKey; label: string; icon: AdminIconName }> = [
   { key: 'basic', label: 'Thông tin', icon: 'blog' },
   { key: 'pricing', label: 'Giá & nhãn', icon: 'sales' },
   { key: 'images', label: 'Hình ảnh', icon: 'images' },
-  { key: 'includes', label: 'Trong hộp', icon: 'orders' },
+  { key: 'includes', label: 'Gồm có', icon: 'orders' },
   { key: 'videos', label: 'Video', icon: 'video' },
 ];
+
+/** Under each step's name while creating, so the order explains itself. */
+const STEP_HINT: Record<TabKey, string> = {
+  basic: 'Tên, danh mục, mô tả',
+  pricing: 'Giá bán, giảm giá, nhãn',
+  images: 'Ít nhất 1 ảnh',
+  includes: 'Khách nhận được gì',
+  videos: 'Ít nhất 1 video',
+};
 
 const BADGES = [
   { value: '', label: 'Không có nhãn' },
@@ -247,8 +257,7 @@ export function ProductEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  // After creating, the modal stays open in edit mode so videos can be added
-  // straight away — a video needs a product id to attach to.
+  // Videos are managed separately after the product has an id.
   const [product, setProduct] = useState<AdminProduct | null>(editing);
   const [form, setForm] = useState<FormState>(() => (editing ? toForm(editing) : EMPTY));
   const [tab, setTab] = useState<TabKey>('basic');
@@ -294,23 +303,88 @@ export function ProductEditor({
   const imageCount = form.images.filter((u) => u.trim()).length;
   const includeCount = form.includes.filter((i) => i.trim()).length;
 
-  /** Which tab a missing required field lives on, so we can jump there. */
-  const problem = useMemo((): { tab: TabKey; message: string } | null => {
-    if (form.name.trim().length < 2) return { tab: 'basic', message: 'Tên sản phẩm phải có ít nhất 2 ký tự.' };
-    if (form.ageRange.trim().length < 2) return { tab: 'basic', message: 'Độ tuổi phải có ít nhất 2 ký tự.' };
-    if (form.collection.trim().length < 2) return { tab: 'basic', message: 'Bộ sưu tập phải có ít nhất 2 ký tự.' };
-    if (form.description.trim().length < 10) return { tab: 'basic', message: 'Mô tả phải có ít nhất 10 ký tự.' };
-    if (!price) return { tab: 'pricing', message: 'Nhập giá bán lớn hơn 0.' };
-    if (oldPrice && oldPrice <= price) return { tab: "pricing", message: "Giá trước giảm phải lớn hơn giá bán." };
-    if (isPlan && planDays < 1) return { tab: 'pricing', message: 'Nhập thời hạn gói VIP (số ngày).' };
-    return null;
+  /** Every missing required field, with the tab it lives on, so we can jump there. */
+  const problems = useMemo(() => {
+    const list: Array<{ tab: TabKey; message: string }> = [];
+    if (form.name.trim().length < 2) list.push({ tab: 'basic', message: 'Tên sản phẩm phải có ít nhất 2 ký tự.' });
+    if (form.ageRange.trim().length < 2) list.push({ tab: 'basic', message: 'Độ tuổi phải có ít nhất 2 ký tự.' });
+    if (form.collection.trim().length < 2) list.push({ tab: 'basic', message: 'Bộ sưu tập phải có ít nhất 2 ký tự.' });
+    if (form.description.trim().length < 10) list.push({ tab: 'basic', message: 'Mô tả phải có ít nhất 10 ký tự.' });
+    if (!price) list.push({ tab: 'pricing', message: 'Nhập giá bán lớn hơn 0.' });
+    if (oldPrice && oldPrice <= price) list.push({ tab: 'pricing', message: 'Giá trước giảm phải lớn hơn giá bán.' });
+    if (isPlan && planDays < 1) list.push({ tab: 'pricing', message: 'Nhập thời hạn gói VIP (số ngày).' });
+    return list;
   }, [form, price, oldPrice, isPlan, planDays]);
+  const problem = problems[0] ?? null;
+
+  /* ── Creating: five steps, in order ─────────────────────────────────────
+     A new product goes through every section once — information, price,
+     pictures, what is in the box, then videos — instead of being saved from
+     the first tab with no photo and nothing listed in the box. Editing an
+     existing product keeps the free tabs; it already went through this. */
+  const wizard = !editing;
+  const stepIndex = TABS.findIndex((t) => t.key === tab);
+  /** The furthest step opened so far; anything beyond it stays locked. */
+  const [reached, setReached] = useState(0);
+  /** Videos on the product, reported by the panel. The admin adds them here. */
+  const [videoCount, setVideoCount] = useState(0);
+
+  /** What still blocks leaving this step, in that step's own words. */
+  function stepProblem(key: TabKey): string | null {
+    if (key === 'images') return imageCount ? null : 'Thêm ít nhất 1 ảnh sản phẩm.';
+    if (key === 'includes') return includeCount ? null : 'Thêm ít nhất 1 thứ khách nhận được.';
+    if (key === 'videos') return videoCount ? null : 'Thêm ít nhất 1 video hướng dẫn để hoàn tất.';
+    return problems.find((p) => p.tab === key)?.message ?? null;
+  }
+
+  function goTo(key: TabKey) {
+    setError('');
+    setTab(key);
+  }
+
+  function nextStep() {
+    const issue = stepProblem(tab);
+    if (issue) {
+      setError(issue);
+      return;
+    }
+    const following = TABS[stepIndex + 1];
+    if (!following) return;
+    setReached((r) => Math.max(r, stepIndex + 1));
+    goTo(following.key);
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (busy) return;
     setError('');
 
-    if (problem) {
+    if (wizard) {
+      // Created already: the last step finishes, once a video is on it.
+      if (product) {
+        if (!videoCount) {
+          setError('Thêm ít nhất 1 video hướng dẫn để hoàn tất.');
+          return;
+        }
+        showToast('Đã hoàn tất sản phẩm', 'success');
+        onClose();
+        return;
+      }
+      // Enter in a field, or "Tiếp theo", moves one step on; only the box
+      // step creates the product.
+      if (tab !== 'includes') {
+        nextStep();
+        return;
+      }
+      const first = TABS.slice(0, 4)
+        .map((t) => ({ tab: t.key, message: stepProblem(t.key) }))
+        .find((s) => s.message);
+      if (first) {
+        setTab(first.tab);
+        setError(first.message as string);
+        return;
+      }
+    } else if (problem) {
       setTab(problem.tab);
       setError(problem.message);
       return;
@@ -347,7 +421,10 @@ export function ProductEditor({
         const { product: created } = await API.admin.products.create(payload);
         setProduct(created);
         onSaved();
-        showToast('Đã tạo sản phẩm — giờ có thể thêm video hướng dẫn', 'success');
+        // On to the last step: videos need the product's id, so they could
+        // only come after it exists.
+        showToast('Đã tạo sản phẩm — bước cuối: thêm video hướng dẫn', 'success');
+        setReached(TABS.length - 1);
         setTab('videos');
       }
     } catch (err: any) {
@@ -379,10 +456,14 @@ export function ProductEditor({
         <div className="editor-head">
           <div>
             <h2 className="adm-modal-title" style={{ margin: 0 }}>
-              {product ? 'Sửa sản phẩm' : 'Thêm sản phẩm'}
+              {wizard ? 'Thêm sản phẩm' : 'Sửa sản phẩm'}
             </h2>
             <p className="editor-sub">
-              {product ? product.name : 'Điền thông tin rồi lưu để thêm video hướng dẫn'}
+              {wizard
+                ? `Bước ${stepIndex + 1}/${TABS.length} · ${TABS[stepIndex]?.label}${
+                    product ? ` · đã tạo “${product.name}”` : ''
+                  }`
+                : product?.name}
             </p>
           </div>
           <button className="adm-modal-close" onClick={onClose} aria-label="Đóng">
@@ -395,8 +476,39 @@ export function ProductEditor({
             {/* A vertical rail rather than a tab strip: five labels never fit on
                 one row inside the dialog, and wrapping or truncating them both
                 looked broken. Below 720px it lays back down as a scrolling row. */}
-            <nav className="editor-rail" aria-label="Phần thông tin sản phẩm">
-              {TABS.map((t) => {
+            <nav className={`editor-rail${wizard ? ' is-wizard' : ''}`} aria-label="Phần thông tin sản phẩm">
+              {wizard && TABS.map((t, i) => {
+                const created = Boolean(product);
+                // Before creating: only steps already opened. After: only the
+                // video step — the rest are saved, and edited from the list.
+                const locked = created ? t.key !== 'videos' : i > reached || t.key === 'videos';
+                const done = created ? i < TABS.length - 1 || videoCount > 0 : i < reached && !stepProblem(t.key);
+                const current = tab === t.key;
+                return (
+                  <button
+                    key={t.key}
+                    type="button"
+                    className={`editor-step${current ? ' active' : ''}${locked ? ' locked' : ''}${done && !current ? ' done' : ''}`}
+                    disabled={locked}
+                    aria-current={current ? 'step' : undefined}
+                    title={
+                      locked
+                        ? created
+                          ? 'Đã lưu — sửa lại từ danh sách sản phẩm'
+                          : 'Hoàn thành bước trước để mở bước này'
+                        : undefined
+                    }
+                    onClick={() => goTo(t.key)}
+                  >
+                    <span className="editor-step-num">{done && !current ? '✓' : i + 1}</span>
+                    <span className="editor-step-label">
+                      {t.label}
+                      <small>{STEP_HINT[t.key]}</small>
+                    </span>
+                  </button>
+                );
+              })}
+              {!wizard && TABS.map((t) => {
                 const locked = t.key === 'videos' && !product;
                 return (
                   <button
@@ -751,47 +863,17 @@ export function ProductEditor({
             )}
 
             {tab === 'includes' && (
-              <>
-                <div className="panel-note">
-                  Danh sách những gì có trong hộp. Hiện ở tab “Thông tin” của trang sản phẩm.
-                </div>
-
-                {form.includes.map((item, i) => (
-                  <div className="repeat-row" key={i}>
-                    <div className="repeat-index">{i + 1}</div>
-                    <input
-                      className="form-input"
-                      placeholder="VD: Chậu đất nung"
-                      value={item}
-                      onChange={(e) =>
-                        set('includes')(form.includes.map((x, j) => (j === i ? e.target.value : x)))
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="repeat-remove"
-                      disabled={form.includes.length <= 1}
-                      onClick={() => set('includes')(form.includes.filter((_, j) => j !== i))}
-                      title="Bỏ mục này"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => set('includes')([...form.includes, ''])}
-                >
-                  + Thêm mục
-                </button>
-              </>
+              <IncludesEditor
+                items={form.includes}
+                onChange={set('includes')}
+                category={form.category}
+                speciesLabel={chosenSpecies?.label}
+              />
             )}
 
             {tab === 'videos' &&
               (product ? (
-                <VideoPanel productId={product.id} productName={product.name} />
+                <VideoPanel productId={product.id} productName={product.name} onCountChange={setVideoCount} />
               ) : (
                 <div className="panel-empty">Lưu sản phẩm trước để thêm video hướng dẫn.</div>
               ))}
@@ -800,10 +882,73 @@ export function ProductEditor({
 
           {error && <div className="form-error editor-error">{error}</div>}
 
+          {wizard ? (
+            <div className="editor-foot">
+              {/* Which step this is, and what it still needs before the next. */}
+              <div className="editor-foot-left">
+                <span className="editor-progress" aria-hidden="true">
+                  {TABS.map((t, i) => (
+                    <i key={t.key} className={i < stepIndex ? 'done' : i === stepIndex ? 'current' : ''} />
+                  ))}
+                </span>
+                {!busy && (stepProblem(tab) || error) ? (
+                  <span className="editor-missing is-static" role="status">
+                    <AdminIcon name="alert" size={15} />
+                    {stepProblem(tab) || error}
+                  </span>
+                ) : (
+                  <span className="editor-step-ok">
+                    {tab === 'includes' && !product
+                      ? 'Đủ 4 bước — tạo sản phẩm để thêm video.'
+                      : product
+                        ? 'Đã có video — bấm Hoàn tất.'
+                        : 'Bước này đã đủ.'}
+                  </span>
+                )}
+              </div>
+
+              {!product && (
+                <button type="button" className="btn btn-ghost" onClick={onClose}>
+                  Hủy
+                </button>
+              )}
+              {!product && stepIndex > 0 && (
+                <button type="button" className="btn btn-ghost" onClick={() => goTo(TABS[stepIndex - 1].key)}>
+                  ← Quay lại
+                </button>
+              )}
+              <button type="submit" className="btn btn-primary" disabled={busy || Boolean(stepProblem(tab))}>
+                {busy ? (
+                  'Đang tạo…'
+                ) : product ? (
+                  <>
+                    <AdminIcon name="check" size={17} />
+                    Hoàn tất
+                  </>
+                ) : tab === 'includes' ? (
+                  <>
+                    Tạo sản phẩm & thêm video
+                    <AdminIcon name="arrow-right" size={16} />
+                  </>
+                ) : (
+                  <>
+                    Tiếp theo
+                    <AdminIcon name="arrow-right" size={16} />
+                  </>
+                )}
+              </button>
+            </div>
+          ) : (
           <div className="editor-foot">
             {/* What is still missing, said before the button is pressed. It
                 used to be discoverable only by clicking a button that looked
                 ready and then being bounced to another tab. */}
+            {!problem && error && !busy && (
+              <span className="editor-missing is-static" role="alert">
+                <AdminIcon name="alert" size={15} />
+                {error}
+              </span>
+            )}
             {problem && !busy && (
               <button
                 type="button"
@@ -824,16 +969,17 @@ export function ProductEditor({
               ) : product ? (
                 <>
                   <AdminIcon name="save" size={17} />
-                  Lưu thay đổi
+                  Lưu thay đổi sản phẩm
                 </>
               ) : (
                 <>
-                  Lưu &amp; thêm video
+                  Tạo sản phẩm
                   <AdminIcon name="arrow-right" size={16} />
                 </>
               )}
             </button>
           </div>
+          )}
         </form>
       </div>
     </div>

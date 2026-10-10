@@ -90,6 +90,49 @@ async function _fetch(path: string, options: RequestInit = {}): Promise<any> {
   return data;
 }
 
+/**
+ * A multipart POST that reports how much has been sent. fetch cannot, and a
+ * video of a few hundred megabytes uploading behind a static "Đang tải lên…"
+ * looks exactly like one that has hung.
+ */
+export function uploadWithProgress(
+  path: string,
+  form: FormData,
+  onProgress: (loaded: number, total: number) => void,
+): Promise<any> {
+  const send = (retried: boolean): Promise<any> =>
+    new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', API_BASE + path);
+      xhr.withCredentials = true;
+      if (_csrfToken) xhr.setRequestHeader('X-CSRF-Token', _csrfToken);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(e.loaded, e.total);
+      };
+      xhr.onload = () => {
+        let data: any = null;
+        try { data = JSON.parse(xhr.responseText); } catch { data = null; }
+        if (xhr.status >= 200 && xhr.status < 300) return resolve(data);
+        // A stale CSRF token after a reload: fetch a fresh one and send once more.
+        if (xhr.status === 403 && !retried) {
+          return API.auth.getCsrf().catch(() => null).then(() => send(true)).then(resolve, reject);
+        }
+        const err = new Error(data?.message || `Tải lên thất bại (HTTP ${xhr.status}).`) as ApiError;
+        err.status = xhr.status;
+        err.data = data;
+        reject(err);
+      };
+      xhr.onerror = () => {
+        const err = new Error('Mất kết nối khi đang tải lên. Vui lòng thử lại.') as ApiError;
+        err.status = 0;
+        err.networkError = true;
+        reject(err);
+      };
+      xhr.send(form);
+    });
+  return (_csrfToken ? Promise.resolve() : API.auth.getCsrf().catch(() => null)).then(() => send(false));
+}
+
 export const API = {
   garden: {
     benefits() { return _fetch('/me/benefits'); },
@@ -247,6 +290,10 @@ export const API = {
     videos: {
       list(productId)        { return _fetch(`/admin/products/${productId}/videos`); },
       create(productId, body){ return _fetch(`/admin/products/${productId}/videos`, { method: 'POST', body: body instanceof FormData ? body : JSON.stringify(body) }); },
+      /** The same upload, reporting bytes sent so the panel can show a bar. */
+      upload(productId, form: FormData, onProgress: (loaded: number, total: number) => void) {
+        return uploadWithProgress(`/admin/products/${productId}/videos`, form, onProgress);
+      },
       update(id, d)          { return _fetch(`/admin/videos/${id}`, { method: 'PUT', body: JSON.stringify(d) }); },
       remove(id)             { return _fetch(`/admin/videos/${id}`, { method: 'DELETE' }); },
       thumbnail(id, form)    { return _fetch(`/admin/videos/${id}/upload-thumbnail`, { method: 'POST', body: form }); },
@@ -281,7 +328,7 @@ export const API = {
     userImages: {
       list(params = {})  { return _fetch('/admin/user-images?' + new URLSearchParams(params)); },
       counts()           { return _fetch('/admin/user-images/counts'); },
-      status(id, status) { return _fetch(`/admin/user-images/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }); },
+      status(id, status, details = {}) { return _fetch(`/admin/user-images/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, ...details }) }); },
     },
     workshops: {
       list(params = {})  { return _fetch('/admin/workshops?' + new URLSearchParams(params)); },
@@ -303,7 +350,7 @@ export const API = {
         return _fetch(`/admin/workshops/${id}/registrations/${registrationId}`, { method: 'DELETE' });
       },
     },
-    stats() { return _fetch('/admin/stats'); },
+    stats(params = {}) { return _fetch('/admin/stats?' + new URLSearchParams(params)); },
   },
 
   chat: {
@@ -317,6 +364,8 @@ export const API = {
 
   videos: {
     listForProduct(productId) { return _fetch(`/products/${productId}/videos`); },
+    /** Public: titles and lengths only, for the shop before anyone has bought. */
+    summary(productId)        { return _fetch(`/products/${productId}/videos/summary`); },
     get(videoId)              { return _fetch(`/videos/${videoId}`); },
     progress(videoId, data)   { return _fetch(`/videos/${videoId}/progress`, { method: 'POST', body: JSON.stringify(data) }); },
   },

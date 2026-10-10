@@ -1,5 +1,5 @@
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { roleLandingPath, useAuth } from '@/contexts/AuthContext';
 import { SproutyIcon } from '@/components/icons/SproutyIcon';
 import { loginHref } from '@/services/auth-nav';
 
@@ -13,10 +13,10 @@ import { loginHref } from '@/services/auth-nav';
  * to the home page, which quietly threw away where they were trying to go.
  */
 export function ProtectedRoute({ role }: { role?: 'employee' | 'admin' }) {
-  const { ready, isLoggedIn, isEmployee, isAdmin } = useAuth();
+  const { ready, isLoggedIn, isEmployee, isAdmin, user } = useAuth();
   const location = useLocation();
 
-  const allowed = role === 'admin' ? isAdmin : role === 'employee' ? isEmployee : isLoggedIn;
+  const allowed = role === 'admin' ? isAdmin : role === 'employee' ? isEmployee : user?.role === 'customer';
 
   if (!ready) {
     return (
@@ -38,6 +38,10 @@ export function ProtectedRoute({ role }: { role?: 'employee' | 'admin' }) {
   // Signed in, but not as the right kind of account. This is a different
   // problem from being signed out, and sending them to the login form would
   // only invite them to try the same account again.
+  if (!allowed && user && roleLandingPath(user.role)) {
+    return <Navigate to={roleLandingPath(user.role)!} replace />;
+  }
+
   if (!allowed) {
     return (
       <div className="route-gate">

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { requireAuth, requireCsrf } from '../middleware/rbac.js';
+import { requireCustomer, requireCsrf } from '../middleware/rbac.js';
 import { AppError } from '../utils/errors.js';
 import { intParam, parseOrThrow } from '../utils/validation.js';
 import { canAccessProductFeature } from '../services/access.js';
@@ -30,7 +30,25 @@ function publicVideo(video, progress = null) {
 }
 
 export default async function videoRoutes(fastify) {
-  fastify.get('/products/:productId/videos', { preHandler: [requireAuth] }, async (req) => {
+  // GET /api/v1/products/:productId/videos/summary — public. What a product's
+  // videos are, without the videos: titles and lengths, so the shop can say
+  // "3 video hướng dẫn" before anyone has bought it. No URLs, no thumbnails —
+  // those stay behind the purchase check below.
+  fastify.get('/products/:productId/videos/summary', async (req) => {
+    const productId = intParam(req.params.productId, 'ID sản phẩm');
+    const videos = await fastify.prisma.instructionVideo.findMany({
+      where: { productId, status: 'published' },
+      select: { title: true, durationSec: true },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+    });
+    return {
+      count: videos.length,
+      totalDurationSec: videos.reduce((sum, v) => sum + (v.durationSec || 0), 0),
+      items: videos,
+    };
+  });
+
+  fastify.get('/products/:productId/videos', { preHandler: [requireCustomer] }, async (req) => {
     const productId = intParam(req.params.productId, 'ID sản phẩm');
     const canAccess = await canAccessProductFeature(fastify.prisma, req.user, productId, 'instruction_videos');
     if (!canAccess) {
@@ -49,7 +67,7 @@ export default async function videoRoutes(fastify) {
     return { videos: videos.map(v => publicVideo(v, byVideo.get(v.id))) };
   });
 
-  fastify.get('/videos/:videoId', { preHandler: [requireAuth] }, async (req, reply) => {
+  fastify.get('/videos/:videoId', { preHandler: [requireCustomer] }, async (req, reply) => {
     const video = await fastify.prisma.instructionVideo.findFirst({
       where: { id: req.params.videoId, status: 'published' },
       include: { asset: true, thumbnailAsset: true },
@@ -65,7 +83,7 @@ export default async function videoRoutes(fastify) {
     };
   });
 
-  fastify.post('/videos/:videoId/progress', { preHandler: [requireAuth, requireCsrf] }, async (req, reply) => {
+  fastify.post('/videos/:videoId/progress', { preHandler: [requireCustomer, requireCsrf] }, async (req, reply) => {
     const parsed = parseOrThrow(progressSchema, req.body);
     const video = await fastify.prisma.instructionVideo.findFirst({
       where: { id: req.params.videoId, status: 'published' },

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { requireEmployee, requireCsrf } from '../../middleware/rbac.js';
+import { requireAdmin, requireCsrf } from '../../middleware/rbac.js';
 import { AppError } from '../../utils/errors.js';
 import { intParam, multipartFields, noHtml, parseOrThrow } from '../../utils/validation.js';
 import { auditLog } from '../../services/audit.js';
@@ -47,9 +47,9 @@ async function parseVideoRequest(req, allowFile = true) {
 }
 
 export default async function adminVideoRoutes(fastify) {
-  const auth = [requireEmployee, requireCsrf];
+  const auth = [requireAdmin, requireCsrf];
 
-  fastify.get('/products/:productId/videos', { preHandler: [requireEmployee] }, async (req) => {
+  fastify.get('/products/:productId/videos', { preHandler: [requireAdmin] }, async (req) => {
     const productId = intParam(req.params.productId, 'ID sản phẩm');
     const videos = await fastify.prisma.instructionVideo.findMany({
       where: { productId },

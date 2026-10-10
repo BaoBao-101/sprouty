@@ -25,7 +25,7 @@ import { usePagedList } from '@/components/admin/usePagedList';
 /**
  * The product catalogue, shared by the admin and employee areas.
  *
- * Employees get a read-only list plus video management; only an admin can add,
+ * Employees get a read-only list; only an admin can manage videos or add,
  * edit or delete a product. The server enforces the same split — hiding the
  * buttons alone would not stop a direct API call.
  */
@@ -131,9 +131,9 @@ function ProductRow({
               <AdminIcon name="edit" size={16} />
             </button>
           )}
-          <button className="ad-icon-btn" onClick={onVideos} title="Video hướng dẫn" aria-label="Video hướng dẫn">
+          {canEdit && <button className="ad-icon-btn" onClick={onVideos} title="Video hướng dẫn" aria-label="Video hướng dẫn">
             <AdminIcon name="video" size={16} />
-          </button>
+          </button>}
           {canEdit && (
             <button
               className="ad-icon-btn danger"
@@ -205,7 +205,7 @@ export function ProductManager() {
         subtitle={
           isAdmin
             ? 'Thêm, sửa và quản lý catalog sản phẩm bán trên web'
-            : 'Xem catalog và quản lý video hướng dẫn'
+            : 'Tra cứu danh mục sản phẩm'
         }
         actions={
           isAdmin && (
@@ -258,8 +258,7 @@ export function ProductManager() {
 
       {!isAdmin && (
         <div className="panel-note" style={{ marginBottom: 16 }}>
-          Chỉ quản trị viên mới thêm, sửa hoặc xoá được sản phẩm. Bạn vẫn quản lý được video hướng
-          dẫn của từng sản phẩm.
+          Nhân viên tra cứu sản phẩm để hỗ trợ khách hàng. Quản trị viên quản lý sản phẩm và video hướng dẫn.
         </div>
       )}
 
@@ -350,8 +349,8 @@ export function ProductManager() {
         />
       )}
 
-      {/* Standalone video manager, for employees who cannot open the editor. */}
-      {videoFor && (
+      {/* Standalone video manager for administrators. */}
+      {videoFor && isAdmin && (
         <Modal
           title="Video hướng dẫn"
           subtitle={videoFor.name}

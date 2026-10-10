@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { AppError } from '../utils/errors.js';
-import { requireAuth, requireCsrf } from '../middleware/rbac.js';
+import { requireCustomer, requireCsrf } from '../middleware/rbac.js';
 import { ticketCode } from './admin/attendance.js';
 import { reconcile, pollingConfigured } from '../services/sepay.js';
 import { paymentMemo } from '../services/payment-memo.js';
@@ -156,7 +156,7 @@ export default async function workshopRoutes(fastify) {
   // Registering gave no receipt anywhere in the account: once the confirmation
   // dialog closed there was no way to check when the session was, where it was,
   // or whether staff had confirmed the seat.
-  fastify.get('/me/workshops', { preHandler: [requireAuth] }, async (req) => {
+  fastify.get('/me/workshops', { preHandler: [requireCustomer] }, async (req) => {
     // Same reason as the order page: a booking paid by QR is credited by a
     // webhook SePay cannot deliver to a laptop. Asking SePay directly costs
     // one throttled call and makes the two environments behave alike.
@@ -214,7 +214,7 @@ export default async function workshopRoutes(fastify) {
   // PATCH /api/v1/me/workshops/:registrationId/cancel — let a customer give the
   // seat back themselves rather than having to phone in.
   fastify.patch('/me/workshops/:registrationId/cancel', {
-    preHandler: [requireAuth, requireCsrf],
+    preHandler: [requireCustomer, requireCsrf],
   }, async (req, reply) => {
     const registration = await fastify.prisma.workshopRegistration.findUnique({
       where: { id: req.params.registrationId },
@@ -262,7 +262,7 @@ export default async function workshopRoutes(fastify) {
   // free-seat reward has an owner to debit.
   fastify.post('/workshops/register', {
     config: { rateLimit: { max: 5, timeWindow: '10 minutes' } },
-    preHandler: [requireAuth, requireCsrf],
+    preHandler: [requireCustomer, requireCsrf],
   }, async (req, reply) => {
     const parsed = regSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -399,7 +399,7 @@ export default async function workshopRoutes(fastify) {
   // mind. Signed-in customers only; a guest booking has no account to prove
   // ownership from, and these instructions name an amount and a reference.
   fastify.get('/me/workshops/:registrationId/payment', {
-    preHandler: [requireAuth],
+    preHandler: [requireCustomer],
   }, async (req, reply) => {
     const registration = await fastify.prisma.workshopRegistration.findUnique({
       where: { id: req.params.registrationId },

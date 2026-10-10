@@ -1,9 +1,10 @@
+import { ProductVideos } from '@/components/ProductVideos';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ProductCard } from '@/components/ProductCard';
 import { useCart } from '@/contexts/CartContext';
 import { API } from '@/services/api';
-import { normalizeProduct, productFallbackImage } from '@/services/products';
+import { normalizeProduct, productFallbackImage, productGalleryImages } from '@/services/products';
 import { Cart } from '@/services/cart';
 import { formatPrice, type Product } from '@/types/product';
 import './ProductDetail.css';
@@ -57,13 +58,8 @@ const REVIEWS = [
 type Tab = 'info' | 'videos' | 'reviews';
 type Variant = 'standard' | 'smart';
 
-/** Real photos only; the legacy "product-images" uploads path is dead. */
-function galleryImages(product: Product) {
-  return (product.images || []).filter((u) => u && !u.includes('product-images'));
-}
-
 function Gallery({ product }: { product: Product }) {
-  const images = galleryImages(product);
+  const images = productGalleryImages(product);
   const fallback = productFallbackImage(product);
   const [index, setIndex] = useState(0);
   const [src, setSrc] = useState(() => images[0] || fallback);
@@ -134,6 +130,15 @@ export default function ProductDetail() {
   const [qty, setQty] = useState(1);
   const [variant, setVariant] = useState<Variant>('standard');
   const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'videos' ? 'videos' : 'info');
+  // How many instruction videos the kit has; it used to read a hard-coded 0.
+  const [videoCount, setVideoCount] = useState<number | null>(null);
+  useEffect(() => {
+    let live = true;
+    API.videos.summary(id).then((d: { count: number }) => live && setVideoCount(d.count ?? 0)).catch(() => live && setVideoCount(null));
+    return () => {
+      live = false;
+    };
+  }, [id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -223,7 +228,7 @@ export default function ProductDetail() {
 
       <div className="container">
         <div className="pdp-wrap">
-          <Gallery product={product} />
+          <Gallery key={JSON.stringify([product.id, product.images])} product={product} />
 
           <div className="pdp-info">
             <div className="pdp-tags">
@@ -377,7 +382,7 @@ export default function ProductDetail() {
                 className={`pdp-tab-btn${tab === 'videos' ? ' active' : ''}`}
                 onClick={() => setTab('videos')}
               >
-                Video (0)
+                Video{videoCount !== null ? ` (${videoCount})` : ''}
               </button>
               <button
                 className={`pdp-tab-btn${tab === 'reviews' ? ' active' : ''}`}
@@ -444,10 +449,8 @@ export default function ProductDetail() {
             )}
 
             {tab === 'videos' && (
-              <div className="tab-pane active pdp-empty-tab">
-                <div className="pdp-empty-emoji">🎬</div>
-                <h4>Video đang được chuẩn bị</h4>
-                <p>Sẽ có sẵn trước khi sản phẩm được giao đến bạn.</p>
+              <div className="tab-pane active">
+                <ProductVideos productId={product.id} />
               </div>
             )}
 

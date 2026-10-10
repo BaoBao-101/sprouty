@@ -114,3 +114,11 @@ export function isVipOrder(order: Pick<Order, 'items'>) {
 export function shortOrderId(id: string) {
   return id.slice(-8).toUpperCase();
 }
+
+export function allowedOrderTransitions(order: Order): OrderStatus[] {
+  if (order.status === 'pending') return order.paidAt ? ['processing'] : ['cancelled'];
+  if (!order.paidAt) return [];
+  if (order.status === 'processing') return ['shipped'];
+  if (order.status === 'shipped') return ['delivered'];
+  return [];
+}

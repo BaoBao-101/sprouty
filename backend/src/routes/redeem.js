@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { requireAuth, requireCsrf } from '../middleware/rbac.js';
+import { requireCustomer, requireCsrf } from '../middleware/rbac.js';
 import { activeEntitlements, isVipUser } from '../services/access.js';
 import { hashRedeemCode, normalizeCode, redeemCode } from '../services/redeem.js';
 import { noHtml, parseOrThrow } from '../utils/validation.js';
@@ -18,7 +18,7 @@ const redeemSchema = z.object({
 });
 
 export default async function redeemRoutes(fastify) {
-  fastify.post('/redeem', { preHandler: [requireAuth, requireCsrf] }, async (req) => {
+  fastify.post('/redeem', { preHandler: [requireCustomer, requireCsrf] }, async (req) => {
     const { code, nickname } = parseOrThrow(redeemSchema, req.body);
     const result = await redeemCode(fastify.prisma, req.user.id, code, {
       ip: req.ip,
@@ -41,7 +41,7 @@ export default async function redeemRoutes(fastify) {
     };
   });
 
-  fastify.get('/me/entitlements', { preHandler: [requireAuth] }, async (req) => {
+  fastify.get('/me/entitlements', { preHandler: [requireCustomer] }, async (req) => {
     const [entitlements, isVip] = await Promise.all([
       activeEntitlements(fastify.prisma, req.user.id),
       isVipUser(fastify.prisma, req.user.id),

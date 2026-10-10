@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { benefitsFor, saveGarden } from '../services/benefits.js';
 import { AppError } from '../utils/errors.js';
-import { requireAuth, requireCsrf } from '../middleware/rbac.js';
+import { requireCustomer, requireCsrf } from '../middleware/rbac.js';
 import { auditLog } from '../services/audit.js';
 import { buildPaymentInfo } from './orders.js';
 import { MEMBERSHIP_CATEGORY, membershipDaysFor, tierOf } from '../services/membership.js';
@@ -41,10 +41,10 @@ function planDto(product) {
 }
 
 export default async function membershipRoutes(fastify) {
-  fastify.get('/me/benefits', { preHandler: [requireAuth] }, async (req) =>
+  fastify.get('/me/benefits', { preHandler: [requireCustomer] }, async (req) =>
     benefitsFor(fastify.prisma, req.user.id));
 
-  fastify.put('/me/garden', { preHandler: [requireAuth, requireCsrf] }, async (req) => {
+  fastify.put('/me/garden', { preHandler: [requireCustomer, requireCsrf] }, async (req) => {
     const parsed = z.object({
       scene: z.enum(['natural', 'night', 'autumn', 'sakura']),
       decoration: z.enum(['plain', 'terracotta', 'ceramic', 'porcelain']),
@@ -65,7 +65,7 @@ export default async function membershipRoutes(fastify) {
   // GET /api/v1/me/membership — the account's tier, plus an unpaid VIP order
   // if there is one, so the VIP page can offer to finish paying it instead of
   // starting a second.
-  fastify.get('/me/membership', { preHandler: [requireAuth] }, async (req) => {
+  fastify.get('/me/membership', { preHandler: [requireCustomer] }, async (req) => {
     const [user, pending] = await Promise.all([
       fastify.prisma.user.findUnique({ where: { id: req.user.id }, select: { vipUntil: true } }),
       fastify.prisma.order.findFirst({
@@ -102,7 +102,7 @@ export default async function membershipRoutes(fastify) {
 
   // POST /api/v1/membership/checkout — start paying for a plan.
   fastify.post('/membership/checkout', {
-    preHandler: [requireAuth, requireCsrf],
+    preHandler: [requireCustomer, requireCsrf],
   }, async (req, reply) => {
     const parsed = checkoutSchema.safeParse(req.body);
     if (!parsed.success) {

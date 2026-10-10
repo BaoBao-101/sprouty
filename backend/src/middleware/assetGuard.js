@@ -47,21 +47,21 @@ export async function assetAccessGuard(req) {
   if (PUBLIC_KINDS.has(kind)) return;
 
   if (!req.user) throw new AppError('Bạn cần đăng nhập để xem tệp này.', 401);
-  // Staff moderate this media (the user-image queue, the video manager), so they
-  // read every kind — the same rule the metadata endpoints already apply.
-  if (['employee', 'admin'].includes(req.user.role)) return;
+  // Only administrators moderate private media; employees only read the catalogue.
+  if (req.user.role === 'admin') return;
+  if (req.user.role !== 'customer') throw new AppError('Bạn không có quyền xem tệp này.', 403);
 
   const prisma = req.server.prisma;
   const asset = await prisma.asset.findFirst({
     where: { key },
-    select: { ownerUserId: true, productId: true, kind: true },
+    select: { ownerUserId: true, productId: true, kind: true, userProductImages: { select: { userId: true, status: true } } },
   });
   // A key with no Asset row is a stray file. 404 rather than 403 so probing
   // cannot distinguish "exists but forbidden" from "does not exist".
   if (!asset) throw new AppError('Không tìm thấy tệp.', 404);
 
   if (OWNER_ONLY_KINDS.has(kind)) {
-    if (asset.ownerUserId === req.user.id) return;
+    if (asset.ownerUserId === req.user.id && asset.userProductImages.some(image => image.userId === req.user.id && image.status === 'active')) return;
     throw new AppError('Bạn không có quyền xem tệp này.', 403);
   }
 

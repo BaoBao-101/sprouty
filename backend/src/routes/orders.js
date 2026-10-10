@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { createHash, createHmac } from 'crypto';
 import { AppError } from '../utils/errors.js';
-import { requireAuth, requireCsrf } from '../middleware/rbac.js';
+import { requireCustomer, requireCsrf } from '../middleware/rbac.js';
 import { auditLog } from '../services/audit.js';
 import { syncWorkshopRewards } from '../services/rewards.js';
 import { reconcile, pollingConfigured } from '../services/sepay.js';
@@ -254,7 +254,7 @@ async function ensurePurchaseRedeemCodes(prisma, order) {
 export default async function orderRoutes(fastify) {
   // POST /api/v1/orders
   fastify.post('/orders', {
-    preHandler: [requireAuth, requireCsrf],
+    preHandler: [requireCustomer, requireCsrf],
     bodyLimit: 65536, // 64 KB — well above legitimate 50-item payload, blocks bulk-row attacks
   }, async (req, reply) => {
     const parsed = createOrderSchema.safeParse(req.body);
@@ -337,7 +337,7 @@ export default async function orderRoutes(fastify) {
   // doing that work for all of them to render the ten they were looking at.
   // The counts are over the whole history, so the tabs do not renumber
   // themselves as you click between them.
-  fastify.get('/orders', { preHandler: [requireAuth] }, async (req) => {
+  fastify.get('/orders', { preHandler: [requireCustomer] }, async (req) => {
     const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
     const limit = Math.min(50, Math.max(1, Number.parseInt(req.query.limit, 10) || 10));
 
@@ -383,7 +383,7 @@ export default async function orderRoutes(fastify) {
   });
 
   // GET /api/v1/orders/:id
-  fastify.get('/orders/:id', { preHandler: [requireAuth] }, async (req, reply) => {
+  fastify.get('/orders/:id', { preHandler: [requireCustomer] }, async (req, reply) => {
     // The payment page polls this every second and a half while it waits. If
     // SePay cannot reach us — which is every laptop, and any production day
     // the webhook is missed or misrouted — this is the other direction: ask
@@ -446,7 +446,7 @@ export default async function orderRoutes(fastify) {
   // read it back — had no way to correct it, and neither did they have one
   // afterwards. Restricted to unpaid orders: once we are packing, a silent
   // address change would send the parcel somewhere nobody is expecting it.
-  fastify.patch('/orders/:id/shipping', { preHandler: [requireAuth, requireCsrf] }, async (req, reply) => {
+  fastify.patch('/orders/:id/shipping', { preHandler: [requireCustomer, requireCsrf] }, async (req, reply) => {
     const parsed = shippingSchema.safeParse(req.body);
     if (!parsed.success) {
       throw new AppError(parsed.error.errors[0]?.message || 'Dữ liệu không hợp lệ.', 400);
@@ -493,7 +493,7 @@ export default async function orderRoutes(fastify) {
   });
 
   // PATCH /api/v1/orders/:id/cancel — customer cancels their own order before payment
-  fastify.patch('/orders/:id/cancel', { preHandler: [requireAuth, requireCsrf] }, async (req, reply) => {
+  fastify.patch('/orders/:id/cancel', { preHandler: [requireCustomer, requireCsrf] }, async (req, reply) => {
     const order = await fastify.prisma.order.findFirst({
       where: { id: req.params.id, userId: req.user.id },
     });
@@ -525,7 +525,7 @@ export default async function orderRoutes(fastify) {
   // row naming it as fake, so a credited order can always be told apart from a
   // real one. sepayTransactionId stays null — no bank transaction backs this.
   fastify.post('/orders/:id/simulate-payment', {
-    preHandler: [requireAuth, requireCsrf],
+    preHandler: [requireCustomer, requireCsrf],
   }, async (req, reply) => {
     if (!fakePaymentsAllowed()) {
       // Deliberately a 404, not a 403: on a production host this route should

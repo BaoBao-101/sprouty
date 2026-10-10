@@ -75,7 +75,7 @@ export default function Auth({ mode }: { mode: Mode }) {
   if (ready && isLoggedIn && user) {
     // Already signed in — nothing to do here. Send them where this account
     // belongs rather than showing a form they cannot use.
-    return <Navigate to={next || roleLandingPath(user.role) || '/'} replace />;
+    return <Navigate to={roleLandingPath(user.role) || next || '/'} replace />;
   }
 
   async function submit(e: FormEvent) {
@@ -106,9 +106,9 @@ export default function Auth({ mode }: { mode: Mode }) {
         'success',
       );
 
-      // `next` wins when a guarded page sent us here; otherwise staff go to
+      // Staff always land in their own workspace; customers can return to
       // their own area and a customer goes to their garden.
-      navigate(next || roleLandingPath(account.role) || '/my-plants', { replace: true });
+      navigate(roleLandingPath(account.role) || next || '/my-plants', { replace: true });
     } catch (err: any) {
       setError(err?.message || (mode === 'login' ? 'Đăng nhập thất bại.' : 'Đăng ký thất bại.'));
     } finally {

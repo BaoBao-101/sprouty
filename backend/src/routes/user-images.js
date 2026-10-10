@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { leafLimit } from '../services/benefits.js';
-import { requireAuth, requireCsrf } from '../middleware/rbac.js';
+import { requireCustomer, requireCsrf } from '../middleware/rbac.js';
 import { AppError } from '../utils/errors.js';
 import { intParam, multipartFields, noHtml, parseOrThrow } from '../utils/validation.js';
 import { canAccessProductFeature, isVipUser } from '../services/access.js';
@@ -33,7 +33,7 @@ async function removalsUsedFor(prisma, userId, productId) {
  * The product is passed so the stage can be named the way this species names
  * it — a carrot's album says "Phình củ" where a tomato's says "Ra nụ".
  */
-function imageDto(row, product = null) {
+export function imageDto(row, product = null) {
   return {
     id: row.id,
     productId: row.productId,
@@ -42,8 +42,8 @@ function imageDto(row, product = null) {
     status: row.status,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
-    url: row.asset?.url,
-    asset: row.asset,
+    url: row.status === 'active' ? row.asset?.url : null,
+    asset: row.status === 'active' ? row.asset : null,
     stage: row.stage,
     stageLabel: row.stage ? stageLabel(row.stage, product) : null,
   };
@@ -63,7 +63,7 @@ async function plantFor(prisma, userId, productId) {
 }
 
 export default async function userImageRoutes(fastify) {
-  fastify.get('/my-products/:productId/images', { preHandler: [requireAuth] }, async (req) => {
+  fastify.get('/my-products/:productId/images', { preHandler: [requireCustomer] }, async (req) => {
     const productId = intParam(req.params.productId, 'ID sản phẩm');
     const ok = await canAccessProductFeature(fastify.prisma, req.user, productId, 'image_uploads');
     if (!ok) throw new AppError('Bạn chưa có quyền quản lý ảnh cho sản phẩm này.', 403);
@@ -109,7 +109,7 @@ export default async function userImageRoutes(fastify) {
     };
   });
 
-  fastify.post('/my-products/:productId/images', { preHandler: [requireAuth, requireCsrf] }, async (req, reply) => {
+  fastify.post('/my-products/:productId/images', { preHandler: [requireCustomer, requireCsrf] }, async (req, reply) => {
     const productId = intParam(req.params.productId, 'ID sản phẩm');
     const ok = await canAccessProductFeature(fastify.prisma, req.user, productId, 'image_uploads');
     if (!ok) throw new AppError('Mua sản phẩm hoặc nhập mã để tải ảnh/video cho sản phẩm này.', 403);
@@ -160,7 +160,7 @@ export default async function userImageRoutes(fastify) {
     return { image: imageDto(image, product) };
   });
 
-  fastify.patch('/my-images/:imageId', { preHandler: [requireAuth, requireCsrf] }, async (req, reply) => {
+  fastify.patch('/my-images/:imageId', { preHandler: [requireCustomer, requireCsrf] }, async (req, reply) => {
     const parsed = parseOrThrow(updateSchema, req.body);
     const existing = await fastify.prisma.userProductImage.findFirst({
       where: { id: req.params.imageId, userId: req.user.id, status: { not: 'deleted' } },
@@ -177,7 +177,7 @@ export default async function userImageRoutes(fastify) {
     return { image: imageDto(image) };
   });
 
-  fastify.delete('/my-images/:imageId', { preHandler: [requireAuth, requireCsrf] }, async (req, reply) => {
+  fastify.delete('/my-images/:imageId', { preHandler: [requireCustomer, requireCsrf] }, async (req, reply) => {
     const existing = await fastify.prisma.userProductImage.findFirst({
       where: { id: req.params.imageId, userId: req.user.id, status: { not: 'deleted' } },
     });

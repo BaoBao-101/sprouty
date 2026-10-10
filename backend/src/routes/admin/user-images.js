@@ -1,69 +1,86 @@
-import { z } from 'zod';
-import { requireEmployee, requireCsrf } from '../../middleware/rbac.js';
+﻿import { z } from 'zod';
+import { requireAdmin, requireCsrf } from '../../middleware/rbac.js';
+import { AppError } from '../../utils/errors.js';
 import { parseOrThrow } from '../../utils/validation.js';
-import { auditLog } from '../../services/audit.js';
+import { speciesFor, stageLabel, STAGES } from '../../services/plant-sim.js';
 
-const statusSchema = z.object({
-  status: z.enum(['active', 'hidden', 'deleted']),
+const querySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(10),
+  status: z.enum(['active', 'hidden', 'deleted']).optional(),
+  search: z.string().trim().max(100).optional(),
+  media: z.enum(['image', 'video']).optional(),
+  stage: z.string().refine(value => STAGES.some(stage => stage.id === value), 'Giai đoạn không hợp lệ.').optional(),
+  sort: z.enum(['newest', 'oldest']).default('newest'),
+  productId: z.coerce.number().int().positive().optional(),
+  userId: z.string().min(1).optional(),
 });
+const statusSchema = z.object({
+  status: z.enum(['active', 'hidden']),
+  expectedStatus: z.enum(['active', 'hidden']).optional(),
+  reason: z.string().trim().max(500).optional(),
+}).refine(data => data.status !== 'hidden' || (data.reason?.length || 0) >= 5, { message: 'Nhập lý do ẩn nội dung (ít nhất 5 ký tự).' });
+const include = {
+  asset: { select: { url: true, mimeType: true, sizeBytes: true, originalName: true } },
+  product: { select: { id: true, name: true, speciesKey: true, category: true } },
+  user: { select: { id: true, email: true, name: true } },
+};
+export function imageJourney(row, plant = null) {
+  return { ...row, plant, species: row.product?.category === 'kit' ? speciesFor(row.product).label : null,
+    stageLabel: row.stage ? stageLabel(row.stage, row.product) : null };
+}
 
 export default async function adminUserImageRoutes(fastify) {
-  // Paged rather than a flat `take: 200` — past the 200th upload the oldest
-  // images became unreachable, which for a moderation queue means unreviewable.
-  fastify.get('/user-images', { preHandler: [requireEmployee] }, async (req) => {
-    const { page = '1', limit = '20' } = req.query;
-    const pageNum = Math.max(1, parseInt(page, 10) || 1);
-    const pageSize = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
-
-    const where = {};
-    if (req.query.productId) where.productId = Number(req.query.productId);
-    if (req.query.userId) where.userId = String(req.query.userId);
-    if (req.query.status) where.status = String(req.query.status);
-
-    const [images, total] = await Promise.all([
-      fastify.prisma.userProductImage.findMany({
-        where,
-        include: {
-          asset: true,
-          product: { select: { id: true, name: true } },
-          user: { select: { id: true, email: true, name: true } },
-        },
-        orderBy: { createdAt: 'desc' },
-        skip: (pageNum - 1) * pageSize,
-        take: pageSize,
-      }),
+  fastify.get('/user-images', { preHandler: [requireAdmin] }, async (req) => {
+    const query = parseOrThrow(querySchema, req.query);
+    const { page, limit, sort, search, status, stage, media, productId, userId } = query;
+    const where = { ...(status && { status }), ...(stage && { stage }), ...(productId && { productId }), ...(userId && { userId }),
+      ...(media && { asset: { mimeType: { startsWith: `${media}/` } } }) };
+    if (search) {
+      const contains = { contains: search, mode: 'insensitive' };
+      const plants = await fastify.prisma.virtualPlant.findMany({ where: { nickname: contains }, select: { userId: true, productId: true } });
+      where.OR = [{ title: contains }, { note: contains }, { user: { name: contains } }, { user: { email: contains } }, { product: { name: contains } }, ...plants.map(plant => ({ userId: plant.userId, productId: plant.productId }))];
+    }
+    const [total, groups] = await Promise.all([
       fastify.prisma.userProductImage.count({ where }),
+      fastify.prisma.userProductImage.groupBy({ by: ['status'], _count: { _all: true } }),
     ]);
-
-    return { images, total, page: pageNum, limit: pageSize, pages: Math.ceil(total / pageSize) };
+    const pages = Math.max(1, Math.ceil(total / limit));
+    const currentPage = Math.min(page, pages);
+    const images = await fastify.prisma.userProductImage.findMany({ where, include,
+      orderBy: [{ createdAt: sort === 'oldest' ? 'asc' : 'desc' }, { id: sort === 'oldest' ? 'asc' : 'desc' }], skip: (currentPage - 1) * limit, take: limit });
+    const plants = images.length ? await fastify.prisma.virtualPlant.findMany({
+      where: { OR: images.map(image => ({ userId: image.userId, productId: image.productId })) },
+      select: { id: true, userId: true, productId: true, nickname: true, stage: true, activatedAt: true },
+    }) : [];
+    const plantMap = new Map(plants.map(plant => [`${plant.userId}:${plant.productId}`, plant]));
+    const counts = { active: 0, hidden: 0, deleted: 0 };
+    for (const group of groups) counts[group.status] = group._count._all;
+    return { images: images.map(image => imageJourney(image, plantMap.get(`${image.userId}:${image.productId}`) || null)),
+      total, page: currentPage, limit, pages, counts, all: counts.active + counts.hidden + counts.deleted,
+      stages: STAGES.map(stage => ({ id: stage.id, label: stage.label })) };
   });
 
-  // Counts per status, so the filter tabs can show how much is waiting without
-  // a request per tab.
-  fastify.get('/user-images/counts', { preHandler: [requireEmployee] }, async () => {
-    const rows = await fastify.prisma.userProductImage.groupBy({
-      by: ['status'],
-      _count: { _all: true },
-    });
+  fastify.get('/user-images/counts', { preHandler: [requireAdmin] }, async () => {
+    const rows = await fastify.prisma.userProductImage.groupBy({ by: ['status'], _count: { _all: true } });
     const counts = { active: 0, hidden: 0, deleted: 0 };
     for (const row of rows) counts[row.status] = row._count._all;
     return { counts, total: counts.active + counts.hidden + counts.deleted };
   });
 
-  fastify.patch('/user-images/:imageId/status', { preHandler: [requireEmployee, requireCsrf] }, async (req, reply) => {
-    const { status } = parseOrThrow(statusSchema, req.body);
-    const existing = await fastify.prisma.userProductImage.findUnique({ where: { id: req.params.imageId } });
-    if (!existing) return reply.code(404).send({ message: 'Không tìm thấy ảnh.' });
-    const image = await fastify.prisma.userProductImage.update({
-      where: { id: existing.id },
-      data: { status },
-      include: { asset: true, product: true, user: { select: { id: true, email: true, name: true } } },
+  fastify.patch('/user-images/:imageId/status', { preHandler: [requireAdmin, requireCsrf] }, async (req) => {
+    const { status, expectedStatus, reason } = parseOrThrow(statusSchema, req.body);
+    return fastify.prisma.$transaction(async tx => {
+      const existing = await tx.userProductImage.findUnique({ where: { id: req.params.imageId } });
+      if (!existing) throw new AppError('Không tìm thấy nội dung.', 404);
+      if (existing.status === 'deleted') throw new AppError('Nội dung đã xóa không được khôi phục hoặc kiểm duyệt lại.', 409);
+      if (expectedStatus && existing.status !== expectedStatus) throw new AppError('Trạng thái vừa thay đổi. Vui lòng tải lại thư viện.', 409);
+      if (existing.status === status) return { image: { id: existing.id, status } };
+      const result = await tx.userProductImage.updateMany({ where: { id: existing.id, status: existing.status }, data: { status } });
+      if (!result.count) throw new AppError('Nội dung vừa được thay đổi hoặc xóa. Vui lòng tải lại.', 409);
+      await tx.auditLog.create({ data: { actorUserId: req.user.id, action: `user_image.${status}`, targetType: 'UserProductImage', targetId: existing.id,
+        metadata: { previousStatus: existing.status, productId: existing.productId, userId: existing.userId, reason: reason || null } } });
+      return { image: { id: existing.id, status } };
     });
-    await auditLog(fastify.prisma, req.user.id, `user_image.${status}`, 'UserProductImage', image.id, {
-      previousStatus: existing.status,
-      productId: image.productId,
-      userId: image.userId,
-    });
-    return { image };
   });
 }

@@ -12,7 +12,8 @@
  * moved on refresh would make the wait feel broken.
  */
 
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ProductVideos } from '@/components/ProductVideos';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
@@ -295,6 +296,67 @@ function DeviceCard({
 /** Openers for a child who has not thought of a question yet. */
 const QUICK_ASKS = ['Tại sao lá bị vàng?', 'Bao lâu nữa cây lớn?', 'Nên bật thiết bị nào?'];
 
+/**
+ * The kit's instruction videos, folded away until asked for — like the
+ * journal. Open, a player sat in the middle of the care panels and pushed the
+ * devices a screen further down for something watched once or twice. The
+ * player is only mounted on opening, so nothing streams until then. Hidden
+ * entirely when the kit has no videos.
+ */
+function PlantVideos({
+  productId,
+  open,
+  onToggle,
+  onCount,
+  anchorRef,
+}: {
+  productId: number;
+  open: boolean;
+  onToggle: (open: boolean) => void;
+  /** Tells the page how many videos there are, for the shortcut in the hero. */
+  onCount: (count: number) => void;
+  anchorRef: RefObject<HTMLDivElement | null>;
+}) {
+  const [summary, setSummary] = useState<{ count: number; totalDurationSec: number } | null>(null);
+  useEffect(() => {
+    let live = true;
+    API.videos
+      .summary(productId)
+      .then((data: { count: number; totalDurationSec: number }) => {
+        if (!live) return;
+        setSummary(data);
+        onCount(data.count || 0);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [productId, onCount]);
+  if (!summary?.count) return null;
+  const minutes = Math.round((summary.totalDurationSec || 0) / 60);
+  return (
+    <div ref={anchorRef} className={`pd-panel pd-log pd-videos${open ? ' open' : ''}`}>
+      <button className="pd-log-toggle" aria-expanded={open} onClick={() => onToggle(!open)}>
+        <SproutyIcon name="camera" size={20} />
+        <span>
+          <strong>Video hướng dẫn</strong>
+          <em>
+            {summary.count} video
+            {summary.totalDurationSec ? ` · ${minutes < 1 ? 'dưới 1 phút' : `${minutes} phút`}` : ''}
+            {open ? '' : ' · bấm để xem'}
+          </em>
+        </span>
+        <SproutyIcon name="arrow-down" size={18} className="pd-log-chevron" />
+      </button>
+      {open && (
+        <div className="pd-log-body">
+          <ProductVideos productId={productId} compact />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PlantDetail() {
   const { plantId = '' } = useParams();
   const navigate = useNavigate();
@@ -312,6 +374,18 @@ export default function PlantDetail() {
 
   // Opens by itself on a first visit; the "?" button brings it back after that.
   const [guideOpen, closeGuide, openGuide] = useGuideFirstRun();
+
+  // The instruction videos live folded near the bottom; the hero's shortcut
+  // opens the fold and brings it into view.
+  const [videosOpen, setVideosOpen] = useState(false);
+  const [videoCount, setVideoCount] = useState(0);
+  const videosRef = useRef<HTMLDivElement>(null);
+  function openVideos() {
+    setVideosOpen(true);
+    requestAnimationFrame(() =>
+      videosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    );
+  }
 
   // The thread lives on the server, so it survives a reload and follows the
   // child from the tablet to the phone. Mirrored here so an optimistic question
@@ -594,10 +668,18 @@ export default function PlantDetail() {
                 {plant.productName} · giống {plant.speciesLabel} · thu hoạch {plant.harvestLabel}
               </p>
 
-              <button className="guide-open-btn pd-guide-btn" onClick={openGuide}>
-                <SproutyIcon name="info" size={17} />
-                Cây cần gì? Xem hướng dẫn
-              </button>
+              <div className="pd-guide-row">
+                <button className="guide-open-btn pd-guide-btn" onClick={openGuide}>
+                  <SproutyIcon name="info" size={17} />
+                  Cây cần gì? Xem hướng dẫn
+                </button>
+                {videoCount > 0 && (
+                  <button className="guide-open-btn pd-guide-btn" onClick={openVideos}>
+                    <SproutyIcon name="camera" size={17} />
+                    Video hướng dẫn ({videoCount})
+                  </button>
+                )}
+              </div>
 
               <div className="pd-badges">
                 <span className="pd-badge pd-badge-stage">
@@ -837,6 +919,18 @@ export default function PlantDetail() {
                   ))}
                 </div>
               </div>
+
+              {/* ── Instruction videos ─────────────────────────────────── */}
+              {/* Folded, beside the journal: both are looked up now and then,
+                  while care, sensors and devices above are used every visit.
+                  The hero's "Video hướng dẫn" button opens it from the top. */}
+              <PlantVideos
+                productId={plant.productId}
+                open={videosOpen}
+                onToggle={setVideosOpen}
+                onCount={setVideoCount}
+                anchorRef={videosRef}
+              />
 
               {/* ── Journal ────────────────────────────────────────────── */}
               <div className={`pd-panel pd-log${logOpen ? ' open' : ''}`}>

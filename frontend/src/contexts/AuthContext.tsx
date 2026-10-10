@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       ready,
       isLoggedIn: !!user,
-      isEmployee: user?.role === 'employee' || user?.role === 'admin',
+      isEmployee: user?.role === 'employee',
       isAdmin: user?.role === 'admin',
 
       async login(email, password) {

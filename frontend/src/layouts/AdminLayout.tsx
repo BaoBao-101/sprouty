@@ -13,7 +13,7 @@ const GROUPS: SidebarGroup[] = [
   {
     title: 'Kinh doanh',
     items: [
-      { to: '/admin/orders', label: 'Đơn hàng', icon: icon('orders') },
+      { to: '/admin/orders', label: 'Giám sát đơn hàng', icon: icon('orders') },
       { to: '/admin/sales', label: 'Báo cáo bán hàng', icon: icon('sales') },
       { to: '/admin/redeem', label: 'Mã kích hoạt', icon: icon('redeem') },
     ],
@@ -22,9 +22,8 @@ const GROUPS: SidebarGroup[] = [
     title: 'Nội dung',
     items: [
       { to: '/admin/workshops', label: 'Workshop', icon: icon('workshop') },
-      { to: '/employee/attendance', label: 'Điểm danh', icon: icon('check') },
       { to: '/admin/blog', label: 'Blog', icon: icon('blog') },
-      { to: '/admin/user-images', label: 'Ảnh người dùng', icon: icon('images') },
+      { to: '/admin/user-images', label: 'Ảnh cây người dùng', icon: icon('images') },
       { to: '/admin/products', label: 'Sản phẩm', icon: icon('products') },
     ],
   },
@@ -33,8 +32,6 @@ const GROUPS: SidebarGroup[] = [
     items: [{ to: '/admin/users', label: 'Người dùng', icon: icon('users') }],
   },
   {
-    // Not "Hệ thống": StaffSidebar already renders a group by that name for the
-    // back-to-site link, and two identical headings read as a rendering bug.
     title: 'Giám sát',
     items: [{ to: '/admin/audit', label: 'Nhật ký hoạt động', icon: icon('audit') }],
   },

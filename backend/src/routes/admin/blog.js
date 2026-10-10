@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { requireEmployee, requireAdmin, requireCsrf } from '../../middleware/rbac.js';
+import { requireAdmin, requireCsrf } from '../../middleware/rbac.js';
 import { AppError } from '../../utils/errors.js';
 import { multipartFields, noHtml, parseOrThrow } from '../../utils/validation.js';
 import { auditLog } from '../../services/audit.js';
@@ -45,7 +45,7 @@ export default async function adminBlogRoutes(fastify) {
     return [...new Set((ids || []).map(Number).filter(n => Number.isInteger(n) && n > 0))];
   }
 
-  fastify.get('/blog', { preHandler: [requireEmployee] }, async (req) => {
+  fastify.get('/blog', { preHandler: [requireAdmin] }, async (req) => {
     const paging = readPaging(req.query);
 
     const where = {};
@@ -73,7 +73,7 @@ export default async function adminBlogRoutes(fastify) {
     };
   });
 
-  fastify.post('/blog', { preHandler: [requireEmployee, requireCsrf] }, async (req, reply) => {
+  fastify.post('/blog', { preHandler: [requireAdmin, requireCsrf] }, async (req, reply) => {
     const data = parseOrThrow(postSchema, req.body);
     const post = await fastify.prisma.blogPost.create({
       data: {
@@ -93,7 +93,7 @@ export default async function adminBlogRoutes(fastify) {
     return { post };
   });
 
-  fastify.put('/blog/:id', { preHandler: [requireEmployee, requireCsrf] }, async (req, reply) => {
+  fastify.put('/blog/:id', { preHandler: [requireAdmin, requireCsrf] }, async (req, reply) => {
     const existing = await fastify.prisma.blogPost.findUnique({ where: { id: req.params.id } });
     if (!existing) return reply.code(404).send({ message: 'Không tìm thấy bài viết.' });
     const data = parseOrThrow(updateSchema, req.body);
@@ -147,7 +147,7 @@ export default async function adminBlogRoutes(fastify) {
     return { post };
   });
 
-  fastify.post('/blog/:id/cover', { preHandler: [requireEmployee, requireCsrf] }, async (req, reply) => {
+  fastify.post('/blog/:id/cover', { preHandler: [requireAdmin, requireCsrf] }, async (req, reply) => {
     const post = await fastify.prisma.blogPost.findUnique({ where: { id: req.params.id } });
     if (!post) return reply.code(404).send({ message: 'Không tìm thấy bài viết.' });
     const { file } = await multipartFields(req);
@@ -167,7 +167,7 @@ export default async function adminBlogRoutes(fastify) {
     return { post: updated };
   });
 
-  fastify.post('/blog-images', { preHandler: [requireEmployee, requireCsrf] }, async (req, reply) => {
+  fastify.post('/blog-images', { preHandler: [requireAdmin, requireCsrf] }, async (req, reply) => {
     const { file } = await multipartFields(req);
     const asset = await createAsset(fastify.prisma, {
       ownerUserId: req.user.id,

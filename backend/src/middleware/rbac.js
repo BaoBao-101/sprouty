@@ -40,7 +40,7 @@ export function requireRole(...roles) {
 }
 
 // employee or admin
-export function requireEmployee(req, reply, done) {
+export function requireStaff(req, reply, done) {
   if (!req.user) return done(new AppError('Bạn cần đăng nhập.', 401));
   if (!['employee', 'admin'].includes(req.user.role)) {
     return done(new AppError('Chỉ nhân viên hoặc quản trị viên mới có thể truy cập.', 403));
@@ -55,3 +55,6 @@ export function requireAdmin(req, reply, done) {
   }
   done();
 }
+
+export const requireCustomer = requireRole('customer');
+export const requireEmployee = requireRole('employee');
