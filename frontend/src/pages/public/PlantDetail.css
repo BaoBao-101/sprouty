@@ -1681,3 +1681,5 @@
 .coach-panel button:focus-visible { outline: 2px solid #627e4f; outline-offset: 3px; }
 .coach-panel .coach-input .form-input { border-color: #cedbc3; }
 .coach-panel .coach-input .form-input:focus { border-color: #628054; box-shadow: 0 0 0 2px #e8efdf; }
+/* Keep the brand mark readable on the filled assistant action. */
+.coach-ask > img { filter: brightness(0) invert(1); }

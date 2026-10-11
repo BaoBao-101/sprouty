@@ -1,3 +1,4 @@
+import { AiBrandMark } from '@/components/AiBrandMark';
 import { confirmAction } from '@/services/dialog';
 /**
  * One plant's simulation dashboard.
@@ -995,7 +996,7 @@ export default function PlantDetail() {
               <div className="pd-panel coach-panel">
                 <header className="coach-head">
                   <span className="coach-avatar">
-                    <SproutyIcon name="plant-chat" size={24} />
+                    <AiBrandMark size={24} />
                   </span>
                   <div className="coach-who">
                     <strong>Sprouty AI</strong>
@@ -1024,14 +1025,14 @@ export default function PlantDetail() {
                   {messages.length === 0 && !coachBusy && (
                     <div className="coach-empty">
                       <span className="coach-empty-icon">
-                        <SproutyIcon name="plant-chat" size={30} />
+                        <AiBrandMark size={30} />
                       </span>
                       <p>
                         Chào bạn! Mình là <b>Sprouty AI</b>. Mình nhìn được hết cảm biến của{' '}
                         {plant.nickname} và sẽ nói cho bạn biết cây đang cần gì.
                       </p>
                       <button className="coach-ask" onClick={() => askCoach()}>
-                        <SproutyIcon name="plant-chat" size={18} />
+                        <AiBrandMark size={18} />
                         Xem cây giúp mình
                       </button>
                     </div>
@@ -1041,7 +1042,7 @@ export default function PlantDetail() {
                     <div key={m.id} className={`coach-msg coach-msg-${m.role}`}>
                       {m.role === 'assistant' && (
                         <span className="coach-msg-avatar">
-                          <SproutyIcon name="plant-chat" size={16} />
+                          <AiBrandMark size={16} />
                         </span>
                       )}
                       <div className="coach-bubble">
@@ -1059,7 +1060,7 @@ export default function PlantDetail() {
                   {coachBusy && (
                     <div className="coach-msg coach-msg-assistant">
                       <span className="coach-msg-avatar">
-                        <SproutyIcon name="plant-chat" size={16} />
+                        <AiBrandMark size={16} />
                       </span>
                       <div
                         className="coach-bubble coach-typing"
@@ -1089,7 +1090,7 @@ export default function PlantDetail() {
                   <div className="coach-quick">
                     {messages.length > 0 && (
                       <button className="lead" disabled={coachBusy} onClick={() => askCoach()}>
-                        <SproutyIcon name="plant-chat" size={14} />
+                        <AiBrandMark size={14} />
                         Xem cây giúp mình
                       </button>
                     )}

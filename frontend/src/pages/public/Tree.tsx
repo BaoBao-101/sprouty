@@ -119,7 +119,7 @@ function resizeToDataUrl(file: File, maxDim = 640, quality = 0.72): Promise<stri
 }
 
 function ComposeModal({
-  file,
+  file: initialFile,
   onClose,
   onUploaded,
   productId,
@@ -133,6 +133,8 @@ function ComposeModal({
   stages: AlbumData['stages'];
   initialStage: string;
 }) {
+  const [file, setFile] = useState<File | null>(initialFile);
+  const replaceInput = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [caption, setCaption] = useState('');
   const [stage, setStage] = useState(initialStage);
@@ -141,15 +143,17 @@ function ComposeModal({
   const [suggesting, setSuggesting] = useState(false);
   const dialog = useAlbumDialog(onClose, busy);
 
-  const video = file.type.startsWith('video/') || /\.(mp4|m4v|mov|qt|webm|mkv|avi|3gp|3gpp|3g2|mpeg|mpg|mpe|ogv|wmv|asf|flv)$/i.test(file.name);
+  const video = !!file && (file.type.startsWith('video/') || /\.(mp4|m4v|mov|qt|webm|mkv|avi|3gp|3gpp|3g2|mpeg|mpg|mpe|ogv|wmv|asf|flv)$/i.test(file.name));
 
   useEffect(() => {
+    if (!file) { setPreviewUrl(''); return; }
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
   async function suggest() {
+    if (!file || busy || suggesting) return;
     setSuggesting(true);
     try {
       const dataUrl = await resizeToDataUrl(file);
@@ -176,6 +180,7 @@ function ComposeModal({
   }
 
   async function submit() {
+    if (!file || busy || suggesting) return;
     setBusy(true);
     const form = new FormData();
     // Text fields go before the file so Fastify's multipart parser exposes
@@ -217,10 +222,23 @@ function ComposeModal({
           </select>
           <small>Bạn có thể bổ sung ảnh cho những chặng đã qua.</small>
         </label>
-        <div className="leaf-media-frame">
-          {previewUrl &&
-            <AlbumMedia src={previewUrl} video={video} title={file.name} />}
-        </div>
+        <input ref={replaceInput} type="file" hidden disabled={busy || suggesting} onChange={event => {
+          const next = event.target.files?.[0];
+          event.target.value = '';
+          if (next) { setPreviewUrl(''); setFile(next); }
+        }} />
+        {file ? <>
+          <div className="leaf-media-frame">
+            {previewUrl && <AlbumMedia key={previewUrl} src={previewUrl} video={video} title={file.name} />}
+          </div>
+          <div className="leaf-file-actions">
+            <span title={file.name}>{file.name}</span>
+            <button className="btn btn-outline btn-sm" disabled={busy || suggesting} onClick={() => replaceInput.current?.click()}><SproutyIcon name="camera" size={16} /> Đổi ảnh/video</button>
+            <button className="btn btn-ghost btn-sm leaf-remove-file" disabled={busy || suggesting} onClick={() => { setFile(null); setPreviewUrl(''); }}><SproutyIcon name="trash" size={16} /> Gỡ tệp</button>
+          </div>
+        </> : <button className="leaf-file-empty" disabled={busy || suggesting} onClick={() => replaceInput.current?.click()}>
+          <SproutyIcon name="camera" size={32} /><strong>Chọn ảnh hoặc video khác</strong><span>Tên, ghi chú và giai đoạn của bạn vẫn được giữ lại.</span>
+        </button>}
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
           <input
@@ -231,11 +249,11 @@ function ComposeModal({
             onChange={(e) => setCaption(e.target.value)}
           />
           {/* Captioning looks at a photo, so it makes no sense for a clip. */}
-          {!video && (
+          {file && !video && (
             <button
               className="btn btn-outline btn-sm"
               style={{ whiteSpace: 'nowrap' }}
-              disabled={suggesting}
+              disabled={suggesting || busy}
               onClick={suggest}
             >
               {suggesting ? 'Đang xem ảnh...' : <><SproutyIcon name="sparkle" size={15} /> AI gợi ý</>}
@@ -256,7 +274,7 @@ function ComposeModal({
           <button className="btn btn-ghost btn-sm" disabled={busy} onClick={onClose}>
             Hủy
           </button>
-          <button className="btn btn-primary btn-sm" disabled={busy} onClick={submit}>
+          <button className="btn btn-primary btn-sm" disabled={busy || suggesting || !file} onClick={submit}>
             {busy ? 'Đang đăng...' : <><SproutyIcon name="sprout" size={16} /> Đăng lên cây</>}
           </button>
         </div>
