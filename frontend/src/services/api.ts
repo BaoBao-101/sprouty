@@ -1,3 +1,4 @@
+import { normalizeMediaUrls } from './media-urls';
 /* ═══════════════════════════════════════════
    SPROUTY api.js — Backend API Client
    All calls go through /api/v1/... (proxied by nginx)
@@ -87,7 +88,7 @@ async function _fetch(path: string, options: RequestInit = {}): Promise<any> {
     throw err;
   }
 
-  return data;
+  return normalizeMediaUrls(data);
 }
 
 /**
