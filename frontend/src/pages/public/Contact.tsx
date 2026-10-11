@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ContactForm } from '@/components/ContactForm';
+import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
 import './Contact.css';
 
 export default function Contact() {
@@ -38,7 +39,7 @@ export default function Contact() {
                 <div style={{ display: "none" }} className="d-lg-block">
                   <div
                     style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.15)", borderRadius: "var(--r-2xl)", padding: "32px", textAlign: "center" }}>
-                    <div style={{ fontSize: "6rem", marginBottom: "12px" }}>💬</div>
+                    <div className="contact-hero-icon"><SproutyIcon name="chat" size={72} /></div>
                     <p style={{ color: "rgba(255,255,255,.6)", fontSize: ".88rem", lineHeight: "1.7" }}>Gia đình có thể hỏi Sprouty về kit,
                       workshop, chăm cây hoặc hành trình Cây Kỷ Niệm</p>
                   </div>
@@ -56,7 +57,7 @@ export default function Contact() {
                   <h2 style={{ marginBottom: "24px" }}>Thông tin liên hệ</h2>
                   <div className="contact-info-list">
                     <div className="ci-item">
-                      <div className="ci-icon orange">📧</div>
+                      <div className="ci-icon orange"><SproutyIcon name="mail" size={22} /></div>
                       <div>
                         <div className="ci-title">Email chính</div>
                         <div className="ci-val"><a href="#formBody">Gửi tin nhắn qua biểu mẫu</a></div>
@@ -64,7 +65,7 @@ export default function Contact() {
                       </div>
                     </div>
                     <div className="ci-item">
-                      <div className="ci-icon green">📞</div>
+                      <div className="ci-icon green"><SproutyIcon name="phone" size={22} /></div>
                       <div>
                         <div className="ci-title">Kênh hỗ trợ</div>
                         <div className="ci-val"><a href="#formBody">Gửi yêu cầu hỗ trợ</a></div>
@@ -72,7 +73,7 @@ export default function Contact() {
                       </div>
                     </div>
                     <div className="ci-item">
-                      <div className="ci-icon blue">📍</div>
+                      <div className="ci-icon blue"><SproutyIcon name="pin" size={22} /></div>
                       <div>
                         <div className="ci-title">Địa chỉ văn phòng</div>
                         <div className="ci-val">TP. Hồ Chí Minh, Việt Nam</div>
@@ -80,7 +81,7 @@ export default function Contact() {
                       </div>
                     </div>
                     <div className="ci-item">
-                      <div className="ci-icon purple">🕐</div>
+                      <div className="ci-icon purple"><SproutyIcon name="clock" size={22} /></div>
                       <div>
                         <div className="ci-title">Giờ làm việc</div>
                         <div className="ci-val">Thứ 2 – Thứ 6: 8:00 – 18:00<br />Thứ 7: 8:00 – 12:00</div>
@@ -93,25 +94,25 @@ export default function Contact() {
                   <h3 style={{ marginBottom: "16px", fontSize: "1.15rem" }}>Liên hệ đúng bộ phận</h3>
                   <div className="dept-grid">
                     <div className="dept-card">
-                      <span className="dept-em">🛍</span>
+                      <span className="dept-em"><SproutyIcon name="cart" size={24} /></span>
                       <div className="dept-title">Đặt hàng & Thanh toán</div>
                       <a href="mailto:orders@sprouty.id.vn" className="dept-email">orders@sprouty.id.vn</a>
                       <p className="dept-desc">Hỗ trợ đặt hàng, kiểm tra đơn, thanh toán</p>
                     </div>
                     <div className="dept-card">
-                      <span className="dept-em">↩</span>
+                      <span className="dept-em"><SproutyIcon name="return" size={24} /></span>
                       <div className="dept-title">Đổi trả & Hoàn tiền</div>
                       <a href="#formBody" className="dept-email">Gửi yêu cầu hỗ trợ</a>
                       <p className="dept-desc">Yêu cầu đổi trả, sản phẩm lỗi, khiếu nại</p>
                     </div>
                     <div className="dept-card">
-                      <span className="dept-em">🏫</span>
+                      <span className="dept-em"><SproutyIcon name="ticket" size={24} /></span>
                       <div className="dept-title">Workshop & Giáo dục</div>
                       <a href="#formBody" className="dept-email">Gửi yêu cầu workshop</a>
                       <p className="dept-desc">Workshop trường học, hợp tác giáo dục</p>
                     </div>
                     <div className="dept-card">
-                      <span className="dept-em">🤝</span>
+                      <span className="dept-em"><SproutyIcon name="heart" size={24} /></span>
                       <div className="dept-title">Hợp tác & Đối tác</div>
                       <a href="#formBody" className="dept-email">Gửi đề xuất hợp tác</a>
                       <p className="dept-desc">Phân phối, hợp tác nội dung, tài trợ</p>
@@ -120,7 +121,7 @@ export default function Contact() {
 
                   {/* Map */}
                   <div className="map-placeholder">
-                    <div style={{ fontSize: "3rem", marginBottom: "12px" }}>📍</div>
+                    <div className="contact-map-icon"><SproutyIcon name="pin" size={40} /></div>
                     <div
                       style={{ fontFamily: "var(--font-h)", fontSize: ".96rem", fontWeight: "700", color: "var(--ink)", marginBottom: "6px" }}>
                       TP. Hồ Chí Minh, Việt Nam</div>
@@ -134,10 +135,10 @@ export default function Contact() {
                   <div style={{ marginTop: "36px" }}>
                     <h3 style={{ marginBottom: "14px", fontSize: "1.05rem" }}>Kênh Sprouty</h3>
                     <div className="social-row">
-                      <Link to="/workshop" className="social-btn">🌱 Workshop</Link>
-                      <Link to="/shop" className="social-btn">🪴 Sprouty Kit</Link>
-                      <Link to="/ai" className="social-btn">🤖 Plant Buddy AI</Link>
-                      <Link to="/my-plants" className="social-btn"><img src="/assets/images/sprouty-icons/MyTree.png" alt="" style={{ width: "16px", height: "16px", objectFit: "contain", verticalAlign: "middle", marginRight: "4px" }} />Cây Kỷ Niệm</Link>
+                      <Link to="/workshop" className="social-btn"><SproutyIcon name="ticket" size={16} /> Workshop</Link>
+                      <Link to="/shop" className="social-btn"><SproutyIcon name="pot" size={16} /> Sprouty Kit</Link>
+                      <Link to="/ai" className="social-btn"><SproutyIcon name="chat" size={16} /> Plant Buddy AI</Link>
+                      <Link to="/my-plants" className="social-btn"><SproutyIcon name="album" size={16} /> Cây Kỷ Niệm</Link>
                     </div>
                   </div>
                 </div>

@@ -1,203 +1,320 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
 import './About.css';
 
+/** From the 168-parent survey and the 90-day pilot. */
+const STATS = [
+  { value: '168', label: 'phụ huynh tham gia khảo sát' },
+  { value: '90', label: 'ngày thí điểm cùng gia đình' },
+  { value: '60%', label: 'bé hoàn thành bộ kit đầu tiên' },
+  { value: '90%', label: 'phụ huynh muốn trồng tiếp' },
+];
+
+/** What parents told us, and what Sprouty does about each. */
+const PROBLEMS: Array<{ icon: IconName; problem: string; detail: string; answer: string }> = [
+  {
+    icon: 'bolt',
+    problem: 'Quá nhiều thời gian màn hình',
+    detail: '72% phụ huynh lo bé dành hơn 3 giờ mỗi ngày cho điện thoại.',
+    answer: 'Một việc đủ hấp dẫn để bé tự đặt điện thoại xuống: ghé thăm và chăm cây của mình.',
+  },
+  {
+    icon: 'info',
+    problem: 'Thiếu hướng dẫn rõ ràng',
+    detail: 'Bé hứng thú lúc đầu rồi nản vì không biết bước tiếp theo — ba mẹ cũng vậy.',
+    answer: 'Plant Buddy AI và video nói rõ hôm nay cây cần gì, từng bước một.',
+  },
+  {
+    icon: 'trophy',
+    problem: 'Cần cảm giác “con chăm được”',
+    detail: 'Trẻ cần thấy nỗ lực của mình tạo ra kết quả thật.',
+    answer: 'Cây lớn qua 8 chặng nhờ chính bé chăm, và mỗi chặng được lưu thành kỷ niệm.',
+  },
+];
+
+/** The four pieces, in the order a family meets them. */
+const PILLARS: Array<{ icon: IconName; title: string; text: string; to: string; cta: string }> = [
+  {
+    icon: 'seed',
+    title: 'Bộ kit & cây mô phỏng',
+    text: 'Kích hoạt mã là có một cây 3D lớn dần qua 8 chặng, với cảm biến và thiết bị IoT ảo.',
+    to: '/shop',
+    cta: 'Xem bộ kit',
+  },
+  {
+    icon: 'chat',
+    title: 'Plant Buddy AI',
+    text: 'Người bạn trả lời câu hỏi của bé và nhắc việc chăm cây đúng lúc.',
+    to: '/ai',
+    cta: 'Hỏi thử',
+  },
+  {
+    icon: 'album',
+    title: 'Cây Kỷ Niệm',
+    text: 'Ảnh, video và những câu nói nhỏ của con được lưu thành từng chiếc lá.',
+    to: '/my-plants',
+    cta: 'Mở vườn',
+  },
+  {
+    icon: 'pot',
+    title: 'Workshop gia đình',
+    text: 'Buổi cuối tuần bé vẽ chậu, gieo hạt thật và mang cây về nhà.',
+    to: '/workshop',
+    cta: 'Xem lịch',
+  },
+];
+
+const MILESTONES = [
+  {
+    when: 'Tháng 9 / 2025',
+    title: 'Nảy sinh ý tưởng',
+    text: 'Nhóm sinh viên FPT University thấy gia đình cần một hoạt động vừa có thiên nhiên thật, vừa có công nghệ lưu giữ kỷ niệm.',
+  },
+  {
+    when: 'Tháng 11 / 2025',
+    title: 'Nghiên cứu thực địa',
+    text: 'Khảo sát 168 phụ huynh tại TP.HCM, phỏng vấn sâu 12 gia đình để hiểu bé thực sự cần gì.',
+  },
+  {
+    when: 'Tháng 1 / 2026',
+    title: 'Thí điểm 90 ngày',
+    text: 'Điều bé thích nhất không phải chiếc chậu, mà là mỗi ngày được quay lại xem cây đã lớn tới đâu.',
+  },
+  {
+    when: 'Tháng 3 / 2026',
+    title: 'Sprouty ra mắt',
+    text: 'Bộ kit, Cây Kỷ Niệm, Plant Buddy AI và workshop gia đình trong một trải nghiệm.',
+  },
+];
+
+const BELIEFS: Array<{ icon: IconName; title: string; text: string }> = [
+  {
+    icon: 'sprout',
+    title: 'Thiên nhiên là lớp học đầu tiên',
+    text: 'Gieo hạt, tưới nước, quan sát cây lớn giúp bé luyện kiên nhẫn và trách nhiệm.',
+  },
+  {
+    icon: 'heart',
+    title: 'Gia đình trong từng chiếc lá',
+    text: 'Mỗi bộ kit là một hoạt động chung: cùng đặt tên cây, cùng đọc cảm biến, cùng lưu kỷ niệm.',
+  },
+  {
+    icon: 'leaf',
+    title: 'Ít màn hình, nhiều kỷ niệm',
+    text: 'Công nghệ chỉ để quan sát và ghi lại — phần quan trọng vẫn diễn ra ngoài đời.',
+  },
+];
+
+/**
+ * The team. This section used to be an empty <div id="teamGrid"> waiting for
+ * a script from the old static site that no longer runs, so the page showed a
+ * heading over nothing. The data comes from that script.
+ */
+const TEAM = [
+  { id: 'SE190176', name: 'Huỳnh Trọng Phước', role: 'Trưởng nhóm ý tưởng & thiết kế', note: '3D generalist, mê sáng tạo và minh hoạ.' },
+  { id: 'SE194132', name: 'Phan Chính Hiếu', role: 'Phát triển sản phẩm', note: 'Tạo giải pháp mới bằng công nghệ và sự sáng tạo.' },
+  { id: 'SE181830', name: 'Nguyễn Thị Thanh Ngân', role: 'Ý tưởng & thiết kế sản phẩm', note: 'Live with passion.' },
+  { id: 'SE190091', name: 'Lê Huỳnh Quốc Đại', role: 'Ý tưởng & thiết kế sản phẩm', note: 'Graphic designer yêu minh hoạ và truyền thông thị giác.' },
+  { id: 'SE191117', name: 'Trương Tuấn Minh', role: 'Phát triển sản phẩm', note: '“Do it as your enterprise.”' },
+  { id: 'SS190207', name: 'Phạm Xuân Tùng', role: 'Chiến lược kinh doanh', note: 'Biến ý tưởng thành mô hình bền vững.' },
+];
+
+function Member({ m }: { m: (typeof TEAM)[number] }) {
+  const [failed, setFailed] = useState(false);
+  const initial = m.name.trim().split(' ').slice(-1)[0].charAt(0);
+  return (
+    <article className="ab-member">
+      <div className="ab-member-photo">
+        {failed ? (
+          <span className="ab-member-initial">{initial}</span>
+        ) : (
+          <img src={`/assets/images/team/${m.id}.png`} alt={m.name} loading="lazy" onError={() => setFailed(true)} />
+        )}
+      </div>
+      <div className="ab-member-body">
+        <strong>{m.name}</strong>
+        <span className="ab-member-role">{m.role}</span>
+        <p>{m.note}</p>
+      </div>
+    </article>
+  );
+}
+
 export default function About() {
+  useEffect(() => {
+    document.title = 'Giới thiệu — Sprouty';
+  }, []);
+
   return (
     <>
-      {/* Mission Banner */}
-        <div
-          style={{ background: "linear-gradient(135deg,rgba(26,18,9,.82) 0%,rgba(45,27,14,.72) 50%,rgba(244,138,0,.55) 100%),url(/assets/images/banner/about-banner.png) center/cover no-repeat", padding: "64px 0 56px", position: "relative", overflow: "hidden" }}>
-          <div
-            style={{ position: "absolute", right: "4%", top: "50%", transform: "translateY(-50%)", fontSize: "14rem", opacity: ".04", pointerEvents: "none", lineHeight: "1" }}>
-            🌱</div>
-          <div className="container">
-            <span className="eyebrow"
-              style={{ background: "rgba(255,255,255,.1)", color: "rgba(255,255,255,.8)", borderColor: "rgba(255,255,255,.15)" }}>Về
-              Sprouty</span>
-            <h1 style={{ color: "#fff", marginTop: "14px", maxWidth: "580px" }}>Chăm cây mỗi ngày, <em
-                style={{ fontStyle: "italic", color: "var(--terra-3)" }}>lớn lên cùng bé</em></h1>
-            <p style={{ color: "rgba(255,255,255,.6)", maxWidth: "500px", lineHeight: "1.78", marginTop: "16px", fontSize: ".97rem" }}>Sprouty
-              bắt đầu từ một ý tưởng đơn giản: gia đình cần nhiều khoảnh khắc chậm lại cùng nhau. Mỗi ngày bé ghé thăm cây
-              của mình, đọc cảm biến, quyết định hôm nay cây cần gì — một thói quen nhỏ kéo dài hàng tuần.</p>
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "28px" }}>
-              <Link to="/shop" className="btn btn-white btn-lg">Xem sản phẩm →</Link>
-              <Link to="/workshop" className="btn btn-white-ol btn-lg">Workshop</Link>
+      {/* ── Hero ─────────────────────────────────────────────────────── */}
+      <div className="ab-hero">
+        <div className="container ab-hero-grid">
+          <div className="ab-hero-copy">
+            <div className="breadcrumb ab-crumb">
+              <Link to="/">Trang chủ</Link> › Giới thiệu
             </div>
+            <span className="ab-kicker">
+              <SproutyIcon name="sprout" size={15} /> Về Sprouty
+            </span>
+            <h1>
+              Chăm cây mỗi ngày,
+              <span>lớn lên cùng bé</span>
+            </h1>
+            <p>
+              Sprouty bắt đầu từ một ý tưởng đơn giản: gia đình cần nhiều khoảnh khắc chậm lại cùng nhau. Mỗi
+              ngày bé ghé thăm cây của mình, xem cảm biến và quyết định hôm nay cây cần gì.
+            </p>
+            <div className="ab-hero-actions">
+              <Link to="/shop" className="btn btn-primary btn-lg">
+                Xem bộ kit
+                <SproutyIcon name="arrow-right" size={18} />
+              </Link>
+              <a href="#doi-ngu" className="btn btn-outline btn-lg">
+                Gặp đội ngũ
+              </a>
+            </div>
+          </div>
+          <div className="ab-hero-art">
+            <img src="/assets/images/banner/about-banner.png" alt="Bé và gia đình cùng chăm cây Sprouty" />
+            <span className="ab-hero-note">
+              <SproutyIcon name="heart" size={16} /> Từ sinh viên FPT University, TP.HCM
+            </span>
           </div>
         </div>
+      </div>
 
-        {/* Stats */}
-        <div style={{ background: "var(--parchment)", borderBottom: "1.5px solid var(--parchment-2)", padding: "36px 0" }}>
-          <div className="container">
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "24px" }}>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontFamily: "var(--font-display)", fontSize: "2.4rem", fontWeight: "700", color: "var(--orange)" }}>168</div>
-                <div style={{ fontSize: ".82rem", color: "var(--ink-3)", marginTop: "5px", fontFamily: "var(--font-h)" }}>Phụ huynh khảo sát
-                </div>
-              </div>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontFamily: "var(--font-display)", fontSize: "2.4rem", fontWeight: "700", color: "var(--orange)" }}>60%</div>
-                <div style={{ fontSize: ".82rem", color: "var(--ink-3)", marginTop: "5px", fontFamily: "var(--font-h)" }}>Trẻ hoàn thành kit
-                  đầu tiên</div>
-              </div>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontFamily: "var(--font-display)", fontSize: "2.4rem", fontWeight: "700", color: "var(--orange)" }}>90%</div>
-                <div style={{ fontSize: ".82rem", color: "var(--ink-3)", marginTop: "5px", fontFamily: "var(--font-h)" }}>Phụ huynh muốn mua
-                  thêm</div>
-              </div>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontFamily: "var(--font-display)", fontSize: "2.4rem", fontWeight: "700", color: "var(--orange)" }}>90</div>
-                <div style={{ fontSize: ".82rem", color: "var(--ink-3)", marginTop: "5px", fontFamily: "var(--font-h)" }}>Ngày thí điểm</div>
-              </div>
-            </div>
+      {/* ── Numbers ──────────────────────────────────────────────────── */}
+      <div className="container">
+        <ul className="ab-stats">
+          {STATS.map((s) => (
+            <li key={s.label}>
+              <strong>{s.value}</strong>
+              <span>{s.label}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* ── Why: each problem with its answer ────────────────────────── */}
+      <section className="ab-section" id="nghien-cuu">
+        <div className="container">
+          <div className="ab-head">
+            <span className="label">Vì sao có Sprouty</span>
+            <h2>Ba điều phụ huynh nói với chúng tôi</h2>
+          </div>
+          <div className="ab-problems">
+            {PROBLEMS.map((p) => (
+              <article className="ab-problem" key={p.problem}>
+                <span className="ab-icon">
+                  <SproutyIcon name={p.icon} size={22} />
+                </span>
+                <h3>{p.problem}</h3>
+                <p className="ab-problem-detail">{p.detail}</p>
+                <p className="ab-problem-answer">
+                  <SproutyIcon name="check" size={15} />
+                  <span>{p.answer}</span>
+                </p>
+              </article>
+            ))}
           </div>
         </div>
+      </section>
 
-        {/* Why Sprouty */}
-        <section className="section" id="nghien-cuu">
-          <div className="container">
-            <div className="sh center">
-              <span className="label">Vấn đề chúng tôi giải quyết</span>
-              <h2>Nghiên cứu từ 168 phụ huynh tại TP.HCM</h2>
-              <p className="lead">Trước khi xây dựng Sprouty, chúng tôi lắng nghe phụ huynh về nhu cầu cân bằng giữa học qua chơi,
-                thiên nhiên và công nghệ an toàn cho trẻ.</p>
-            </div>
-            <div className="grid-3" style={{ gap: "20px" }}>
-              <div className="card" style={{ padding: "28px" }}>
-                <div
-                  style={{ width: "52px", height: "52px", background: "var(--orange-pale)", borderRadius: "var(--r-lg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", marginBottom: "18px" }}>
-                  📱</div>
-                <h3 style={{ marginBottom: "10px", fontSize: "1.05rem" }}>Quá nhiều thời gian màn hình</h3>
-                <p style={{ fontSize: ".87rem", color: "var(--ink-3)", lineHeight: "1.75" }}>72% phụ huynh lo ngại bé dành hơn 3 giờ/ngày
-                  xem điện thoại. Họ muốn có lựa chọn thay thế đủ hấp dẫn để bé tự chọn bỏ điện thoại xuống.</p>
-              </div>
-              <div className="card" style={{ padding: "28px" }}>
-                <div
-                  style={{ width: "52px", height: "52px", background: "var(--sage-bg)", borderRadius: "var(--r-lg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", marginBottom: "18px" }}>
-                  🧩</div>
-                <h3 style={{ marginBottom: "10px", fontSize: "1.05rem" }}>Thiếu hướng dẫn rõ ràng</h3>
-                <p style={{ fontSize: ".87rem", color: "var(--ink-3)", lineHeight: "1.75" }}>Nhiều bộ đồ chơi không đi kèm hướng dẫn cụ
-                  thể. Bé bắt đầu hứng thú nhưng nhanh nản vì không biết bước tiếp theo — và ba mẹ cũng không biết giúp thế
-                  nào.</p>
-              </div>
-              <div className="card" style={{ padding: "28px" }}>
-                <div
-                  style={{ width: "52px", height: "52px", background: "var(--amber-bg)", borderRadius: "var(--r-lg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", marginBottom: "18px" }}>
-                  🎖</div>
-                <h3 style={{ marginBottom: "10px", fontSize: "1.05rem" }}>Cần cảm giác "con chăm được"</h3>
-                <p style={{ fontSize: ".87rem", color: "var(--ink-3)", lineHeight: "1.75" }}>Trẻ em cần thấy nỗ lực của mình tạo ra kết quả
-                  thật. Khi một hạt giống nảy mầm nhờ bé chăm sóc, sự tự tin đó trở thành một kỷ niệm gia đình.</p>
-              </div>
-            </div>
+      {/* ── What Sprouty is ──────────────────────────────────────────── */}
+      <section className="ab-section ab-tinted">
+        <div className="container">
+          <div className="ab-head">
+            <span className="label">Sprouty gồm những gì</span>
+            <h2>Bốn mảnh ghép, một hành trình</h2>
           </div>
-        </section>
+          <div className="ab-pillars">
+            {PILLARS.map((p, i) => (
+              <Link to={p.to} className="ab-pillar" key={p.title}>
+                <span className="ab-pillar-n">0{i + 1}</span>
+                <span className="ab-icon">
+                  <SproutyIcon name={p.icon} size={22} />
+                </span>
+                <strong>{p.title}</strong>
+                <span className="ab-pillar-text">{p.text}</span>
+                <span className="ab-pillar-cta">
+                  {p.cta} <SproutyIcon name="arrow-right" size={14} />
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
 
-        {/* Story / Timeline + Beliefs */}
-        <section className="section bg-cream" id="hanh-trinh">
-          <div className="container">
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "64px", alignItems: "start" }}>
-              <div>
-                <div className="sh">
-                  <span className="label">Hành trình</span>
-                  <h2>Từ ý tưởng đến sản phẩm thực</h2>
-                </div>
-                <div className="timeline">
-                  <div className="timeline-item">
-                    <div className="timeline-date">Tháng 9 / 2025</div>
-                    <div className="timeline-title">Nảy sinh ý tưởng</div>
-                    <div className="timeline-desc">Nhóm sinh viên FPT University nhận ra khoảng trống: gia đình cần một hoạt động
-                      vừa có thiên nhiên thật, vừa có công nghệ lưu giữ kỷ niệm. Bắt đầu khảo sát và phỏng vấn phụ huynh.
-                    </div>
-                  </div>
-                  <div className="timeline-item">
-                    <div className="timeline-date">Tháng 11 / 2025</div>
-                    <div className="timeline-title">Nghiên cứu thực địa</div>
-                    <div className="timeline-desc">Khảo sát 168 phụ huynh tại TP.HCM. Phỏng vấn sâu 12 gia đình để hiểu thực sự bé
-                      cần gì — không chỉ ba mẹ muốn gì.</div>
-                  </div>
-                  <div className="timeline-item">
-                    <div className="timeline-date">Tháng 1 / 2026</div>
-                    <div className="timeline-title">Thí điểm 90 ngày</div>
-                    <div className="timeline-desc">Thử nghiệm những bộ kit trồng cây đầu tiên với các gia đình tình nguyện.
-                      Chính giai đoạn này cho chúng tôi thấy điều bé thích nhất không phải chiếc chậu, mà là việc
-                      mỗi ngày được quay lại xem cây đã lớn tới đâu.</div>
-                  </div>
-                  <div className="timeline-item">
-                    <div className="timeline-date">Tháng 3 / 2026</div>
-                    <div className="timeline-title">Sprouty chính thức ra mắt</div>
-                    <div className="timeline-desc">Bộ kit trồng cây, Cây Kỷ Niệm số, Plant Buddy AI và workshop gia đình cùng xuất
-                      hiện trong một trải nghiệm thống nhất.</div>
-                  </div>
+      {/* ── Journey, across ──────────────────────────────────────────── */}
+      <section className="ab-section" id="hanh-trinh">
+        <div className="container">
+          <div className="ab-head">
+            <span className="label">Hành trình</span>
+            <h2>Từ ý tưởng đến sản phẩm thật</h2>
+          </div>
+          <ol className="ab-journey">
+            {MILESTONES.map((m, i) => (
+              <li key={m.when} className={i === MILESTONES.length - 1 ? 'is-now' : ''}>
+                <span className="ab-dot" />
+                <span className="ab-when">{m.when}</span>
+                <strong>{m.title}</strong>
+                <p>{m.text}</p>
+              </li>
+            ))}
+          </ol>
+
+          <div className="ab-beliefs">
+            {BELIEFS.map((b) => (
+              <div className="ab-belief" key={b.title}>
+                <span className="ab-icon is-soft">
+                  <SproutyIcon name={b.icon} size={20} />
+                </span>
+                <div>
+                  <strong>{b.title}</strong>
+                  <p>{b.text}</p>
                 </div>
               </div>
-              <div>
-                <div className="sh">
-                  <span className="label">Sứ mệnh</span>
-                  <h2>Những điều chúng tôi tin</h2>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                  <div className="card" style={{ padding: "22px" }}>
-                    <div style={{ display: "flex", gap: "16px" }}>
-                      <div style={{ fontSize: "1.8rem", flexShrink: "0", marginTop: "2px" }}>🌱</div>
-                      <div>
-                        <h3 style={{ fontSize: "1rem", marginBottom: "7px" }}>Thiên nhiên là lớp học đầu tiên</h3>
-                        <p style={{ fontSize: ".85rem", color: "var(--ink-3)", lineHeight: "1.7" }}>Gieo hạt, tưới nước và quan sát cây lớn
-                          giúp bé luyện kiên nhẫn, trách nhiệm và khả năng kể chuyện từ trải nghiệm thật.</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="card" style={{ padding: "22px" }}>
-                    <div style={{ display: "flex", gap: "16px" }}>
-                      <div style={{ fontSize: "1.8rem", flexShrink: "0", marginTop: "2px" }}>🌏</div>
-                      <div>
-                        <h3 style={{ fontSize: "1rem", marginBottom: "7px" }}>Gia đình trong từng chiếc lá</h3>
-                        <p style={{ fontSize: ".85rem", color: "var(--ink-3)", lineHeight: "1.7" }}>Mỗi bộ kit mở ra một hoạt động chung:
-                          ba mẹ cùng bé đặt tên cho cây, đọc chỉ số cảm biến và lưu lại từng chặng trên Cây Kỷ Niệm.</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="card" style={{ padding: "22px" }}>
-                    <div style={{ display: "flex", gap: "16px" }}>
-                      <div style={{ fontSize: "1.8rem", flexShrink: "0", marginTop: "2px" }}>📱</div>
-                      <div>
-                        <h3 style={{ fontSize: "1rem", marginBottom: "7px" }}>Ít màn hình, nhiều kỷ niệm</h3>
-                        <p style={{ fontSize: ".85rem", color: "var(--ink-3)", lineHeight: "1.7" }}>Sprouty dùng AI, IoT và Cây Kỷ Niệm số
-                          để hỗ trợ gia đình quan sát, ghi lại và kể tiếp hành trình của cây ngoài đời.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Team */}
-        <section className="section" id="doi-ngu">
-          <div className="container">
-            <div className="sh center">
-              <span className="label">Đội ngũ</span>
-              <h2>Đội ngũ xây dựng Sprouty</h2>
-              <p className="lead">Nhóm sinh viên Đại học FPT TP.HCM.</p>
-            </div>
-            <div className="team-grid" id="teamGrid"></div>
+      {/* ── Team ─────────────────────────────────────────────────────── */}
+      <section className="ab-section ab-tinted" id="doi-ngu">
+        <div className="container">
+          <div className="ab-head">
+            <span className="label">Đội ngũ</span>
+            <h2>Những người xây dựng Sprouty</h2>
+            <p>Sáu sinh viên Đại học FPT TP.HCM.</p>
           </div>
-        </section>
+          <div className="ab-team">
+            {TEAM.map((m) => (
+              <Member m={m} key={m.id} />
+            ))}
+          </div>
+        </div>
+      </section>
 
-        {/* Contact CTA */}
-        <section className="section bg-cream" id="lien-he-ve">
-          <div className="container" style={{ maxWidth: "640px", textAlign: "center" }}>
-            <span className="label" style={{ justifyContent: "center" }}>Liên hệ</span>
-            <h2 style={{ marginTop: "12px" }}>Bạn muốn hợp tác hoặc góp ý?</h2>
-            <p style={{ color: "var(--ink-3)", margin: "14px auto 28px", fontSize: ".96rem", lineHeight: "1.75", maxWidth: "480px" }}>Chúng tôi
-              luôn mở cửa với phụ huynh muốn góp ý, giáo viên muốn đưa hoạt động gieo hạt vào lớp, hay đối tác muốn tổ chức
-              workshop Sprouty cùng.</p>
-            <div style={{ display: "flex", justifyContent: "center", gap: "14px", flexWrap: "wrap" }}>
-              <Link to="/contact" className="btn btn-primary btn-lg">Gửi lời nhắn cho Sprouty</Link>
-              <Link to="/contact" className="btn btn-outline btn-lg">Liên hệ Sprouty</Link>
+      {/* ── Contact ──────────────────────────────────────────────────── */}
+      <section className="ab-section" id="lien-he-ve">
+        <div className="container">
+          <div className="ab-contact">
+            <div>
+              <strong>Bạn muốn hợp tác hoặc góp ý?</strong>
+              <p>
+                Phụ huynh muốn góp ý, giáo viên muốn đưa hoạt động gieo hạt vào lớp, hay đối tác muốn tổ chức workshop
+                cùng Sprouty — chúng tôi luôn sẵn lòng lắng nghe.
+              </p>
             </div>
+            <Link to="/contact" className="btn btn-white btn-lg">
+              Gửi lời nhắn
+              <SproutyIcon name="arrow-right" size={18} />
+            </Link>
           </div>
-        </section>
+        </div>
+      </section>
     </>
   );
 }

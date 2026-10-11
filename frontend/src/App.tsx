@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { PublicLayout } from '@/layouts/PublicLayout';
 import { AdminLayout } from '@/layouts/AdminLayout';
 import { EmployeeLayout } from '@/layouts/EmployeeLayout';
+import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
@@ -94,7 +95,7 @@ function Loading() {
 function NotFound() {
   return (
     <div className="container" style={{ textAlign: 'center', padding: '90px 0' }}>
-      <div style={{ fontSize: '3rem', marginBottom: 12 }}>🌱</div>
+      <div className="state-icon"><SproutyIcon name="sprout" size={40} /></div>
       <h1>Không tìm thấy trang</h1>
       <p style={{ color: 'var(--ink-4)' }}>Trang bạn tìm không tồn tại hoặc đã được chuyển đi.</p>
       <a href="/" className="btn btn-primary" style={{ marginTop: 16, display: 'inline-block' }}>

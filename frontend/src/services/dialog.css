@@ -1,0 +1,18 @@
+.sprouty-dialog { padding: 0; width: min(480px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); margin: auto; border: 1px solid #d7dfce; border-radius: 24px; background: #fffcf6; color: #314934; font-family: var(--font-body, sans-serif); overflow-y: auto; }
+.sprouty-dialog::backdrop { background: rgb(24 39 28 / 48%); }
+.sprouty-dialog-content { position: relative; padding: 28px; }
+.sprouty-dialog-icon { display: grid; place-items: center; width: 54px; height: 54px; border: 1px solid #d4dfc8; border-radius: 18px; color: #446b3b; background: #edf3e4; margin-bottom: 20px; }
+.sprouty-dialog.is-danger .sprouty-dialog-icon { color: #9a503c; background: #f7eae1; border-color: #e9d4c7; }
+.sprouty-dialog-close { position: absolute; top: 18px; right: 18px; display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: 50%; background: transparent; color: #78816e; cursor: pointer; }
+.sprouty-dialog-close:hover { background: #edf0e6; }
+.sprouty-dialog-eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .18em; color: #768269; }
+.sprouty-dialog h2 { margin: 7px 0 14px; font-family: var(--font-display, sans-serif); font-size: 24px; line-height: 1.3; color: #314934; }
+.sprouty-dialog p { margin: 0; color: #66715d; font-size: 14px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sprouty-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 18px 28px; border-top: 1px solid #e3e7da; background: #f4f5ed; }
+.sprouty-dialog-actions button { min-height: 44px; padding: 10px 24px; border-radius: 12px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.sprouty-dialog-cancel { border: 1px solid #d3dccb; background: #fffcf6; color: #52634b; }
+.sprouty-dialog-confirm { border: 1px solid #356446; background: #356446; color: #fff; }
+.sprouty-dialog.is-danger .sprouty-dialog-confirm { background: #914d3b; border-color: #914d3b; }
+.sprouty-dialog button:focus-visible { outline: 2px solid #879a6f; outline-offset: 3px; }
+.sprouty-dialog-actions button:hover { filter: brightness(.96); }
+@media (max-width: 480px) { .sprouty-dialog-content { padding: 24px 20px; } .sprouty-dialog-actions { padding: 16px 20px; } .sprouty-dialog-actions button { flex: 1; } }

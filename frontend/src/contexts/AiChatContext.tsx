@@ -25,10 +25,19 @@ import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 
 export interface AiMessage {
+  products?: AiProduct[];
   role: 'user' | 'ai';
   text: string;
   imageUrl?: string;
   time: string;
+}
+
+export interface AiProduct {
+  id: number;
+  name: string;
+  price: number;
+  ageRange: string;
+  image: string | null;
 }
 
 interface AiChatValue {
@@ -95,9 +104,9 @@ export function AiChatProvider({ children }: { children: ReactNode }) {
       // is signed in and looks the catalogue up itself, so one sent from here
       // would only be a claim it has to ignore.
       try {
-        const { reply } = await API.chat.send(nextHistory.slice(-CONTEXT_TURNS));
+        const { reply, products } = await API.chat.send(nextHistory.slice(-CONTEXT_TURNS));
         setHistory((h) => [...h, { role: 'assistant', content: reply }]);
-        setMessages((m) => [...m, { role: 'ai', text: reply, time: now() }]);
+        setMessages((m) => [...m, { role: 'ai', text: reply, products, time: now() }]);
       } catch (err: any) {
         // The server says why it refused - not signed in, no activation code,
         // too many questions. Replacing every one of those with "lỗi kết nối"

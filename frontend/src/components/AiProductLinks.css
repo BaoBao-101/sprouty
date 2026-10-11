@@ -1,0 +1,9 @@
+.ai-product-links { display: grid; gap: 9px; margin: 12px 0 5px; }
+.ai-product-link { display: flex; gap: 12px; align-items: center; padding: 12px; border: 1px solid #dce3d0; border-radius: 13px; background: #fffdf5; color: #365439; text-decoration: none; }
+.ai-product-link:hover { background: #eff3e7; border-color: #93a580; }
+.ai-product-link:focus-visible { outline: 2px solid #65804e; outline-offset: 3px; }
+.ai-product-link img { width: 66px !important; height: 66px !important; object-fit: cover; border-radius: 8px; margin: 0 !important; flex-shrink: 0; }
+.ai-product-link > span { min-width: 0; }
+.ai-product-link strong { display: block; font-size: .85rem; overflow-wrap: anywhere; }
+.ai-product-link small { display: block; color: #7a866c; margin: 5px 0; font-size: .72rem; }
+.ai-product-link b { font-size: .72rem; font-weight: 600; }

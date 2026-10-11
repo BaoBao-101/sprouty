@@ -7,6 +7,7 @@ import { API } from '@/services/api';
 import { normalizeProduct, productFallbackImage, productGalleryImages } from '@/services/products';
 import { Cart } from '@/services/cart';
 import { formatPrice, type Product } from '@/types/product';
+import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
 import './ProductDetail.css';
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -16,10 +17,13 @@ const CATEGORY_LABEL: Record<string, string> = {
 };
 
 const BADGE_TAG: Record<string, { label: string; tone: string }> = {
-  hot: { label: '🔥 Bán chạy', tone: 'red' },
-  new: { label: '✨ Hàng mới', tone: 'indigo' },
-  sale: { label: '🏷 Đang giảm', tone: 'green' },
+  hot: { label: 'Bán chạy', tone: 'red' },
+  new: { label: 'Hàng mới', tone: 'indigo' },
+  sale: { label: 'Đang giảm', tone: 'green' },
 };
+
+/** "quả đậu" → "Quả đậu" where it starts a value. */
+const cap = (t: string) => (t ? t.charAt(0).toUpperCase() + t.slice(1) : t);
 
 const THUMB_BACKGROUNDS = ['#F8F8F8', '#FFF0E8', '#F0FDF4'];
 
@@ -201,7 +205,9 @@ export default function ProductDetail() {
     const missing = status === 'missing';
     return (
       <div className="pdp-state">
-        <div className="pdp-state-emoji">{missing ? '😕' : '⚠️'}</div>
+        <span className="pdp-state-icon">
+          <SproutyIcon name={missing ? 'info' : 'warning'} size={34} />
+        </span>
         <h2>{missing ? 'Không tìm thấy sản phẩm' : 'Không thể tải sản phẩm'}</h2>
         <p>
           {missing
@@ -215,297 +221,315 @@ export default function ProductDetail() {
     );
   }
 
+  const variantChoice = product.smartDelta != null;
+
+  /** What a parent checks before buying, as four short facts. */
+  const facts: Array<{ icon: IconName; label: string; value: string }> = [
+    { icon: 'heart', label: 'Độ tuổi', value: product.age || '—' },
+    ...(product.species
+      ? [
+          { icon: 'sprout' as IconName, label: 'Giống cây', value: product.species.label },
+          { icon: 'harvest' as IconName, label: 'Thu hoạch', value: cap(product.species.harvest) },
+        ]
+      : []),
+    { icon: 'bolt', label: 'Kích hoạt', value: 'Ngay sau thanh toán' },
+  ];
+
+  /** Promises that are true of a digital kit — nothing here ships. */
+  const promises: Array<{ icon: IconName; text: string }> = [
+    { icon: 'bolt', text: 'Nhận mã và gieo hạt ngay trên web' },
+    { icon: 'chat', text: 'Plant Buddy AI hướng dẫn từng bước' },
+    ...(videoCount ? [{ icon: 'camera' as IconName, text: `${videoCount} video hướng dẫn` }] : []),
+    { icon: 'check', text: 'Hoàn tiền 100% nếu mã chưa kích hoạt (7 ngày)' },
+  ];
+
   return (
     <>
-      <div className="pdp-crumb-bar">
-        <div className="container">
-          <div className="breadcrumb">
-            <Link to="/">Trang chủ</Link> › <Link to="/shop">Sản phẩm</Link> ›{' '}
-            <span className="pdp-crumb-current">{product.name}</span>
-          </div>
-        </div>
-      </div>
-
       <div className="container">
+        <div className="breadcrumb pdp-crumb">
+          <Link to="/">Trang chủ</Link> › <Link to="/shop">Sản phẩm</Link> ›{' '}
+          <span className="pdp-crumb-current">{product.name}</span>
+        </div>
+
         <div className="pdp-wrap">
           <Gallery key={JSON.stringify([product.id, product.images])} product={product} />
 
+          {/* ── The buying box ─────────────────────────────────────────── */}
           <div className="pdp-info">
-            <div className="pdp-tags">
-              <span className="pdp-tag blue">{CATEGORY_LABEL[product.cat] ?? product.cat}</span>
-              {product.species && (
-                <span className="pdp-tag green">Giống {product.species.label}</span>
-              )}
-              <span className="pdp-tag gray">{product.age}</span>
-              <span className="pdp-tag gray">{product.col}</span>
-              {product.badge && (
-                <span className={`pdp-tag ${BADGE_TAG[product.badge].tone}`}>
-                  {BADGE_TAG[product.badge].label}
-                </span>
-              )}
-            </div>
-
+            <span className="pdp-kicker">
+              {CATEGORY_LABEL[product.cat] ?? product.cat}
+              {product.col ? ` · ${product.col}` : ''}
+            </span>
             <h1 className="pdp-name">{product.name}</h1>
 
             <div className="pdp-rating">
-              <span className="pdp-stars">★★★★★</span>
-              <span className="pdp-rating-count">4.9 ·</span>
-              <button className="pdp-rating-link" onClick={() => setTab('reviews')}>
+              <span className="pdp-stars" aria-hidden="true">★★★★★</span>
+              <span>4.9</span>
+              <button
+                className="pdp-rating-link"
+                onClick={() => {
+                  setTab('reviews');
+                  document.getElementById('chi-tiet')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
                 18 đánh giá
               </button>
             </div>
 
-            <div className="pdp-price-wrap">
-              <span className="pdp-price">{formatPrice(price)}</span>
-              {/* The strike-through only makes sense against the standard price. */}
-              {product.old && variant === 'standard' && (
-                <>
-                  <span className="pdp-price-old">{formatPrice(product.old)}</span>
-                  <span className="pdp-discount-badge">Giảm {discount}%</span>
-                </>
-              )}
-            </div>
-
-            {product.smartDelta != null && (
-              <div className="pdp-qty-section">
-                <div className="pdp-qty-label">Phiên bản</div>
-                <div className="pdp-variant-row">
-                  <label className="pdp-variant-opt">
-                    <img
-                      src="/assets/images/sprouty-icons/StandardVariant.png"
-                      alt="Standard"
-                      className="pdp-variant-thumb"
-                    />
-                    <input
-                      type="radio"
-                      name="pdpVariant"
-                      value="standard"
-                      checked={variant === 'standard'}
-                      onChange={() => setVariant('standard')}
-                    />
-                    <div>
-                      <strong>Standard</strong>
-                      <div className="pdp-variant-price">{formatPrice(product.price)}</div>
-                      <div className="pdp-variant-note">
-                        Thiết bị IoT mở dần theo từng giai đoạn cây lớn.
-                      </div>
-                    </div>
-                  </label>
-
-                  <label className="pdp-variant-opt">
-                    <img
-                      src="/assets/images/sprouty-icons/SmartVariant.png"
-                      alt="Smart IoT"
-                      className="pdp-variant-thumb"
-                    />
-                    <input
-                      type="radio"
-                      name="pdpVariant"
-                      value="smart"
-                      checked={variant === 'smart'}
-                      onChange={() => setVariant('smart')}
-                    />
-                    <div>
-                      <strong>Smart · IoT</strong>
-                      <div className="pdp-variant-price">
-                        {formatPrice(product.price + product.smartDelta)}
-                      </div>
-                      {/* The Smart upgrade used to be hardware in the box.
-                          Nothing ships now, so say what it actually unlocks —
-                          see createPlantForProduct in services/plants.js. */}
-                      <div className="pdp-variant-note">
-                        Mở sẵn <strong>cả 8 thiết bị IoT</strong> ngay từ ngày đầu — không phải chờ
-                        cây lớn mới có bơm tưới, đèn và quạt tự động.
-                      </div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-            )}
-
             <p className="pdp-desc">{product.desc}</p>
-            <div className="pdp-divider" />
 
-            <div className="pdp-qty-section">
-              <div className="pdp-qty-label">Số lượng</div>
-              <div className="pdp-qty-row">
-                <button
-                  className="pdp-qty-btn"
-                  onClick={() => setQty((q) => Math.max(1, q - 1))}
-                  aria-label="Giảm"
-                >
-                  −
-                </button>
-                <div className="pdp-qty-num">{qty}</div>
-                <button
-                  className="pdp-qty-btn"
-                  onClick={() => setQty((q) => Math.min(10, q + 1))}
-                  aria-label="Tăng"
-                >
-                  +
-                </button>
-              </div>
-              <div className="pdp-stock">Kích hoạt ngay · Không cần giao hàng</div>
-            </div>
-
-            <div className="pdp-cta">
-              <button className="btn-add" onClick={addToCart}>
-                <img src="/assets/images/sprouty-icons/Cart.png" alt="" className="pdp-cta-icon" />
-                Thêm vào giỏ
-              </button>
-              <button
-                className="btn-buy"
-                onClick={() => {
-                  addToCart();
-                  navigate('/cart');
-                }}
-              >
-                Mua ngay →
-              </button>
-            </div>
-
-            <div className="trust-badges">
-              <div className="trust-badge"><span>🚚</span><span>Miễn phí ship từ 200.000đ</span></div>
-              <div className="trust-badge"><span>🔄</span><span>Hoàn tiền trong 7 ngày</span></div>
-              <div className="trust-badge"><span>✅</span><span>An toàn cho trẻ em</span></div>
-              <div className="trust-badge"><span>🎬</span><span>Video hướng dẫn kèm theo</span></div>
-            </div>
-
-            <div className="pdp-tabs">
-              <button
-                className={`pdp-tab-btn${tab === 'info' ? ' active' : ''}`}
-                onClick={() => setTab('info')}
-              >
-                Thông tin
-              </button>
-              <button
-                className={`pdp-tab-btn${tab === 'videos' ? ' active' : ''}`}
-                onClick={() => setTab('videos')}
-              >
-                Video{videoCount !== null ? ` (${videoCount})` : ''}
-              </button>
-              <button
-                className={`pdp-tab-btn${tab === 'reviews' ? ' active' : ''}`}
-                onClick={() => setTab('reviews')}
-              >
-                Đánh giá (18)
-              </button>
-            </div>
-
-            {tab === 'info' && (
-              <div className="tab-pane active">
-                {product.inc.length > 0 && (
+            <div className="pdp-price-box">
+              <div className="pdp-price-wrap">
+                <span className="pdp-price">{formatPrice(price)}</span>
+                {/* The strike-through only makes sense against the standard price. */}
+                {product.old && variant === 'standard' && (
                   <>
-                    <h4 className="pdp-subhead">📦 Bộ kit gồm có</h4>
-                    <div className="pdp-includes">
-                      {product.inc.map((item) => (
-                        <div className="include-item" key={item}>
-                          <div className="include-check">✓</div>
-                          <div className="include-text">{item}</div>
-                        </div>
-                      ))}
-                    </div>
+                    <span className="pdp-price-old">{formatPrice(product.old)}</span>
+                    <span className="pdp-discount-badge">−{discount}%</span>
                   </>
                 )}
+              </div>
 
-                <h4 className="pdp-subhead">📋 Thông số</h4>
-                <div>
-                  <div className="spec-row">
-                    <span className="spec-label">Độ tuổi khuyến nghị</span>
-                    <span className="spec-val">{product.age}</span>
+              {variantChoice && (
+                <div className="pdp-variants" role="radiogroup" aria-label="Phiên bản">
+                  {(
+                    [
+                      {
+                        key: 'standard',
+                        name: 'Standard',
+                        price: product.price,
+                        note: 'Thiết bị IoT mở dần theo từng chặng cây lớn.',
+                        img: '/assets/images/sprouty-icons/StandardVariant.png',
+                      },
+                      {
+                        key: 'smart',
+                        name: 'Smart · IoT',
+                        price: product.price + (product.smartDelta || 0),
+                        // The Smart upgrade used to be hardware in the box.
+                        // Nothing ships now, so say what it unlocks — see
+                        // createPlantForProduct in services/plants.js.
+                        note: 'Mở sẵn cả 8 thiết bị IoT từ ngày đầu tiên.',
+                        img: '/assets/images/sprouty-icons/SmartVariant.png',
+                      },
+                    ] as const
+                  ).map((v) => (
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={variant === v.key}
+                      key={v.key}
+                      className={`pdp-variant${variant === v.key ? ' active' : ''}`}
+                      onClick={() => setVariant(v.key)}
+                    >
+                      <img src={v.img} alt="" />
+                      <span className="pdp-variant-text">
+                        <strong>{v.name}</strong>
+                        <em>{formatPrice(v.price)}</em>
+                        <small>{v.note}</small>
+                      </span>
+                      <span className="pdp-variant-check" aria-hidden="true">
+                        {variant === v.key && <SproutyIcon name="check" size={13} />}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="pdp-buy">
+                <div className="pdp-qty" aria-label="Số lượng">
+                  <button onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Giảm" disabled={qty <= 1}>
+                    −
+                  </button>
+                  <span>{qty}</span>
+                  <button onClick={() => setQty((q) => Math.min(10, q + 1))} aria-label="Tăng" disabled={qty >= 10}>
+                    +
+                  </button>
+                </div>
+                <button className="btn btn-outline pdp-add" onClick={addToCart}>
+                  <SproutyIcon name="cart" size={18} />
+                  Thêm vào giỏ
+                </button>
+                <button
+                  className="btn btn-primary pdp-now"
+                  onClick={() => {
+                    addToCart();
+                    navigate('/cart');
+                  }}
+                >
+                  Mua ngay
+                  <SproutyIcon name="arrow-right" size={17} />
+                </button>
+              </div>
+            </div>
+
+            <ul className="pdp-promises">
+              {promises.map((p) => (
+                <li key={p.text}>
+                  <SproutyIcon name={p.icon} size={17} />
+                  {p.text}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* ── Facts strip ──────────────────────────────────────────────── */}
+        <ul className="pdp-facts">
+          {facts.map((f) => (
+            <li key={f.label}>
+              <span className="pdp-fact-icon">
+                <SproutyIcon name={f.icon} size={20} />
+              </span>
+              <span>
+                <em>{f.label}</em>
+                <strong>{f.value}</strong>
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        {/* ── Details, full width ──────────────────────────────────────── */}
+        <section className="pdp-details" id="chi-tiet">
+          <div className="pdp-tabs" role="tablist">
+            {(
+              [
+                ['info', 'Tổng quan'],
+                ['videos', `Video hướng dẫn${videoCount !== null ? ` (${videoCount})` : ''}`],
+                ['reviews', 'Đánh giá (18)'],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                role="tab"
+                aria-selected={tab === key}
+                className={`pdp-tab-btn${tab === key ? ' active' : ''}`}
+                onClick={() => setTab(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {tab === 'info' && (
+            <div className="pdp-overview">
+              <div className="pdp-panel">
+                <h3>
+                  <SproutyIcon name="gift" size={19} /> Bộ kit gồm có
+                </h3>
+                {product.inc.length > 0 ? (
+                  <ul className="pdp-includes">
+                    {product.inc.map((item) => (
+                      <li key={item}>
+                        <span className="pdp-check">✓</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="pdp-muted">Thông tin đang được cập nhật.</p>
+                )}
+              </div>
+
+              <div className="pdp-panel">
+                <h3>
+                  <SproutyIcon name="info" size={19} /> Thông số
+                </h3>
+                <dl className="pdp-specs">
+                  <div>
+                    <dt>Loại sản phẩm</dt>
+                    <dd>{CATEGORY_LABEL[product.cat] ?? product.cat}</dd>
                   </div>
-                  <div className="spec-row">
-                    <span className="spec-label">Bộ sưu tập</span>
-                    <span className="spec-val">{product.col}</span>
+                  <div>
+                    <dt>Độ tuổi khuyến nghị</dt>
+                    <dd>{product.age}</dd>
+                  </div>
+                  <div>
+                    <dt>Bộ sưu tập</dt>
+                    <dd>{product.col}</dd>
                   </div>
                   {product.species && (
                     <>
-                      <div className="spec-row">
-                        <span className="spec-label">Giống cây mô phỏng</span>
-                        <span className="spec-val">{product.species.label}</span>
+                      <div>
+                        <dt>Giống cây mô phỏng</dt>
+                        <dd>{product.species.label}</dd>
                       </div>
-                      <div className="spec-row">
-                        <span className="spec-label">Thu hoạch</span>
-                        <span className="spec-val">{product.species.harvest}</span>
+                      <div>
+                        <dt>Thu hoạch</dt>
+                        <dd>{cap(product.species.harvest)}</dd>
                       </div>
                     </>
                   )}
-                  <div className="spec-row">
-                    <span className="spec-label">Loại sản phẩm</span>
-                    <span className="spec-val">{CATEGORY_LABEL[product.cat] ?? product.cat}</span>
+                  <div>
+                    <dt>Hình thức</dt>
+                    <dd>Sản phẩm số · kích hoạt bằng mã</dd>
                   </div>
-                  <div className="spec-row">
-                    <span className="spec-label">Chứng nhận an toàn</span>
-                    <span className="spec-val" style={{ color: 'var(--green)' }}>
-                      ✓ Đạt chuẩn EN71
-                    </span>
+                  <div>
+                    <dt>Phát triển bởi</dt>
+                    <dd>Sprouty · Việt Nam</dd>
                   </div>
-                  <div className="spec-row">
-                    <span className="spec-label">Xuất xứ</span>
-                    <span className="spec-val">Việt Nam 🇻🇳</span>
-                  </div>
-                </div>
+                </dl>
               </div>
-            )}
+            </div>
+          )}
 
-            {tab === 'videos' && (
-              <div className="tab-pane active">
-                <ProductVideos productId={product.id} />
-              </div>
-            )}
+          {tab === 'videos' && (
+            <div className="pdp-pane">
+              <ProductVideos productId={product.id} />
+            </div>
+          )}
 
-            {tab === 'reviews' && (
-              <div className="tab-pane active">
-                <div className="review-summary-wrap">
-                  <div className="review-score-col">
-                    <div className="review-score-big">4.9</div>
-                    <div className="review-score-stars">★★★★★</div>
-                    <div className="review-score-sub">18 đánh giá</div>
-                  </div>
-                  <div className="review-bars">
-                    {REVIEW_BARS.map(([label, width, count]) => (
-                      <div className="review-bar-row" key={label}>
-                        <span className="review-bar-label">{label}</span>
-                        <div className="review-bar-track">
-                          <div className="review-bar-fill" style={{ width }} />
-                        </div>
-                        <span className="review-bar-count">{count}</span>
-                      </div>
-                    ))}
-                  </div>
+          {tab === 'reviews' && (
+            <div className="pdp-pane pdp-reviews">
+              <div className="pdp-review-summary">
+                <div className="pdp-review-score">
+                  <strong>4.9</strong>
+                  <span className="pdp-stars">★★★★★</span>
+                  <em>18 đánh giá</em>
                 </div>
-
-                <div>
-                  {REVIEWS.map((review) => (
-                    <div className="review-item" key={review.name}>
-                      <div className="reviewer-row">
-                        <div className="reviewer-av" style={{ background: review.bg }}>
-                          {review.av}
-                        </div>
-                        <div>
-                          <div className="reviewer-name">{review.name}</div>
-                          <div className="reviewer-loc">{review.loc}</div>
-                        </div>
-                        <div className="reviewer-stars">★★★★★</div>
-                      </div>
-                      <p className="review-text">“{review.text}”</p>
+                <div className="pdp-review-bars">
+                  {REVIEW_BARS.map(([label, width, count]) => (
+                    <div className="pdp-review-bar" key={label}>
+                      <span>{label}</span>
+                      <i>
+                        <b style={{ width }} />
+                      </i>
+                      <span>{count}</span>
                     </div>
                   ))}
                 </div>
               </div>
-            )}
-          </div>
-        </div>
+
+              <div className="pdp-review-list">
+                {REVIEWS.map((review) => (
+                  <article className="pdp-review" key={review.name}>
+                    <header>
+                      <span className="pdp-review-av" style={{ background: review.bg }}>
+                        {review.av}
+                      </span>
+                      <span>
+                        <strong>{review.name}</strong>
+                        <em>{review.loc}</em>
+                      </span>
+                      <span className="pdp-stars">★★★★★</span>
+                    </header>
+                    <p>“{review.text}”</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
 
         {related.length > 0 && (
-          <div className="related-section">
+          <section className="related-section">
             <div className="related-head">
               <div>
                 <span className="label">Có thể bạn thích</span>
                 <h2>Sản phẩm liên quan</h2>
               </div>
               <Link to="/shop" className="btn btn-outline btn-sm">
-                Xem tất cả →
+                Xem tất cả
+                <SproutyIcon name="arrow-right" size={15} />
               </Link>
             </div>
             <div className="grid-4">
@@ -513,8 +537,20 @@ export default function ProductDetail() {
                 <ProductCard key={p.id} product={p} />
               ))}
             </div>
-          </div>
+          </section>
         )}
+      </div>
+
+      {/* On a phone the buy buttons scroll away; keep the price and one
+          button on screen. */}
+      <div className="pdp-mobile-bar">
+        <span>
+          <strong>{formatPrice(price)}</strong>
+          {variantChoice && <em>{variant === 'smart' ? 'Smart · IoT' : 'Standard'}</em>}
+        </span>
+        <button className="btn btn-primary" onClick={addToCart}>
+          <SproutyIcon name="cart" size={17} /> Thêm vào giỏ
+        </button>
       </div>
     </>
   );

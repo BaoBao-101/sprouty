@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
 
 interface Props {
   children: ReactNode;
@@ -29,7 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
     return (
       <div className="container" style={{ padding: '80px 0', textAlign: 'center' }}>
-        <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🌱</div>
+        <div className="state-icon"><SproutyIcon name="warning" size={36} /></div>
         <h1 style={{ marginBottom: 8 }}>Trang này gặp lỗi</h1>
         <p style={{ color: 'var(--ink-4)', marginBottom: 20 }}>
           Đã có lỗi khi hiển thị nội dung. Vui lòng tải lại trang.

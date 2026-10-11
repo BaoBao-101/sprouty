@@ -1,16 +1,17 @@
 import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FAQ_DATA, type FaqGroupKey } from '@/data/faq';
+import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
 import './Faq.css';
 
-const GROUPS: Array<{ key: FaqGroupKey; icon: string; title: string }> = [
-  { key: 'orders', icon: '📦', title: 'Đặt hàng & Thanh toán' },
-  { key: 'activation', icon: '🌱', title: 'Kích hoạt & chăm cây' },
-  { key: 'product', icon: '🎨', title: 'Sản phẩm & Kit' },
-  { key: 'account', icon: '👤', title: 'Tài khoản & Video' },
-  { key: 'ai', icon: '🤖', title: 'Trợ lý AI' },
-  { key: 'workshop', icon: '🏫', title: 'Workshop' },
-  { key: 'returns', icon: '↩', title: 'Đổi trả & Hoàn tiền' },
+const GROUPS: Array<{ key: FaqGroupKey; icon: IconName; title: string }> = [
+  { key: 'orders', icon: 'card', title: 'Đặt hàng & Thanh toán' },
+  { key: 'activation', icon: 'sprout', title: 'Kích hoạt & chăm cây' },
+  { key: 'product', icon: 'gift', title: 'Sản phẩm & Kit' },
+  { key: 'account', icon: 'user', title: 'Tài khoản & Video' },
+  { key: 'ai', icon: 'chat', title: 'Trợ lý AI' },
+  { key: 'workshop', icon: 'ticket', title: 'Workshop' },
+  { key: 'returns', icon: 'return', title: 'Đổi trả & Hoàn tiền' },
 ];
 
 export default function Faq() {
@@ -56,7 +57,7 @@ export default function Faq() {
             Tìm câu trả lời nhanh cho mọi thắc mắc về sản phẩm, đặt hàng và Cây Kỷ Niệm.
           </p>
           <div className="faq-search-wrap">
-            <span className="faq-search-icon">🔍</span>
+            <span className="faq-search-icon"><SproutyIcon name="search" size={18} /></span>
             <input
               className="faq-search"
               type="text"
@@ -79,7 +80,7 @@ export default function Faq() {
                   className={`faq-nav-item${activeNav === group.key ? ' active' : ''}`}
                   onClick={() => scrollToGroup(group.key)}
                 >
-                  {group.icon} {group.title}
+                  <SproutyIcon name={group.icon} size={16} /> {group.title}
                 </button>
               ))}
             </aside>
@@ -94,7 +95,7 @@ export default function Faq() {
                   }}
                 >
                   <div className="faq-group-title">
-                    <div className="faq-group-icon">{group.icon}</div>
+                    <div className="faq-group-icon"><SproutyIcon name={group.icon} size={22} /></div>
                     {group.title}
                   </div>
 
@@ -120,7 +121,7 @@ export default function Faq() {
 
               {nothingFound && (
                 <div className="faq-empty">
-                  <div className="faq-empty-icon">🔍</div>
+                  <div className="faq-empty-icon"><SproutyIcon name="search" size={40} /></div>
                   <p>
                     Không tìm thấy kết quả cho &ldquo;{query.trim()}&rdquo;.
                     <br />
@@ -131,17 +132,17 @@ export default function Faq() {
 
               {!nothingFound && (
                 <div className="contact-cta">
-                  <div style={{ fontSize: '3rem', marginBottom: 14 }}>💬</div>
+                  <div className="faq-cta-icon"><SproutyIcon name="chat" size={44} /></div>
                   <h3>Chưa tìm thấy câu trả lời?</h3>
                   <p>
                     Đội ngũ hỗ trợ Sprouty luôn sẵn sàng giải đáp mọi thắc mắc của bạn trong vòng 24 giờ.
                   </p>
                   <div style={{ display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
                     <Link to="/contact" className="btn btn-white btn-lg">
-                      📧 Liên hệ ngay
+                      <SproutyIcon name="mail" size={17} /> Liên hệ ngay
                     </Link>
                     <Link to="/ai" className="btn btn-white-ol btn-lg">
-                      🤖 Hỏi AI Sprouty
+                      <SproutyIcon name="chat" size={17} /> Hỏi AI Sprouty
                     </Link>
                   </div>
                 </div>

@@ -451,3 +451,7 @@
   .aib-quick button,
   .aib-input button { transition: none }
 }
+
+/* Keep the original green brand mark legible on a quiet light surface. */
+.aib-launch { background: #fffdf6; color: #296e36; border-color: #dce5d3; box-shadow: 0 6px 20px rgba(35, 70, 40, .16); }
+.aib-avatar, .aib-empty-icon { transform: none; }

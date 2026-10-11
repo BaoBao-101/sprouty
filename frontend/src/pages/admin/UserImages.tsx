@@ -15,7 +15,8 @@ interface UserImage {
   product?: { id: number; name: string };
   plant?: { id: string; nickname: string; activatedAt: string } | null;
 }
-interface Gallery { images: UserImage[]; counts: Record<ImageStatus, number>; all: number; page: number; pages: number; total: number; stages: Array<{ id: string; label: string }> }
+interface Album { userId: string; productId: number; count: number; latestAt: string; cover: UserImage }
+interface Gallery { albums?: Album[]; images: UserImage[]; counts: Record<ImageStatus, number>; all: number; page: number; pages: number; total: number; stages: Array<{ id: string; label: string }> }
 const PAGE_SIZE = 10;
 const labels: Record<ImageStatus, string> = { active: 'Hiển thị trong album', hidden: 'Đã ẩn bởi quản trị', deleted: 'Đã xóa' };
 const tones: Record<ImageStatus, string> = { active: 'green', hidden: 'amber', deleted: 'grey' };
@@ -31,6 +32,7 @@ function Media({ image, full = false }: { image: UserImage; full?: boolean }) {
 }
 
 export default function UserImages() {
+  const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
   const [data, setData] = useState<Gallery | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState('');
@@ -39,6 +41,10 @@ export default function UserImages() {
   const [term, setTerm] = useState('');
   const [media, setMedia] = useState('');
   const [stage, setStage] = useState('');
+  const [ownerSearch, setOwnerSearch] = useState('');
+  const [productSearch, setProductSearch] = useState('');
+  const [ownerId, setOwnerId] = useState('');
+  const [productId, setProductId] = useState('');
   const [sort, setSort] = useState('newest');
   const [page, setPage] = useState(1);
   const [preview, setPreview] = useState<UserImage | null>(null);
@@ -52,21 +58,25 @@ export default function UserImages() {
   const load = useCallback(() => {
     const id = ++request.current;
     setState('loading');
-    const params: Record<string, unknown> = { page, limit: PAGE_SIZE, sort };
+    const params: Record<string, unknown> = { page, limit: PAGE_SIZE, sort, view: selectedAlbum ? 'moments' : 'albums' };
     if (filter) params.status = filter;
     if (term) params.search = term;
     if (media) params.media = media;
     if (stage) params.stage = stage;
+    if (ownerSearch.trim()) params.ownerSearch = ownerSearch.trim();
+    if (productSearch.trim()) params.productSearch = productSearch.trim();
+    if (ownerId) params.userId = ownerId;
+    if (productId) params.productId = productId;
     API.admin.userImages.list(params).then((result: Gallery) => {
       if (id !== request.current) return;
       setData(result); setState('ready');
       if (result.page !== page) setPage(result.page);
     }).catch((err: Error) => { if (id === request.current) { setError(err.message || 'Không tải được thư viện.'); setState('error'); } });
-  }, [page, filter, term, media, stage, sort]);
+  }, [page, filter, term, media, stage, sort, ownerSearch, productSearch, ownerId, productId, selectedAlbum]);
   useEffect(load, [load]);
   function open(image: UserImage, review = false) { setPreview(image); setModerating(review); setReason(''); setActionError(''); }
   function close() { if (!busyRef.current) { setPreview(null); setModerating(false); } }
-  function reset() { setSearch(''); setTerm(''); setFilter(''); setMedia(''); setStage(''); setPage(1); }
+  function reset() { setOwnerSearch(''); setProductSearch(''); setOwnerId(selectedAlbum?.userId || ''); setProductId(selectedAlbum ? String(selectedAlbum.productId) : ''); setSearch(''); setTerm(''); setFilter(''); setMedia(''); setStage(''); setPage(1); }
   async function moderate() {
     if (!preview || preview.status === 'deleted' || busyRef.current) return;
     const next = preview.status === 'active' ? 'hidden' : 'active';
@@ -84,7 +94,7 @@ export default function UserImages() {
     } finally { busyRef.current = false; setBusy(false); }
   }
   const counts = data?.counts;
-  const filtered = !!(filter || search.trim() || media || stage);
+  const filtered = !!(filter || search.trim() || media || stage || ownerSearch || productSearch);
   const summary: Array<{ title: string; hint: string; value?: number; icon: AdminIconName; tone: string }> = [
     { title: 'Tổng khoảnh khắc', hint: 'Ảnh và video từ album cây', value: data?.all, icon: 'images', tone: 'green' },
     { title: 'Đang hiển thị', hint: 'Trong album của người trồng', value: counts?.active, icon: 'eye', tone: 'blue' },
@@ -92,34 +102,36 @@ export default function UserImages() {
     { title: 'Đã xóa', hint: 'Chỉ lưu thông tin đối chiếu', value: counts?.deleted, icon: 'trash', tone: 'grey' },
   ];
   return <div className="user-garden-gallery">
-    <header className="ug-header"><div><span className="ug-eyebrow">NỘI DUNG TỪ NGƯỜI TRỒNG</span><h1>Khoảnh khắc từ vườn cây</h1><p>Ảnh và video người dùng lưu lại trong hành trình chăm sóc cây của mình.</p></div>
+    <header className="ug-header"><div><span className="ug-eyebrow">NỘI DUNG TỪ NGƯỜI TRỒNG</span><h1>Quản lý ảnh theo người đăng</h1><p>Theo dõi người đăng, sản phẩm và nội dung trong từng album.</p></div>
       <button className="btn btn-ghost btn-sm" onClick={load} disabled={state === 'loading'}><AdminIcon name="refresh" size={16} />Làm mới</button></header>
     <div className="ug-summary">{summary.map(item => <article key={item.title} className={`ug-stat ug-${item.tone}`}><span className="ug-stat-icon"><AdminIcon name={item.icon} size={21} /></span><div><span>{item.title}</span><strong>{state === 'ready' && item.value !== undefined ? item.value.toLocaleString('vi-VN') : '—'}</strong><small>{item.hint}</small></div></article>)}</div>
     <div className="ug-privacy"><AdminIcon name="lock" size={17} /><span>Nội dung thuộc album của từng người dùng. Admin kiểm duyệt tại đây; đây không phải thư viện ảnh sản phẩm hay bảng tin công khai.</span></div>
     <section className="ug-library" aria-label="Thư viện khoảnh khắc">
-      <div className="ug-filter-top"><div className="ug-tabs" role="group" aria-label="Lọc trạng thái">{([{ key: '', label: 'Tất cả', count: data?.all }, { key: 'active', label: 'Đang hiển thị', count: counts?.active }, { key: 'hidden', label: 'Đã ẩn', count: counts?.hidden }, { key: 'deleted', label: 'Đã xóa', count: counts?.deleted }] as const).map(item => <button key={item.key} className={filter === item.key ? 'active' : ''} aria-pressed={filter === item.key} onClick={() => { setFilter(item.key); setPage(1); }}>{item.label}<span>{item.count ?? '—'}</span></button>)}</div><span className="ug-page-size">10 khoảnh khắc / trang</span></div>
+<div className="ug-album-heading">{selectedAlbum && <><button className="btn btn-ghost" onClick={() => { setSelectedAlbum(null); setOwnerId(''); setProductId(''); setStage(''); setFilter(''); setMedia(''); setSearch(''); setTerm(''); setPage(1); }}>← Tất cả album</button><h2>{selectedAlbum.cover.product?.name} · {plantName(selectedAlbum.cover)}</h2><p>Người đăng: <strong>{selectedAlbum.cover.user?.name}</strong> · {selectedAlbum.cover.user?.email}</p></>}</div>\n      <div className="ug-filter-top"><div className="ug-tabs" role="group" aria-label="Lọc trạng thái">{([{ key: '', label: 'Tất cả', count: data?.all }, { key: 'active', label: 'Đang hiển thị', count: counts?.active }, { key: 'hidden', label: 'Đã ẩn', count: counts?.hidden }, { key: 'deleted', label: 'Đã xóa', count: counts?.deleted }] as const).map(item => <button key={item.key} className={filter === item.key ? 'active' : ''} aria-pressed={filter === item.key} onClick={() => { setFilter(item.key); setPage(1); }}>{item.label}<span>{item.count ?? '—'}</span></button>)}</div><span className="ug-page-size">{selectedAlbum ? '10 khoảnh khắc / trang' : '10 album / trang'}</span></div>
+      <div className="ug-ownership-filters" hidden={!!selectedAlbum}>
+        <label><span>Người đăng</span><input value={ownerSearch} maxLength={100} placeholder="Nhập tên hoặc email người đăng…" onChange={event => { setOwnerSearch(event.target.value); setOwnerId(''); setPage(1); }} /></label>
+        <label><span>Sản phẩm được đăng ảnh</span><input value={productSearch} maxLength={100} placeholder="Nhập tên sản phẩm…" onChange={event => { setProductSearch(event.target.value); setProductId(''); setPage(1); }} /></label>
+      </div>
+      {!selectedAlbum && (ownerId || productId) && <div className="ug-scope" role="status"><strong>Đang lọc chính xác:</strong>{ownerId && <button onClick={() => { setOwnerId(''); setPage(1); }}>Người đăng: {data?.images.find(image => image.user?.id === ownerId)?.user?.name || ownerId} ×</button>}{productId && <button onClick={() => { setProductId(''); setPage(1); }}>Sản phẩm #{productId} ×</button>}</div>}
       <div className="ug-toolbar"><SearchBox value={search} placeholder="Tìm tên cây, người trồng, email, chú thích…" onChange={setSearch} />
         <label><span>Loại nội dung</span><select value={media} onChange={event => { setMedia(event.target.value); setPage(1); }}><option value="">Ảnh và video</option><option value="image">Chỉ ảnh</option><option value="video">Chỉ video</option></select></label>
         <label><span>Giai đoạn lúc đăng</span><select value={stage} onChange={event => { setStage(event.target.value); setPage(1); }}><option value="">Tất cả giai đoạn</option>{data?.stages.map(item => <option value={item.id} key={item.id}>{item.label}</option>)}</select></label>
         <label><span>Sắp xếp</span><select value={sort} onChange={event => { setSort(event.target.value); setPage(1); }}><option value="newest">Mới nhất trước</option><option value="oldest">Cũ nhất trước</option></select></label>
       </div>
-      <div className="ug-result-line"><span>{state === 'ready' && data ? `${data.total.toLocaleString('vi-VN')} khoảnh khắc${filtered ? ' phù hợp' : ' trong thư viện'}` : state === 'loading' ? 'Đang tải thư viện…' : 'Chưa tải được thư viện'}</span>{filtered && <button onClick={reset}>Xóa bộ lọc</button>}</div>
+      <div className="ug-result-line"><span>{state === 'ready' && data ? `${data.total.toLocaleString('vi-VN')} ${selectedAlbum ? 'khoảnh khắc' : 'album'}${filtered ? ' phù hợp' : ' trong thư viện'}` : state === 'loading' ? 'Đang tải thư viện…' : 'Chưa tải được thư viện'}</span>{filtered && <button onClick={reset}>Xóa bộ lọc</button>}</div>
       {state === 'loading' && <div className="ug-grid ug-loading" role="status" aria-label="Đang tải nội dung">{[1, 2, 3, 4, 5].map(i => <div key={i} />)}</div>}
       {state === 'error' && <div className="ug-empty" role="alert"><AdminIcon name="alert" size={32} /><h2>Không mở được thư viện</h2><p>{error}</p><button className="btn btn-primary" onClick={load}>Thử lại</button></div>}
       {state === 'ready' && data && <>
-        {!data.images.length && <div className="ug-empty"><AdminIcon name="seed" size={36} /><h2>{filtered ? 'Chưa có khoảnh khắc phù hợp' : 'Vườn cây chưa có khoảnh khắc nào'}</h2><p>{filtered ? 'Thử đổi từ khóa hoặc bỏ bớt bộ lọc.' : 'Ảnh và video sẽ xuất hiện khi người dùng tải lên album cây của họ.'}</p>{filtered && <button className="btn btn-ghost" onClick={reset}>Xóa bộ lọc</button>}</div>}
-        <div className="ug-grid">{data.images.map(image => <article className={`ug-card ${image.status === 'deleted' ? 'ug-deleted' : ''}`} key={image.id}>
-          <button className="ug-card-media" onClick={() => open(image)} aria-label={`Xem ${image.title || 'khoảnh khắc'} của ${plantName(image)}`}><Media image={image} /><span className="ug-media-type"><AdminIcon name={isVideo(image) ? 'video' : 'images'} size={13} />{isVideo(image) ? 'Video' : 'Ảnh'}</span><span className="ug-view-label"><AdminIcon name="eye" size={16} />Xem chi tiết</span></button>
-          <div className="ug-card-body"><Pill tone={tones[image.status]}>{labels[image.status]}</Pill><h2 title={image.title || 'Khoảnh khắc chưa đặt tên'}>{image.title || 'Khoảnh khắc chưa đặt tên'}</h2>
-            <div className="ug-plant-name"><AdminIcon name="seed" size={17} /><strong>{plantName(image)}</strong></div>
-            <div className="ug-stage">{image.stageLabel ? `Lúc đăng: ${image.stageLabel}` : 'Chưa ghi nhận giai đoạn lúc đăng'}</div>
-            <p className="ug-caption">{image.note || 'Người trồng chưa thêm ghi chú cho khoảnh khắc này.'}</p>
-            <div className="ug-owner"><span className="ug-avatar">{(image.user?.name || '?').slice(0, 1).toUpperCase()}</span><div><strong>{image.user?.name || 'Người trồng'}</strong><span title={image.user?.email}>{image.user?.email || 'Chưa có email'}</span></div></div>
-            <time className="ug-upload-time" dateTime={image.createdAt}><AdminIcon name="calendar" size={13} />{date(image.createdAt)}</time>
-          </div><div className="ug-card-actions"><button onClick={() => open(image)}>Chi tiết<AdminIcon name="arrow-right" size={14} /></button>{image.status !== 'deleted' ? <button className={image.status === 'active' ? 'ug-hide' : 'ug-restore'} onClick={() => open(image, true)}><AdminIcon name={image.status === 'active' ? 'shield' : 'eye'} size={14} />{image.status === 'active' ? 'Ẩn nội dung' : 'Hiện lại'}</button> : <span>Không thể khôi phục</span>}</div>
-        </article>)}</div>
-        <div className="ug-result-footer"><span>{data.total ? `Hiển thị ${(data.page - 1) * PAGE_SIZE + 1}–${Math.min(data.page * PAGE_SIZE, data.total)} / ${data.total} khoảnh khắc` : '0 khoảnh khắc'}</span><span>Trang {data.page} / {data.pages}</span></div>
-        <Pagination page={data.page} pages={data.pages} total={data.total} unit="khoảnh khắc" onChange={setPage} />
+        {!(selectedAlbum ? data.images.length : data.albums?.length) && <div className="ug-empty"><AdminIcon name="seed" size={36} /><h2>{filtered ? 'Chưa có khoảnh khắc phù hợp' : 'Vườn cây chưa có khoảnh khắc nào'}</h2><p>{filtered ? 'Thử đổi từ khóa hoặc bỏ bớt bộ lọc.' : 'Ảnh và video sẽ xuất hiện khi người dùng tải lên album cây của họ.'}</p>{filtered && <button className="btn btn-ghost" onClick={reset}>Xóa bộ lọc</button>}</div>}
+        {!selectedAlbum ? <div className="ug-album-grid">{data.albums?.map(album => <button className="ug-album-card" key={album.userId + ':' + album.productId} onClick={() => { setSelectedAlbum(album); setOwnerId(album.userId); setProductId(String(album.productId)); setFilter(''); setStage(''); setMedia(''); setSearch(''); setTerm(''); setOwnerSearch(''); setProductSearch(''); setPage(1); }}>
+          <span className="ug-album-cover"><Media image={album.cover} /></span><span className="ug-album-info"><small>ALBUM SẢN PHẨM #{album.productId}</small><strong>{album.cover.product?.name || 'Sản phẩm'}</strong><span>Cây: {plantName(album.cover)}</span><b>{album.cover.user?.name || 'Người đăng'}</b><span>{album.cover.user?.email}</span><em>{album.count} khoảnh khắc{filtered ? ' phù hợp bộ lọc' : ''} · Mở album →</em></span>
+        </button>)}</div> : <div className="ug-album-stages">{[...data.stages, { id: 'unknown', label: 'Chưa rõ giai đoạn' }].map(item => {
+          const images = data.images.filter(image => (image.stage || 'unknown') === item.id);
+          if (!images.length) return null;
+          return <section className="ug-album-stage" key={item.id}><h2>{images[0].stageLabel || item.label} <small>{images.length} mục trên trang này</small></h2><div className="ug-grid">{images.map(image => <article className="ug-card" key={image.id}><button className="ug-card-media" onClick={() => open(image)}><Media image={image} /></button><div className="ug-card-body"><Pill tone={tones[image.status]}>{labels[image.status]}</Pill><h2>{image.title || image.asset?.originalName || 'Khoảnh khắc'}</h2><time>{date(image.createdAt)}</time></div><div className="ug-card-actions"><button onClick={() => open(image)}>Xem chi tiết</button>{image.status !== 'deleted' && <button onClick={() => open(image, true)}>{image.status === 'active' ? 'Ẩn nội dung' : 'Hiện lại'}</button>}</div></article>)}</div></section>;
+        })}</div>}
+        <div className="ug-result-footer"><span>{data.total ? `Hiển thị ${(data.page - 1) * PAGE_SIZE + 1}–${Math.min(data.page * PAGE_SIZE, data.total)} / ${data.total} ${selectedAlbum ? 'khoảnh khắc' : 'album'}` : '0 khoảnh khắc'}</span><span>Trang {data.page} / {data.pages}</span></div>
+        <Pagination page={data.page} pages={data.pages} total={data.total} unit={selectedAlbum ? "khoảnh khắc" : "album"} onChange={setPage} />
       </>}
     </section>
     {preview && <Modal title={preview.title || 'Chi tiết khoảnh khắc'} subtitle={`Album cây ${plantName(preview)}`} width={1080} onClose={close} footer={<><span className="ug-modal-footnote"><AdminIcon name="shield" size={15} />Thao tác kiểm duyệt được lưu trong nhật ký.</span><button className="btn btn-ghost" disabled={busy} onClick={close}>Đóng</button></>}>

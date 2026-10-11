@@ -1,3 +1,5 @@
+import { AiBrandMark } from '@/components/AiBrandMark';
+import { AiProductLinks } from '@/components/AiProductLinks';
 /**
  * The assistant, reachable from wherever the reader already is.
  *
@@ -120,7 +122,7 @@ export function AiBubble() {
         <div className="aib-panel" role="dialog" aria-label="Trợ lý Sprouty">
           <header className="aib-head">
             <span className="aib-avatar">
-              <SproutyIcon name="sprout" size={22} />
+              <AiBrandMark size={22} />
             </span>
             <div className="aib-who">
               <strong>Trợ lý Sprouty</strong>
@@ -153,7 +155,7 @@ export function AiBubble() {
             {messages.length === 0 && !typing && (
               <div className="aib-empty">
                 <span className="aib-empty-icon">
-                  <SproutyIcon name="sparkle" size={28} />
+                  <AiBrandMark size={28} />
                 </span>
                 <p>
                   Hỏi mình về <b>kit trồng cây</b>, cách chăm cây, thiết bị IoT hay lịch workshop
@@ -176,12 +178,13 @@ export function AiBubble() {
               <div className={`aib-msg aib-msg-${m.role}`} key={i}>
                 {m.role === 'ai' && (
                   <span className="aib-msg-avatar">
-                    <SproutyIcon name="sprout" size={15} />
+                    <AiBrandMark size={15} />
                   </span>
                 )}
                 <div className="aib-bubble">
                   {m.imageUrl && <img src={m.imageUrl} alt="" />}
                   <p dangerouslySetInnerHTML={{ __html: renderMarkup(m.text) }} />
+                  {m.role === 'ai' && <AiProductLinks products={m.products} />}
                   <time>{m.time}</time>
                 </div>
               </div>
@@ -190,7 +193,7 @@ export function AiBubble() {
             {typing && (
               <div className="aib-msg aib-msg-ai">
                 <span className="aib-msg-avatar">
-                  <SproutyIcon name="sprout" size={15} />
+                  <AiBrandMark size={15} />
                 </span>
                 <div className="aib-bubble aib-typing" aria-label="Đang trả lời">
                   <i />
@@ -249,7 +252,7 @@ export function AiBubble() {
         aria-expanded={open}
         onClick={launch}
       >
-        <SproutyIcon name={open ? 'close' : 'chat'} size={26} />
+        {open ? <SproutyIcon name="close" size={26} /> : <AiBrandMark size={30} />}
       </button>
     </div>
   );

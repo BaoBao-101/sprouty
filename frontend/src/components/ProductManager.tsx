@@ -1,3 +1,4 @@
+import { confirmAction } from '@/services/dialog';
 import { useState } from 'react';
 import { ProductEditor, type AdminProduct } from './ProductEditor';
 import { VideoPanel } from './VideoPanel';
@@ -67,7 +68,7 @@ function ProductRow({
 
   async function remove() {
     if (
-      !confirm(
+      !await confirmAction(
         `Xoá sản phẩm “${product.name}”?\n\nNếu sản phẩm đã có trong đơn hàng, nó sẽ được chuyển sang Lưu trữ thay vì xoá hẳn.`,
       )
     )

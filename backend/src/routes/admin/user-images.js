@@ -5,10 +5,13 @@ import { parseOrThrow } from '../../utils/validation.js';
 import { speciesFor, stageLabel, STAGES } from '../../services/plant-sim.js';
 
 const querySchema = z.object({
+  view: z.enum(['moments', 'albums']).default('moments'),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(10),
   status: z.enum(['active', 'hidden', 'deleted']).optional(),
   search: z.string().trim().max(100).optional(),
+  ownerSearch: z.string().trim().max(100).optional(),
+  productSearch: z.string().trim().max(100).optional(),
   media: z.enum(['image', 'video']).optional(),
   stage: z.string().refine(value => STAGES.some(stage => stage.id === value), 'Giai đoạn không hợp lệ.').optional(),
   sort: z.enum(['newest', 'oldest']).default('newest'),
@@ -36,10 +39,36 @@ export default async function adminUserImageRoutes(fastify) {
     const { page, limit, sort, search, status, stage, media, productId, userId } = query;
     const where = { ...(status && { status }), ...(stage && { stage }), ...(productId && { productId }), ...(userId && { userId }),
       ...(media && { asset: { mimeType: { startsWith: `${media}/` } } }) };
+    if (query.ownerSearch) {
+      const contains = { contains: query.ownerSearch, mode: 'insensitive' };
+      where.user = { OR: [{ name: contains }, { email: contains }] };
+    }
+    if (query.productSearch) where.product = { name: { contains: query.productSearch, mode: 'insensitive' } };
     if (search) {
       const contains = { contains: search, mode: 'insensitive' };
       const plants = await fastify.prisma.virtualPlant.findMany({ where: { nickname: contains }, select: { userId: true, productId: true } });
       where.OR = [{ title: contains }, { note: contains }, { user: { name: contains } }, { user: { email: contains } }, { product: { name: contains } }, ...plants.map(plant => ({ userId: plant.userId, productId: plant.productId }))];
+    }
+    if (query.view === 'albums') {
+      const grouped = await fastify.prisma.userProductImage.groupBy({
+        by: ['userId', 'productId'], where, _count: { _all: true }, _max: { createdAt: true },
+        orderBy: [{ _max: { createdAt: sort === 'oldest' ? 'asc' : 'desc' } }, { userId: 'asc' }, { productId: 'asc' }],
+      });
+      const pages = Math.max(1, Math.ceil(grouped.length / limit));
+      const currentPage = Math.min(page, pages);
+      const albums = await Promise.all(grouped.slice((currentPage - 1) * limit, currentPage * limit).map(async group => {
+        const pair = { userId: group.userId, productId: group.productId };
+        const [cover, plant] = await Promise.all([
+          fastify.prisma.userProductImage.findFirst({ where: { AND: [where, pair] }, include, orderBy: { createdAt: 'desc' } }),
+          fastify.prisma.virtualPlant.findUnique({ where: { userId_productId: pair } }),
+        ]);
+        return { ...pair, count: group._count._all, latestAt: group._max.createdAt, cover: imageJourney(cover, plant) };
+      }));
+      const statuses = await fastify.prisma.userProductImage.groupBy({ by: ['status'], _count: { _all: true } });
+      const counts = { active: 0, hidden: 0, deleted: 0 };
+      for (const item of statuses) counts[item.status] = item._count._all;
+      return { albums, images: [], total: grouped.length, page: currentPage, pages, counts,
+        all: counts.active + counts.hidden + counts.deleted, stages: STAGES.map(stage => ({ id: stage.id, label: stage.label })) };
     }
     const [total, groups] = await Promise.all([
       fastify.prisma.userProductImage.count({ where }),

@@ -260,10 +260,10 @@ export function WorkshopRegisterModal({
                   {workshop.title}
                 </h3>
                 <div className="ws-modal-meta">
-                  📅 {formatWorkshopWhen(workshop)}
+                  <SproutyIcon name="calendar" size={15} /> {formatWorkshopWhen(workshop)}
                   <br />
-                  📍 {workshop.location}
-                  {workshop.ageRange && <> · 👶 {workshop.ageRange}</>}
+                  <SproutyIcon name="pin" size={15} /> {workshop.location}
+                  {workshop.ageRange && <> · <SproutyIcon name="child" size={15} /> {workshop.ageRange}</>}
                 </div>
                 <div className="ws-modal-seats">
                   Còn <strong>{workshop.seatsLeft}</strong>/{workshop.capacity} chỗ
@@ -424,7 +424,7 @@ export function WorkshopRegisterModal({
                         onChange={() => setPayMethod('online')}
                       />
                       <div>
-                        <strong>💳 Thanh toán online ngay</strong>
+                        <strong><SproutyIcon name="card" size={16} /> Thanh toán online ngay</strong>
                         <div className="ws-pay-choice-hint ok">
                           Quét QR chuyển khoản — chỗ được giữ chắc chắn cho bé.
                         </div>
@@ -439,9 +439,9 @@ export function WorkshopRegisterModal({
                         onChange={() => setPayMethod('onsite')}
                       />
                       <div>
-                        <strong>🏫 Thanh toán tại buổi học</strong>
+                        <strong><SproutyIcon name="ticket" size={16} /> Thanh toán tại buổi học</strong>
                         <div className="ws-pay-choice-hint warn">
-                          ⚠️ Chưa chắc chắn còn chỗ. Khi buổi học kín, suất sẽ ưu tiên cho những
+                          <SproutyIcon name="warning" size={15} /> Chưa chắc chắn còn chỗ. Khi buổi học kín, suất sẽ ưu tiên cho những
                           người đã thanh toán online trước.
                         </div>
                       </div>

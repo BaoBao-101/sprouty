@@ -14,7 +14,7 @@ function _showApiDownBanner() {
   div.id = 'api-down-banner';
   div.setAttribute('role', 'alert');
   div.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#FEF3C7;color:#92400E;border-bottom:1.5px solid #FDE68A;padding:10px 16px;font-family:system-ui,sans-serif;font-size:.9rem;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06)';
-  div.textContent = '⚠️ Hệ thống đang bảo trì — một số tính năng tạm thời không khả dụng. Vui lòng thử lại sau ít phút.';
+  div.textContent = 'Hệ thống đang bảo trì — một số tính năng tạm thời không khả dụng. Vui lòng thử lại sau ít phút.';
   document.body && document.body.appendChild(div);
 }
 

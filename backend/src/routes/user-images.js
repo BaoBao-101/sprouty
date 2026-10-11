@@ -6,6 +6,7 @@ import { intParam, multipartFields, noHtml, parseOrThrow } from '../utils/valida
 import { canAccessProductFeature, isVipUser } from '../services/access.js';
 import { STAGES, speciesFor, stageLabel } from '../services/plant-sim.js';
 import { createAsset, maxLeafVideoBytes } from '../services/storage/index.js';
+import { albumFormat } from '../services/storage/album-formats.js';
 
 const updateSchema = z.object({
   title: noHtml('Tiêu đề').and(z.string().max(120)).optional().nullable(),
@@ -13,11 +14,6 @@ const updateSchema = z.object({
 });
 
 // The shared leafLimit policy returns null for unlimited active VIP albums.
-
-// Guards against accidental-upload spam: a user can remove (and re-upload
-// a replacement) at most this many leaves per kit — soft-deleted rows are
-// kept, so counting them doubles as the usage counter, no extra column.
-const MAX_REMOVALS_PER_PRODUCT = 5;
 
 async function maxLeavesFor(prisma, userId) {
   return leafLimit(await isVipUser(prisma, userId));
@@ -87,7 +83,7 @@ export default async function userImageRoutes(fastify) {
       images: images.map((row) => imageDto(row, product)),
       maxLeaves,
       removalsUsed,
-      removalsMax: MAX_REMOVALS_PER_PRODUCT,
+      removalsMax: null,
       // Everything the album needs to render itself as this plant's journey,
       // rather than as a generic grid of pictures.
       product: product ? { id: product.id, name: product.name } : null,
@@ -121,7 +117,12 @@ export default async function userImageRoutes(fastify) {
       throw new AppError(`Cây đã đủ ${maxLeaves} lá kỷ niệm rồi — hãy xoá bớt ảnh/video cũ nếu muốn thêm mới.`, 409);
     }
     const { file, fields } = await multipartFields(req);
-    const isVideo = (file?.mimetype || '').startsWith('video/');
+    const requestedStage = fields.stage ? String(fields.stage) : null;
+    if (requestedStage && !STAGES.some((stage) => stage.id === requestedStage)) {
+      throw new AppError('Giai đoạn không hợp lệ.', 400);
+    }
+    const format = albumFormat(file?.filename, file?.mimetype);
+    const isVideo = (format?.[0] || file?.mimetype || '').startsWith('video/');
     const category = isVideo ? 'video' : 'image';
     const asset = await createAsset(fastify.prisma, {
       ownerUserId: req.user.id,
@@ -129,14 +130,12 @@ export default async function userImageRoutes(fastify) {
       kind: 'user_image',
       file,
       category,
+      albumMedia: true,
       // Leaf videos are phone clips, not produced instructional content —
       // cap them well below the admin instruction-video limit.
       maxBytesOverride: isVideo ? maxLeafVideoBytes() : undefined,
     });
-    // Stamp the growth stage the plant is at right now. Recorded at upload
-    // rather than derived later: the plant will have moved on by the time
-    // anyone looks, and a photo of a seedling filed under "Ra hoa" would make
-    // the album lie about the journey it exists to record.
+    // Preserve the selected photo stage; older clients default to the current stage.
     const [plant, product] = await Promise.all([
       plantFor(fastify.prisma, req.user.id, productId),
       fastify.prisma.product.findUnique({
@@ -152,7 +151,7 @@ export default async function userImageRoutes(fastify) {
         assetId: asset.id,
         title: fields.title ? String(fields.title).slice(0, 120) : null,
         note: fields.note ? String(fields.note).slice(0, 1000) : null,
-        stage: plant?.stage ?? null,
+        stage: requestedStage ?? plant?.stage ?? null,
       },
       include: { asset: true },
     });
@@ -182,10 +181,6 @@ export default async function userImageRoutes(fastify) {
       where: { id: req.params.imageId, userId: req.user.id, status: { not: 'deleted' } },
     });
     if (!existing) return reply.code(404).send({ message: 'Không tìm thấy ảnh.' });
-    const removalsUsed = await removalsUsedFor(fastify.prisma, req.user.id, existing.productId);
-    if (removalsUsed >= MAX_REMOVALS_PER_PRODUCT) {
-      throw new AppError(`Mỗi cây chỉ được gỡ tối đa ${MAX_REMOVALS_PER_PRODUCT} lần — bạn đã dùng hết lượt gỡ.`, 403);
-    }
     const image = await fastify.prisma.userProductImage.update({
       where: { id: existing.id },
       data: { status: 'deleted' },

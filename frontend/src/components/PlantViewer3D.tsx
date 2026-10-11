@@ -8,16 +8,19 @@ import './PlantViewer3D.css';
 import { plantBackdrop } from './plant-backdrop';
 import { buildAmbience, sceneLighting, type Ambience } from './garden-ambience';
 import type { SceneKey } from './garden-looks';
+import { buildGadgets, type Gadget, type Gadgets } from './plant-devices';
 
 type Props = ModelOptions & {
   /** The garden's scene; `natural` follows the clock through `isNight`. */
   scene?: SceneKey;
   /** Real time of day, for the regular scene. */
   isNight?: boolean;
+  /** The parts wired on the IoT board, built into the pot. */
+  gadgets?: Gadget[];
 };
 type Viewer = {
   scene: T.Scene; camera: T.PerspectiveCamera; renderer: T.WebGLRenderer; controls: OrbitControls;
-  draw: () => void; model?: T.Group; ambience?: Ambience | null;
+  draw: () => void; model?: T.Group; ambience?: Ambience | null; gadgets?: Gadgets | null;
   hemi: T.HemisphereLight; sun: T.DirectionalLight; rim: T.DirectionalLight; env: T.Texture;
 };
 
@@ -44,10 +47,11 @@ export default function PlantViewer3D(props:Props) {
     renderer.toneMappingExposure=1.25;
     const scene3=new T.Scene();
     const camera=new T.PerspectiveCamera(38,1,.05,30);
-    camera.position.set(2.4,1.6,3.5);
+    // Close enough that a seedling fills the frame; zoom out to see the whole pot.
+    camera.position.set(1.85,1.25,2.7);
     const controls=new OrbitControls(camera,renderer.domElement);
     controls.target.set(0,.48,0);
-    controls.enablePan=false; controls.minDistance=1.8; controls.maxDistance=7;
+    controls.enablePan=false; controls.minDistance=1.2; controls.maxDistance=7;
     controls.minPolarAngle=.08; controls.maxPolarAngle=Math.PI-.08;
     controls.update(); controls.saveState();
     const hemi=new T.HemisphereLight('#FFF6DE','#707B65',2.5); scene3.add(hemi);
@@ -95,10 +99,11 @@ export default function PlantViewer3D(props:Props) {
     const started=performance.now();
     const tick=(now:number)=>{
       frame=requestAnimationFrame(tick);
-      if(!engine.ambience || !onScreen || document.hidden) return;
+      if((!engine.ambience && !engine.gadgets?.animated) || !onScreen || document.hidden) return;
       if(now-last<1000/AMBIENT_FPS) return;
       last=now;
-      engine.ambience.update((now-started)/1000);
+      engine.ambience?.update((now-started)/1000);
+      engine.gadgets?.update((now-started)/1000);
       draw();
     };
     if(!still) frame=requestAnimationFrame(tick);
@@ -111,6 +116,7 @@ export default function PlantViewer3D(props:Props) {
       canvas.removeEventListener('keydown',key);canvas.removeEventListener('webglcontextlost',lost);
       if(engine.model)disposePlantModel(engine.model);
       if(engine.ambience){scene3.remove(engine.ambience.group);engine.ambience.dispose();}
+      if(engine.gadgets){scene3.remove(engine.gadgets.group);engine.gadgets.dispose();}
       if(scene3.background instanceof T.Texture) scene3.background.dispose();
       env.dispose();
       renderer.dispose();renderer.forceContextLoss();canvas.remove();viewer.current=null;
@@ -148,9 +154,26 @@ export default function PlantViewer3D(props:Props) {
     engine.draw();
   },[scene,props.isNight]);
 
+  // The IoT parts wired on the board, standing in the pot. Rebuilt when the
+  // plant grows, so the lamp stays above the leaves.
+  const gadgetKey=(props.gadgets??[]).map(g=>g.type+(g.on?'+':'')).sort().join(',');
+  useEffect(()=>{
+    const engine=viewer.current;if(!engine)return;
+    if(engine.gadgets){engine.scene.remove(engine.gadgets.group);engine.gadgets.dispose();}
+    const plant=engine.model?.getObjectByName('plant');
+    const box=plant?new T.Box3().setFromObject(plant):null;
+    const top=box && !box.isEmpty()?box.max.y:.3;
+    engine.gadgets=buildGadgets(props.gadgets??[],top);
+    if(engine.gadgets){engine.gadgets.group.visible=!rootsRef.current;engine.scene.add(engine.gadgets.group);}
+    engine.draw();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[gadgetKey,props.stage,props.progress,props.form,props.health]);
+
   function toggleRoots(){
     const next=!roots;setRoots(next);rootsRef.current=next;
     const shell=viewer.current?.model?.getObjectByName('soil-shell');if(shell)shell.visible=!next;
+    // Probes in the soil would hang in the air with the soil hidden.
+    if(viewer.current?.gadgets) viewer.current.gadgets.group.visible=!next;
     viewer.current?.draw();
   }
   return <div className="plant-viewer">

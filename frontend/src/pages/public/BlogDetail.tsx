@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { API, API_BASE } from '@/services/api';
 import { formatPrice } from '@/types/product';
+import { productImage } from '@/services/products';
+import { SproutyIcon } from '@/components/icons/SproutyIcon';
+import './BlogDetail.css';
 
 interface RecommendedProduct {
   id: number;
@@ -13,6 +16,7 @@ interface RecommendedProduct {
   description?: string;
   price: number;
   oldPrice?: number | null;
+  category?: string;
 }
 
 interface Post {
@@ -20,33 +24,54 @@ interface Post {
   excerpt?: string;
   coverUrl?: string;
   contentHtml: string;
+  publishedAt?: string | null;
+  createdAt?: string;
+  author?: { name: string } | null;
   recommendedProducts?: RecommendedProduct[];
 }
 
+/** About 200 words a minute, the pace a parent reads at between other things. */
+function readingMinutes(html: string) {
+  const words = html.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / 200));
+}
+
+/**
+ * A product the article recommends, as the shop shows one: picture first,
+ * then name, a two-line summary and the price. The old card ran the whole
+ * description down a narrow column and printed the original price as plain
+ * text, so it read as a second, higher price rather than a discount.
+ */
 function RecommendedCard({ product }: { product: RecommendedProduct }) {
-  const image = product.images?.[0] || `/assets/images/products/kit-${product.id}.svg`;
+  const image = productImage({ id: product.id, images: product.images });
+  const plan = product.category === 'membership';
+  const discount =
+    product.oldPrice && product.oldPrice > product.price
+      ? Math.round((1 - product.price / product.oldPrice) * 100)
+      : 0;
 
   return (
-    <Link className="blog-reco-card" to={`/shop/${product.id}`}>
-      <div className="blog-reco-thumb" style={{ background: product.bgColor || '#FEF5EA' }}>
-        <img src={image} alt={product.name} loading="lazy" />
-      </div>
-      <div className="blog-reco-body">
-        <div>
-          <div className="blog-reco-title">{product.name}</div>
-          <div className="blog-reco-meta">
-            {product.collection} · {product.ageRange}
-          </div>
-          <div className="blog-reco-meta">{product.description}</div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          {!!product.oldPrice && product.oldPrice > product.price && (
-            <span className="blog-reco-old">{formatPrice(product.oldPrice)}</span>
-          )}
-          <div className="blog-reco-price">{formatPrice(Number(product.price) || 0)}</div>
-        </div>
-        <span className="btn btn-primary btn-sm blog-reco-cta">Xem sản phẩm</span>
-      </div>
+    <Link className="bd-reco" to={plan ? '/vip' : `/shop/${product.id}`}>
+      <span className="bd-reco-thumb" style={{ background: product.bgColor || '#FEF5EA' }}>
+        <img src={image} alt="" loading="lazy" />
+        {discount > 0 && <span className="bd-reco-off">−{discount}%</span>}
+      </span>
+      <span className="bd-reco-body">
+        <span className="bd-reco-meta">
+          {plan ? 'Gói thành viên' : [product.collection, product.ageRange].filter(Boolean).join(' · ')}
+        </span>
+        <strong>{product.name}</strong>
+        {product.description && <span className="bd-reco-desc">{product.description}</span>}
+        <span className="bd-reco-foot">
+          <span className="bd-reco-price">
+            {formatPrice(Number(product.price) || 0)}
+            {discount > 0 && <s>{formatPrice(product.oldPrice as number)}</s>}
+          </span>
+          <span className="bd-reco-go">
+            Xem <SproutyIcon name="arrow-right" size={15} />
+          </span>
+        </span>
+      </span>
     </Link>
   );
 }
@@ -92,8 +117,8 @@ export default function BlogDetail() {
   const recommendations = (post?.recommendedProducts || []).filter(Boolean);
 
   return (
-    <main className="section-sm">
-      <article className="container" style={{ maxWidth: 820 }}>
+    <main className="section-sm bd">
+      <article className="container bd-article">
         <Link to="/blog" className="blog-back">
           ← Blog
         </Link>
@@ -103,24 +128,32 @@ export default function BlogDetail() {
 
         {post && (
           <>
-            <h1 style={{ marginTop: 16 }}>{post.title}</h1>
-            {post.excerpt && <p className="lead">{post.excerpt}</p>}
+            <header className="bd-head">
+              <span className="bd-meta">
+                {new Date(post.publishedAt || post.createdAt || Date.now()).toLocaleDateString('vi-VN', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                })}
+                {post.author?.name ? ` · ${post.author.name}` : ''} · {readingMinutes(post.contentHtml)} phút đọc
+              </span>
+              <h1>{post.title}</h1>
+              {post.excerpt && <p className="bd-lead">{post.excerpt}</p>}
+            </header>
             {post.coverUrl && <img src={post.coverUrl} alt="" className="blog-cover" />}
             {/* contentHtml is rendered from Markdown by the backend and only
                 employees/admins can author it. */}
             <div className="blog-content" dangerouslySetInnerHTML={{ __html: post.contentHtml }} />
 
             {recommendations.length > 0 && (
-              <section className="blog-recommendations">
-                <div className="section-title" style={{ marginBottom: 0 }}>
-                  <div className="eyebrow">Sản phẩm đề xuất</div>
-                  <h2>Gợi ý phù hợp với bài viết này</h2>
-                  <p className="lead">
-                    Các sản phẩm dưới đây liên quan trực tiếp đến chủ đề bài viết. Bấm vào để chuyển
-                    sang trang bán hàng.
-                  </p>
+              <section className="bd-recos" aria-label="Sản phẩm đề xuất">
+                <div className="bd-recos-head">
+                  <span className="bd-recos-kicker">
+                    <SproutyIcon name="sprout" size={15} /> Thử cùng bé
+                  </span>
+                  <h2>Sản phẩm gợi ý cho bài viết này</h2>
                 </div>
-                <div className="blog-reco-grid">
+                <div className="bd-recos-grid">
                   {recommendations.map((product) => (
                     <RecommendedCard key={product.id} product={product} />
                   ))}

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { loginHref } from '@/services/auth-nav';
 import { tierLabel } from '@/services/membership';
+import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
 
 const ROLE_VN = { customer: 'Khách hàng', employee: 'Nhân viên', admin: 'Quản trị viên' } as const;
 
@@ -43,31 +44,20 @@ function UserMenu({ onClose }: { onClose: () => void }) {
     onClose();
   };
 
-  const items: Array<{ label: React.ReactNode; onClick: () => void }> = [
-    { label: '👤 Thông tin tài khoản', onClick: () => go('/profile') },
+  // One icon set for every entry: the menu mixed emoji, PNG artwork and
+  // nothing, so no two rows looked like they belonged together.
+  const items: Array<{ icon: IconName; label: string; onClick: () => void; danger?: boolean }> = [
+    { icon: 'user', label: 'Thông tin tài khoản', onClick: () => go('/profile') },
+    { icon: 'sprout', label: 'Cây của tôi', onClick: () => go('/my-plants') },
+    { icon: 'cart', label: 'Đơn hàng của tôi', onClick: () => go('/account') },
+    { icon: 'ticket', label: 'Workshop của tôi', onClick: () => go('/my-workshops') },
+    { icon: 'star', label: user.isVip ? 'Gói VIP của tôi' : 'Nâng cấp VIP', onClick: () => go('/vip') },
+    ...(isEmployee ? [{ icon: 'shield' as IconName, label: 'Cổng nhân viên', onClick: () => go('/employee/orders') }] : []),
+    ...(isAdmin ? [{ icon: 'settings' as IconName, label: 'Quản trị', onClick: () => go('/admin') }] : []),
     {
-      label: (
-        <>
-          <img src="/assets/images/sprouty-icons/MyTree.png" alt="Cây" className="menu-item-icon" /> Cây của tôi
-        </>
-      ),
-      onClick: () => go('/my-plants'),
-    },
-    { label: '📦 Đơn hàng của tôi', onClick: () => go('/account') },
-    { label: '🎪 Workshop của tôi', onClick: () => go('/my-workshops') },
-    {
-      label: (
-        <>
-          <img src="/assets/images/sprouty-icons/VIP.png" alt="" className="menu-item-icon" />
-          {user.isVip ? 'Gói VIP của tôi' : 'Nâng cấp VIP'}
-        </>
-      ),
-      onClick: () => go('/vip'),
-    },
-    ...(isEmployee ? [{ label: '👷 Cổng nhân viên', onClick: () => go('/employee/orders') }] : []),
-    ...(isAdmin ? [{ label: '⚙️ Quản trị', onClick: () => go('/admin') }] : []),
-    {
-      label: '🚪 Đăng xuất',
+      icon: 'logout',
+      label: 'Đăng xuất',
+      danger: true,
       onClick: () => {
         onClose();
         void logout();
@@ -96,7 +86,8 @@ function UserMenu({ onClose }: { onClose: () => void }) {
         )}
       </div>
       {items.map((item, i) => (
-        <div key={i} className="user-menu-item" onClick={item.onClick}>
+        <div key={i} className={`user-menu-item${item.danger ? ' is-danger' : ''}`} onClick={item.onClick}>
+          <SproutyIcon name={item.icon} size={18} />
           {item.label}
         </div>
       ))}

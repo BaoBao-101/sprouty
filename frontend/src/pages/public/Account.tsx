@@ -1,3 +1,4 @@
+import { confirmAction } from '@/services/dialog';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -165,7 +166,7 @@ function OrderCard({ order, onCancelled }: { order: Order; onCancelled: () => vo
   const vip = isVipOrder(order);
 
   async function cancel() {
-    if (!confirm('Bạn chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác.')) return;
+    if (!await confirmAction('Bạn chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác.')) return;
     setCancelling(true);
     try {
       await API.orders.cancel(order.id);

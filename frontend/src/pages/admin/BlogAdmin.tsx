@@ -1,3 +1,4 @@
+import { confirmAction } from '@/services/dialog';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FilterPills,
@@ -241,13 +242,32 @@ export default function BlogAdmin() {
   }
 
   async function archive(post: Post) {
-    if (!confirm(`Lưu trữ bài “${post.title}”?\n\nBài sẽ không còn hiện trên trang blog.`)) return;
+    if (!await confirmAction(`Lưu trữ bài “${post.title}”?\n\nBài sẽ không còn hiện trên trang blog, nhưng vẫn giữ lại để mở lại sau.`)) return;
     try {
-      await API.admin.blog.remove(post.id);
+      await API.admin.blog.status(post.id, 'archived');
       showToast('Đã lưu trữ', 'success');
       load();
     } catch (err: any) {
       showToast(err?.message || 'Không lưu trữ được', 'error');
+    }
+  }
+
+  async function remove(post: Post) {
+    const live = post.status === 'published' ? '\nBài đang hiển thị trên trang blog sẽ biến mất ngay.' : '';
+    if (
+      !await confirmAction(
+        `Xoá vĩnh viễn bài “${post.title}”?${live}\n\nẢnh bìa và ảnh trong bài cũng bị xoá. Thao tác này không hoàn tác được — nếu chỉ muốn ẩn bài, hãy chọn “Lưu trữ”.`,
+      )
+    )
+      return;
+    try {
+      await API.admin.blog.remove(post.id);
+      showToast('Đã xoá bài viết', 'success');
+      // The last post on a page leaves an empty page behind; step back one.
+      if (posts.length === 1 && page > 1) setPage(page - 1);
+      else load();
+    } catch (err: any) {
+      showToast(err?.message || 'Không xoá được bài viết', 'error');
     }
   }
 
@@ -306,7 +326,7 @@ export default function BlogAdmin() {
       </Toolbar>
 
       <Panel flush>
-        <table className="admin-table">
+        <table className="admin-table blog-admin-table">
           <thead>
             <tr>
               <th style={{ width: 90 }}>Ảnh bìa</th>
@@ -344,7 +364,7 @@ export default function BlogAdmin() {
                       )}
                       <input
                         type="file"
-                        accept="image/jpeg,image/png,image/webp"
+                        accept="image/*"
                         hidden
                         onChange={(e) => uploadCover(post.id, e.target)}
                       />
@@ -381,10 +401,13 @@ export default function BlogAdmin() {
                         Sửa
                       </button>
                       {post.status !== 'archived' && (
-                        <button className="act-btn act-del" onClick={() => archive(post)}>
+                        <button className="act-btn act-archive" onClick={() => archive(post)}>
                           Lưu trữ
                         </button>
                       )}
+                      <button className="act-btn act-del" onClick={() => remove(post)}>
+                        Xoá
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -445,7 +468,7 @@ export default function BlogAdmin() {
             </span>
             <textarea
               ref={contentRef}
-              className="form-input blog-content"
+              className="form-input blog-editor-source"
               rows={14}
               placeholder="Nội dung Markdown. Đặt con trỏ tại vị trí cần chèn ảnh rồi bấm nút bên dưới."
               value={editor.content}
@@ -456,7 +479,7 @@ export default function BlogAdmin() {
                 ＋ Chèn ảnh vào nội dung
                 <input
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
+                  accept="image/*"
                   hidden
                   onChange={(e) => {
                     const file = e.target.files?.[0];
@@ -485,7 +508,7 @@ export default function BlogAdmin() {
                   {coverFile || existingCover ? 'Đổi ảnh bìa' : 'Chọn ảnh bìa'}
                   <input
                     type="file"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept="image/*"
                     hidden
                     onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)}
                   />

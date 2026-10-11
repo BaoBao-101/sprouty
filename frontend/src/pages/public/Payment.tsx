@@ -533,7 +533,7 @@ export default function PaymentPage() {
                               {item.product?.images?.[0] ? (
                                 <img src={item.product.images[0]} alt="" />
                               ) : (
-                                <span>{item.product?.emoji || '🌱'}</span>
+                                <SproutyIcon name="pot" size={26} />
                               )}
                               {item.qty > 1 && <em className="ord-item-qty">{item.qty}</em>}
                             </span>

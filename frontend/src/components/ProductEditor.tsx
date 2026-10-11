@@ -69,9 +69,9 @@ const STEP_HINT: Record<TabKey, string> = {
 
 const BADGES = [
   { value: '', label: 'Không có nhãn' },
-  { value: 'hot', label: '🔥 Bán chạy' },
-  { value: 'new', label: '✨ Mới' },
-  { value: 'sale', label: '🏷 Giảm giá' },
+  { value: 'hot', label: 'Bán chạy' },
+  { value: 'new', label: 'Mới' },
+  { value: 'sale', label: 'Giảm giá' },
 ];
 
 const STATUSES = [

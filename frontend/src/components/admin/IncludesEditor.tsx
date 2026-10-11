@@ -66,7 +66,7 @@ export function IncludesEditor({
   const lower = new Set(filled.map((i) => i.toLowerCase()));
   const suggestions = suggestionsFor(category, speciesLabel);
   const missing = suggestions.filter((s) => !lower.has(s.toLowerCase()));
-  const heading = category === 'membership' ? '✨ Quyền lợi của gói' : category === 'book' ? '📘 Sách gồm có' : '📦 Bộ kit gồm có';
+  const heading = category === 'membership' ? 'Quyền lợi của gói' : category === 'book' ? 'Sách gồm có' : 'Bộ kit gồm có';
 
   const duplicates = new Set(
     filled.filter((item, i) => filled.findIndex((x) => x.toLowerCase() === item.toLowerCase()) !== i).map((i) => i.toLowerCase()),

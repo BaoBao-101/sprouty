@@ -1,0 +1,135 @@
+/* Blog list: hero with search, the newest post large, the rest in a grid. */
+
+.bl-hero {
+  padding: 40px 0 56px;
+  background:
+    radial-gradient(70% 120% at 100% 0%, rgba(187, 247, 208, .55) 0%, transparent 60%),
+    linear-gradient(180deg, #F0FDF4 0%, var(--cream, #FFFDF7) 100%);
+  border-bottom: 1.5px solid var(--parchment-2);
+}
+.bl-crumb, .bl-crumb a { color: var(--ink-4); font-size: .85rem }
+.bl-kicker {
+  display: inline-flex; align-items: center; gap: 6px; margin: 16px 0 10px; padding: 5px 12px;
+  border-radius: var(--r-full); background: var(--primary-100); color: var(--primary-600);
+  font-family: var(--font-h); font-size: .76rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+}
+.bl-hero h1 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); line-height: 1.2 }
+.bl-hero p { margin: 10px 0 0; max-width: 620px; font-size: 1.02rem; line-height: 1.7; color: var(--ink-3) }
+
+.bl-search {
+  position: relative; display: flex; align-items: center; gap: 8px; max-width: 620px; margin-top: 24px;
+  padding: 6px 6px 6px 44px; border-radius: var(--r-full); background: var(--surface);
+  border: 1.5px solid var(--parchment-2); box-shadow: 0 6px 20px rgba(20, 60, 30, .06);
+}
+.bl-search:focus-within { border-color: var(--primary-300) }
+.bl-search-icon { position: absolute; left: 16px; color: var(--ink-4) }
+.bl-search input {
+  flex: 1; min-width: 0; height: 42px; border: none; outline: none; background: none;
+  font: inherit; font-size: .98rem; color: var(--ink);
+}
+.bl-search .btn { border-radius: var(--r-full); padding-left: 22px; padding-right: 22px }
+
+.bl-body { padding: 40px 0 72px }
+
+.bl-result {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 20px;
+  font-size: .95rem; color: var(--ink-3);
+}
+.bl-link {
+  border: none; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--primary-600); cursor: pointer;
+}
+.bl-link:hover { text-decoration: underline }
+
+/* Art for a post without a cover. */
+.bl-art { position: relative; display: grid; place-items: center; width: 100%; height: 100%; color: #166534; overflow: hidden }
+/* A soft dot pattern and a ring, so the placeholder reads as artwork, not a gap. */
+.bl-art::before {
+  content: ''; position: absolute; inset: 0; opacity: .65;
+  background-image: radial-gradient(rgba(255, 255, 255, .7) 2px, transparent 2.5px);
+  background-size: 22px 22px;
+}
+.bl-art-ring {
+  position: relative; display: grid; place-items: center; width: 42%; max-width: 150px; aspect-ratio: 1;
+  border-radius: 50%; background: rgba(255, 255, 255, .72); box-shadow: 0 10px 30px rgba(0, 0, 0, .08);
+}
+
+/* The newest post. */
+.bl-featured {
+  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); overflow: hidden;
+  border-radius: 26px; background: var(--surface); border: 1.5px solid var(--parchment-2);
+  color: inherit; text-decoration: none; transition: box-shadow .2s, transform .2s;
+}
+.bl-featured:hover { box-shadow: 0 18px 44px rgba(20, 60, 30, .12); transform: translateY(-2px) }
+.bl-featured-cover { position: relative; min-height: 320px; background: var(--parchment) }
+.bl-featured-cover img, .bl-card-cover img { width: 100%; height: 100%; object-fit: cover; display: block }
+.bl-featured-cover > img, .bl-featured-cover > .bl-art { position: absolute; inset: 0 }
+.bl-badge {
+  position: absolute; top: 16px; left: 16px; padding: 5px 12px; border-radius: var(--r-full);
+  background: #fff; color: var(--orange); font-family: var(--font-h); font-size: .76rem; font-weight: 800;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .1);
+}
+.bl-featured-body { display: flex; flex-direction: column; justify-content: center; gap: 10px; padding: 32px 34px }
+.bl-featured-body strong { font-family: var(--font-display); font-size: clamp(1.4rem, 2.6vw, 1.9rem); line-height: 1.25; color: var(--ink) }
+.bl-featured-body p {
+  margin: 0; font-size: 1rem; line-height: 1.7; color: var(--ink-3);
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+.bl-meta { font-size: .82rem; font-weight: 600; color: var(--ink-4) }
+.bl-read {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 4px;
+  font-family: var(--font-h); font-weight: 800; color: var(--primary-600);
+}
+.bl-featured:hover .bl-read, .bl-card:hover .bl-read { gap: 10px }
+
+.bl-section-title { margin: 44px 0 18px; font-size: 1.4rem }
+
+/* The rest. */
+.bl-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px }
+.bl-card {
+  display: flex; flex-direction: column; overflow: hidden; border-radius: 22px;
+  background: var(--surface); border: 1.5px solid var(--parchment-2);
+  color: inherit; text-decoration: none; transition: box-shadow .2s, transform .2s;
+}
+.bl-card:hover { box-shadow: 0 14px 34px rgba(20, 60, 30, .1); transform: translateY(-3px) }
+.bl-card-cover { display: block; aspect-ratio: 16 / 10; background: var(--parchment) }
+.bl-card-body { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px 20px; flex: 1 }
+.bl-card-body strong {
+  font-family: var(--font-h); font-size: 1.08rem; line-height: 1.35; color: var(--ink);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.bl-card-body p {
+  margin: 0; font-size: .9rem; line-height: 1.6; color: var(--ink-3); flex: 1;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+.bl-skeleton { min-height: 320px; background: linear-gradient(90deg, var(--cream-2), var(--parchment), var(--cream-2)); background-size: 200% 100%; animation: bl-shimmer 1.4s infinite }
+@keyframes bl-shimmer { from { background-position: 200% 0 } to { background-position: -200% 0 } }
+
+.bl-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 48px 20px; text-align: center;
+  border: 1.5px dashed var(--parchment-2); border-radius: 22px; color: var(--primary-600);
+}
+.bl-empty strong { font-family: var(--font-display); font-size: 1.2rem; color: var(--ink) }
+.bl-empty span { max-width: 420px; color: var(--ink-3) }
+.bl-empty .btn { margin-top: 8px }
+.bl-msg { padding: 24px; text-align: center; color: var(--ink-4) }
+.bl-msg.is-error { color: var(--rose) }
+
+@media (max-width: 960px) {
+  .bl-featured { grid-template-columns: minmax(0, 1fr) }
+  .bl-featured-cover { min-height: 240px }
+  .bl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+}
+@media (max-width: 600px) {
+  .bl-hero { padding: 28px 0 40px }
+  .bl-featured-body { padding: 22px }
+  .bl-grid { grid-template-columns: minmax(0, 1fr) }
+  .bl-search .btn { padding-left: 16px; padding-right: 16px }
+  .bl-skeleton { min-height: 260px }
+  @media (prefers-reduced-motion: reduce) { .bl-skeleton { animation: none } }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bl-skeleton { animation: none }
+  .bl-featured, .bl-card { transition: none }
+}

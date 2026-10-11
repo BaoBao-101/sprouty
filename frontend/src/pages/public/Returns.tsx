@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
 import './Returns.css';
 
 /**
@@ -53,10 +54,10 @@ export default function Returns() {
 
             {/* Content */}
             <div className="policy-content">
-              <div className="last-updated">📅 Cập nhật lần cuối: 07/10/2026</div>
+              <div className="last-updated"><SproutyIcon name="calendar" size={15} /> Cập nhật lần cuối: 07/10/2026</div>
 
               <div className="policy-card green" style={{ marginBottom: "32px" }}>
-                <h4>✅ Cam kết của Sprouty</h4>
+                <h4><SproutyIcon name="shield" size={18} /> Cam kết của Sprouty</h4>
                 <p>
                   <strong>Mã chưa kích hoạt — hoàn tiền 100%, không hỏi lý do</strong>, trong vòng 7
                   ngày kể từ khi thanh toán. Nếu lỗi thuộc về hệ thống của chúng tôi, bạn được hoàn
@@ -78,11 +79,11 @@ export default function Returns() {
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", margin: "20px 0" }}>
                 <div className="policy-card green">
-                  <h4>✅ Mã chưa kích hoạt</h4>
+                  <h4><SproutyIcon name="check" size={18} /> Mã chưa kích hoạt</h4>
                   <p>Xem như chưa nhận sản phẩm. Hoàn tiền 100% trong 7 ngày, không cần nêu lý do.</p>
                 </div>
                 <div className="policy-card orange">
-                  <h4>⚠️ Mã đã kích hoạt</h4>
+                  <h4><SproutyIcon name="warning" size={18} /> Mã đã kích hoạt</h4>
                   <p>Sản phẩm đã được sử dụng. Chỉ hoàn tiền nếu lỗi thuộc về Sprouty (xem mục 6).</p>
                 </div>
               </div>
@@ -112,7 +113,7 @@ export default function Returns() {
 
               <h2 id="khong-chap-nhan">3. Khi nào không hoàn tiền</h2>
               <div className="policy-card red">
-                <h4>❌ Các trường hợp không được hoàn tiền</h4>
+                <h4><SproutyIcon name="close" size={18} /> Các trường hợp không được hoàn tiền</h4>
                 <p>Nêu rõ từ đầu để không ai mất thời gian tranh luận về sau:</p>
               </div>
               <ul>
@@ -128,7 +129,7 @@ export default function Returns() {
                 <li>Mã đã dùng để nhận <strong>ưu đãi workshop miễn phí</strong> và suất đó đã diễn ra</li>
               </ul>
               <div className="policy-card blue">
-                <h4>💡 Chưa chắc có hợp không?</h4>
+                <h4><SproutyIcon name="bulb" size={18} /> Chưa chắc có hợp không?</h4>
                 <p>
                   Cứ <Link to="/contact" style={{ fontWeight: 700 }}>liên hệ</Link> và kể rõ chuyện
                   gì đã xảy ra. Chúng tôi xử lý theo tinh thần thiện chí — nếu bạn mất tiền mà không
@@ -225,7 +226,7 @@ export default function Returns() {
                 <li>Bạn được chọn: nhận mã kích hoạt mới, hoặc hoàn tiền</li>
               </ul>
               <div className="policy-card blue">
-                <h4>📸 Giúp chúng tôi xử lý nhanh hơn</h4>
+                <h4><SproutyIcon name="camera" size={18} /> Giúp chúng tôi xử lý nhanh hơn</h4>
                 <p>
                   Chụp màn hình thông báo lỗi kèm mã đơn hàng. Hệ thống có lưu nhật ký, nhưng ảnh
                   của bạn giúp chúng tôi tìm đúng chỗ ngay thay vì dò tìm.
@@ -253,16 +254,16 @@ export default function Returns() {
               <h2 id="lien-he">8. Liên hệ hỗ trợ</h2>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", margin: "20px 0" }}>
                 <div className="policy-card orange">
-                  <h4>📧 Email hỗ trợ</h4>
+                  <h4><SproutyIcon name="mail" size={18} /> Email hỗ trợ</h4>
                   <p><Link to="/contact" style={{ color: "var(--orange)", fontWeight: "700" }}>Gửi yêu cầu hỗ trợ</Link><br /><span style={{ fontSize: ".8rem", color: "var(--ink-4)" }}>Phản hồi trong 4 giờ (T2–T7, 8h–18h)</span></p>
                 </div>
                 <div className="policy-card green">
-                  <h4>📞 Hotline</h4>
+                  <h4><SproutyIcon name="phone" size={18} /> Hotline</h4>
                   <p><Link to="/contact" style={{ color: "var(--green)", fontWeight: "700" }}>Trang liên hệ</Link><br /><span style={{ fontSize: ".8rem", color: "var(--ink-4)" }}>T2–T7: 8:00–18:00 | T8-CN: 9:00–15:00</span></p>
                 </div>
               </div>
               <div style={{ textAlign: "center", marginTop: "40px", padding: "36px", background: "var(--cream-2)", borderRadius: "var(--r-2xl)", border: "1.5px solid var(--parchment-2)" }}>
-                <div style={{ fontSize: "2.8rem", marginBottom: "12px" }}>🤝</div>
+                <div className="returns-cta-icon"><SproutyIcon name="heart" size={40} /></div>
                 <h3 style={{ marginBottom: "8px" }}>Chúng tôi ở đây để giúp bạn</h3>
                 <p style={{ color: "var(--ink-3)", maxWidth: "420px", margin: "0 auto 24px" }}>Đội ngũ Sprouty luôn sẵn sàng hỗ trợ. Đừng ngại liên hệ — câu hỏi nào cũng có câu trả lời.</p>
                 <div style={{ display: "flex", justifyContent: "center", gap: "14px", flexWrap: "wrap" }}>

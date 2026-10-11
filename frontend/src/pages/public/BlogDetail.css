@@ -1,0 +1,99 @@
+/* A blog article: set for reading, in the site's body font. */
+
+.bd-article { max-width: 760px }
+
+.bd-head { margin: 18px 0 26px }
+.bd-meta { display: block; margin-bottom: 10px; font-size: .86rem; font-weight: 600; color: var(--ink-4) }
+.bd-head h1 { margin: 0; font-size: clamp(1.75rem, 3.6vw, 2.5rem); line-height: 1.25 }
+.bd-lead {
+  margin: 14px 0 0; padding-left: 14px; border-left: 4px solid var(--primary-300);
+  font-size: 1.1rem; line-height: 1.7; color: var(--ink-2);
+}
+
+.bd .blog-cover { display: block; width: 100%; max-height: 440px; object-fit: cover; border-radius: 20px; margin: 0 0 28px }
+
+/* The body. Explicit about its font: the Markdown is turned into HTML on the
+   server, and nothing should be left to inherit from wherever it lands. */
+.bd-article .blog-content {
+  font-family: var(--font-body);
+  font-size: 1.04rem;
+  line-height: 1.85;
+  color: var(--ink-2);
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+.bd-article .blog-content > * + * { margin-top: 1em }
+.bd-article .blog-content p { margin: 0 0 1em }
+.bd-article .blog-content h1,
+.bd-article .blog-content h2,
+.bd-article .blog-content h3 {
+  font-family: var(--font-h);
+  color: var(--ink);
+  line-height: 1.35;
+  margin: 1.8em 0 .6em;
+}
+.bd-article .blog-content h1 { font-size: 1.6rem }
+.bd-article .blog-content h2 { font-size: 1.4rem }
+.bd-article .blog-content h3 { font-size: 1.18rem }
+.bd-article .blog-content ul,
+.bd-article .blog-content ol { margin: 0 0 1em; padding-left: 1.4em }
+.bd-article .blog-content li { margin: .35em 0 }
+.bd-article .blog-content li::marker { color: var(--primary-600) }
+.bd-article .blog-content a { color: var(--primary-600); font-weight: 600; text-decoration: underline; text-underline-offset: 3px }
+.bd-article .blog-content strong { color: var(--ink) }
+.bd-article .blog-content blockquote {
+  margin: 1.4em 0; padding: 14px 18px; border-radius: 14px;
+  background: var(--primary-100); border-left: 4px solid var(--primary-500, #35A853); color: var(--ink-2);
+}
+.bd-article .blog-content blockquote p:last-child { margin-bottom: 0 }
+.bd-article .blog-content code {
+  padding: 1px 6px; border-radius: 6px; background: var(--cream-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em;
+}
+.bd-article .blog-content hr { border: none; border-top: 1.5px solid var(--parchment-2); margin: 2em 0 }
+
+@media (max-width: 600px) {
+  .bd-article .blog-content { font-size: 1rem; line-height: 1.8 }
+  .bd-lead { font-size: 1rem }
+}
+
+/* ── Products the article recommends ───────────────────────────────────── */
+.bd-recos { margin-top: 44px; padding-top: 28px; border-top: 1.5px solid var(--parchment-2) }
+.bd-recos-head { margin-bottom: 18px }
+.bd-recos-kicker {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: var(--r-full);
+  background: var(--primary-100); color: var(--primary-600);
+  font-family: var(--font-h); font-size: .74rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+}
+.bd-recos-head h2 { margin: 10px 0 0; font-size: 1.35rem }
+.bd-recos-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px }
+@media (max-width: 720px) { .bd-recos-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+@media (max-width: 440px) { .bd-recos-grid { grid-template-columns: minmax(0, 1fr) } }
+
+.bd-reco {
+  display: flex; flex-direction: column; overflow: hidden; border-radius: 18px;
+  background: var(--surface); border: 1.5px solid var(--parchment-2);
+  color: inherit; text-decoration: none; transition: box-shadow .2s, transform .2s, border-color .2s;
+}
+.bd-reco:hover { transform: translateY(-3px); border-color: var(--primary-300); box-shadow: 0 14px 30px rgba(20, 60, 30, .1) }
+.bd-reco-thumb { position: relative; display: block; aspect-ratio: 4 / 3; overflow: hidden }
+.bd-reco-thumb img { width: 100%; height: 100%; object-fit: cover; display: block }
+.bd-reco-off {
+  position: absolute; top: 10px; left: 10px; padding: 3px 9px; border-radius: var(--r-full);
+  background: var(--rose, #E11D48); color: #fff; font-size: .74rem; font-weight: 800;
+}
+.bd-reco-body { display: flex; flex-direction: column; gap: 5px; padding: 14px 16px 16px; flex: 1 }
+.bd-reco-meta { font-size: .76rem; font-weight: 600; color: var(--ink-4) }
+.bd-reco-body strong { font-family: var(--font-h); font-size: 1.02rem; color: var(--ink); line-height: 1.3 }
+.bd-reco-desc {
+  font-size: .84rem; line-height: 1.55; color: var(--ink-3);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.bd-reco-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 8px }
+.bd-reco-price { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font-family: var(--font-display); font-size: 1.12rem; color: var(--orange) }
+.bd-reco-price s { font-family: var(--font-body); font-size: .8rem; color: var(--ink-4) }
+.bd-reco-go {
+  display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: var(--r-full);
+  background: var(--primary-100); color: var(--primary-600); font-family: var(--font-h); font-size: .8rem; font-weight: 800;
+}
+.bd-reco:hover .bd-reco-go { background: var(--primary-600); color: #fff }

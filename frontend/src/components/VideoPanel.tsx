@@ -1,3 +1,4 @@
+import { confirmAction } from '@/services/dialog';
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
@@ -339,7 +340,7 @@ export function VideoPanel({
   }
 
   async function archive(video: Video) {
-    if (!confirm(`Lưu trữ video “${video.title}”? Khách sẽ không thấy video này nữa; có thể khôi phục lại sau.`)) return;
+    if (!await confirmAction(`Lưu trữ video “${video.title}”? Khách sẽ không thấy video này nữa; có thể khôi phục lại sau.`)) return;
     setBusyId(video.id);
     try {
       await API.admin.videos.remove(video.id);

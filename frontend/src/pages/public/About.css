@@ -1,58 +1,165 @@
-/* Page styles for About. Lifted out of the <style> block that used to sit
-   in the <head> of about.html. */
+/* About: hero, numbers, why, what, journey + beliefs, team, contact. */
 
-/* Team section — centered, balanced layout (5 members: 3 + 2 centered) */
-#doi-ngu .team-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 30px;
-  max-width: 1040px;
-  margin: 0 auto;
+.ab-hero {
+  padding: 40px 0 88px;
+  background:
+    radial-gradient(60% 90% at 100% 0%, rgba(253, 230, 138, .45) 0%, transparent 60%),
+    linear-gradient(180deg, #F0FDF4 0%, var(--cream, #FFFDF7) 100%);
 }
-
-#doi-ngu .team-card {
-  flex: 0 1 300px;
-  max-width: 300px;
-  display: flex;
-  flex-direction: column;
-  border-radius: 18px;
-  border-width: 1.5px;
-  overflow: hidden;
+.ab-hero-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 44px; align-items: center }
+.ab-crumb, .ab-crumb a { color: var(--ink-4); font-size: .85rem }
+.ab-kicker {
+  display: inline-flex; align-items: center; gap: 6px; margin: 16px 0 12px; padding: 5px 12px;
+  border-radius: var(--r-full); background: var(--primary-100); color: var(--primary-600);
+  font-family: var(--font-h); font-size: .76rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
 }
+.ab-hero h1 { margin: 0; font-size: clamp(2rem, 4.4vw, 3.1rem); line-height: 1.15 }
+.ab-hero h1 span { display: block; color: var(--orange) }
+.ab-hero-copy > p { margin: 16px 0 0; max-width: 520px; font-size: 1.04rem; line-height: 1.75; color: var(--ink-3) }
+.ab-hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px }
+.ab-hero-actions .btn { display: inline-flex; align-items: center; gap: 8px }
 
-/* Photo fills the frame edge-to-edge; top corners rounded to hug the border */
-#doi-ngu .team-photo-wrap {
-  aspect-ratio: 4/5;
-  border-radius: 0;
-  margin: 0;
-  background: var(--parchment);
+.ab-hero-art { position: relative }
+.ab-hero-art img {
+  display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover;
+  border-radius: 28px; box-shadow: 0 24px 60px rgba(20, 60, 30, .18); transform: rotate(1.2deg);
 }
-
-#doi-ngu .team-photo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center top;
-  display: block;
+.ab-hero-note {
+  position: absolute; left: -14px; bottom: 22px; display: inline-flex; align-items: center; gap: 7px;
+  padding: 10px 14px; border-radius: 16px; background: #fff; color: var(--ink-2);
+  font-family: var(--font-h); font-size: .84rem; font-weight: 700; box-shadow: 0 10px 26px rgba(0, 0, 0, .12);
 }
+.ab-hero-note svg { color: var(--rose, #E11D48) }
 
-#doi-ngu .team-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column
+/* Numbers: a solid strip over the hero's edge. */
+.ab-stats {
+  position: relative; z-index: 2; margin: -48px 0 0; padding: 18px; list-style: none;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;
+  border-radius: 22px; background: #fff; border: 1.5px solid var(--parchment-2);
+  box-shadow: 0 16px 40px rgba(20, 60, 30, .1);
 }
+.ab-stats li { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 8px; text-align: center }
+.ab-stats li + li { border-left: 1.5px solid var(--parchment) }
+.ab-stats strong { font-family: var(--font-display); font-size: 2rem; color: var(--orange); line-height: 1.1 }
+.ab-stats span { font-size: .84rem; color: var(--ink-3) }
 
-@media(max-width:760px) {
-  #doi-ngu .team-card {
-    flex: 0 1 260px;
-    max-width: 320px
-  }
+/* Sections. */
+.ab-section { padding: 64px 0 }
+.ab-tinted { background: var(--cream-2) }
+.ab-head { max-width: 640px; margin: 0 0 28px }
+.ab-head h2 { margin: 6px 0 0 }
+.ab-head p { margin: 8px 0 0; color: var(--ink-3) }
+.ab-icon {
+  display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px;
+  background: var(--primary-600); color: #fff; flex-shrink: 0;
 }
+.ab-icon.is-soft { width: 42px; height: 42px; background: var(--primary-100); color: var(--primary-600) }
 
-@media(max-width:520px) {
-  #doi-ngu .team-card {
-    flex: 1 1 100%;
-    max-width: 340px
-  }
+.ab-problems { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px }
+.ab-problem {
+  display: flex; flex-direction: column; gap: 10px; padding: 24px;
+  border-radius: 22px; background: var(--surface); border: 1.5px solid var(--parchment-2);
+}
+.ab-problem h3 { margin: 4px 0 0; font-size: 1.12rem }
+.ab-problem-detail { margin: 0; font-size: .9rem; line-height: 1.6; color: var(--ink-3); flex: 1 }
+.ab-problem-answer {
+  display: flex; gap: 8px; align-items: flex-start; margin: 4px 0 0; padding: 12px 14px; border-radius: 14px;
+  background: var(--primary-100); color: var(--primary-700, #1F6B35); font-size: .88rem; line-height: 1.55; font-weight: 600;
+}
+.ab-problem-answer svg { flex-shrink: 0; margin-top: 3px }
+
+.ab-pillars { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px }
+.ab-pillar {
+  position: relative; display: flex; flex-direction: column; gap: 10px; padding: 22px;
+  border-radius: 22px; background: var(--surface); border: 1.5px solid var(--parchment-2);
+  color: inherit; text-decoration: none; transition: transform .2s, box-shadow .2s, border-color .2s;
+}
+.ab-pillar:hover { transform: translateY(-3px); border-color: var(--primary-300); box-shadow: 0 14px 30px rgba(20, 60, 30, .1) }
+.ab-pillar-n { position: absolute; top: 18px; right: 20px; font-family: var(--font-display); font-size: 1.6rem; color: var(--parchment-2) }
+.ab-pillar strong { font-family: var(--font-h); font-size: 1.05rem; color: var(--ink) }
+.ab-pillar-text { font-size: .88rem; line-height: 1.55; color: var(--ink-3); flex: 1 }
+.ab-pillar-cta { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-h); font-size: .86rem; font-weight: 800; color: var(--primary-600) }
+
+/* Journey: four steps along one line. */
+.ab-journey {
+  position: relative; list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px;
+}
+.ab-journey::before {
+  content: ''; position: absolute; left: 8px; right: 8px; top: 9px; height: 3px; border-radius: 3px;
+  background: linear-gradient(90deg, var(--primary-300), var(--orange));
+}
+.ab-journey li { position: relative; display: flex; flex-direction: column; gap: 6px; padding-top: 32px }
+.ab-dot {
+  position: absolute; top: 0; left: 0; width: 21px; height: 21px; border-radius: 50%;
+  background: #fff; border: 4px solid var(--primary-500, #35A853);
+}
+.ab-journey li.is-now .ab-dot { border-color: var(--orange); box-shadow: 0 0 0 5px rgba(249, 115, 22, .18) }
+.ab-when { font-family: var(--font-h); font-size: .76rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--orange) }
+.ab-journey strong { font-family: var(--font-h); font-size: 1.04rem; color: var(--ink) }
+.ab-journey p { margin: 0; font-size: .88rem; line-height: 1.6; color: var(--ink-3) }
+
+.ab-beliefs {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 40px;
+  padding: 22px; border-radius: 22px; background: #FFFBF2; border: 1.5px solid #F3E3C3;
+}
+.ab-belief { display: flex; gap: 12px; align-items: flex-start }
+.ab-belief strong { display: block; font-family: var(--font-h); font-size: .98rem; color: var(--ink) }
+.ab-belief p { margin: 4px 0 0; font-size: .86rem; line-height: 1.55; color: var(--ink-3) }
+
+/* Team. */
+.ab-team { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px }
+.ab-member {
+  display: flex; gap: 16px; align-items: center; padding: 14px; border-radius: 22px;
+  background: var(--surface); border: 1.5px solid var(--parchment-2); transition: transform .2s, box-shadow .2s;
+}
+.ab-member:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(20, 60, 30, .1) }
+.ab-member-photo {
+  flex: 0 0 96px; height: 116px; overflow: hidden; border-radius: 16px; background: var(--parchment);
+  display: grid; place-items: center;
+}
+.ab-member-photo img { width: 100%; height: 100%; object-fit: cover; object-position: center top }
+.ab-member-initial { font-family: var(--font-display); font-size: 2.4rem; color: var(--orange) }
+.ab-member-body { display: flex; flex-direction: column; gap: 3px; min-width: 0 }
+.ab-member-body strong { font-family: var(--font-h); font-size: 1.02rem; color: var(--ink) }
+.ab-member-role { font-size: .82rem; font-weight: 700; color: var(--primary-600) }
+.ab-member-body p { margin: 4px 0 0; font-size: .82rem; line-height: 1.5; color: var(--ink-3) }
+
+/* Contact. */
+.ab-contact {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px 28px;
+  padding: 30px 34px; border-radius: 26px; color: #fff;
+  background:
+    radial-gradient(60% 120% at 100% 0%, rgba(255, 255, 255, .14) 0%, transparent 60%),
+    linear-gradient(135deg, var(--primary-700) 0%, var(--primary-500, #35A853) 100%);
+}
+.ab-contact > div { flex: 1 1 420px; min-width: 0 }
+.ab-contact strong { display: block; font-family: var(--font-display); font-size: 1.5rem; line-height: 1.25; color: #fff }
+.ab-contact p { margin: 8px 0 0; max-width: 600px; color: rgba(255, 255, 255, .85); line-height: 1.65 }
+.ab-contact .btn { display: inline-flex; align-items: center; gap: 8px }
+
+@media (max-width: 1024px) {
+  .ab-pillars { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  .ab-team { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+}
+@media (max-width: 900px) {
+  .ab-hero-grid { grid-template-columns: minmax(0, 1fr) }
+  .ab-hero-art { max-width: 560px }
+  .ab-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 14px }
+  .ab-stats li:nth-child(3) { border-left: none }
+  .ab-problems, .ab-beliefs { grid-template-columns: minmax(0, 1fr) }
+  .ab-journey { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-left: 34px }
+  .ab-journey::before { left: 9px; right: auto; top: 6px; bottom: 6px; width: 3px; height: auto; background: linear-gradient(180deg, var(--primary-300), var(--orange)) }
+  .ab-journey li { padding-top: 0 }
+  .ab-dot { left: -34px; top: 2px }
+}
+@media (max-width: 600px) {
+  .ab-hero { padding: 28px 0 80px }
+  .ab-hero-note { left: 10px; bottom: 12px }
+  .ab-section { padding: 44px 0 }
+  .ab-stats { padding: 12px; gap: 6px }
+  .ab-stats li + li { border-left: none }
+  .ab-stats strong { font-size: 1.6rem }
+  .ab-pillars, .ab-team { grid-template-columns: minmax(0, 1fr) }
+  .ab-contact { padding: 22px }
 }

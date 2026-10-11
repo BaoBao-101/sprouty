@@ -24,10 +24,10 @@ type PricePreset = 'all' | 'u70' | '70-90' | 'o90';
 type Sort = '' | 'pa' | 'pd' | 'az' | 'pop';
 type View = 'grid' | 'list';
 
-const CATEGORIES: Array<{ value: Category; icon: string; label: string }> = [
-  { value: 'all', icon: '🛍', label: 'Tất cả' },
-  { value: 'kit', icon: '🌱', label: 'Bộ kit trồng cây' },
-  { value: 'book', icon: '📖', label: 'Sách hướng dẫn' },
+const CATEGORIES: Array<{ value: Category; icon: IconName; label: string }> = [
+  { value: 'all', icon: 'cart', label: 'Tất cả' },
+  { value: 'kit', icon: 'sprout', label: 'Bộ kit trồng cây' },
+  { value: 'book', icon: 'book', label: 'Sách hướng dẫn' },
 ];
 
 const AGE_BANDS: Array<{ value: AgeBand; label: string }> = [
@@ -39,9 +39,9 @@ const AGE_BANDS: Array<{ value: AgeBand; label: string }> = [
 
 const BADGES: Array<{ value: Badge; label: string }> = [
   { value: 'all', label: 'Tất cả' },
-  { value: 'hot', label: '🔥 Bán chạy' },
-  { value: 'new', label: '✨ Mới' },
-  { value: 'sale', label: '🏷 Giảm giá' },
+  { value: 'hot', label: 'Bán chạy' },
+  { value: 'new', label: 'Mới' },
+  { value: 'sale', label: 'Giảm giá' },
 ];
 
 const PRICE_PRESETS: Array<{ value: PricePreset; label: string; min: string; max: string }> = [
@@ -191,7 +191,7 @@ export default function Shop() {
               onClick={() => setCategory(c.value)}
             >
               <span>
-                <span className="filter-chip-icon">{c.icon}</span>
+                <span className="filter-chip-icon"><SproutyIcon name={c.icon} size={16} /></span>
                 {c.label}
               </span>
               <span className="filter-chip-count">{countByCategory[c.value]}</span>
@@ -340,7 +340,7 @@ export default function Shop() {
           <aside className="filter-sidebar">
             <div className="filter-head">
               <div className="filter-head-left">
-                <span className="filter-head-icon">⚡</span>
+                <span className="filter-head-icon"><SproutyIcon name="filter" size={18} /></span>
                 <h3>Bộ lọc</h3>
                 <span className={`filter-active-count${activeTags.length ? ' show' : ''}`}>
                   {activeTags.length}
@@ -356,7 +356,7 @@ export default function Shop() {
           <div className="products-main">
             <button className="filter-mobile-toggle" onClick={() => setDrawerOpen(true)}>
               <div className="filter-mobile-toggle-left">
-                <span style={{ fontSize: '1.1rem' }}>⚡</span>
+                <SproutyIcon name="filter" size={18} />
                 <span>Bộ lọc &amp; Sắp xếp</span>
                 {activeTags.length > 0 && (
                   <span className="filter-active-count show">{activeTags.length}</span>
@@ -372,7 +372,7 @@ export default function Shop() {
 
             <div className="shop-toolbar">
               <div className="search-field">
-                <span className="search-field-icon">🔍</span>
+                <span className="search-field-icon"><SproutyIcon name="search" size={17} /></span>
                 <input
                   type="search"
                   placeholder="Tìm tên, chủ đề, độ tuổi..."
@@ -441,7 +441,7 @@ export default function Shop() {
 
             {!error && !loading && results.length === 0 && (
               <div className="empty-state">
-                <div className="empty-state-emoji">🔍</div>
+                <div className="empty-state-emoji"><SproutyIcon name="search" size={40} /></div>
                 <h3>Không tìm thấy sản phẩm nào</h3>
                 <p>Thử thay đổi bộ lọc hoặc từ khoá tìm kiếm của bạn.</p>
                 <button className="btn btn-primary btn-lg" onClick={resetFilters}>
@@ -474,7 +474,7 @@ export default function Shop() {
         <div className="filter-drawer-panel">
           <div className="filter-drawer-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: '1.1rem' }}>⚡</span>
+              <SproutyIcon name="filter" size={18} />
               <span className="filter-drawer-title">Bộ lọc sản phẩm</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

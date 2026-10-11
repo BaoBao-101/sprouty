@@ -3,6 +3,7 @@ import path from 'path';
 import { localStorageProvider } from './localStorage.js';
 import { s3StorageProvider } from './s3Storage.js';
 import { AppError } from '../../utils/errors.js';
+import { albumFormat } from './album-formats.js';
 
 const IMAGE_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const VIDEO_MIME = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
@@ -89,7 +90,7 @@ export function validateUpload({ mimeType, filename, bytes, category, maxBytesOv
   return ext;
 }
 
-export async function multipartFileToBuffer(file, { category, maxBytesOverride }) {
+export async function multipartFileToBuffer(file, { category, maxBytesOverride, albumMedia = false }) {
   if (!file) throw new AppError('Thiếu tệp upload.', 400);
   const chunks = [];
   let total = 0;
@@ -100,17 +101,25 @@ export async function multipartFileToBuffer(file, { category, maxBytesOverride }
     chunks.push(chunk);
   }
   const buffer = Buffer.concat(chunks);
-  const ext = validateUpload({
-    mimeType: file.mimetype,
-    filename: file.filename,
-    bytes: buffer.length,
-    category,
-    maxBytesOverride,
-  });
-  // Only after validateUpload has confirmed the declared type is one we accept —
-  // otherwise this would be looking up a signature for an arbitrary string.
-  assertMagicBytes(buffer, file.mimetype);
-  return { buffer, ext, mimeType: file.mimetype, originalName: file.filename, sizeBytes: buffer.length };
+  if (file.file.truncated) throw new AppError('Tệp vượt quá giới hạn dung lượng tải lên.', 413);
+  // Known media retain canonical types. Unrecognized media are kept as binary
+  // originals, so the browser downloads them instead of executing active content.
+  const format = albumFormat(file.filename, file.mimetype);
+  if (format) {
+    const [mimeType, extensions, check] = format;
+    if (check(buffer)) {
+      if (!albumMedia && !mimeType.startsWith(category + '/')) {
+        throw new AppError('Please choose a file matching the media category.', 400);
+      }
+      return { buffer, ext: '.' + extensions[0], mimeType, originalName: file.filename, sizeBytes: buffer.length };
+    }
+  }
+  if (!buffer.length) throw new AppError('The uploaded file is empty.', 400);
+  if (albumMedia || /^(image|video)\//i.test(file.mimetype || '') || format) {
+    return { buffer, ext: '.bin', mimeType: 'application/octet-stream', originalName: file.filename, sizeBytes: buffer.length };
+  }
+  throw new AppError('Please choose an image or video file.', 400);
+
 }
 
 export function safeObjectKey({ kind, ownerUserId, productId, ext }) {
@@ -128,8 +137,9 @@ export async function createAsset(prisma, {
   category,
   metadata = null,
   maxBytesOverride,
+  albumMedia = false,
 }) {
-  const parsed = await multipartFileToBuffer(file, { category, maxBytesOverride });
+  const parsed = await multipartFileToBuffer(file, { category, maxBytesOverride, albumMedia });
   const checksum = createHash('sha256').update(parsed.buffer).digest('hex');
   const key = safeObjectKey({ kind, ownerUserId, productId, ext: parsed.ext });
   const storage = storageProvider();

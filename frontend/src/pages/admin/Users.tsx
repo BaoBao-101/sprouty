@@ -1,3 +1,4 @@
+import { confirmAction } from '@/services/dialog';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   FilterPills,
@@ -343,10 +344,10 @@ export default function Users() {
     }
   }
 
-  function changeRole(user: AdminUser, role: string) {
+  async function changeRole(user: AdminUser, role: string) {
     if (
       role !== user.role &&
-      !confirm(
+      !await confirmAction(
         `Đổi ${user.name} sang ${ROLE_LABEL[role as Role]}?\n\nCác phiên đăng nhập sẽ bị thu hồi. Tài khoản chỉ được sử dụng chức năng của vai trò mới.`,
       )
     )
@@ -357,13 +358,13 @@ export default function Users() {
     });
   }
 
-  function toggleStatus(user: AdminUser) {
+  async function toggleStatus(user: AdminUser) {
     const next = user.status === 'active' ? 'disabled' : 'active';
     const message =
       next === 'disabled'
         ? `Vô hiệu hóa tài khoản của ${user.name}?\n\nHọ sẽ không thể đăng nhập, nhưng đơn hàng và lịch sử vẫn được giữ.`
         : `Kích hoạt lại tài khoản của ${user.name}?\n\nHọ sẽ có thể đăng nhập trở lại.`;
-    if (!confirm(message)) return;
+    if (!await confirmAction(message)) return;
 
     run(user, async () => {
       await API.admin.users.update(user.id, { status: next });
@@ -374,17 +375,17 @@ export default function Users() {
     });
   }
 
-  function grantVip(user: AdminUser) {
-    if (user.status !== 'active' || !confirm(`Cấp tặng VIP cho ${user.name}? Không ghi nhận doanh thu cho quyền lợi miễn phí này.`)) return;
+  async function grantVip(user: AdminUser) {
+    if (user.status !== 'active' || !await confirmAction(`Cấp tặng VIP cho ${user.name}? Không ghi nhận doanh thu cho quyền lợi miễn phí này.`)) return;
     run(user, async () => {
       const { message } = await API.admin.users.grantVip(user.id);
       showToast(message, 'success');
     });
   }
 
-  function revokeVip(user: AdminUser) {
+  async function revokeVip(user: AdminUser) {
     if (
-      !confirm(
+      !await confirmAction(
         'Thu hồi phần VIP do quản trị viên cấp tặng? Các gói khách đã mua vẫn được giữ nguyên.',
       )
     )

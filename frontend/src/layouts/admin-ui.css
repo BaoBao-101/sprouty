@@ -517,6 +517,14 @@
 .act-btn.act-vip:hover:not(:disabled) { background: #FEF3C7 }
 
 /* ── Blog ────────────────────────────────────────────────────── */
+/* Hiding a post is undoable, so it is quiet; red is kept for "Xoá". */
+.act-btn.act-archive { border-color: var(--parchment-2); color: var(--ink-3); background: transparent }
+.act-btn.act-archive:hover:not(:disabled) { border-color: var(--ink-4); background: var(--cream-2) }
+/* Sửa · Lưu trữ · Xoá on one line, and "3 sản phẩm" unbroken. */
+.blog-admin-table .admin-inline-actions { flex-wrap: nowrap }
+.blog-admin-table .act-btn { white-space: nowrap }
+.blog-admin-table td:nth-child(3) { white-space: nowrap }
+.blog-admin-table .admin-mini-select { min-width: 140px }
 .blog-cover-empty {
   display: flex;
   align-items: center;
@@ -528,7 +536,10 @@
   color: var(--ink-4);
   font-size: 1.1rem;
 }
-.blog-content {
+/* The Markdown source box in the blog editor. Its own name: it used to be
+   .blog-content, which the public article also uses, and once the admin
+   stylesheet had loaded the article turned monospace. */
+.blog-editor-source {
   resize: vertical;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.84rem;

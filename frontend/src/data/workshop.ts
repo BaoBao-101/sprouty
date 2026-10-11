@@ -8,16 +8,16 @@ export interface LightboxImage {
 }
 
 export const LB_IMAGES = [
-  { src:'/assets/images/workshop/1.jpg', caption:'🎁 Bộ kit Sprouty đầy đủ — từ hạt giống đến chậu cây thông minh' },
-  { src:'/assets/images/workshop/2.jpg', caption:'🎨 Lớp học đông vui — mỗi bé một chậu cây, mỗi chậu một câu chuyện' },
-  { src:'/assets/images/workshop/3.jpg', caption:'✏️ Cùng cô trang trí chậu cây — từng nét vẽ đầu tiên' },
-  { src:'/assets/images/workshop/4.jpg', caption:'🌈 Thành quả tự hào — bé khoe chậu cây Rainbow của mình' },
-  { src:'/assets/images/workshop/5.jpg', caption:'🌶 Cận cảnh chậu Rainbow — cây ớt đã ra hoa' },
-  { src:'/assets/images/workshop/6.jpg', caption:'🖌 Hướng dẫn viên vẽ mẫu — bé quan sát và học theo' },
-  { src:'/assets/images/workshop/7.jpg', caption:'🎀 Món quà tự tay làm — gói ghém yêu thương' },
-  { src:'/assets/images/workshop/8.jpg', caption:'🖍 Tỉ mỉ từng nét cọ — sắc màu của riêng bé' },
-  { src:'/assets/images/workshop/9.jpg', caption:'🧐 Tập trung tuyệt đối — khoảnh khắc sáng tạo của bé' },
-  { src:'/assets/images/workshop/10.jpg', caption:'🏆 Sản phẩm hoàn thiện — chậu cây mang dấu ấn riêng của bé' },
+  { src:'/assets/images/workshop/1.jpg', caption:'Bộ kit Sprouty đầy đủ — từ hạt giống đến chậu cây thông minh' },
+  { src:'/assets/images/workshop/2.jpg', caption:'Lớp học đông vui — mỗi bé một chậu cây, mỗi chậu một câu chuyện' },
+  { src:'/assets/images/workshop/3.jpg', caption:'Cùng cô trang trí chậu cây — từng nét vẽ đầu tiên' },
+  { src:'/assets/images/workshop/4.jpg', caption:'Thành quả tự hào — bé khoe chậu cây Rainbow của mình' },
+  { src:'/assets/images/workshop/5.jpg', caption:'Cận cảnh chậu Rainbow — cây ớt đã ra hoa' },
+  { src:'/assets/images/workshop/6.jpg', caption:'Hướng dẫn viên vẽ mẫu — bé quan sát và học theo' },
+  { src:'/assets/images/workshop/7.jpg', caption:'Món quà tự tay làm — gói ghém yêu thương' },
+  { src:'/assets/images/workshop/8.jpg', caption:'Tỉ mỉ từng nét cọ — sắc màu của riêng bé' },
+  { src:'/assets/images/workshop/9.jpg', caption:'Tập trung tuyệt đối — khoảnh khắc sáng tạo của bé' },
+  { src:'/assets/images/workshop/10.jpg', caption:'Sản phẩm hoàn thiện — chậu cây mang dấu ấn riêng của bé' },
 ];
 
 export const FAQS = [

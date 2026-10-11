@@ -40,9 +40,9 @@ export interface Product {
 }
 
 export const BADGE_LABEL: Record<Exclude<ProductBadge, null>, string> = {
-  hot: '🔥 Bán chạy',
-  new: '✨ Mới',
-  sale: '🏷 Giảm giá',
+  hot: 'Bán chạy',
+  new: 'Mới',
+  sale: 'Giảm giá',
 };
 
 export function formatPrice(value: number) {

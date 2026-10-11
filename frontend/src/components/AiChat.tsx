@@ -1,3 +1,5 @@
+import { AiBrandMark } from '@/components/AiBrandMark';
+import { AiProductLinks } from '@/components/AiProductLinks';
 /**
  * The assistant at full size: the same conversation the bubble shows, plus
  * the photo and voice input there is no room for in a floating panel.
@@ -9,16 +11,16 @@ import { loginHref } from '@/services/auth-nav';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAiChat } from '@/contexts/AiChatContext';
 import { renderMarkup } from '@/services/ai-markup';
+import { SproutyIcon } from '@/components/icons/SproutyIcon';
 import { showToast } from '@/services/toast';
 
 const PROMPTS = [
-  '🎁 Kit nào phù hợp cho bé 6 tuổi?',
-  '📅 Lịch workshop sắp tới',
-  '🌱 Cách gieo hạt và tưới cây đúng cách',
-  '💰 So sánh kit và gói thành viên',
-  '🎨 Cách chọn màu hài hoà cho bé',
-  '🧸 Kit có an toàn cho bé 4 tuổi?',
-];
+  { icon: 'gift', label: 'Chọn kit cho bé', text: 'Kit nào phù hợp cho bé 6 tuổi?' },
+  { icon: 'water', label: 'Chăm cây mỗi ngày', text: 'Cách gieo hạt và tưới cây đúng cách' },
+  { icon: 'camera', label: 'Viết một kỷ niệm', text: 'Gợi ý một caption cho ngày đầu bé gieo hạt' },
+  { icon: 'bulb', label: 'Khám phá STEM', text: 'Giải thích cảm biến độ ẩm đất cho bé dễ hiểu' },
+  { icon: 'ticket', label: 'Hẹn một workshop', text: 'Lịch workshop sắp tới' },
+] as const;
 
 export function AiChat() {
   const { isLoggedIn } = useAuth();
@@ -31,6 +33,9 @@ export function AiChat() {
 
   const fileInput = useRef<HTMLInputElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => () => recognition.current?.abort(), []);
   const recognition = useRef<any>(null);
 
   useEffect(() => {
@@ -56,7 +61,7 @@ export function AiChat() {
 
   function submit() {
     const question = input.trim();
-    if (!question && !image) return;
+    if (typing || locked || (!question && !image)) return;
     setInput('');
     // A URL of its own, deliberately never revoked. The preview URL dies with
     // the preview, and the message outlives this page now - it is in the shared
@@ -84,10 +89,11 @@ export function AiChat() {
     instance.continuous = false;
     instance.onstart = () => {
       setRecording(true);
-      showToast('🎙 Đang nghe...');
+      showToast('Đang nghe…');
     };
     instance.onresult = (e: any) => setInput(e.results[0][0].transcript);
     instance.onend = () => setRecording(false);
+    instance.onerror = () => { setRecording(false); showToast('Không nhận được giọng nói. Bạn kiểm tra quyền micro hoặc nhập câu hỏi nhé.', 'error'); };
     instance.start();
     recognition.current = instance;
   }
@@ -96,21 +102,21 @@ export function AiChat() {
     <div className="ai-layout">
       <aside className="ai-sidebar">
         <div className="ai-sb-hd">
-          <h3 style={{ fontSize: '.88rem' }}>Gợi ý câu hỏi</h3>
+          <span className="buddy-eyebrow">GÓC GỢI Ý</span><h3>Mình bắt đầu từ đâu?</h3><p>Chọn một chủ đề bạn đang tò mò.</p>
         </div>
         <div className="prompt-list">
           {PROMPTS.map((prompt) => (
             <button
               className="prompt-btn"
-              key={prompt}
-              onClick={() => setInput(prompt.replace(/^[^\w\s]+ /, ''))}
+              key={prompt.label}
+              onClick={() => { setInput(prompt.text); inputRef.current?.focus(); }}
             >
-              {prompt}
+              <SproutyIcon name={prompt.icon} size={21} /><span>{prompt.label}</span><SproutyIcon name="arrow-right" size={15} />
             </button>
           ))}
         </div>
 
-        <div className="ai-sb-sep" />
+        <div className="buddy-sidebar-note"><SproutyIcon name="pot" size={42} /><strong>Chậm một chút, hiểu cây hơn.</strong><p>Kể mình nghe tên cây và điều bạn quan sát được để mình gợi ý cụ thể hơn nhé.</p></div>
 
         {!isLoggedIn && (
           <div className="ai-sb-login">
@@ -134,43 +140,45 @@ export function AiChat() {
       <div className="chat-shell">
         <div className="chat-header">
           <div className="chat-header-left">
-            <div className="chat-ai-av">🤖</div>
+            <div className="chat-ai-av"><AiBrandMark size={25} /></div>
             <div>
               <div style={{ fontSize: '.88rem', fontWeight: 700, color: 'var(--ink)' }}>
                 Trợ lý Sprouty
               </div>
-              <div className="chat-online">Đang hoạt động</div>
+              <div className="chat-online">Trợ lý AI của Sprouty</div>
             </div>
           </div>
           <button
             className="btn btn-ghost btn-sm"
             title="Xoá lịch sử"
+            disabled={typing || messages.length === 0}
             onClick={clear}
           >
-            🗑 Xoá
+            <SproutyIcon name="trash" size={17} /> Xoá trò chuyện
           </button>
         </div>
 
-        <div className="chat-msgs" ref={scroller}>
+        <div className="chat-msgs" ref={scroller} role="log" aria-label="Cuộc trò chuyện" aria-live="polite" aria-relevant="additions text">
           {messages.length === 0 && (
             <div className="chat-empty-state">
-              <div style={{ fontSize: '2.8rem', marginBottom: 12 }}>🌱</div>
-              <h3 style={{ fontSize: '1rem', marginBottom: 6 }}>Xin chào! Tôi là trợ lý Sprouty</h3>
+              <div className="buddy-welcome-art"><AiBrandMark size={56} /></div><span className="buddy-eyebrow">XIN CHÀO, NGƯỜI BẠN LÀM VƯỜN</span>
+              <h3>Hôm nay, cây của bạn thế nào?</h3>
               <p style={{ fontSize: '.84rem', color: 'var(--ink-3)' }}>
-                Hỏi tôi về kit trồng cây, chăm cây, IoT hoặc workshop nhé!
+                Mình ở đây để cùng bạn tìm hiểu, chăm cây và gom những kỷ niệm nhỏ. Bắt đầu bằng một câu hỏi nhé.
               </p>
             </div>
           )}
 
           {messages.map((message, i) => (
             <div className={`msg ${message.role}`} key={i}>
-              <div className="msg-av">{message.role === 'user' ? '👤' : '🤖'}</div>
+              <div className="msg-av">{message.role === 'user' ? <span className="buddy-user-label">Bạn</span> : <AiBrandMark size={20} />}</div>
               <div>
                 {message.imageUrl && <img src={message.imageUrl} alt="" className="msg-image" />}
                 <div
                   className="msg-bubble"
                   dangerouslySetInnerHTML={{ __html: renderMarkup(message.text) }}
                 />
+                {message.role === 'ai' && <AiProductLinks products={message.products} />}
                 <span className="msg-time">{message.time}</span>
               </div>
             </div>
@@ -178,8 +186,8 @@ export function AiChat() {
 
           {typing && (
             <div className="msg ai">
-              <div className="msg-av">🤖</div>
-              <div className="typing-indicator">
+              <div className="msg-av"><AiBrandMark size={20} /></div>
+              <div className="typing-indicator" role="status" aria-label="Sprouty đang trả lời">
                 <div className="td" />
                 <div className="td" />
                 <div className="td" />
@@ -191,46 +199,53 @@ export function AiChat() {
         <div className="chat-input-area">
           {image && (
             <div className="img-preview">
-              <span>📎</span>
+              <span>{imageUrl && <img src={imageUrl} alt="Ảnh đính kèm" />}</span>
               <span>{image.name}</span>
-              <button onClick={clearImage}>✕</button>
+              <button onClick={clearImage} aria-label="Bỏ ảnh đính kèm"><SproutyIcon name="close" size={17} /></button>
             </div>
           )}
 
           <div className="chat-input-row">
             <div className="chat-input-wrap">
-              <input
-                type="text"
-                placeholder="Nhập câu hỏi..."
+              <textarea
+                ref={inputRef}
+                rows={2}
+                aria-label="Câu hỏi cho Sprouty"
+                placeholder="Hỏi Sprouty một điều bạn đang tò mò…"
                 maxLength={500}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) submit();
+                  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); submit(); }
                 }}
               />
               <button
                 className="ic-btn ic-img"
                 title="Gửi ảnh"
+                aria-label="Đính kèm ảnh"
                 disabled={!isLoggedIn}
                 onClick={() => { if (isLoggedIn) fileInput.current?.click(); else window.location.href = loginHref(); }}
               >
-                📎
+                <SproutyIcon name="camera" size={20} />
               </button>
               <button
                 className={`ic-btn ic-voice${recording ? ' recording' : ''}`}
                 title="Giọng nói"
+                aria-label={recording ? "Dừng ghi âm" : "Nhập bằng giọng nói"}
+                aria-pressed={recording}
                 disabled={!isLoggedIn}
                 onClick={toggleVoice}
               >
-                🎙
+                <SproutyIcon name="microphone" size={20} />
               </button>
             </div>
-            <button className="send-btn" title="Gửi" disabled={locked || typing} onClick={submit}>
-              ➤
+            <button className="send-btn" title="Gửi" aria-label="Gửi câu hỏi" disabled={locked || typing || (!input.trim() && !image)} onClick={submit}>
+              <SproutyIcon name="arrow-right" size={23} />
             </button>
           </div>
 
+          <div className="buddy-input-hint"><span>Enter để gửi · Shift + Enter xuống dòng</span><span>{input.length}/500</span></div>
+          <p className="buddy-ai-note">Sprouty là trợ lý AI, câu trả lời có thể chưa chính xác.</p>
           <input
             ref={fileInput}
             type="file"

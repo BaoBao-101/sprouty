@@ -1,3 +1,4 @@
+import { confirmAction } from '@/services/dialog';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   BlockStates,
@@ -173,7 +174,7 @@ export default function RedeemCodes() {
   }
 
   async function disable(code: Code) {
-    if (!confirm(`Tắt mã “${code.label}”?\n\nMã đã tắt không thể kích hoạt được nữa.`)) return;
+    if (!await confirmAction(`Tắt mã “${code.label}”?\n\nMã đã tắt không thể kích hoạt được nữa.`)) return;
     try {
       await API.admin.redeemCodes.remove(code.id);
       showToast('Đã tắt mã', 'success');
@@ -201,7 +202,7 @@ export default function RedeemCodes() {
 
   async function revoke(codeId: string, redemptionId: string) {
     if (
-      !confirm(
+      !await confirmAction(
         'Thu hồi lượt kích hoạt này? Người dùng đó sẽ mất quyền lợi đã được cấp từ mã này, và mã sẽ mở lại cho người khác.',
       )
     )

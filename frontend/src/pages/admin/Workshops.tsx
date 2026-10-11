@@ -1,3 +1,4 @@
+import { confirmAction } from '@/services/dialog';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   BlockStates,
@@ -319,7 +320,7 @@ export default function Workshops() {
   }
 
   async function remove(workshop: WorkshopRow) {
-    if (!confirm(`Xoá workshop “${workshop.title}”?\n\nThao tác này không hoàn tác được.`)) return;
+    if (!await confirmAction(`Xoá workshop “${workshop.title}”?\n\nThao tác này không hoàn tác được.`)) return;
     try {
       await API.admin.workshops.remove(workshop.id);
       showToast('Đã xoá workshop', 'success');
@@ -348,7 +349,7 @@ export default function Workshops() {
   async function markRegistrationPaid(registrationId: string, amount: number) {
     if (!viewing) return;
     if (
-      !confirm(
+      !await confirmAction(
         `Ghi nhận đã thu ${amount.toLocaleString('vi-VN')}đ cho lượt đăng ký này?\n\n` +
           'Chỉ dùng khi bạn đã cầm tiền hoặc kiểm tra tiền về tài khoản.',
       )
@@ -382,7 +383,7 @@ export default function Workshops() {
 
   async function cancelRegistration(registrationId: string) {
     if (!viewing) return;
-    if (!confirm('Huỷ lượt đăng ký này? Chỗ sẽ được mở lại cho người khác.')) return;
+    if (!await confirmAction('Huỷ lượt đăng ký này? Chỗ sẽ được mở lại cho người khác.')) return;
     try {
       await API.admin.workshops.cancelRegistration(viewing.id, registrationId);
       showToast('Đã huỷ lượt đăng ký', 'success');
@@ -822,7 +823,7 @@ export default function Workshops() {
                   {uploading ? 'Đang tải lên…' : form.imageUrl ? 'Đổi ảnh' : 'Chọn ảnh từ máy'}
                   <input
                     type="file"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept="image/*"
                     hidden
                     disabled={uploading}
                     onChange={(e) => {

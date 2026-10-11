@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { showToast } from '@/services/toast';
+import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
 
 const SUBJECTS = [
   { value: 'order', label: 'Hỏi về đặt hàng / thanh toán' },
@@ -52,7 +53,7 @@ export function ContactForm() {
     }
 
     setSentTo(email);
-    showToast('Đã gửi tin nhắn thành công! 📧', 'success');
+    showToast('Đã gửi tin nhắn thành công!', 'success');
   }
 
   function reset() {
@@ -66,7 +67,7 @@ export function ContactForm() {
     return (
       <div className="contact-form-card">
         <div className="form-success">
-          <div style={{ fontSize: '4rem', marginBottom: 16 }}>🎉</div>
+          <div className="form-success-icon"><SproutyIcon name="check" size={44} /></div>
           <h3 style={{ marginBottom: 8, color: 'var(--green)' }}>Đã gửi thành công!</h3>
           <p className="contact-success-text">
             Cảm ơn bạn đã liên hệ. Chúng tôi sẽ phản hồi email <strong>{sentTo}</strong> trong vòng 4

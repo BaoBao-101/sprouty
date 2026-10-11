@@ -46,6 +46,8 @@ interface Props {
   decoration?: PotKey;
   size?: number;
   className?: string;
+  /** Just the pot and the plant, for placing on a background of your own. */
+  bare?: boolean;
 }
 
 /** Body colour of each pot, matching the 3D ones in plant-pots.ts. */
@@ -81,6 +83,7 @@ export function PlantArt({
   decoration = 'plain',
   size = 260,
   className,
+  bare = false,
 }: Props) {
   const artId = useId().replace(/:/g, '');
   const ref = (name: string) => `url(#${artId}-${name})`;
@@ -146,6 +149,8 @@ export function PlantArt({
       </defs>
 
       <g clipPath={ref('pa-frame')}>
+        {/* Without the backdrop when the pot stands in a scene of its own. */}
+        {!bare && (<>
         {/* ── Sky ─────────────────────────────────────────────────────────── */}
         <rect x="0" y="0" width="300" height="300" fill={ref('pa-sky')} />
 
@@ -238,6 +243,8 @@ export function PlantArt({
           <ellipse cx="74" cy="258" rx="9" ry="5" opacity="0.75" />
           <ellipse cx="232" cy="262" rx="8" ry="4.5" opacity="0.7" />
         </g>
+
+        </>)}
 
         {/* ── Pot ─────────────────────────────────────────────────────────── */}
         {/* Shadow first, so the pot sits on the ground rather than floating. */}

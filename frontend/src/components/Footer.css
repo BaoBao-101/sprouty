@@ -1,0 +1,72 @@
+/* Site footer: invitation, brand + three link groups, small print. */
+
+.ft {
+  background:
+    radial-gradient(60% 80% at 100% 0%, rgba(255, 255, 255, .07) 0%, transparent 60%),
+    var(--primary-700);
+  color: rgba(255, 255, 255, .82);
+  padding: 26px 0 0;
+  font-size: .88rem;
+}
+
+/* The invitation: a light band so it reads as an action, not more footer. */
+.ft-cta {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px;
+  padding: 14px 20px; margin-bottom: 28px; border-radius: 16px;
+  background: linear-gradient(120deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .06));
+  border: 1px solid rgba(255, 255, 255, .18);
+}
+.ft-cta-text { display: flex; flex-direction: column; gap: 2px; min-width: 0 }
+.ft-cta-text strong { font-family: var(--font-display); font-size: 1.1rem; color: #fff; line-height: 1.3 }
+.ft-cta-text span { font-size: .85rem; color: rgba(255, 255, 255, .8) }
+.ft-cta-actions { display: flex; flex-wrap: wrap; gap: 8px }
+.ft-cta-actions .btn { display: inline-flex; align-items: center; gap: 6px }
+
+.ft-grid {
+  display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr));
+  gap: 22px 32px; padding-bottom: 24px;
+}
+
+.ft-logo { display: inline-block; margin-bottom: 8px }
+.ft-logo img { width: 132px; height: auto; display: block; filter: drop-shadow(0 2px 10px rgba(0, 0, 0, .3)) }
+.ft-logo-text { font-family: var(--font-display); font-size: 1.5rem; color: #fff }
+.ft-tagline { margin: 0 0 12px; max-width: 300px; font-size: .86rem; line-height: 1.6; color: rgba(255, 255, 255, .82) }
+
+.ft-contact { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px }
+.ft-contact li { display: flex; align-items: center; gap: 8px; font-size: .84rem; color: rgba(255, 255, 255, .88) }
+.ft-contact svg { flex-shrink: 0; color: var(--primary-300, #86EFAC) }
+.ft-contact a { color: #fff; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255, 255, 255, .4) }
+.ft-contact a:hover { text-decoration-color: #fff }
+
+.ft-col h4 {
+  margin: 2px 0 8px; font-family: var(--font-h); font-size: .72rem; font-weight: 800;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--primary-300, #86EFAC);
+}
+.ft-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0 }
+.ft-col a {
+  display: inline-block; padding: 3px 0; font-size: .86rem; color: rgba(255, 255, 255, .86);
+  text-decoration: none; transition: color .15s, transform .15s;
+}
+.ft-col a:hover { color: #fff; transform: translateX(3px) }
+
+.ft-bottom {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px;
+  padding: 12px 0 14px; border-top: 1px solid rgba(255, 255, 255, .14);
+  font-size: .78rem; color: rgba(255, 255, 255, .7);
+}
+.ft-bottom-links { display: flex; gap: 18px }
+.ft-bottom-links a { color: rgba(255, 255, 255, .8); text-decoration: none }
+.ft-bottom-links a:hover { color: #fff; text-decoration: underline }
+
+@media (max-width: 1024px) {
+  .ft-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) }
+  .ft-brand { grid-column: 1 / -1 }
+}
+@media (max-width: 640px) {
+  .ft { padding-top: 20px }
+  .ft-cta { padding: 14px; margin-bottom: 22px }
+  .ft-cta-actions { width: 100% }
+  .ft-cta-actions .btn { flex: 1 1 auto; justify-content: center }
+  .ft-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 16px }
+  .ft-bottom { flex-direction: column; align-items: flex-start }
+}

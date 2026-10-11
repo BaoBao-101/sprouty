@@ -3,7 +3,7 @@ import { requireAdmin, requireCsrf } from '../../middleware/rbac.js';
 import { AppError } from '../../utils/errors.js';
 import { multipartFields, noHtml, parseOrThrow } from '../../utils/validation.js';
 import { auditLog } from '../../services/audit.js';
-import { createAsset } from '../../services/storage/index.js';
+import { createAsset, storageProvider } from '../../services/storage/index.js';
 import { publishBlogEvent } from '../../services/blog-events.js';
 import { readPaging, paged, searchOr } from './paging.js';
 
@@ -135,16 +135,55 @@ export default async function adminBlogRoutes(fastify) {
     return { post };
   });
 
+  // DELETE /api/v1/admin/blog/:id — gone for good. Hiding a post is
+  // PATCH .../status with "archived"; this used to do that too, so the admin
+  // had no way to remove a post at all.
   fastify.delete('/blog/:id', { preHandler: [requireAdmin, requireCsrf] }, async (req, reply) => {
     const existing = await fastify.prisma.blogPost.findUnique({ where: { id: req.params.id } });
     if (!existing) return reply.code(404).send({ message: 'Không tìm thấy bài viết.' });
-    const post = await fastify.prisma.blogPost.update({
-      where: { id: existing.id },
-      data: { status: 'archived' },
+
+    // The images uploaded for it, found before the post is gone: its cover,
+    // and the inline images its text points at.
+    const inline = await fastify.prisma.asset.findMany({
+      where: { kind: 'blog_inline' },
+      select: { id: true, key: true, url: true },
     });
-    await auditLog(fastify.prisma, req.user.id, 'blog.archive', 'BlogPost', post.id, {});
-    publishBlogEvent({ action: 'archived', postId: post.id, slug: post.slug, status: post.status });
-    return { post };
+    const candidates = [
+      ...(existing.coverAssetId
+        ? await fastify.prisma.asset.findMany({ where: { id: existing.coverAssetId }, select: { id: true, key: true, url: true } })
+        : []),
+      ...inline.filter((a) => a.url && existing.content.includes(a.url)),
+    ];
+
+    await fastify.prisma.blogPost.delete({ where: { id: existing.id } });
+
+    // An image another post still uses — a shared cover, a picture pasted
+    // into two articles — stays. The rest go, row and file.
+    let removedImages = 0;
+    for (const asset of candidates) {
+      const stillUsed = await fastify.prisma.blogPost.findFirst({
+        where: { OR: [{ coverAssetId: asset.id }, { content: { contains: asset.url } }] },
+        select: { id: true },
+      });
+      if (stillUsed) continue;
+      await fastify.prisma.asset.delete({ where: { id: asset.id } }).catch(() => null);
+      try {
+        await storageProvider().deleteObject({ key: asset.key });
+      } catch (err) {
+        // The post is already gone; a file left behind is not worth failing for.
+        req.log.warn({ err, assetId: asset.id }, 'blog delete: could not remove stored image');
+      }
+      removedImages += 1;
+    }
+
+    await auditLog(fastify.prisma, req.user.id, 'blog.delete', 'BlogPost', existing.id, {
+      title: existing.title,
+      slug: existing.slug,
+      status: existing.status,
+      removedImages,
+    });
+    publishBlogEvent({ action: 'deleted', postId: existing.id, slug: existing.slug, status: null });
+    return { message: 'Đã xoá bài viết.', removedImages };
   });
 
   fastify.post('/blog/:id/cover', { preHandler: [requireAdmin, requireCsrf] }, async (req, reply) => {

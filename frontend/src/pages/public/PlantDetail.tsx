@@ -1,3 +1,4 @@
+import { confirmAction } from '@/services/dialog';
 /**
  * One plant's simulation dashboard.
  *
@@ -21,6 +22,9 @@ import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
 const PlantViewer3D = lazy(() => import('@/components/PlantViewer3D'));
 import { GardenStyle, type GardenBenefits } from '@/components/GardenStyle';
 import { sceneLook } from '@/components/garden-looks';
+import { IotWorkbench, type IotCommand } from '@/components/IotWorkbench';
+import { CareGame } from '@/components/CareGame';
+import { IotDock, type SensorRead } from '@/components/IotDock';
 import { PlantGuide, useGuideFirstRun } from '@/components/PlantGuide';
 import {
   formatCountdown,
@@ -202,97 +206,6 @@ function SensorChart({ readings }: { readings: SensorReading[] }) {
   );
 }
 
-function DeviceCard({
-  device,
-  busy,
-  onToggle,
-}: {
-  device: PlantDevice;
-  busy: boolean;
-  onToggle: (type: string, next: boolean) => void;
-}) {
-  const [open, setOpen] = useState(false);
-
-  if (!device.unlocked) {
-    return (
-      <div className="device device-locked">
-        <span className="device-icon">
-          <SproutyIcon name="lock" size={22} />
-        </span>
-        <div className="device-body">
-          <strong>{device.label}</strong>
-          <p>Mở ở giai đoạn “{device.unlockStageLabel}”</p>
-        </div>
-      </div>
-    );
-  }
-
-  const lowBattery = device.battery < 20;
-
-  return (
-    <div className={`device${device.autoMode ? ' device-on' : ''}`}>
-      <span className="device-icon">
-        <SproutyIcon name={device.icon} size={22} />
-      </span>
-
-      <div className="device-body">
-        <div className="device-top">
-          <strong>{device.label}</strong>
-          <button
-            type="button"
-            className="device-info-btn"
-            aria-label={`Giải thích ${device.label}`}
-            aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
-          >
-            <SproutyIcon name="info" size={17} />
-          </button>
-        </div>
-
-        {device.reading !== null ? (
-          <div className="device-reading">
-            <span className="device-value">
-              {Math.round(device.reading)}
-              <em>{device.unit}</em>
-            </span>
-            {device.secondary && (
-              <span className="device-secondary">
-                {device.secondary.label} {Math.round(device.secondary.value)}
-                {device.secondary.unit}
-              </span>
-            )}
-          </div>
-        ) : device.kind === 'actuator' ? (
-          <label className="device-switch">
-            <input
-              type="checkbox"
-              checked={device.autoMode}
-              disabled={busy}
-              onChange={(e) => onToggle(device.type, e.target.checked)}
-            />
-            <span className="device-switch-track" aria-hidden="true">
-              <span className="device-switch-knob" />
-            </span>
-            <span className="device-switch-label">{device.autoMode ? 'Đang bật' : 'Đang tắt'}</span>
-          </label>
-        ) : (
-          <p className="device-note">Đang hoạt động</p>
-        )}
-
-        <div className={`device-battery${lowBattery ? ' low' : ''}`}>
-          <SproutyIcon name="battery" size={15} />
-          <span className="device-batt-track">
-            <span className="device-batt-fill" style={{ width: `${Math.round(device.battery)}%` }} />
-          </span>
-          {Math.round(device.battery)}%
-        </div>
-
-        {open && <p className="device-about">{device.about}</p>}
-      </div>
-    </div>
-  );
-}
-
 /** Openers for a child who has not thought of a question yet. */
 const QUICK_ASKS = ['Tại sao lá bị vàng?', 'Bao lâu nữa cây lớn?', 'Nên bật thiết bị nào?'];
 
@@ -357,6 +270,17 @@ function PlantVideos({
   );
 }
 
+/** Repeated events, one line each with a count — oldest order kept. */
+function groupFeed(feed: PlantEvent[]) {
+  const out: Array<PlantEvent & { count: number }> = [];
+  for (const event of feed) {
+    const same = out.find((e) => e.text === event.text && e.level === event.level);
+    if (same) same.count += 1;
+    else out.push({ ...event, count: 1 });
+  }
+  return out;
+}
+
 export default function PlantDetail() {
   const { plantId = '' } = useParams();
   const navigate = useNavigate();
@@ -368,6 +292,7 @@ export default function PlantDetail() {
   const [careBusy, setCareBusy] = useState<string | null>(null);
   const [deviceBusy, setDeviceBusy] = useState(false);
   const [garden, setGarden] = useState<GardenBenefits | null>(null);
+  const [gardenOpen, setGardenOpen] = useState(false);
   const [feed, setFeed] = useState<PlantEvent[]>([]);
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
@@ -385,6 +310,18 @@ export default function PlantDetail() {
     requestAnimationFrame(() =>
       videosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
     );
+  }
+
+  // The IoT board and the 3D plant are one kit: what is wired below stands in
+  // the pot above, and a reading on the plant opens its part on the board.
+  const [connected, setConnected] = useState<string[]>([]);
+  const [iotCmd, setIotCmd] = useState<IotCommand | null>(null);
+  const iotRef = useRef<HTMLDivElement>(null);
+  const sendIot = (kind: IotCommand['kind'], type?: string) =>
+    setIotCmd((prev) => ({ kind, type, n: (prev?.n ?? 0) + 1 }));
+  function openIot(type?: string) {
+    if (type) sendIot('select', type);
+    requestAnimationFrame(() => iotRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   }
 
   // The thread lives on the server, so it survives a reload and follows the
@@ -466,8 +403,8 @@ export default function PlantDetail() {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [load]);
 
-  async function doCare(action: string) {
-    if (careBusy) return;
+  async function doCare(action: string): Promise<number | null> {
+    if (careBusy) return null;
     setCareBusy(action);
     try {
       const data = await API.plants.care(plantId, action);
@@ -487,10 +424,12 @@ export default function PlantDetail() {
         const unlocked = data.plant.devices.find((d: PlantDevice) => d.type === type);
         if (unlocked) showToast(`Thiết bị mới: ${unlocked.label}`, 'success');
       }
+      return Number(data.growth) || 0;
     } catch (err: any) {
       showToast(err?.message || 'Không chăm cây được lúc này.', 'error');
       // A 429 means the cooldown moved under us; refresh so the pill is honest.
       if (err?.status === 429 || err?.status === 409) void load();
+      return null;
     } finally {
       setCareBusy(null);
     }
@@ -538,16 +477,16 @@ export default function PlantDetail() {
       ]);
     } catch (err: any) {
       // Take the question back out: it was never recorded, and leaving it in
-      // the thread would imply Plant Buddy chose not to answer.
+      // the thread would imply Sprouty AI chose not to answer.
       setMessages((prev) => prev.filter((m) => m.id !== pending.id));
-      showToast(err?.message || 'Plant Buddy đang nghỉ một chút, thử lại sau nhé.', 'error');
+      showToast(err?.message || 'Sprouty AI đang nghỉ một chút, thử lại sau nhé.', 'error');
     } finally {
       setCoachBusy(false);
     }
   }
 
   async function clearCoach() {
-    if (!confirm('Xoá toàn bộ lịch sử trò chuyện với Plant Buddy?')) return;
+    if (!await confirmAction('Xoá toàn bộ lịch sử trò chuyện với Sprouty AI?')) return;
     try {
       await API.plants.clearCoach(plantId);
       setMessages([]);
@@ -583,6 +522,51 @@ export default function PlantDetail() {
   const careSlots = plant.care.filter((c) => c.allowedInStage || c.action !== 'harvest');
   const recommended = plant.nextStep.action;
 
+  // The parts wired on the board, as they show on the plant.
+  const wired = plant.devices.filter((d) => d.unlocked && connected.includes(d.type));
+  // What a wired sensor says, in the same words and colours as the rings below.
+  const sensorRead = (d: PlantDevice): SensorRead | null => {
+    const pct = (v: number) => `${Math.round(v)}%`;
+    switch (d.type) {
+      case 'moisture_sensor':
+        return {
+          value: pct(plant.moisture),
+          verdict: verdict('moisture', plant.moisture, plant.idealMoisture),
+          tone: metricBand(plant.moisture, plant.idealMoisture) as SensorRead['tone'],
+          note: `Chặng này cây thích đất ẩm ${plant.idealMoisture[0]}–${plant.idealMoisture[1]}%.`,
+        };
+      case 'thermo_sensor':
+        return {
+          value: `${Math.round(plant.environment.temperature)}°C`,
+          verdict: verdict('temperature', plant.environment.temperature, plant.idealTemp),
+          tone: metricBand(plant.environment.temperature, plant.idealTemp) as SensorRead['tone'],
+          note: `Cây thích ${plant.idealTemp[0]}–${plant.idealTemp[1]}°C${d.secondary ? ` · ${d.secondary.label} ${Math.round(d.secondary.value)}${d.secondary.unit}` : ''}.`,
+        };
+      case 'light_sensor':
+        return {
+          value: pct(plant.environment.light),
+          verdict: verdict('light', plant.environment.light),
+          tone: plant.environment.light > 35 || !plant.environment.isDay ? 'good' : 'warn',
+        };
+      case 'nutrient_sensor':
+        return {
+          value: pct(plant.nutrient),
+          verdict: verdict('nutrient', plant.nutrient),
+          tone: plant.nutrient > 45 ? 'good' : plant.nutrient > 28 ? 'warn' : 'bad',
+          note: plant.nutrient <= 45 ? 'Kéo bao phân lên cây để bón thêm.' : undefined,
+        };
+      case 'camera':
+        return {
+          value: pct(plant.pestRisk),
+          verdict: verdict('pest', plant.pestRisk),
+          tone: plant.pestRisk < 40 ? 'good' : plant.pestRisk < 58 ? 'warn' : 'bad',
+          note: 'Camera soi lá mỗi giờ để tìm sâu bệnh.',
+        };
+      default:
+        return null;
+    }
+  };
+
   return (
     <>
       <PlantGuide open={guideOpen} onClose={closeGuide} />
@@ -605,28 +589,75 @@ export default function PlantDetail() {
 
           <div className="pd-hero-grid">
             <div className="pd-art-pane">
-              <Suspense fallback={<div className="plant-viewer-loading">Đang mở mô hình cây…</div>}><PlantViewer3D
-                stage={plant.stage}
-                progress={plant.stageProgress}
-                health={plant.health}
-                form={plant.form}
-                fruitShape={plant.fruitShape}
-                fruitColor={plant.fruitColor}
-                flowerColor={plant.flowerColor}
-                scene={garden?.scene ?? 'natural'}
-                isNight={!plant.environment.isDay}
-                decoration={garden?.decoration}
-              /></Suspense>
-              <div className="pd-clock">
-                <SproutyIcon name={garden?.scene === 'night' ? 'moon' : garden && garden.scene !== 'natural' ? 'sparkle' : plant.environment.isDay ? 'sun' : 'moon'} size={17} />
-                {/* A VIP scene is the same place at any hour, so the pill names
-                    the scene instead of claiming it is daytime under a night sky. */}
-                {garden && garden.scene !== 'natural'
-                  ? sceneLook(garden.scene).label
-                  : plant.environment.isDay ? 'Ban ngày' : 'Ban đêm'} ·{' '}
-                {String(Math.floor(plant.environment.hour)).padStart(2, '0')}:
-                {String(Math.round((plant.environment.hour % 1) * 60)).padStart(2, '0')}
-              </div>
+              {/* Care happens on the plant itself: the tools sit under the
+                  3D model and are dragged onto it. */}
+              <CareGame
+                disabled={harvested}
+                plant={{
+                  stage: plant.stage,
+                  progress: plant.stageProgress,
+                  health: plant.health,
+                  form: plant.form,
+                  fruitShape: plant.fruitShape,
+                  fruitColor: plant.fruitColor,
+                  flowerColor: plant.flowerColor,
+                }}
+                tools={careSlots.map((slot) => {
+                  const left = secondsLeftNow(slot, fetchedAt, now);
+                  return {
+                    action: slot.action,
+                    label: slot.label,
+                    icon: slot.icon,
+                    hint: slot.hint,
+                    recommended: slot.action === recommended,
+                    wait: formatCountdown(left),
+                    state: !slot.allowedInStage
+                      ? 'locked'
+                      : careBusy === slot.action
+                        ? 'busy'
+                        : left <= 0
+                          ? 'ready'
+                          : 'cooldown',
+                  };
+                })}
+                onCare={doCare}>
+                <Suspense fallback={<div className="plant-viewer-loading">Đang mở mô hình cây…</div>}><PlantViewer3D
+                  stage={plant.stage}
+                  progress={plant.stageProgress}
+                  health={plant.health}
+                  form={plant.form}
+                  fruitShape={plant.fruitShape}
+                  fruitColor={plant.fruitColor}
+                  flowerColor={plant.flowerColor}
+                  scene={garden?.scene ?? 'natural'}
+                  isNight={!plant.environment.isDay}
+                  decoration={garden?.decoration}
+                  gadgets={wired.map((d) => ({ type: d.type, on: d.kind === 'sensor' || d.autoMode }))}
+                /></Suspense>
+                <div className="pd-clock">
+                  <SproutyIcon name={garden?.scene === 'night' ? 'moon' : garden && garden.scene !== 'natural' ? 'sparkle' : plant.environment.isDay ? 'sun' : 'moon'} size={17} />
+                  {/* A VIP scene is the same place at any hour, so the pill names
+                      the scene instead of claiming it is daytime under a night sky. */}
+                  {garden && garden.scene !== 'natural'
+                    ? sceneLook(garden.scene).label
+                    : plant.environment.isDay ? 'Ban ngày' : 'Ban đêm'} ·{' '}
+                  {String(Math.floor(plant.environment.hour)).padStart(2, '0')}:
+                  {String(Math.round((plant.environment.hour % 1) * 60)).padStart(2, '0')}
+                </div>
+                {/* The parts wired below, on the plant they measure: readings,
+                    switches, wiring in and out, all without leaving the plant. */}
+                <IotDock
+                  devices={plant.devices}
+                  wired={connected}
+                  busy={deviceBusy}
+                  read={sensorRead}
+                  onToggle={toggleDevice}
+                  onPlace={(type) => sendIot('place', type)}
+                  onPlaceAll={() => sendIot('placeAll')}
+                  onRemove={(type) => sendIot('remove', type)}
+                  onOpenBoard={openIot}
+                />
+              </CareGame>
             </div>
 
             <div className="pd-head-pane">
@@ -668,6 +699,51 @@ export default function PlantDetail() {
                 {plant.productName} · giống {plant.speciesLabel} · thu hoạch {plant.harvestLabel}
               </p>
 
+              <div className="pd-badges">
+                <span className={`pd-badge pd-badge-health pd-h-${plant.healthState.id}`}>
+                  <SproutyIcon name="heart" size={17} />
+                  {plant.healthState.label} {Math.round(plant.health)}%
+                </span>
+                {plant.careStreak > 0 && (
+                  <span className="pd-badge pd-badge-streak">
+                    <SproutyIcon name="bolt" size={17} />
+                    {plant.careStreak} ngày liên tục
+                  </span>
+                )}
+              </div>
+
+              {/* Where the plant is now, in one card: the stage, how far
+                  through it, and what is happening to it. */}
+              <div className="pd-now">
+                <div className="pd-now-head">
+                  <span>Chặng hiện tại</span>
+                  <strong>{plant.stageLabel}</strong>
+                  <em>{Math.round(plant.stageProgress)}%</em>
+                </div>
+                <div className="pd-progress-track">
+                  <div className="pd-progress-fill" style={{ width: `${Math.round(plant.stageProgress)}%` }} />
+                </div>
+                <p>{plant.stageStory}</p>
+              </div>
+
+              {/* What to do next, said once, beside the plant it is about. It
+                  used to be a banner further down repeating what the care
+                  tools already said. */}
+              <div className={`pd-todo${harvested ? ' is-done' : ''}`}>
+                <span className="pd-todo-icon">
+                  <SproutyIcon name={harvested ? 'trophy' : plant.nextStep.icon} size={24} />
+                </span>
+                <div>
+                  <span className="pd-todo-kicker">{harvested ? 'Đã hoàn thành' : 'Việc nên làm'}</span>
+                  <strong>
+                    {harvested
+                      ? `Bạn đã thu hoạch ${plant.harvestLabel}!`
+                      : plant.nextStep.label || 'Cây đang tự lớn'}
+                  </strong>
+                  <p>{harvested ? 'Mở một bộ kit mới để trồng cây khác nhé.' : plant.nextStep.why}</p>
+                </div>
+              </div>
+
               <div className="pd-guide-row">
                 <button className="guide-open-btn pd-guide-btn" onClick={openGuide}>
                   <SproutyIcon name="info" size={17} />
@@ -681,158 +757,70 @@ export default function PlantDetail() {
                 )}
               </div>
 
-              <div className="pd-badges">
-                <span className="pd-badge pd-badge-stage">
-                  <SproutyIcon name="sprout" size={17} />
-                  {plant.stageLabel}
-                </span>
-                <span className={`pd-badge pd-badge-health pd-h-${plant.healthState.id}`}>
-                  <SproutyIcon name="heart" size={17} />
-                  {plant.healthState.label} {Math.round(plant.health)}%
-                </span>
-                {plant.careStreak > 0 && (
-                  <span className="pd-badge pd-badge-streak">
-                    <SproutyIcon name="bolt" size={17} />
-                    {plant.careStreak} ngày liên tục
-                  </span>
-                )}
-              </div>
-
-              {/* Journey map */}
-              <div className="pd-journey">
-                {plant.stages.map((s, i) => (
-                  <div
-                    key={s.id}
-                    className={`pdj-step${s.reached ? ' reached' : ''}${s.current ? ' current' : ''}`}
-                    title={s.story}
-                  >
-                    {i > 0 && <span className="pdj-line" aria-hidden="true" />}
-                    <span className="pdj-dot">
-                      <SproutyIcon name={s.reached && !s.current ? 'check' : s.icon} size={18} />
-                    </span>
-                    <span className="pdj-label">{s.label}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="pd-progress">
-                <div className="pd-progress-track">
-                  <div
-                    className="pd-progress-fill"
-                    style={{ width: `${Math.round(plant.stageProgress)}%` }}
-                  />
-                </div>
-                <span>
-                  {Math.round(plant.stageProgress)}% của chặng “{plant.stageLabel}”
-                </span>
-              </div>
-
-              <p className="pd-story">{plant.stageStory}</p>
               {plant.cultivation && <details className="pd-botanical"><summary>Hồ sơ giống · {plant.speciesLabel}</summary>
                 <em>{plant.cultivation.name}</em><p>{plant.cultivation.sow}</p><p>{plant.cultivation.support}</p>
                 <p>{plant.cultivation.mature}</p><small>Mô phỏng giáo dục: thời gian và thang độ ẩm được giản lược. Cây thật còn phụ thuộc giống, đất và khí hậu.</small>
               </details>}
             </div>
           </div>
-          <GardenStyle onChange={setGarden} />
+
+          {/* All eight stages across the full width. Squeezed into the right
+              column it scrolled sideways and hid the last stages. */}
+          <div className="pd-journey-wrap">
+            <div className="pd-journey">
+              {plant.stages.map((s, i) => (
+                <div
+                  key={s.id}
+                  className={`pdj-step${s.reached ? ' reached' : ''}${s.current ? ' current' : ''}`}
+                  title={s.story}
+                >
+                  {i > 0 && <span className="pdj-line" aria-hidden="true" />}
+                  <span className="pdj-dot">
+                    <SproutyIcon name={s.reached && !s.current ? 'check' : s.icon} size={18} />
+                  </span>
+                  <span className="pdj-label">{s.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Garden look ──────────────────────────────────────── */}
+          {/* Folded, but right under the plant: a pick shows on the 3D model
+              above, so the two have to be on screen together. It stays
+              mounted while closed — it loads the scene and pot the model is
+              drawn with. */}
+          <div className={`pd-panel pd-log pd-garden${gardenOpen ? ' open' : ''}`}>
+            <button className="pd-log-toggle" aria-expanded={gardenOpen} onClick={() => setGardenOpen((v) => !v)}>
+              <SproutyIcon name="pot" size={20} />
+              <span>
+                <strong>Trang trí vườn</strong>
+                <em>Khung cảnh và chậu cho cây 3D</em>
+              </span>
+              <SproutyIcon name="arrow-down" size={18} className="pd-log-chevron" />
+            </button>
+            <div className="pd-log-body" hidden={!gardenOpen}>
+              <GardenStyle onChange={setGarden} />
+            </div>
+          </div>
         </div>
       </div>
 
       <section className="pd-main">
         <div className="container">
-          {/* ── Next step ──────────────────────────────────────────────── */}
-          <div className={`pd-next${harvested ? ' done' : ''}`}>
-            <span className="pd-next-icon">
-              <SproutyIcon name={harvested ? 'trophy' : plant.nextStep.icon} size={30} />
-            </span>
-            <div className="pd-next-copy">
-              <span className="pd-next-kicker">
-                {harvested ? 'Hành trình đã hoàn thành' : 'Việc nên làm tiếp theo'}
-              </span>
-              <strong>
-                {harvested
-                  ? `Bạn đã thu hoạch ${plant.harvestLabel} từ cây này!`
-                  : plant.nextStep.label || 'Cây đang tự lớn'}
-              </strong>
-              <p>
-                {harvested ? 'Mở một bộ kit mới để bắt đầu một cây khác nhé.' : plant.nextStep.why}
-              </p>
-            </div>
-            {!harvested && recommended && (
-              <button
-                className="pd-next-btn"
-                disabled={careBusy !== null}
-                onClick={() => doCare(recommended)}
-              >
-                {careBusy === recommended ? 'Đang làm...' : 'Làm ngay'}
-                <SproutyIcon name="arrow-right" size={18} />
-              </button>
-            )}
-          </div>
-
           <div className="pd-cols">
             <div className="pd-col-main">
-              {/* ── Care actions ───────────────────────────────────────── */}
-              <div className="pd-panel">
+              {/* ── IoT station ────────────────────────────────────────── */}
+              {/* One panel for the readings and the parts that take them. They
+                  were two panels saying much the same thing: five rings of
+                  sensor values, then a board of sensors showing the same values. */}
+              <div className="pd-panel pd-iot" ref={iotRef}>
                 <div className="pd-panel-head">
                   <h2>
-                    <SproutyIcon name="water" size={21} /> Chăm cây
+                    <SproutyIcon name="chart" size={21} /> Trạm IoT
                   </h2>
                   <p>
-                    Mỗi việc có thời gian hồi riêng. Làm đúng lúc cây đang cần thì được nhiều điểm
-                    phát triển hơn.
-                  </p>
-                </div>
-
-                <div className="care-grid">
-                  {careSlots.map((slot) => {
-                    const left = secondsLeftNow(slot, fetchedAt, now);
-                    const ready = slot.allowedInStage && left <= 0;
-                    const isRec = slot.action === recommended;
-                    return (
-                      <button
-                        key={slot.action}
-                        className={`care-btn${ready ? ' ready' : ''}${isRec ? ' recommended' : ''}`}
-                        disabled={!ready || careBusy !== null || harvested}
-                        onClick={() => doCare(slot.action)}
-                        title={slot.hint}
-                      >
-                        {isRec && ready && <span className="care-flag">Nên làm</span>}
-                        <span className="care-icon">
-                          <SproutyIcon name={slot.icon} size={26} />
-                        </span>
-                        <span className="care-label">{slot.label}</span>
-                        <span className="care-state">
-                          {!slot.allowedInStage ? (
-                            <>
-                              <SproutyIcon name="lock" size={13} /> Chưa tới lúc
-                            </>
-                          ) : careBusy === slot.action ? (
-                            'Đang làm...'
-                          ) : ready ? (
-                            <>
-                              <SproutyIcon name="check" size={13} /> Sẵn sàng
-                            </>
-                          ) : (
-                            <>
-                              <SproutyIcon name="clock" size={13} /> {formatCountdown(left)}
-                            </>
-                          )}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* ── Sensors ────────────────────────────────────────────── */}
-              <div className="pd-panel">
-                <div className="pd-panel-head">
-                  <h2>
-                    <SproutyIcon name="chart" size={21} /> Cảm biến IoT
-                  </h2>
-                  <p>
-                    Xanh là cây đang vui, vàng là cây hơi mệt, đỏ là cây cần bạn giúp ngay.
+                    Linh kiện lắp vào bảng mạch sẽ được gắn vào chậu cây ở trên. Xanh là cây đang vui,
+                    vàng là hơi mệt, đỏ là cần giúp ngay.
                     <br />
                     <span className="pd-panel-fine">
                       Chặng này cây thích đất ẩm {plant.idealMoisture[0]}–{plant.idealMoisture[1]}%
@@ -893,31 +881,22 @@ export default function PlantDetail() {
                   />
                 </div>
 
-                <SensorChart readings={plant.readings} />
-              </div>
+                <IotWorkbench
+                  plantId={plant.id}
+                  devices={[...sensors, ...actuators]}
+                  busy={deviceBusy}
+                  onToggle={toggleDevice}
+                  plantName={plant.nickname}
+                  onConnectedChange={setConnected}
+                  command={iotCmd}
+                />
 
-              {/* ── Devices ────────────────────────────────────────────── */}
-              <div className="pd-panel">
-                <div className="pd-panel-head">
-                  <h2>
-                    <SproutyIcon name="pump" size={21} /> Thiết bị trong bộ kit
-                  </h2>
-                  <p>
-                    Bật chế độ tự động để thiết bị giữ cây sống khi bạn đi vắng. Nhưng điểm phát
-                    triển chỉ đến từ việc bạn tự chăm.
-                  </p>
-                </div>
-
-                <div className="device-grid">
-                  {[...sensors, ...actuators].map((device) => (
-                    <DeviceCard
-                      key={device.type}
-                      device={device}
-                      busy={deviceBusy}
-                      onToggle={toggleDevice}
-                    />
-                  ))}
-                </div>
+                <details className="pd-iot-chart">
+                  <summary>
+                    <SproutyIcon name="chart" size={17} /> Biểu đồ cảm biến 24 giờ
+                  </summary>
+                  <SensorChart readings={plant.readings} />
+                </details>
               </div>
 
               {/* ── Instruction videos ─────────────────────────────────── */}
@@ -956,7 +935,7 @@ export default function PlantDetail() {
                   <div className="pd-log-body">
                     {feed.length > 0 && (
                       <ul className="feed-list">
-                        {feed.map((event, i) => (
+                        {groupFeed(feed).map((event, i) => (
                           <li key={i} className={`feed-item feed-${event.level}`}>
                             <SproutyIcon
                               name={
@@ -969,6 +948,7 @@ export default function PlantDetail() {
                               size={16}
                             />
                             {event.text}
+                            {event.count > 1 && <em className="feed-count">×{event.count}</em>}
                           </li>
                         ))}
                       </ul>
@@ -976,7 +956,7 @@ export default function PlantDetail() {
 
                     <ul className="history-list">
                       {plant.history.length === 0 && (
-                        <li className="history-empty">Chưa có việc chăm cây nào được ghi lại.</li>
+                        <li className="history-empty">Chưa có lần chăm cây nào — kéo một dụng cụ lên cây để bắt đầu.</li>
                       )}
                       {plant.history.map((entry) => (
                         <li key={entry.id} className={entry.warned ? 'warned' : ''}>
@@ -996,7 +976,7 @@ export default function PlantDetail() {
                               {entry.stageLabel}
                             </span>
                           </div>
-                          {entry.growth > 0 && <em className="history-growth">+{entry.growth}</em>}
+                          {entry.growth > 0 && <em className="history-growth">+{entry.growth.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}</em>}
                         </li>
                       ))}
                     </ul>
@@ -1005,7 +985,7 @@ export default function PlantDetail() {
               </div>
             </div>
 
-            {/* Plant Buddy is pinned to the viewport rather than left to scroll
+            {/* Sprouty AI is pinned to the viewport rather than left to scroll
                 away with the page: the questions a child asks are about the
                 numbers in the left column, so both have to be readable at the
                 same moment. Pinning is also what earns the thread its own
@@ -1015,10 +995,11 @@ export default function PlantDetail() {
               <div className="pd-panel coach-panel">
                 <header className="coach-head">
                   <span className="coach-avatar">
-                    <SproutyIcon name="chat" size={24} />
+                    <SproutyIcon name="plant-chat" size={24} />
                   </span>
                   <div className="coach-who">
-                    <strong>Plant Buddy</strong>
+                    <strong>Sprouty AI</strong>
+                    <small className="coach-tagline">Bạn đồng hành chăm cây</small>
                     <span className={`coach-status${coachBusy ? ' busy' : ''}`}>
                       <i />
                       {coachBusy ? 'đang xem cây…' : 'đang chờ bạn hỏi'}
@@ -1043,14 +1024,14 @@ export default function PlantDetail() {
                   {messages.length === 0 && !coachBusy && (
                     <div className="coach-empty">
                       <span className="coach-empty-icon">
-                        <SproutyIcon name="sprout" size={30} />
+                        <SproutyIcon name="plant-chat" size={30} />
                       </span>
                       <p>
-                        Chào bạn! Mình là <b>Plant Buddy</b>. Mình nhìn được hết cảm biến của{' '}
+                        Chào bạn! Mình là <b>Sprouty AI</b>. Mình nhìn được hết cảm biến của{' '}
                         {plant.nickname} và sẽ nói cho bạn biết cây đang cần gì.
                       </p>
                       <button className="coach-ask" onClick={() => askCoach()}>
-                        <SproutyIcon name="sparkle" size={18} />
+                        <SproutyIcon name="plant-chat" size={18} />
                         Xem cây giúp mình
                       </button>
                     </div>
@@ -1060,7 +1041,7 @@ export default function PlantDetail() {
                     <div key={m.id} className={`coach-msg coach-msg-${m.role}`}>
                       {m.role === 'assistant' && (
                         <span className="coach-msg-avatar">
-                          <SproutyIcon name="sprout" size={16} />
+                          <SproutyIcon name="plant-chat" size={16} />
                         </span>
                       )}
                       <div className="coach-bubble">
@@ -1078,11 +1059,11 @@ export default function PlantDetail() {
                   {coachBusy && (
                     <div className="coach-msg coach-msg-assistant">
                       <span className="coach-msg-avatar">
-                        <SproutyIcon name="sprout" size={16} />
+                        <SproutyIcon name="plant-chat" size={16} />
                       </span>
                       <div
                         className="coach-bubble coach-typing"
-                        aria-label="Plant Buddy đang trả lời"
+                        aria-label="Sprouty AI đang trả lời"
                       >
                         <i />
                         <i />
@@ -1108,7 +1089,7 @@ export default function PlantDetail() {
                   <div className="coach-quick">
                     {messages.length > 0 && (
                       <button className="lead" disabled={coachBusy} onClick={() => askCoach()}>
-                        <SproutyIcon name="sparkle" size={14} />
+                        <SproutyIcon name="plant-chat" size={14} />
                         Xem cây giúp mình
                       </button>
                     )}

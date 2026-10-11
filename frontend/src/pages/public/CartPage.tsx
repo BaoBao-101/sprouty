@@ -1,3 +1,4 @@
+import { confirmAction } from '@/services/dialog';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LoginRequiredDialog, type LoginGate } from '@/components/LoginRequiredDialog';
@@ -39,7 +40,7 @@ function CartRow({ item }: { item: CartLine }) {
     <div className="cart-item">
       <div className="cart-item-em" style={{ background: CATEGORY_BG[item.cat] ?? 'var(--cream)' }}>
         {failed ? (
-          <span className="cart-item-fallback">{item.em || '📦'}</span>
+          <span className="cart-item-fallback"><SproutyIcon name="pot" size={26} /></span>
         ) : (
           <img src={lineImage(item)} alt={item.name} onError={() => setFailed(true)} />
         )}
@@ -289,8 +290,8 @@ export default function CartPage() {
                 <button
                   className="btn btn-ghost btn-sm"
                   style={{ color: 'var(--rose)' }}
-                  onClick={() => {
-                    if (confirm('Xoá tất cả sản phẩm khỏi giỏ hàng?')) clear();
+                  onClick={async () => {
+                    if (await confirmAction('Xoá tất cả sản phẩm khỏi giỏ hàng?')) clear();
                   }}
                 >
                   Xoá toàn bộ giỏ hàng
@@ -334,9 +335,9 @@ export default function CartPage() {
                 </div>
 
                 <div className="cart-trust">
-                  <span>🔒 Thanh toán an toàn</span>
-                  <span>🔄 Đổi trả 7 ngày</span>
-                  <span>🚚 Giao toàn quốc</span>
+                  <span><SproutyIcon name="lock" size={15} /> Thanh toán an toàn</span>
+                  <span><SproutyIcon name="return" size={15} /> Hoàn tiền 7 ngày</span>
+                  <span><SproutyIcon name="bolt" size={15} /> Kích hoạt ngay</span>
                 </div>
               </div>
             </div>

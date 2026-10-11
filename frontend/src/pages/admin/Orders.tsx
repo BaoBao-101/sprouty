@@ -1,3 +1,4 @@
+import { confirmAction } from '@/services/dialog';
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -109,7 +110,7 @@ export default function Orders() {
 
   async function markPaid(order: Order) {
     if (
-      !confirm(
+      !await confirmAction(
         `Ghi nhận đã thu ${formatPrice(order.total)} cho đơn #${shortOrderId(order.id)}?\n\n` +
           'Chỉ dùng khi bạn đã kiểm tra tiền thực sự về tài khoản. ' +
           'Đơn sẽ chuyển sang Đang xử lý và mã kích hoạt được phát cho khách.',

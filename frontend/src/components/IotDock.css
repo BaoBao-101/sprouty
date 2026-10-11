@@ -1,0 +1,123 @@
+/* IoT on the plant: a slim bar along the bottom of the 3D view, a card above it. */
+
+.iotd {
+  position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 3;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  pointer-events: none; transition: opacity .15s;
+}
+.iotd > * { pointer-events: auto }
+
+/* ── The bar ────────────────────────────────────────────────────────────── */
+.iotd-bar {
+  display: flex; align-items: center; gap: 2px; max-width: 100%; padding: 3px; overflow-x: auto; scrollbar-width: none;
+  border-radius: 999px; background: rgba(255, 255, 255, .88); backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, .9); box-shadow: 0 4px 14px rgba(0, 0, 0, .1);
+}
+.iotd-bar::-webkit-scrollbar { display: none }
+.iotd-item, .iotd-wide {
+  flex: none; display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 10px 0 8px;
+  border: none; border-radius: 999px; background: transparent; font: inherit; font-size: .76rem; color: #2b4935; cursor: pointer;
+}
+.iotd-item:hover, .iotd-wide:hover { background: rgba(53, 168, 83, .08) }
+.iotd-item.is-open { background: #fff; box-shadow: 0 0 0 1.5px var(--primary-300) }
+.iotd-item b { font-weight: 800 }
+.iotd-item.is-good { --icon-accent: var(--primary-300); color: #1E6B3A }
+.iotd-item.is-warn { --icon-accent: var(--accent-yellow); color: #A16207 }
+.iotd-item.is-bad { --icon-accent: var(--rose); color: #B01435 }
+.iotd-item.is-icon { position: relative; width: 32px; padding: 0; justify-content: center; color: var(--ink-4) }
+.iotd-item.is-icon.is-on { --icon-accent: #FDBA74; color: #C2410C }
+/* A small light on a working part. */
+.iotd-item.is-icon:not(.is-add)::after {
+  content: ''; position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%;
+  background: #CBD5CF; box-shadow: 0 0 0 1.5px #fff;
+}
+.iotd-item.is-icon.is-on::after { background: #F97316 }
+.iotd-item.is-add { color: var(--primary-600) }
+.iotd-wide { padding: 0 14px 0 10px; font-weight: 800; color: var(--primary-600) }
+.iotd-sep { flex: none; width: 1px; height: 20px; margin: 0 3px; background: rgba(0, 0, 0, .1) }
+
+/* ── The card ───────────────────────────────────────────────────────────── */
+.iotd-pop {
+  width: min(290px, 100%); max-height: 270px; overflow-y: auto; padding: 12px; border-radius: 18px;
+  background: #fff; border: 1px solid var(--parchment-2); box-shadow: 0 12px 30px rgba(20, 50, 30, .18);
+  color: var(--ink); animation: iotd-in .16s ease-out;
+}
+@keyframes iotd-in { from { opacity: 0; transform: translateY(6px) } }
+.iotd-pop-head { display: flex; align-items: center; gap: 10px }
+.iotd-pop-head > div { flex: 1; min-width: 0 }
+.iotd-pop-head strong { display: block; font-family: var(--font-h); font-size: .92rem; line-height: 1.25 }
+.iotd-pop-head em { font-style: normal; font-size: .72rem; color: var(--ink-4) }
+.iotd-pop-icon {
+  flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px;
+  background: var(--primary-100); color: var(--primary-600);
+}
+.iotd-pop-icon.is-sensor { background: #E0F2FE; color: #0369A1 }
+.iotd-pop-icon.is-actuator { background: #FFEDD5; color: #C2410C }
+.iotd-close {
+  flex: none; align-self: flex-start; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  border: 1.5px solid var(--parchment-2); background: var(--surface); color: var(--ink-2); cursor: pointer;
+}
+
+.iotd-read { display: flex; align-items: baseline; gap: 10px; margin: 12px 0 4px }
+.iotd-read b { font-family: var(--font-display); font-size: 1.7rem; line-height: 1 }
+.iotd-read span { padding: 2px 10px; border-radius: 999px; font-size: .76rem; font-weight: 800 }
+.iotd-read.is-good b { color: #1E6B3A }
+.iotd-read.is-good span { background: #DCFCE7; color: #15803D }
+.iotd-read.is-warn b { color: #A16207 }
+.iotd-read.is-warn span { background: #FEF3C7; color: #A16207 }
+.iotd-read.is-bad b { color: #B01435 }
+.iotd-read.is-bad span { background: #FFE4E6; color: #B01435 }
+.iotd-note { margin: 8px 0 0; font-size: .8rem; line-height: 1.5; color: var(--ink-3) }
+
+.iotd-switch {
+  display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 10px; padding: 8px 12px 8px 8px;
+  border-radius: 14px; border: 1.5px solid var(--parchment-2); background: var(--cream-2);
+  font: inherit; font-size: .82rem; font-weight: 800; color: var(--ink-3); cursor: pointer;
+}
+.iotd-switch.is-on { border-color: #FDBA74; background: #FFF7ED; color: #C2410C }
+.iotd-switch:disabled { opacity: .6; cursor: progress }
+.iotd-knob {
+  position: relative; flex: none; width: 38px; height: 22px; border-radius: 999px; background: #CBD5CF; transition: background .15s;
+}
+.iotd-knob::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .2); transition: transform .15s;
+}
+.iotd-switch.is-on .iotd-knob { background: #F97316 }
+.iotd-switch.is-on .iotd-knob::after { transform: translateX(16px) }
+
+.iotd-pop-foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--parchment-2) }
+.iotd-link {
+  padding: 4px 2px; border: none; background: none; font: inherit; font-size: .76rem; font-weight: 700;
+  color: var(--primary-600); cursor: pointer;
+}
+.iotd-link:first-child { color: var(--ink-4) }
+.iotd-link:hover { text-decoration: underline }
+.iotd-link:disabled { opacity: .5; cursor: progress }
+
+.iotd-spare { display: grid; gap: 6px; margin-top: 10px }
+.iotd-spare-item {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; text-align: left;
+  border: 1.5px solid var(--parchment-2); background: var(--surface); font: inherit; font-size: .8rem; color: var(--ink); cursor: pointer;
+}
+.iotd-spare-item span { flex: 1; min-width: 0; font-weight: 700 }
+.iotd-spare-item.is-sensor > svg:first-child { color: #0369A1 }
+.iotd-spare-item.is-actuator > svg:first-child { color: #C2410C }
+.iotd-spare-item > svg:last-child { color: var(--primary-600) }
+.iotd-spare-item:hover { border-color: var(--primary-300) }
+.iotd-all { width: 100%; margin-top: 10px; justify-content: center }
+
+/* A phone has no room for every reading and switch over a small picture:
+   the bar leaves the picture and sits right under it, wrapping onto a
+   second line if it must; the card still opens over the plant. */
+@media (max-width: 640px) {
+  .iotd { position: relative; left: auto; right: auto; bottom: auto; margin-top: 8px; align-items: stretch }
+  .iotd-bar {
+    flex-wrap: wrap; justify-content: center; overflow: visible; border-radius: 16px;
+    background: #fff; border-color: #DCEAD2; box-shadow: none; backdrop-filter: none;
+  }
+  .iotd-sep { display: none }
+  .iotd-item { height: 30px; padding: 0 8px 0 6px; font-size: .7rem }
+  .iotd-item.is-icon { width: 30px }
+  .iotd-pop { position: absolute; left: 0; bottom: calc(100% + 8px); width: 100%; max-height: 240px }
+}

@@ -1,3 +1,4 @@
+import { confirmAction } from '@/services/dialog';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -5,6 +6,7 @@ import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { formatPrice } from '@/types/product';
 import { TicketQr } from '@/components/TicketQr';
+import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
 import { refreshRewards } from '@/components/PromoBanner';
 import { Pager } from '@/components/Pager';
 import {
@@ -81,7 +83,7 @@ export default function MyWorkshops() {
 
   async function cancel(reg: MyWorkshopRegistration) {
     if (
-      !confirm(
+      !await confirmAction(
         `Huỷ đăng ký "${reg.workshop.title}"?\n\nChỗ sẽ được mở lại cho người khác.` +
           '\n\nSuất workshop miễn phí đã dùng cho đăng ký này sẽ được trả lại.' +
           (reg.paidAt ? '\n\nBạn đã thanh toán — vui lòng liên hệ để được hoàn tiền.' : ''),
@@ -110,7 +112,7 @@ export default function MyWorkshops() {
       <main className="container section-sm">
         <h1>Workshop của tôi</h1>
         <div className="myws-empty">
-          <div className="myws-empty-icon">🔒</div>
+          <div className="myws-empty-icon"><SproutyIcon name="lock" size={36} /></div>
           <p>Đăng nhập để xem các buổi workshop bạn đã đăng ký.</p>
         </div>
       </main>
@@ -135,7 +137,7 @@ export default function MyWorkshops() {
     return (
       <article className={`myws-card${reg.status === 'cancelled' ? ' cancelled' : ''}`} key={reg.id}>
         <div className="myws-photo">
-          {w.imageUrl ? <img src={w.imageUrl} alt="" /> : <span>🎪</span>}
+          {w.imageUrl ? <img src={w.imageUrl} alt="" /> : <span><SproutyIcon name="ticket" size={30} /></span>}
         </div>
 
         <div className="myws-main">
@@ -147,12 +149,12 @@ export default function MyWorkshops() {
           </div>
 
           <div className="myws-meta">
-            <span>📅 {formatWorkshopWhen(w)}</span>
-            <span>📍 {w.location}</span>
-            <span>👶 {reg.childCount} bé{reg.childAge ? ` · ${reg.childAge}` : ''}</span>
+            <span><SproutyIcon name="calendar" size={15} /> {formatWorkshopWhen(w)}</span>
+            <span><SproutyIcon name="pin" size={15} /> {w.location}</span>
+            <span><SproutyIcon name="child" size={15} /> {reg.childCount} bé{reg.childAge ? ` · ${reg.childAge}` : ''}</span>
           </div>
 
-          {reg.note && <div className="myws-note">📝 {reg.note}</div>}
+          {reg.note && <div className="myws-note"><SproutyIcon name="pencil" size={15} /> {reg.note}</div>}
 
           <div className="myws-pay">
             {reg.amount === 0 ? (
@@ -172,7 +174,7 @@ export default function MyWorkshops() {
 
           {needsPayment && reg.paymentMethod === 'onsite' && (
             <div className="myws-warn">
-              ⚠️ Suất này chưa được đảm bảo. Khi buổi học kín chỗ, chúng tôi ưu tiên những người
+              <SproutyIcon name="warning" size={16} /> Suất này chưa được đảm bảo. Khi buổi học kín chỗ, chúng tôi ưu tiên những người
               đã thanh toán trước.
             </div>
           )}
@@ -215,7 +217,7 @@ export default function MyWorkshops() {
                 disabled={busyId === reg.id}
                 onClick={() => openPayment(reg)}
               >
-                {busyId === reg.id ? 'Đang tải…' : '💳 Thanh toán ngay'}
+                {busyId === reg.id ? 'Đang tải…' : <><SproutyIcon name="card" size={16} /> Thanh toán ngay</>}
               </button>
             )}
             {reg.upcoming && reg.status !== 'cancelled' && (
@@ -241,7 +243,7 @@ export default function MyWorkshops() {
       {state === 'loading' && <div className="myws-empty">Đang tải…</div>}
       {state === 'error' && (
         <div className="myws-empty">
-          <div className="myws-empty-icon">⚠️</div>
+          <div className="myws-empty-icon"><SproutyIcon name="warning" size={36} /></div>
           <p>{error}</p>
           <button className="btn btn-ghost btn-sm" onClick={load}>
             Thử lại
@@ -251,7 +253,7 @@ export default function MyWorkshops() {
 
       {state === 'ready' && rows.length === 0 && (
         <div className="myws-empty">
-          <div className="myws-empty-icon">🎪</div>
+          <div className="myws-empty-icon"><SproutyIcon name="ticket" size={36} /></div>
           <p>Bạn chưa đăng ký buổi workshop nào.</p>
           <Link to="/workshop" className="btn btn-primary" style={{ marginTop: 12 }}>
             Xem lịch workshop
@@ -301,7 +303,7 @@ export default function MyWorkshops() {
               ✕
             </button>
             <div className="ws-done">
-              <div className="ws-done-icon">🏦</div>
+              <div className="ws-done-icon"><SproutyIcon name="card" size={36} /></div>
               <h3>Chuyển khoản giữ chỗ</h3>
               <p>
                 Quét mã để thanh toán <strong>{payment.reg.workshop.title}</strong>. Suất được xác

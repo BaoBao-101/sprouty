@@ -26,7 +26,10 @@ export type IconName =
   | 'clock' | 'gift' | 'ticket' | 'check' | 'lock' | 'battery' | 'plus' | 'trophy'
   | 'heart' | 'bolt' | 'info' | 'bell' | 'chat' | 'sparkle' | 'chart' | 'pot'
   | 'moon' | 'arrow-right' | 'arrow-down' | 'close' | 'pencil' | 'trash' | 'cart' | 'album'
-  | 'warning';
+  | 'warning' | 'microphone' | 'plant-chat'
+  // site-wide
+  | 'search' | 'mail' | 'phone' | 'pin' | 'calendar' | 'user' | 'child' | 'settings'
+  | 'logout' | 'card' | 'return' | 'book' | 'shield' | 'star' | 'home' | 'filter';
 
 interface Props {
   name: IconName;
@@ -56,6 +59,18 @@ function fillProps(opacity = 0.25) {
 }
 
 const PATHS: Record<IconName, React.ReactNode> = {
+  'plant-chat': (
+    <>
+      <path d="M7 3h10a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4H9l-5 3v-4a4 4 0 0 1-2-3V7a4 4 0 0 1 4-4Z" {...S} />
+      <path d="M12 16v-5M12 12C8 12 7 10 7 7c3 0 5 2 5 5ZM12 11c0-3 2-5 5-5 0 3-2 5-5 5Z" {...S} />
+    </>
+  ),
+  microphone: (
+    <>
+      <rect x="9" y="3" width="6" height="12" rx="3" {...S} />
+      <path d="M6 11v1a6 6 0 0 0 12 0v-1M12 18v3M9 21h6" {...S} />
+    </>
+  ),
   // ── Growth stages ──────────────────────────────────────────────────────────
   seed: (
     <>
@@ -465,6 +480,121 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <path d="M12 3.4 21.4 19a1.6 1.6 0 0 1-1.4 2.4H4a1.6 1.6 0 0 1-1.4-2.4L12 3.4Z" {...S} />
       <path d="M12 9.6v4.8" {...S} strokeWidth={2.1} />
       <circle cx="12" cy="17.8" r="1.3" fill="currentColor" stroke="none" />
+    </>
+  ),
+
+  // ── Site-wide ─────────────────────────────────────────────────────────────
+  // Added so no page needs an emoji where an icon belongs: emoji draw
+  // differently on every phone and never match this set's weight.
+  search: (
+    <>
+      <circle cx="10.6" cy="10.6" r="6.4" {...fillProps(0.22)} />
+      <circle cx="10.6" cy="10.6" r="6.4" {...S} />
+      <path d="m15.4 15.4 4.6 4.6" {...S} strokeWidth={2.3} />
+    </>
+  ),
+  mail: (
+    <>
+      <rect x="3.4" y="5.4" width="17.2" height="13.2" rx="2.4" {...fillProps(0.24)} />
+      <rect x="3.4" y="5.4" width="17.2" height="13.2" rx="2.4" {...S} />
+      <path d="m4.2 7 7.8 6 7.8-6" {...S} />
+    </>
+  ),
+  phone: (
+    <>
+      <path d="M7.2 3.6h-2a1.6 1.6 0 0 0-1.6 1.7c.6 8 6.9 14.3 14.9 14.9a1.6 1.6 0 0 0 1.7-1.6v-2a1.6 1.6 0 0 0-1.2-1.6l-2.7-.7a1.6 1.6 0 0 0-1.6.5l-1 1.2a11.2 11.2 0 0 1-5-5l1.2-1a1.6 1.6 0 0 0 .5-1.6l-.7-2.7a1.6 1.6 0 0 0-1.5-1.2Z" {...fillProps(0.24)} />
+      <path d="M7.2 3.6h-2a1.6 1.6 0 0 0-1.6 1.7c.6 8 6.9 14.3 14.9 14.9a1.6 1.6 0 0 0 1.7-1.6v-2a1.6 1.6 0 0 0-1.2-1.6l-2.7-.7a1.6 1.6 0 0 0-1.6.5l-1 1.2a11.2 11.2 0 0 1-5-5l1.2-1a1.6 1.6 0 0 0 .5-1.6l-.7-2.7a1.6 1.6 0 0 0-1.5-1.2Z" {...S} />
+    </>
+  ),
+  pin: (
+    <>
+      <path d="M12 21s-6.6-5.6-6.6-11a6.6 6.6 0 0 1 13.2 0c0 5.4-6.6 11-6.6 11Z" {...fillProps(0.26)} />
+      <path d="M12 21s-6.6-5.6-6.6-11a6.6 6.6 0 0 1 13.2 0c0 5.4-6.6 11-6.6 11Z" {...S} />
+      <circle cx="12" cy="10" r="2.4" {...S} />
+    </>
+  ),
+  calendar: (
+    <>
+      <rect x="3.6" y="5.2" width="16.8" height="15" rx="2.4" {...fillProps(0.22)} />
+      <rect x="3.6" y="5.2" width="16.8" height="15" rx="2.4" {...S} />
+      <path d="M3.6 10h16.8M8 3.4v3.4M16 3.4v3.4" {...S} />
+      <circle cx="8.4" cy="14.4" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="14.4" r="1.1" fill="currentColor" stroke="none" />
+    </>
+  ),
+  user: (
+    <>
+      <circle cx="12" cy="8.4" r="4" {...fillProps(0.26)} />
+      <circle cx="12" cy="8.4" r="4" {...S} />
+      <path d="M4.4 20.4c.8-3.8 3.9-6 7.6-6s6.8 2.2 7.6 6" {...S} />
+    </>
+  ),
+  child: (
+    <>
+      <circle cx="12" cy="6.4" r="2.8" {...fillProps(0.28)} />
+      <circle cx="12" cy="6.4" r="2.8" {...S} />
+      <path d="M8 11.4h8M12 11.4v4.4M12 15.8l-3 4.4M12 15.8l3 4.4M8 11.4l-2.4 2.8M16 11.4l2.4 2.8" {...S} />
+    </>
+  ),
+  settings: (
+    <>
+      <circle cx="12" cy="12" r="3" {...fillProps(0.3)} />
+      <circle cx="12" cy="12" r="3" {...S} />
+      <path d="M12 3.4v2.2M12 18.4v2.2M20.6 12h-2.2M5.6 12H3.4M18.1 5.9l-1.6 1.6M7.5 16.5l-1.6 1.6M18.1 18.1l-1.6-1.6M7.5 7.5 5.9 5.9" {...S} />
+    </>
+  ),
+  logout: (
+    <>
+      <path d="M13.6 4.4H6a2 2 0 0 0-2 2v11.2a2 2 0 0 0 2 2h7.6" {...fillProps(0.22)} />
+      <path d="M13.6 4.4H6a2 2 0 0 0-2 2v11.2a2 2 0 0 0 2 2h7.6" {...S} />
+      <path d="M10 12h10.4M17 8.4l3.6 3.6-3.6 3.6" {...S} />
+    </>
+  ),
+  card: (
+    <>
+      <rect x="3" y="5.6" width="18" height="12.8" rx="2.4" {...fillProps(0.24)} />
+      <rect x="3" y="5.6" width="18" height="12.8" rx="2.4" {...S} />
+      <path d="M3 10h18M6.8 14.6h3.6" {...S} />
+    </>
+  ),
+  return: (
+    <>
+      <circle cx="12" cy="12" r="8.6" {...fillProps(0.2)} />
+      <path d="M9 7.4 5.4 11 9 14.6" {...S} />
+      <path d="M5.4 11h8.4a4.4 4.4 0 0 1 0 8.8H11" {...S} />
+    </>
+  ),
+  book: (
+    <>
+      <path d="M4.4 5.2a2 2 0 0 1 2-2H19v15.6H6.4a2 2 0 0 0-2 2V5.2Z" {...fillProps(0.26)} />
+      <path d="M4.4 20.8V5.2a2 2 0 0 1 2-2H19v15.6H6.4a2 2 0 0 0-2 2Zm0 0h14.6" {...S} />
+      <path d="M8.4 7.6h6.4" {...S} strokeWidth={1.7} />
+    </>
+  ),
+  shield: (
+    <>
+      <path d="M12 3.2 19.2 6v5.6c0 4.4-3 7.8-7.2 9.2-4.2-1.4-7.2-4.8-7.2-9.2V6L12 3.2Z" {...fillProps(0.26)} />
+      <path d="M12 3.2 19.2 6v5.6c0 4.4-3 7.8-7.2 9.2-4.2-1.4-7.2-4.8-7.2-9.2V6L12 3.2Z" {...S} />
+      <path d="m8.8 12.2 2.2 2.2 4.2-4.4" {...S} />
+    </>
+  ),
+  star: (
+    <>
+      <path d="m12 3.6 2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8L12 3.6Z" {...fillProps(0.3)} />
+      <path d="m12 3.6 2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8L12 3.6Z" {...S} />
+    </>
+  ),
+  filter: (
+    <>
+      <path d="M4 5.2h16l-6.2 7.4v5.6l-3.6 1.8v-7.4L4 5.2Z" {...fillProps(0.26)} />
+      <path d="M4 5.2h16l-6.2 7.4v5.6l-3.6 1.8v-7.4L4 5.2Z" {...S} />
+    </>
+  ),
+  home: (
+    <>
+      <path d="M4 10.6 12 4l8 6.6V19a1.6 1.6 0 0 1-1.6 1.6H5.6A1.6 1.6 0 0 1 4 19v-8.4Z" {...fillProps(0.24)} />
+      <path d="M4 10.6 12 4l8 6.6V19a1.6 1.6 0 0 1-1.6 1.6H5.6A1.6 1.6 0 0 1 4 19v-8.4Z" {...S} />
+      <path d="M9.6 20.6v-5.4h4.8v5.4" {...S} />
     </>
   ),
 };

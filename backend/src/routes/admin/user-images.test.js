@@ -59,6 +59,33 @@ test('invalid filters reject and out-of-range pages clamp', async () => {
   const result = await request(database(), 'GET', '/user-images?page=100');
   assert.equal(result.json().page, 3);
 });
+
+test('owner and product filters combine before pagination', async () => {
+  const db = database();
+  const result = await request(db, 'GET', '/user-images?ownerSearch=alice&productSearch=carrot&userId=owner&productId=1&page=2');
+  assert.equal(result.statusCode, 200);
+  const query = db.events.find(event => event[0] === 'list')[1];
+  assert.equal(query.where.user.OR[1].email.contains, 'alice');
+  assert.equal(query.where.product.name.contains, 'carrot');
+  assert.equal(query.where.userId, 'owner');
+  assert.equal(query.where.productId, 1);
+  assert.equal(query.skip, 10);
+});
+
+test('album overview groups owner-product pairs before pagination', async () => {
+  const db = database();
+  db.userProductImage.groupBy = async args => args.by.includes('userId')
+    ? Array.from({ length: 11 }, (_, index) => ({ userId: `owner-${index}`, productId: 1, _count: { _all: 7 }, _max: { createdAt: '2026-10-11' } }))
+    : [{ status: 'active', _count: { _all: 77 } }];
+  db.userProductImage.findFirst = async args => { db.events.push(['cover', args]); return { userId: 'owner-10', productId: 1 }; };
+  db.virtualPlant.findUnique = async () => null;
+  const result = await request(db, 'GET', '/user-images?view=albums&page=2');
+  assert.equal(result.statusCode, 200, result.body);
+  assert.equal(result.json().total, 11);
+  assert.equal(result.json().albums.length, 1);
+  assert.equal(result.json().albums[0].count, 7);
+  assert.deepEqual(db.events.find(event => event[0] === 'cover')[1].where.AND[1], { userId: 'owner-10', productId: 1 });
+});
 test('deleted media cannot be restored or hidden by admin', async () => {
   for (const status of ['active', 'hidden']) {
     const db = database('deleted');
