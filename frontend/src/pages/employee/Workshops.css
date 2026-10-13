@@ -1,0 +1,445 @@
+/* ── Workshop: my sessions, one session, and the door ──────────────────
+   Bigger hit targets than the rest of the admin. The register is used
+   standing up, on a tablet, with a queue forming. */
+
+.att-bar {
+  display: block;
+  height: 5px;
+  margin-top: 5px;
+  border-radius: var(--r-full);
+  background: var(--border-c);
+  overflow: hidden;
+}
+
+.att-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.25s;
+}
+
+/* ── The register ──────────────────────────────────────────────────────── */
+
+.att-register-tools {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.att-register-count {
+  font-size: 0.82rem;
+  color: var(--ink-4);
+}
+
+.att-register-count b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.att-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.att-search > svg {
+  position: absolute;
+  left: 11px;
+  color: var(--ink-4);
+  pointer-events: none;
+}
+
+.att-search .form-input {
+  height: 38px;
+  min-width: 260px;
+  padding-left: 35px;
+}
+
+.att-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.att-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-c);
+  border-radius: var(--r-md);
+  background: #fff;
+}
+
+/* Already in: faded, because the queue is the subject and they are not in it. */
+.att-row.done {
+  background: var(--surface-2);
+  border-color: #D5E7DC;
+}
+
+.att-row.done .att-who strong { color: var(--ink-3) }
+
+/* The code the parent reads out. Monospace so a 0 and an O are different. */
+.att-ticket {
+  flex: none;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  background: var(--ink);
+  color: #fff;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.att-row.done .att-ticket { background: var(--accent) }
+
+.att-who { flex: 1; min-width: 0 }
+
+.att-who strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.att-who > span {
+  font-size: 0.82rem;
+  color: var(--ink-4);
+}
+
+.att-note {
+  display: block;
+  margin-top: 3px;
+  font-style: italic;
+  font-size: 0.8rem;
+  color: var(--ink-3);
+}
+
+.att-flags {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.att-when {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.74rem;
+  color: var(--ink-4);
+}
+
+/* One tap, and it has to be hittable with a thumb while holding a tablet. */
+.att-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 142px;
+  height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: var(--r-md);
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-h);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.att-btn:hover:not(:disabled) { background: var(--accent-hover) }
+
+.att-btn.undo {
+  background: #fff;
+  border: 1px solid var(--border-c);
+  color: var(--ink-4);
+}
+
+.att-btn.undo:hover:not(:disabled) {
+  border-color: #94A3B8;
+  color: var(--ink-2);
+  background: var(--surface-2);
+}
+
+.att-btn:disabled { opacity: 0.6; cursor: not-allowed }
+
+@media (max-width: 760px) {
+
+
+
+  .att-row { flex-wrap: wrap }
+  .att-who { flex-basis: calc(100% - 110px) }
+  .att-flags { align-items: flex-start }
+  .att-btn { width: 100%; }
+}
+
+/* ── The ticket desk ───────────────────────────────────────────────────────
+   Above everything, because it is the first thing that happens when somebody
+   walks in: a parent shows a QR or reads six characters out, and staff want
+   the answer before the next family reaches the table. */
+
+.att-desk {
+  background: #fff;
+  border: 1px solid var(--border-c);
+  border-radius: var(--r-lg);
+  padding: 16px 18px;
+  margin-bottom: 18px;
+}
+
+.att-desk-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 12px;
+  color: var(--accent);
+}
+
+.att-desk-head strong {
+  display: block;
+  font-family: var(--font-h);
+  font-size: 0.98rem;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.att-desk-head span {
+  font-size: 0.81rem;
+  color: var(--ink-4);
+}
+
+.att-desk-form {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+/* The code is read off a screen or a scanner, so the characters have to be
+   unambiguous and wide enough to check at a glance. */
+.att-code {
+  flex: 1;
+  min-width: 180px;
+  max-width: 280px;
+  height: 46px;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 1.22rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.att-desk-form .btn { height: 46px }
+
+.att-desk-miss {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  padding: 11px 13px;
+  border-radius: var(--r-md);
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #991B1B;
+  font-size: 0.86rem;
+}
+
+.att-desk-hit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 13px;
+  padding: 14px 15px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--accent);
+  background: var(--accent-pale);
+}
+
+.att-desk-hit.done {
+  border-color: #CBD5E1;
+  background: var(--surface-2);
+}
+
+.att-desk-hit-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  min-width: 0;
+  flex: 1;
+}
+
+.att-desk-hit-main strong {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.att-desk-hit-main > div > span {
+  display: block;
+  font-size: 0.84rem;
+  color: var(--ink-3);
+}
+
+.att-desk-hit-ws {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+  color: var(--ink-4) !important;
+  font-size: 0.8rem !important;
+}
+
+.att-desk-hit-side {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+}
+
+/* ── Register: who is still to come, who is here ─────────────────────── */
+.att-views { display: inline-flex; gap: 4px; padding: 3px; border-radius: 12px; background: var(--cream-2) }
+.att-view {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 9px;
+  border: none; background: none; font: inherit; font-size: .84rem; font-weight: 700; color: var(--ink-3); cursor: pointer; white-space: nowrap;
+}
+.att-view em { min-width: 20px; padding: 0 6px; border-radius: 99px; background: rgba(0, 0, 0, .06); font-style: normal; font-size: .72rem; text-align: center }
+.att-view.is-on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(15, 23, 42, .1) }
+.att-who a { color: var(--accent); font-weight: 700; text-decoration: none }
+.att-cash-note {
+  display: flex; align-items: flex-start; gap: 8px; margin: 14px 0 0; padding: 10px 12px; border-radius: 10px;
+  background: #FFFBEB; border: 1px solid #FDE68A; font-size: .82rem; line-height: 1.5; color: #78350F;
+}
+.att-cash-note svg { flex: none; margin-top: 2px }
+
+/* Paid at the door: the amount on the ticket, one tap to record it. */
+.att-cash {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 99px;
+  border: 1.5px solid #FCD34D; background: #FFFBEB; color: #92400E; font: inherit; font-size: .8rem; font-weight: 800; cursor: pointer; white-space: nowrap;
+}
+.att-cash:hover:not(:disabled) { background: #FEF3C7 }
+.att-cash:disabled { opacity: .6; cursor: progress }
+
+
+/* ── My sessions, by day ─────────────────────────────────────────────────
+   A day is a heading and its sessions as cards. Many sessions on one day
+   stay readable: the cards sit in a grid that is one column on a phone and
+   two or three on a wide screen, each card the same shape. */
+
+.ew-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)) }
+
+.ew-day + .ew-day { margin-top: 22px }
+.ew-day-head {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px;
+  margin: 0 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border-c);
+}
+.ew-day-head strong { font-family: var(--font-h); font-size: 1rem; color: var(--ink) }
+.ew-day-head span { font-size: .86rem; font-weight: 600; color: var(--ink-3) }
+.ew-day-head em { margin-left: auto; font-style: normal; font-size: .8rem; color: var(--ink-4) }
+.ew-day.is-today .ew-day-head strong { color: var(--accent) }
+
+.ew-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 10px;
+  margin: 0; padding: 0; list-style: none;
+}
+.ew-card {
+  display: grid; gap: 6px; height: 100%; padding: 13px 15px;
+  border: 1px solid var(--border-c); border-radius: var(--r-md); background: #fff;
+  color: var(--ink); text-decoration: none; transition: border-color .15s, background .15s;
+}
+.ew-card:hover { border-color: #94A3B8 }
+.ew-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.ew-day.is-today .ew-card { border-color: #BBDDC8 }
+.ew-card.is-cancelled { background: var(--surface-2); opacity: .8 }
+.ew-card.is-cancelled .ew-card-title { text-decoration: line-through; color: var(--ink-3) }
+
+.ew-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px }
+.ew-card-time { font-family: var(--font-h); font-size: 1.02rem; font-weight: 700; font-variant-numeric: tabular-nums }
+.ew-card-time em { font-style: normal; font-size: .84rem; font-weight: 500; color: var(--ink-4) }
+.ew-card-title { font-size: .96rem; font-weight: 650; line-height: 1.35 }
+.ew-card-meta { display: grid; gap: 2px; font-size: .8rem; color: var(--ink-4) }
+.ew-card-meta > span { display: flex; align-items: flex-start; gap: 5px; min-width: 0 }
+.ew-card-meta svg { flex: none; margin-top: 2px }
+.ew-card-foot {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 4px; padding-top: 9px; border-top: 1px dashed var(--border-c); font-size: .8rem; color: var(--ink-4);
+}
+.ew-card-foot > svg { margin-left: auto; flex: none; color: var(--ink-4) }
+.ew-card-seats { display: inline-flex; align-items: center; gap: 6px }
+.ew-card-seats b, .ew-card-stat b { color: var(--ink); font-variant-numeric: tabular-nums }
+.ew-card-seats .att-bar { width: 56px; margin-top: 0 }
+
+/* ── One session ──────────────────────────────────────────────────────── */
+
+.ew-back {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 40px; margin-bottom: 8px;
+  font-size: .88rem; font-weight: 700; color: var(--ink-3); text-decoration: none;
+}
+.ew-back:hover { color: var(--ink) }
+
+.ew-hero {
+  display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 20px; margin-bottom: 18px; padding: 18px;
+  border: 1px solid var(--border-c); border-radius: var(--r-lg); background: #fff;
+}
+.ew-hero-photo {
+  display: grid; place-items: center; aspect-ratio: 4 / 3; border-radius: var(--r-md); overflow: hidden;
+  background: var(--cream-2); color: var(--ink-5, #9CA3AF);
+}
+.ew-hero-photo img { width: 100%; height: 100%; object-fit: cover }
+.ew-hero.no-photo { grid-template-columns: 1fr }
+.ew-hero-main { min-width: 0 }
+.ew-hero-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px }
+.ew-hero-main h1 { margin: 0 0 12px; font-family: var(--font-h); font-size: 1.4rem; line-height: 1.25; color: var(--ink) }
+.ew-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px 18px; margin: 0 }
+.ew-facts dt { display: flex; align-items: center; gap: 5px; font-size: .74rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; color: var(--ink-4) }
+.ew-facts dd { margin: 2px 0 0; font-size: .92rem; font-weight: 600; color: var(--ink) }
+.ew-crew { display: flex; align-items: center; gap: 6px; margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--border-c); font-size: .86rem; color: var(--ink-3) }
+.ew-crew svg { flex: none; color: var(--accent) }
+.ew-desc { margin: 0; white-space: pre-line; font-size: .92rem; line-height: 1.7; color: var(--ink-2) }
+
+.ew-banner {
+  display: flex; align-items: flex-start; gap: 8px; margin-bottom: 18px; padding: 12px 14px;
+  border-radius: var(--r-md); font-size: .88rem; line-height: 1.5;
+}
+.ew-banner svg { flex: none; margin-top: 2px }
+.ew-banner.is-cancelled { background: #FFF1F2; border: 1px solid #FECDD3; color: #9F1239 }
+
+.att-desk-hit-ws { text-decoration: none }
+.att-desk-hit-ws:hover { color: var(--accent) !important }
+
+@media (max-width: 1100px) {
+  .ew-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+}
+@media (max-width: 760px) {
+  .ew-hero { grid-template-columns: 1fr; gap: 14px; padding: 14px }
+  .ew-hero-photo { aspect-ratio: 16 / 9; max-height: 200px }
+  .att-register-tools { width: 100% }
+  .att-views { width: 100% }
+  .att-view { flex: 1; justify-content: center }
+  .att-search, .att-search .form-input { width: 100%; min-width: 0 }
+  .staff-main .ad-panel:has(.att-register-tools) .ad-panel-head { flex-direction: column; align-items: stretch; gap: 10px }
+}
+@media (max-width: 560px) {
+  .ew-kpis { gap: 6px }
+  .ew-kpis .ax-kpi { padding: 10px; gap: 0 }
+  .ew-kpis .ax-kpi-icon { display: none }
+  .ew-kpis .ax-kpi-body b { font-size: 1.15rem }
+  .ew-kpis .ax-kpi-body strong { font-size: .74rem; line-height: 1.3 }
+  .ew-kpis .ax-kpi-body em { display: none }
+  .ew-day-head em { margin-left: 0; width: 100% }
+  .ew-hero-main h1 { font-size: 1.2rem }
+  .ew-facts { grid-template-columns: 1fr 1fr; gap: 10px 12px }
+  .staff-main .ad-panel:has(.ew-cards) .ad-panel-head { flex-direction: column; align-items: stretch; gap: 10px }
+}

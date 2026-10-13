@@ -123,14 +123,39 @@ export function buildPlantModel(o: ModelOptions) {
   }
   const h=.3+growth*1.45;
   const isHerb=o.form==='leafy', isVine=o.form==='vine', isCorn=o.form==='stalk', isSun=o.form==='head';
-  if(isVine || (o.form==='bush' && o.fruitShape==='round')) {
-    tube([v(-.09,0,0),v(-.09,h+.12,0)],.022,new T.MeshStandardMaterial({color:'#AF946A',roughness:1}));
+  // A bean climbs a bamboo cane and a tomato is tied to a stake; showing the
+  // support teaches that they need one. The bean's stem winds round the cane
+  // (it used to stand beside it, and the cane read as a stray stick); the
+  // tomato's stem is tied to its stake with twine.
+  const staked=o.form==='bush' && o.fruitShape==='round';
+  const caneX=isVine?0:-.09, caneTop=h+.07;
+  const stemAt=(t:number)=>isVine?v(Math.sin(t*15)*.042,t*h,Math.cos(t*15)*.042):v(Math.sin(t*3)*.025,t*h,0);
+  if(isVine || staked) {
+    // A cane pushed into the soil stands firm in the wind, and so does the
+    // stem tied to it; only the leaves move (plant-wind.ts).
+    plant.userData.tied=true;
+    const cane=new T.MeshStandardMaterial({color:'#B39A6B',roughness:.95}); cane.userData.still=true;
+    const node=new T.MeshStandardMaterial({color:'#8E7650',roughness:1}); node.userData.still=true;
+    tube([v(caneX,-.06,0),v(caneX,caneTop,0)],.02,cane);
+    ellipsoid(v(caneX,caneTop,0),v(.02,.007,.02),node);
+    for(let y=.3;y<caneTop-.08;y+=.34) {
+      const ring=mesh(new T.TorusGeometry(.021,.004,6,16),node); ring.position.set(caneX,y,0); ring.rotation.x=Math.PI/2;
+    }
+    if(staked) {
+      const twine=new T.MeshStandardMaterial({color:'#D9C9A0',roughness:1}); twine.userData.still=true;
+      for(const t of [.3,.58,.86]) {
+        if(t*h<.1) continue;
+        const at=stemAt(t);
+        tube([v(caneX,at.y+.01,0),at.clone().add(v(-.012,.004,0))],.005,twine);
+        const loop=mesh(new T.TorusGeometry(.024,.005,6,14),twine); loop.position.set(caneX,at.y+.01,0); loop.rotation.x=Math.PI/2;
+      }
+    }
   }
-  const mainPoints=Array.from({length:16},(_,i)=>{const t=i/15;return v(isVine?Math.sin(t*15)*.08:Math.sin(t*3)*.025,t*h,isVine?Math.cos(t*15)*.08:0)});
-  tube(mainPoints,isCorn?.035:.018);
+  const mainPoints=Array.from({length:16},(_,i)=>stemAt(i/15));
+  tube(mainPoints,isCorn?.035:isVine?.014:.018);
   const count=isHerb?5:7;
   for(let i=0;i<count;i++) {
-    const t=.2+i*.105, a=i*(isHerb?Math.PI:2.399), base=v(0,h*t,0);
+    const t=.2+i*.105, a=i*(isHerb?Math.PI:2.399), base=isVine?stemAt(t):v(0,h*t,0);
     const length=(isCorn?.62:isSun?.42:.32)*(.55+growth*.45);
     const tip=v(Math.cos(a)*length,h*t + length*(vigor*.4-.15),Math.sin(a)*length);
     if(isCorn) { leaf(base,tip,.065); continue; }

@@ -273,7 +273,7 @@ function PlantGridCard({ plant, urgent, look }: { plant: PlantCard; urgent?: Ale
         )}
 
         <span className="pc-open">
-          Vào chăm cây
+          {plant.diedAt ? 'Gieo lại cây' : 'Vào chăm cây'}
           <SproutyIcon name="arrow-right" size={17} />
         </span>
       </div>

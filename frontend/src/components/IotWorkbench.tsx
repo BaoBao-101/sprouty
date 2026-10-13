@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { SproutyIcon } from '@/components/icons/SproutyIcon';
 import { showToast } from '@/services/toast';
 import type { PlantDevice } from '@/types/plant';
@@ -119,13 +120,17 @@ export function IotWorkbench({
   });
 
   // A part that is no longer unlocked (or no longer exists) leaves the board.
+  // What can be used here: unlocked by the stage, and VIP's own parts only for VIP.
+  const usable = (d?: PlantDevice) => Boolean(d?.unlocked && !d.vipLocked);
   const placed = useMemo(
-    () => Object.entries(layout).filter(([type]) => byType.get(type)?.unlocked),
+    () => Object.entries(layout).filter(([type]) => usable(byType.get(type))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [layout, byType],
   );
   const placedSet = useMemo(() => new Set(placed.map(([t]) => t)), [placed]);
   const placedKey = placed.map(([t]) => t).join(',');
-  useEffect(() => {
+  // Before paint, so the readings above do not flash "not measured" on load.
+  useLayoutEffect(() => {
     onConnectedChange?.(placedKey ? placedKey.split(',') : []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [placedKey]);
@@ -139,9 +144,11 @@ export function IotWorkbench({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [command?.n]);
 
-  const tray = devices.filter((d) => d.unlocked && !placedSet.has(d.type));
+  const tray = devices.filter((d) => usable(d) && !placedSet.has(d.type));
   const lockedCount = devices.filter((d) => !d.unlocked).length;
-  const unlockedCount = devices.filter((d) => d.unlocked).length;
+  const unlockedCount = devices.filter(usable).length;
+  // VIP's parts this account cannot use yet: shown, with the way to them.
+  const vipParts = devices.filter((d) => d.unlocked && d.vipLocked);
 
   const save = useCallback(
     (next: Layout) => {
@@ -209,7 +216,7 @@ export function IotWorkbench({
 
   function place(type: string, spot: Spot) {
     const device = byType.get(type);
-    if (!device?.unlocked) return;
+    if (!usable(device)) return;
     const wasPlaced = placedSet.has(type);
     const settled = findSpot({ x: snap(spot.x), y: snap(spot.y) }, othersThan(type));
     save({ ...layout, [type]: settled });
@@ -239,7 +246,7 @@ export function IotWorkbench({
     const taken = Object.values(next);
     let i = 0;
     for (const d of devices) {
-      if (!d.unlocked || next[d.type]) continue;
+      if (!usable(d) || next[d.type]) continue;
       // Try the fixed places in turn, then anywhere clear.
       let spot: Spot | null = null;
       for (; i < SLOTS.length && !spot; i++) {
@@ -264,7 +271,7 @@ export function IotWorkbench({
 
   function startDrag(e: ReactPointerEvent, type: string, from: Drag['from']) {
     const device = byType.get(type);
-    if (!device?.unlocked || busy) return;
+    if (!usable(device) || busy) return;
     e.preventDefault();
     setDrag({ type, from, startX: e.clientX, startY: e.clientY, x: e.clientX, y: e.clientY, moved: false });
   }
@@ -341,7 +348,7 @@ export function IotWorkbench({
       </div>
 
       {/* ── Parts tray ──────────────────────────────────────────────────── */}
-      {(tray.length > 0 || lockedCount > 0) && (
+      {(tray.length > 0 || lockedCount > 0 || vipParts.length > 0) && (
         <div className="iotw-tray" aria-label="Khay linh kiện">
           {tray.length === 0 && <span className="iotw-tray-empty">Đã nối hết linh kiện.</span>}
           {tray.map((d) => (
@@ -366,6 +373,18 @@ export function IotWorkbench({
                 <em>{d.kind === 'sensor' ? 'Cảm biến' : 'Thiết bị'}</em>
               </span>
             </button>
+          ))}
+          {vipParts.map((d) => (
+            <Link key={d.type} to="/vip" className="iotw-vip-chip" title={d.about}>
+              <span className="iotw-chip-icon is-vip">
+                <SproutyIcon name={d.icon} size={18} />
+              </span>
+              <span className="iotw-chip-text">
+                <strong>{d.label}</strong>
+                <em>Mở khoá với VIP</em>
+              </span>
+              <b className="iotw-vip-tag">VIP</b>
+            </Link>
           ))}
           {lockedCount > 0 && (
             <span className="iotw-locked-note">

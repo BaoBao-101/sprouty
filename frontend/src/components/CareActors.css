@@ -1,0 +1,266 @@
+/* The tool doing the job over the plant. 2.2s, as CareGame waits (EFFECT_MS).
+   Placed from the soil line: about 68% down the 3D picture, lower in the
+   drawn garden. Sizes scale with --k on a phone. */
+
+.ca {
+  position: absolute; inset: 0; z-index: 2; overflow: hidden; border-radius: inherit; pointer-events: none;
+  --k: 1; --soil: 68%;
+}
+.cg-scene:not(.has-stage) .ca { --soil: 74% }
+@media (max-width: 640px) { .ca { --k: .76 } }
+
+.ca-tool {
+  position: absolute; width: calc(110px * var(--k)); height: calc(110px * var(--k));
+  margin: calc(-55px * var(--k)) 0 0 calc(-55px * var(--k));
+  filter: drop-shadow(0 6px 10px rgba(30, 50, 35, .22));
+}
+.ca-tool svg { display: block; width: 100%; height: 100% }
+.ca i, .ca span { position: absolute; display: block }
+
+/* Come in from the side, do the job, leave. */
+@keyframes ca-in-out {
+  0% { opacity: 0; transform: translate(50px, -10px) }
+  14%, 86% { opacity: 1; transform: none }
+  100% { opacity: 0; transform: translate(50px, -10px) }
+}
+
+/* ── Tưới nước: the can tips, water runs onto the soil ───────────────────── */
+.ca-water .ca-tool { left: 68%; top: calc(var(--soil) - 38%); transform-origin: 60% 62%; animation: ca-can 2.2s ease-in-out both }
+@keyframes ca-can {
+  0% { opacity: 0; transform: translate(50px, -30px) }
+  14% { opacity: 1; transform: none }
+  28%, 76% { transform: rotate(-34deg) }
+  88% { opacity: 1; transform: none }
+  100% { opacity: 0; transform: translate(50px, -30px) }
+}
+.ca-stream {
+  position: absolute; left: calc(68% - 50px * var(--k)); top: calc(var(--soil) - 38% + 17px * var(--k));
+  width: 14px; height: calc(38% - 17px * var(--k));
+}
+.ca-stream i {
+  left: var(--x); top: 0; width: 5px; height: 9px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background: #4FB3E8; opacity: 0; animation: ca-pour .42s linear calc(.62s + var(--i) * .07s) 3;
+}
+@keyframes ca-pour { 0% { top: 0; opacity: 0 } 15% { opacity: .95 } 100% { top: 100%; opacity: .4 } }
+.ca-splash {
+  left: calc(68% - 50px * var(--k) - 10px); top: calc(var(--soil) - 5px); width: 34px; height: 10px;
+  border: 2px solid rgba(79, 179, 232, .8); border-radius: 50%; opacity: 0; animation: ca-ripple .6s ease-out .95s 2;
+}
+.ca-splash.is-late { animation-delay: 1.25s }
+@keyframes ca-ripple { 0% { opacity: .9; transform: scale(.3) } 100% { opacity: 0; transform: scale(1.5) } }
+
+/* ── Phun sương: three squeezes, three clouds ───────────────────────────── */
+.ca-mist .ca-tool { left: 72%; top: calc(var(--soil) - 32%); animation: ca-in-out 2.2s ease-in-out both }
+.ca-trigger { transform-box: view-box; transform-origin: 58% 34%; animation: ca-squeeze .4s ease-in-out .5s 3 }
+@keyframes ca-squeeze { 50% { transform: rotate(-16deg) } }
+.ca-puffs { position: absolute; left: calc(72% - 20px * var(--k)); top: calc(var(--soil) - 32% - 27px * var(--k)) }
+.ca-puffs i {
+  left: -9px; top: -9px; width: 18px; height: 18px; border-radius: 50%; background: rgba(232, 246, 252, .95);
+  box-shadow: 0 0 8px 2px rgba(255, 255, 255, .85), inset 0 0 0 1px rgba(150, 205, 228, .6);
+  opacity: 0; animation: ca-puff .8s ease-out var(--delay) both;
+}
+@keyframes ca-puff {
+  0% { opacity: 0; transform: scale(.3) }
+  20% { opacity: .9 }
+  100% { opacity: 0; transform: translate(calc(var(--dx) * var(--k)), var(--dy)) scale(1.7) }
+}
+
+/* ── Bón phân: the sack tips and shakes, granules fall ───────────────────── */
+.ca-fert .ca-tool { left: 68%; top: calc(var(--soil) - 34%); animation: ca-sack 2.2s ease-in-out both }
+@keyframes ca-sack {
+  0% { opacity: 0; transform: translate(50px, -20px) }
+  14% { opacity: 1; transform: none }
+  28% { transform: rotate(-45deg) }
+  40% { transform: rotate(-50deg) }
+  52% { transform: rotate(-44deg) }
+  64% { transform: rotate(-50deg) }
+  74% { transform: rotate(-45deg) }
+  86% { opacity: 1; transform: none }
+  100% { opacity: 0; transform: translate(50px, -20px) }
+}
+.ca-grains {
+  position: absolute; left: calc(68% - 29px * var(--k)); top: calc(var(--soil) - 34% - 8px * var(--k));
+  width: 1px; height: calc(34% + 8px * var(--k));
+}
+.ca-grains i {
+  left: 0; top: 0; width: 5px; height: 5px; border-radius: 1.5px; background: #8B5E34; opacity: 0;
+  animation: ca-grain .55s ease-in calc(.62s + var(--i) * .06s) 2;
+}
+.ca-grains i:nth-child(odd) { background: #B48650 }
+@keyframes ca-grain {
+  0% { top: 0; opacity: 0; transform: none }
+  12% { opacity: 1 }
+  100% { top: 100%; opacity: .6; transform: translateX(var(--dx)) }
+}
+
+/* ── Đưa ra nắng: the sun in the sky blazes, light pours on the plant ─────
+   --sun-x/--sun-y is where the scene painted its sun (set by the page per
+   garden scene), --sun-deg the way down to the plant. */
+.ca-sun { --sx: var(--sun-x, 82%); --sy: var(--sun-y, 14.5%) }
+.ca-flare {
+  left: var(--sx); top: var(--sy); width: calc(150px * var(--k)); aspect-ratio: 1; transform: translate(-50%, -50%);
+  border-radius: 50%; opacity: 0; animation: ca-flare 2.2s ease-in-out both;
+  background: radial-gradient(circle, #FFFFF4 0%, rgba(255, 246, 200, .95) 18%, rgba(255, 214, 110, .55) 38%, rgba(255, 214, 110, 0) 68%);
+}
+@keyframes ca-flare {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.4) }
+  22% { opacity: 1; transform: translate(-50%, -50%) scale(1.3) }
+  36% { transform: translate(-50%, -50%) scale(1) }
+  52% { transform: translate(-50%, -50%) scale(1.22) }
+  68% { transform: translate(-50%, -50%) scale(1) }
+  84% { opacity: 1 }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(.6) }
+}
+/* A slow-turning burst of rays round the sun. */
+.ca-burst {
+  left: var(--sx); top: var(--sy); width: calc(260px * var(--k)); aspect-ratio: 1; border-radius: 50%;
+  background: repeating-conic-gradient(rgba(255, 232, 150, .6) 0deg 5deg, rgba(255, 232, 150, 0) 5deg 30deg);
+  -webkit-mask: radial-gradient(circle, #000 18%, transparent 68%); mask: radial-gradient(circle, #000 18%, transparent 68%);
+  opacity: 0; animation: ca-burst 2.2s ease-in-out both;
+}
+@keyframes ca-burst {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(0) scale(.5) }
+  25%, 80% { opacity: 1 }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(40deg) scale(1.1) }
+}
+.ca-beam {
+  left: var(--sx); top: var(--sy); width: 62%; height: 30px; margin-top: -15px; transform-origin: 0 50%;
+  transform: rotate(calc(var(--sun-deg, 148deg) + var(--tilt))); opacity: 0; border-radius: 99px;
+  background: linear-gradient(90deg, rgba(255, 226, 140, .6), rgba(255, 214, 110, 0));
+  animation: ca-shine 2.2s ease-in-out both;
+}
+.ca-glow {
+  left: 50%; top: calc(var(--soil) - 24%); width: 64%; aspect-ratio: 1; transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(255, 214, 110, .42), rgba(255, 214, 110, 0) 64%);
+  opacity: 0; animation: ca-shine 2.2s ease-in-out both;
+}
+/* The whole picture brightens for a moment, the way a cloud moving off does. */
+.ca-wash { inset: 0; background: rgba(255, 244, 210, .22); opacity: 0; animation: ca-shine 2.2s ease-in-out both }
+@keyframes ca-shine { 0%, 18% { opacity: 0 } 36%, 76% { opacity: 1 } 100% { opacity: 0 } }
+
+/* ── Soi sâu bệnh: the magnifier hunts until a bug runs off ──────────────── */
+.ca-pest .ca-tool { left: 50%; top: calc(var(--soil) - 26%); animation: ca-search 2.2s ease-in-out both }
+@keyframes ca-search {
+  0% { opacity: 0; transform: translate(90px, -40px) }
+  15% { opacity: 1; transform: translate(40px, -20px) }
+  35% { transform: translate(-40px, -30px) }
+  55% { transform: translate(-10px, 10px) }
+  70%, 80% { opacity: 1; transform: translate(-6px, 6px) scale(1.12) }
+  100% { opacity: 0; transform: translate(90px, -40px) }
+}
+.ca-bug {
+  position: absolute; left: calc(50% - 15px * var(--k)); top: calc(var(--soil) - 26% - 3px * var(--k));
+  width: 22px; height: 22px; margin: -11px 0 0 -11px; animation: ca-bug 2.2s ease-in-out both;
+}
+@keyframes ca-bug {
+  0%, 52% { opacity: 0; transform: scale(.5) }
+  60%, 78% { opacity: 1; transform: none }
+  100% { opacity: 0; transform: translate(-70px, 24px) rotate(-30deg) }
+}
+
+/* ── Tỉa lá: snip, snip, snip — a leaf drops each time ───────────────────── */
+.ca-prune .ca-tool { left: 36%; top: calc(var(--soil) - 30%); animation: ca-in-left 2.2s ease-in-out both }
+@keyframes ca-in-left {
+  0% { opacity: 0; transform: translate(-50px, -10px) }
+  14%, 86% { opacity: 1; transform: none }
+  100% { opacity: 0; transform: translate(-50px, -10px) }
+}
+.ca-blade-a, .ca-blade-b { transform-box: view-box; transform-origin: 50% 50% }
+.ca-blade-a { animation: ca-snip-a 2.2s ease-in-out both }
+.ca-blade-b { animation: ca-snip-b 2.2s ease-in-out both }
+@keyframes ca-snip-a { 0%, 20%, 36%, 54%, 72%, 100% { transform: rotate(-16deg) } 28%, 46%, 64% { transform: none } }
+@keyframes ca-snip-b { 0%, 20%, 36%, 54%, 72%, 100% { transform: rotate(16deg) } 28%, 46%, 64% { transform: none } }
+.ca-leaves { position: absolute; left: calc(36% + 46px * var(--k)); top: calc(var(--soil) - 30%); width: 1px; height: 30% }
+.ca-leaves i {
+  left: -6px; top: 0; width: 13px; height: 8px; border-radius: 0 80% 0 80%; background: #6E9A4E;
+  opacity: 0; animation: ca-leaf .8s ease-in var(--delay) both;
+}
+@keyframes ca-leaf {
+  0% { opacity: 0; top: 0; transform: none }
+  12% { opacity: 1 }
+  100% { opacity: 0; top: 100%; transform: translateX(var(--dx)) rotate(220deg) }
+}
+
+/* ── Xới đất: the trowel digs twice, soil flies ──────────────────────────── */
+.ca-dig .ca-tool {
+  left: calc(54% + 20px * var(--k)); top: calc(var(--soil) - 33px * var(--k));
+  transform-origin: 70% 30%; animation: ca-dig 2.2s ease-in-out both;
+}
+@keyframes ca-dig {
+  0% { opacity: 0; transform: translate(40px, -50px) }
+  14% { opacity: 1; transform: translate(0, -14px) }
+  26% { transform: translate(0, 6px) rotate(6deg) }
+  38% { transform: translate(6px, -16px) rotate(-22deg) }
+  50% { transform: translate(0, -12px) }
+  62% { transform: translate(0, 6px) rotate(6deg) }
+  74% { transform: translate(6px, -16px) rotate(-22deg) }
+  86% { opacity: 1; transform: translate(0, -14px) }
+  100% { opacity: 0; transform: translate(40px, -50px) }
+}
+.ca-dirt { position: absolute; left: 54%; top: var(--soil) }
+.ca-dirt i {
+  left: -4px; top: -4px; width: 8px; height: 7px; border-radius: 45%; background: #6B4F33;
+  opacity: 0; animation: ca-hop .62s ease-out var(--delay) both;
+}
+.ca-dirt i:nth-child(3n) { background: #8B6B47; width: 6px; height: 6px }
+@keyframes ca-hop {
+  0% { opacity: 0; transform: none }
+  15% { opacity: 1 }
+  50% { transform: translate(calc(var(--dx) * .5), var(--up)) }
+  100% { opacity: 0; transform: translate(var(--dx), 2px) }
+}
+
+/* ── Thụ phấn: a bee loops round the flowers, leaving pollen ─────────────── */
+.ca-bee {
+  position: absolute; left: 50%; top: calc(var(--soil) - 30%);
+  width: calc(75px * var(--k)); height: calc(50px * var(--k)); margin: calc(-25px * var(--k)) 0 0 calc(-37px * var(--k));
+  animation: ca-fly 2.2s ease-in-out both;
+}
+@keyframes ca-fly {
+  0% { opacity: 0; transform: translate(140px, -50px) scaleX(-1) }
+  15% { opacity: 1; transform: translate(50px, -10px) scaleX(-1) }
+  30% { transform: translate(-10px, -30px) scaleX(-1) }
+  40% { transform: translate(-50px, 0) scaleX(-1) }
+  48% { transform: translate(-50px, 0) }
+  62% { transform: translate(0, -20px) }
+  74% { transform: translate(30px, 10px) }
+  86% { opacity: 1; transform: translate(70px, -20px) }
+  100% { opacity: 0; transform: translate(140px, -60px) }
+}
+.ca-wing { transform-box: fill-box; transform-origin: 50% 100%; animation: ca-flap .12s linear infinite alternate }
+@keyframes ca-flap { to { transform: scaleY(.35) } }
+.ca-pollen { position: absolute; left: 50%; top: calc(var(--soil) - 30%) }
+.ca-pollen i {
+  left: var(--x); top: var(--y); width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: #F2C14E;
+  opacity: 0; animation: ca-pollen .9s ease-out var(--delay) both;
+}
+@keyframes ca-pollen { 0% { opacity: 0; transform: scale(.4) } 25% { opacity: 1 } 100% { opacity: 0; transform: translateY(14px) scale(1) } }
+
+/* ── Thu hoạch: fruit drops into the basket ──────────────────────────────── */
+.ca-harvest .ca-tool {
+  left: 28%; top: calc(var(--soil) + 2%); width: calc(90px * var(--k)); height: calc(90px * var(--k));
+  margin: calc(-45px * var(--k)) 0 0 calc(-45px * var(--k)); animation: ca-basket 2.2s ease-in-out both;
+}
+@keyframes ca-basket {
+  0% { opacity: 0; transform: translateY(40px) }
+  14% { opacity: 1; transform: none }
+  43% { transform: scaleY(.92) } 47% { transform: none }
+  59% { transform: scaleY(.92) } 63% { transform: none }
+  75% { transform: scaleY(.92) } 79% { transform: none }
+  88% { opacity: 1; transform: none }
+  100% { opacity: 0; transform: translateY(40px) }
+}
+.ca-fruit {
+  left: calc(50% + var(--from)); top: calc(var(--soil) - 30%); width: 0; height: 0; z-index: 1;
+  opacity: 0; animation: ca-fruit-x .7s linear var(--delay) both;
+}
+@keyframes ca-fruit-x {
+  0% { opacity: 1; left: calc(50% + var(--from)); top: calc(var(--soil) - 30%) }
+  95% { opacity: 1 }
+  100% { opacity: 0; left: 28%; top: calc(var(--soil) - 2%) }
+}
+.ca-fruit i {
+  left: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; background: var(--fruit);
+  box-shadow: inset -3px -3px 0 rgba(0, 0, 0, .12); animation: ca-fruit-y .7s ease-out var(--delay) both;
+}
+@keyframes ca-fruit-y { 0% { transform: none } 40% { transform: translateY(-34px) } 100% { transform: none } }

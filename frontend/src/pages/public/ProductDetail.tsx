@@ -235,7 +235,7 @@ export default function ProductDetail() {
     { icon: 'bolt', label: 'Kích hoạt', value: 'Ngay sau thanh toán' },
   ];
 
-  /** Promises that are true of a digital kit — nothing here ships. */
+  /** Promises that hold for every kit: the code now, the box by post. */
   const promises: Array<{ icon: IconName; text: string }> = [
     { icon: 'bolt', text: 'Nhận mã và gieo hạt ngay trên web' },
     { icon: 'chat', text: 'Plant Buddy AI hướng dẫn từng bước' },
@@ -305,10 +305,10 @@ export default function ProductDetail() {
                         key: 'smart',
                         name: 'Smart · IoT',
                         price: product.price + (product.smartDelta || 0),
-                        // The Smart upgrade used to be hardware in the box.
-                        // Nothing ships now, so say what it unlocks — see
-                        // createPlantForProduct in services/plants.js.
-                        note: 'Mở sẵn cả 8 thiết bị IoT từ ngày đầu tiên.',
+                        // What Smart unlocks on the 3D plant — every IoT
+                        // device from day one (createPlantForProduct in
+                        // services/plants.js); the devices are virtual.
+                        note: 'Mở sẵn cả 7 thiết bị IoT từ ngày đầu tiên.',
                         img: '/assets/images/sprouty-icons/SmartVariant.png',
                       },
                     ] as const
@@ -461,7 +461,7 @@ export default function ProductDetail() {
                   )}
                   <div>
                     <dt>Hình thức</dt>
-                    <dd>Sản phẩm số · kích hoạt bằng mã</dd>
+                    <dd>Hộp kit gửi tận nhà · cây 3D kích hoạt bằng mã</dd>
                   </div>
                   <div>
                     <dt>Phát triển bởi</dt>

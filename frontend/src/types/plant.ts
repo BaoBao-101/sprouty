@@ -10,10 +10,11 @@ export type CareActionId =
 
 export type DeviceType =
   | 'moisture_sensor' | 'thermo_sensor' | 'light_sensor' | 'nutrient_sensor'
-  | 'water_pump' | 'grow_light' | 'fan' | 'camera';
+  | 'grow_light' | 'fan' | 'camera' | 'auto_care';
 
 export interface HealthState {
-  id: 'thriving' | 'healthy' | 'stressed' | 'wilting';
+  /** `critical` is "héo nặng": left there long enough the plant dies (`dead`). */
+  id: 'thriving' | 'healthy' | 'stressed' | 'wilting' | 'critical' | 'dead';
   label: string;
 }
 
@@ -45,6 +46,10 @@ export interface PlantCard {
   careStreak: number;
   harvestedAt: string | null;
   activatedAt: string;
+  /** When it died of neglect; it is replanted from seed on the same kit. */
+  diedAt: string | null;
+  /** Which planting this is: 2 after the first one died. */
+  attempt: number;
 }
 
 export interface PlantEnvironment {
@@ -84,6 +89,9 @@ export interface PlantDevice {
   battery: number;
   reading: number | null;
   secondary: { label: string; value: number; unit: string } | null;
+  /** Only for VIP accounts (the care kit); `vipLocked` when this account is not VIP. */
+  vipOnly: boolean;
+  vipLocked: boolean;
 }
 
 export interface SensorReading {
@@ -113,7 +121,19 @@ export interface CareHistoryEntry {
   stageLabel: string;
   growth: number;
   warned: boolean;
+  /** Done by VIP's gardener, `count` times, rather than by the child. */
+  auto: boolean;
+  count: number;
   createdAt: string;
+}
+
+/** One of the things a stage asks for before the plant moves on. */
+export interface StageTask {
+  action: CareActionId;
+  label: string;
+  icon: IconName;
+  need: number;
+  done: number;
 }
 
 export interface NextStep {
@@ -151,6 +171,16 @@ export interface PlantDetail extends PlantCard {
   readings: SensorReading[];
   coachMessages: CoachMessage[];
   history: CareHistoryEntry[];
+  /** The stage's tasks; with its points (stageProgress 100) they move the plant on. */
+  tasks: StageTask[];
+  tasksDone: boolean;
+  pointsFull: boolean;
+  /** How far a plant grows through a stage on its own, without care. */
+  passiveCap: number;
+  /** "Héo nặng", and the real hours left before it dies. */
+  wilt: { critical: boolean; hoursLeft: number | null };
+  /** VIP's care kit: whether the account may use it, and whether it is switched on. */
+  keeper: { vip: boolean; on: boolean; until: string | null };
 }
 
 export interface PlantEvent {

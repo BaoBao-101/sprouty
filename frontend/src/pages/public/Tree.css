@@ -530,3 +530,181 @@
 .leaf-file-actions .leaf-remove-file { color: #995741; }
 .leaf-file-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 220px; padding: 24px; margin-bottom: 20px; border: 1px dashed #9daf8c; border-radius: 16px; background: #f1f5e9; color: #44613c; cursor: pointer; }
 .leaf-file-empty span { font-size: .8rem; color: #75816b; }
+
+/* The plant as its 3D model: a square still, cropped from the wide render
+   so the plant and its whole pot fill the frame. The same class as the
+   garden cards, styled here because this page can be opened first. */
+.album-plant { width: 220px }
+.album-plant .pc-model-preview {
+  width: 100%; aspect-ratio: 1; display: grid; place-items: center; overflow: hidden;
+  border-radius: 10px; background: #e5ebdd;
+}
+.album-plant .pc-model-preview img { display: block; width: 100%; height: 100%; object-fit: cover }
+.album-plant .pc-model-preview > svg, .album-plant > svg { width: 100%; height: auto }
+@media (max-width: 640px) { .album-plant { width: 180px } }
+
+/* ── The leaves, compact ───────────────────────────────────────────────────
+   A slim bar (what is shown, one add button), then each branch as a short
+   heading with its count ("2/5 lá") and a grid of square tiles. The last tile
+   of a branch with room is "Thêm lá", which files the photo under it. */
+.ab-toolbar {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; margin: 28px 0 14px; padding: 10px 10px 10px 18px;
+  border-radius: 18px; background: var(--surface); border: 1.5px solid #E2EBD7;
+}
+.ab-toolbar-title { flex: 1 1 220px; display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; min-width: 0 }
+.ab-toolbar-title strong { font-family: var(--font-h); font-size: 1.02rem; color: var(--ink) }
+.ab-toolbar-title span { font-size: .84rem; color: var(--ink-4) }
+.ab-link { min-height: 40px; padding: 0 10px; border: none; border-radius: 10px; background: none; font: inherit; font-size: .86rem; font-weight: 700; color: var(--primary-600); cursor: pointer }
+.ab-link:hover { background: #F0FDF4 }
+.ab-add { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 18px }
+.ab-hint { display: flex; align-items: flex-start; gap: 8px; margin: -4px 0 14px; padding: 10px 14px; border-radius: 14px; background: #FFF8EC; border: 1px solid #F6D9AE; font-size: .84rem; line-height: 1.5; color: #7C4A12 }
+.ab-hint svg { flex: none; margin-top: 2px }
+.ab-hint a { font-weight: 700; color: #C2410C }
+
+.ab-empty { display: flex; align-items: center; gap: 14px; padding: 18px 20px; border-radius: 18px; border: 1.5px dashed #D9E3CF; background: #FBFCF8 }
+.ab-empty-icon { flex: none; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px; background: #EEF4E6; color: #4F7A45 }
+.ab-empty h3 { margin: 0; font-family: var(--font-h); font-size: 1rem; color: var(--ink) }
+.ab-empty p { margin: 2px 0 0; font-size: .86rem; line-height: 1.55; color: var(--ink-3) }
+
+.ab-group { margin-bottom: 22px }
+.ab-group-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px }
+.ab-group-icon { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; background: #E7F0DD; color: #3F6E3A }
+.ab-group-head h2 { flex: 1; min-width: 0; margin: 0; font-family: var(--font-h); font-size: 1rem; color: var(--ink) }
+.ab-group-count { flex: none; padding: 3px 10px; border-radius: 99px; background: #F1F5EC; font-size: .76rem; font-weight: 800; color: var(--ink-3); font-variant-numeric: tabular-nums }
+.ab-group-count.is-full { background: #FFF1DC; color: #B45309 }
+
+.ab-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px }
+.ab-tile {
+  display: flex; flex-direction: column; min-width: 0; padding: 0; overflow: hidden; text-align: left; cursor: pointer;
+  border-radius: 16px; border: 1.5px solid #E5EADD; background: var(--surface); font: inherit;
+  transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.ab-tile:hover { border-color: #BFD8B6; box-shadow: 0 8px 18px rgba(32, 52, 36, .08); transform: translateY(-2px) }
+.ab-tile:focus-visible { outline: 3px solid #DD9B3F; outline-offset: 2px }
+.ab-tile-media { position: relative; display: grid; place-items: center; aspect-ratio: 1; overflow: hidden; background: #EEF3E8 }
+.ab-tile-media img, .ab-tile-media video { width: 100%; height: 100%; object-fit: cover; display: block }
+.ab-tile-hidden { padding: 12px; text-align: center; font-size: .76rem; color: var(--ink-4) }
+.ab-tile-play { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; background: rgba(20, 35, 24, .6) }
+.ab-tile-play::before { content: ''; position: absolute; left: 16px; top: 12px; border-left: 12px solid #fff; border-top: 8px solid transparent; border-bottom: 8px solid transparent }
+.ab-tile-cap { display: grid; gap: 1px; padding: 8px 10px 10px; min-width: 0 }
+.ab-tile-cap strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .84rem; font-weight: 700; color: var(--ink) }
+.ab-tile-cap em { font-style: normal; font-size: .72rem; color: var(--ink-4) }
+
+.ab-tile.is-add { border-style: dashed; border-color: #C9DCBF; background: #FAFCF7 }
+.ab-tile.is-add .ab-tile-media { height: 100%; aspect-ratio: auto; min-height: 150px; align-content: center; gap: 4px; background: none; color: var(--primary-600) }
+.ab-tile.is-add strong { font-size: .88rem; color: var(--primary-700) }
+.ab-tile.is-add em { font-style: normal; font-size: .74rem; color: var(--ink-4) }
+.ab-tile.is-add:hover { border-color: var(--primary-500); background: #F0FDF4 }
+
+@media (max-width: 640px) {
+  .ab-toolbar { padding: 10px 12px }
+  .ab-add { flex: 1 1 100% ; justify-content: center }
+  .ab-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px }
+  .ab-tile { border-radius: 12px }
+  .ab-tile-cap { padding: 6px 8px 8px }
+  .ab-tile-cap strong { font-size: .76rem }
+  .ab-tile-cap em { display: none }
+  .ab-tile.is-add .ab-tile-media { min-height: 0; aspect-ratio: 1 }
+  .ab-tile.is-add em { display: none }
+}
+@media (max-width: 359px) { .ab-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+@media (prefers-reduced-motion: reduce) { .ab-tile { transition: none } .ab-tile:hover { transform: none } }
+
+/* ── Leaf dialogs: the photo left, the form right, the buttons always in view ── */
+.lf-overlay {
+  position: fixed; inset: 0; z-index: 900; display: flex; align-items: center; justify-content: center; padding: 24px;
+  background: rgba(20, 35, 24, .55); animation: lf-fade .18s ease;
+}
+.lf-dialog {
+  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(340px, 1fr); width: min(980px, 100%);
+  height: min(640px, calc(100vh - 48px)); height: min(640px, calc(100dvh - 48px));
+  overflow: hidden; border-radius: 24px; background: var(--cream, #FFFDF8); box-shadow: 0 24px 60px rgba(20, 35, 24, .3);
+  animation: lf-pop .2s var(--ease); outline: none;
+}
+.lf-media { position: relative; display: flex; flex-direction: column; min-height: 0; background: #1F2A22 }
+.lf-media-frame { flex: 1; display: grid; place-items: center; min-height: 0; overflow: hidden }
+.lf-media-frame img, .lf-media-frame video { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; display: block }
+.lf-media-frame .album-media-fallback { color: #E8EFE4 }
+.lf-media-note { margin: 0; padding: 24px; text-align: center; color: #C9D6C4; line-height: 1.6 }
+.lf-media-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px;
+  background: rgba(0, 0, 0, .28); color: #DDE7D8; font-size: .8rem;
+}
+.lf-media-bar span { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.lf-media-bar button, .lf-media-bar a {
+  flex: none; min-height: 34px; padding: 0 12px; border-radius: 99px; border: 1px solid rgba(255, 255, 255, .35);
+  background: none; color: #fff; font: inherit; font-size: .8rem; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; cursor: pointer;
+}
+.lf-media-bar button:hover, .lf-media-bar a:hover { background: rgba(255, 255, 255, .12) }
+.lf-media-empty {
+  flex: 1; display: grid; place-content: center; justify-items: center; gap: 8px; margin: 16px; border-radius: 18px;
+  border: 1.5px dashed rgba(255, 255, 255, .35); background: none; color: #E8EFE4; font: inherit; cursor: pointer; text-align: center;
+}
+.lf-media-empty span { font-size: .82rem; color: #B9C8B3 }
+
+.lf-side { display: flex; flex-direction: column; min-height: 0 }
+.lf-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 20px 10px }
+.lf-kicker { display: block; margin-bottom: 4px; font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--primary-600) }
+.lf-head h2 { margin: 0; font-family: var(--font-h); font-size: 1.2rem; line-height: 1.3; color: var(--ink); overflow-wrap: anywhere }
+.lf-close { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--cream-2); color: var(--ink-3); cursor: pointer }
+.lf-close:hover { background: #E8F0E2; color: var(--ink) }
+.lf-body { flex: 1; overflow-y: auto; padding: 4px 20px 12px; overscroll-behavior: contain }
+.lf-field { display: grid; gap: 6px; margin: 0 0 14px; padding: 0; border: none; min-width: 0 }
+.lf-field legend, .lf-label { margin-bottom: 6px; padding: 0; font-size: .8rem; font-weight: 700; color: var(--ink-2) }
+.lf-field legend { float: left; width: 100% }
+.lf-label em { font-style: normal; font-weight: 500; color: var(--ink-4) }
+.lf-field small { font-size: .76rem; color: var(--ink-4) }
+.lf-field .form-input { margin: 0; min-height: 44px }
+.lf-field textarea.form-input { min-height: 0; resize: vertical }
+.lf-input-row { display: flex; gap: 8px }
+.lf-input-row .form-input { flex: 1; min-width: 0 }
+.lf-ai {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 12px;
+  border: 1.5px solid #D9E7D2; background: #F4FAF1; color: var(--primary-700); font: inherit; font-size: .82rem; font-weight: 700; cursor: pointer;
+}
+.lf-ai:disabled { opacity: .6; cursor: progress }
+
+.lf-stages { clear: both; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px }
+.lf-stage {
+  display: flex; align-items: center; gap: 8px; min-height: 42px; padding: 6px 10px; border-radius: 12px;
+  border: 1.5px solid #E2EADA; background: var(--surface); font: inherit; text-align: left; color: var(--ink-2); cursor: pointer;
+}
+.lf-stage svg { flex: none; color: #5C8452 }
+.lf-stage span { flex: 1; display: grid; min-width: 0; font-size: .84rem; font-weight: 600; line-height: 1.2 }
+.lf-stage i { font-style: normal; font-size: .68rem; font-weight: 700; color: var(--primary-600) }
+.lf-stage em { flex: none; font-style: normal; font-size: .72rem; font-weight: 700; color: var(--ink-4) }
+.lf-stage:hover:not(:disabled) { border-color: var(--primary-300) }
+.lf-stage.is-on { border-color: var(--primary-600); background: #F0FDF4; box-shadow: 0 0 0 3px rgba(46, 132, 71, .12) }
+.lf-stage.is-on span { color: var(--primary-700) }
+.lf-stage.is-full { opacity: .55; cursor: not-allowed; background: #F7F7F3 }
+.lf-stage.is-full em { color: #B45309 }
+
+.lf-foot {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid #E5ECDD; background: var(--surface);
+}
+.lf-foot .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px }
+.lf-delete { margin-right: auto; color: #BE123C }
+.lf-delete:hover:not(:disabled) { background: #FFF1F2 }
+@keyframes lf-fade { from { opacity: 0 } }
+@keyframes lf-pop { from { transform: translateY(10px) scale(.985); opacity: .6 } }
+
+/* Tablets: the photo on top, shorter, and the form under it. */
+@media (max-width: 860px) {
+  .lf-dialog { grid-template-columns: 1fr; grid-template-rows: minmax(160px, 38%) minmax(0, 1fr); height: calc(100dvh - 48px); max-width: 620px }
+}
+/* Phones: a sheet from the bottom, the buttons pinned to its foot. */
+@media (max-width: 560px) {
+  .lf-overlay { align-items: flex-end; padding: 0 }
+  .lf-dialog { height: 94vh; height: 94dvh; max-width: none; border-radius: 22px 22px 0 0; grid-template-rows: minmax(140px, 34%) minmax(0, 1fr) }
+  .lf-head { padding: 14px 16px 8px }
+  .lf-body { padding: 4px 16px 10px }
+  .lf-foot { padding: 10px 16px calc(10px + env(safe-area-inset-bottom)) }
+  .lf-foot .btn-primary { flex: 1 }
+}
+@media (prefers-reduced-motion: reduce) { .lf-overlay, .lf-dialog { animation: none } }
+
+/* The same kit grown twice: one album per plant, switched here. */
+.album-switch { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 3px; border-radius: 99px; background: rgba(255, 255, 255, .7); border: 1px solid #E2EBD7 }
+.album-switch a { min-height: 34px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 99px; font-size: .82rem; font-weight: 700; color: var(--ink-3); text-decoration: none }
+.album-switch a.is-on { background: var(--primary-600); color: #fff }

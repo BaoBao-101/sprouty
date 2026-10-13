@@ -1,0 +1,83 @@
+/* Mã kích hoạt: the codes staff make by hand first, the ones orders issue second. */
+
+.rcx-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)) }
+
+.rcx-tabs { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 1px solid var(--border-c) }
+.rcx-tab {
+  display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; margin-bottom: -1px;
+  border: none; border-bottom: 2px solid transparent; background: none; font: inherit; font-size: .88rem;
+  font-weight: 700; color: var(--ink-4); cursor: pointer;
+}
+.rcx-tab:hover { color: var(--ink-2) }
+.rcx-tab.is-active { color: var(--ink); border-bottom-color: var(--accent) }
+.rcx-tab span { padding: 0 8px; border-radius: 99px; background: var(--cream-2); color: var(--ink-3); font-size: .74rem; line-height: 1.6 }
+.rcx-tab.is-active span { background: #DCFCE7; color: #15803D }
+
+.rcx-table td { vertical-align: middle }
+.rcx-table tr.is-off td { opacity: .62 }
+.rcx-code { display: flex; align-items: center; gap: 10px; min-width: 0 }
+.rcx-code-icon { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--cream-2); color: var(--ink-3) }
+.rcx-main { display: block; font-weight: 700; color: var(--ink); font-size: .88rem }
+.rcx-sub { display: block; margin-top: 2px; font-size: .76rem; color: var(--ink-4) }
+
+.rcx-features { display: flex; flex-wrap: wrap; gap: 4px }
+.rcx-feature {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px;
+  background: #EFF6FF; color: #1D4ED8; font-size: .72rem; font-weight: 700; white-space: nowrap;
+}
+
+.rcx-unused { font-size: .8rem; color: var(--ink-4) }
+.rcx-usage { display: grid; gap: 5px; min-width: 90px; font-size: .8rem; font-weight: 700; color: var(--ink-2) }
+.rcx-meter { display: block; height: 5px; border-radius: 99px; background: var(--cream-2); overflow: hidden }
+.rcx-meter span { display: block; height: 100%; border-radius: 99px; background: var(--accent) }
+
+.rcx-status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border-radius: 99px; font-size: .76rem; font-weight: 700; white-space: nowrap }
+.rcx-status i { width: 7px; height: 7px; border-radius: 50%; background: currentColor }
+.rcx-status.is-active { background: #DCFCE7; color: #15803D }
+.rcx-status.is-used_up { background: #FEF3C7; color: #B45309 }
+.rcx-status.is-disabled, .rcx-status.is-expired { background: #F1F5F9; color: #64748B }
+
+.rcx-actions { display: flex; justify-content: flex-end; gap: 6px }
+.rcx-btn {
+  display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 12px; border-radius: 8px;
+  border: 1px solid var(--border-c); background: var(--surface); color: var(--ink-2);
+  font: inherit; font-size: .8rem; font-weight: 700; white-space: nowrap; cursor: pointer;
+}
+.rcx-btn:hover { background: var(--cream-2); border-color: #CBD5E1 }
+.rcx-btn.is-danger { color: #BE123C }
+.rcx-btn.is-danger:hover { background: #FFF1F2; border-color: #FECDD3 }
+
+/* Create: the benefits as cards to tick. */
+.rcx-choices { display: grid; gap: 8px }
+.rcx-choice {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; text-align: left;
+  border: 1.5px solid var(--border-c); background: var(--surface); font: inherit; color: var(--ink); cursor: pointer;
+}
+.rcx-choice:hover { border-color: #CBD5E1 }
+.rcx-choice.is-on { border-color: var(--accent); background: #F0FDF4 }
+.rcx-choice > span:nth-child(2) { flex: 1; display: grid }
+.rcx-choice strong { font-size: .88rem }
+.rcx-choice em { font-style: normal; font-size: .76rem; color: var(--ink-4) }
+.rcx-choice-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--cream-2); color: var(--ink-3) }
+.rcx-choice.is-on .rcx-choice-icon { background: #DCFCE7; color: #15803D }
+.rcx-check { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid #CBD5E1; color: #fff }
+.rcx-choice.is-on .rcx-check { background: var(--accent); border-color: var(--accent) }
+
+.rcx-warn {
+  display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px;
+  background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; font-size: .82rem; line-height: 1.5;
+}
+
+.rcx-redemptions { margin: 0; padding: 0; list-style: none; border: 1px solid var(--border-c); border-radius: 12px; overflow: hidden }
+.rcx-redemptions li { display: flex; align-items: center; gap: 12px; padding: 10px 14px }
+.rcx-redemptions li + li { border-top: 1px solid var(--border-c) }
+.rcx-avatar { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: #E0F2FE; color: #0369A1; font-weight: 800; font-size: .8rem }
+.rcx-red-who { flex: 1; min-width: 0 }
+
+@media (max-width: 900px) {
+  .rcx-kpis { grid-template-columns: 1fr 1fr }
+}
+.rcx-when { flex: none; font-size: .76rem; color: var(--ink-4); white-space: nowrap }
+.rcx-note { margin: 0 0 10px; font-size: .8rem; color: var(--ink-4) }
+.rcx-feature.is-plant { background: #DCFCE7; color: #15803D }
+.rcx-feature.is-muted { background: var(--cream-2); color: var(--ink-4) }

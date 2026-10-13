@@ -15,7 +15,7 @@ import { confirmAction } from '@/services/dialog';
  */
 
 import { ProductVideos } from '@/components/ProductVideos';
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
@@ -110,6 +110,7 @@ function MetricRing({
   icon,
   kind,
   ideal,
+  off,
 }: {
   value: number;
   band: 'good' | 'warn' | 'bad';
@@ -118,9 +119,37 @@ function MetricRing({
   icon: IconName;
   kind: string;
   ideal?: [number, number];
+  /**
+   * Set when the sensor that reads this is not wired on the board: the ring
+   * shows nothing measured, and a way to wire it (or the stage it opens at).
+   */
+  off?: { locked: string | null; onPlug: () => void; sensor: string };
 }) {
   const R = 26;
   const circumference = 2 * Math.PI * R;
+  if (off) {
+    return (
+      <div className={`ring ring-off${off.locked ? ' is-locked' : ''}`}>
+        <svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+          <circle cx="32" cy="32" r={R} className="ring-track" />
+        </svg>
+        <span className="ring-icon">
+          <SproutyIcon name={off.locked ? 'lock' : icon} size={20} />
+        </span>
+        <div className="ring-read">
+          <strong>Chưa đo</strong>
+          <span className="ring-label">{label}</span>
+          {off.locked ? (
+            <span className="ring-lock">Mở ở chặng {off.locked}</span>
+          ) : (
+            <button type="button" className="ring-plug" title={`Cắm ${off.sensor} vào bảng mạch`} onClick={off.onPlug}>
+              <SproutyIcon name="plus" size={12} /> Nối cảm biến
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
   // Temperature is not a percentage, so the ring maps 10–40°C onto the dial.
   const pct = unit === '°C' ? Math.min(100, Math.max(0, ((value - 10) / 30) * 100)) : value;
   const dash = (Math.min(100, Math.max(0, pct)) / 100) * circumference;
@@ -155,7 +184,7 @@ function MetricRing({
 }
 
 /** A compact multi-series sparkline of the sensor history. */
-function SensorChart({ readings }: { readings: SensorReading[] }) {
+function SensorChart({ readings, wired }: { readings: SensorReading[]; wired: string[] }) {
   if (readings.length < 2) {
     return (
       <p className="chart-empty">
@@ -167,13 +196,18 @@ function SensorChart({ readings }: { readings: SensorReading[] }) {
   const W = 640;
   const H = 150;
   const PAD = 6;
-  const series: Array<{ key: keyof SensorReading; label: string; color: string; scale: (v: number) => number }> = [
-    { key: 'moisture', label: 'Độ ẩm đất', color: 'var(--cobalt)', scale: (v) => v },
-    { key: 'nutrient', label: 'Dinh dưỡng', color: 'var(--primary-500)', scale: (v) => v },
-    { key: 'light', label: 'Ánh sáng', color: 'var(--accent-yellow)', scale: (v) => v },
+  const lines: Array<{ key: keyof SensorReading; sensor: string; label: string; color: string; scale: (v: number) => number }> = [
+    { key: 'moisture', sensor: 'moisture_sensor', label: 'Độ ẩm đất', color: 'var(--cobalt)', scale: (v) => v },
+    { key: 'nutrient', sensor: 'nutrient_sensor', label: 'Dinh dưỡng', color: 'var(--primary-500)', scale: (v) => v },
+    { key: 'light', sensor: 'light_sensor', label: 'Ánh sáng', color: 'var(--accent-yellow)', scale: (v) => v },
     // Mapped onto the same 0–100 axis as the rest, 10–40°C → 0–100.
-    { key: 'temperature', label: 'Nhiệt độ', color: 'var(--accent-coral)', scale: (v) => ((v - 10) / 30) * 100 },
+    { key: 'temperature', sensor: 'thermo_sensor', label: 'Nhiệt độ', color: 'var(--accent-coral)', scale: (v) => ((v - 10) / 30) * 100 },
   ];
+  const series = lines.filter((s) => wired.includes(s.sensor));
+  // A line is a sensor's history: no sensor, nothing was recorded to draw.
+  if (!series.length) {
+    return <p className="chart-empty">Nối cảm biến vào bảng mạch để vẽ biểu đồ của nó.</p>;
+  }
 
   const stepX = (W - PAD * 2) / (readings.length - 1);
   const y = (pct: number) => H - PAD - (Math.min(100, Math.max(0, pct)) / 100) * (H - PAD * 2);
@@ -270,6 +304,18 @@ function PlantVideos({
     </div>
   );
 }
+
+/**
+ * Where each garden scene painted its sun (or moon), as a share of the
+ * picture, and the way down from it to the plant — so "Đưa ra nắng" lights
+ * up the sun that is actually in the sky. From plant-backdrop.ts.
+ */
+const SUN_AT: Record<string, Record<string, string>> = {
+  natural: { '--sun-x': '82%', '--sun-y': '14.5%', '--sun-deg': '148deg' },
+  night: { '--sun-x': '19%', '--sun-y': '15%', '--sun-deg': '32deg' },
+  autumn: { '--sun-x': '76.7%', '--sun-y': '47%', '--sun-deg': '172deg' },
+  sakura: { '--sun-x': '71%', '--sun-y': '21%', '--sun-deg': '150deg' },
+};
 
 /** Repeated events, one line each with a count — oldest order kept. */
 function groupFeed(feed: PlantEvent[]) {
@@ -436,6 +482,20 @@ export default function PlantDetail() {
     }
   }
 
+  const [replanting, setReplanting] = useState(false);
+  async function replant() {
+    setReplanting(true);
+    try {
+      const data = await API.plants.replant(plantId);
+      apply(data.plant);
+      showToast(data.message || 'Đã gieo lại hạt mới.', 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Chưa gieo lại được, thử lại nhé.', 'error');
+    } finally {
+      setReplanting(false);
+    }
+  }
+
   async function toggleDevice(type: string, next: boolean) {
     setDeviceBusy(true);
     try {
@@ -518,6 +578,14 @@ export default function PlantDetail() {
   if (!plant) return null;
 
   const harvested = Boolean(plant.harvestedAt);
+  // Died of neglect: everything waits for it to be sown again.
+  const dead = Boolean(plant.diedAt);
+  const critical = !dead && plant.wilt.critical;
+  const hoursLeftText = plant.wilt.hoursLeft === null
+    ? ''
+    : plant.wilt.hoursLeft >= 48
+      ? `${Math.round(plant.wilt.hoursLeft / 24)} ngày`
+      : `${plant.wilt.hoursLeft} giờ`;
   const sensors = plant.devices.filter((d) => d.kind === 'sensor');
   const actuators = plant.devices.filter((d) => d.kind === 'actuator');
   const careSlots = plant.care.filter((c) => c.allowedInStage || c.action !== 'harvest');
@@ -525,6 +593,25 @@ export default function PlantDetail() {
 
   // The parts wired on the board, as they show on the plant.
   const wired = plant.devices.filter((d) => d.unlocked && connected.includes(d.type));
+  // A VIP plant is alive: it sways in a breeze, and harder with the IoT fan
+  // wired and on. A regular account's plant stands still.
+  const fanOn = wired.some((d) => d.type === 'fan' && d.autoMode);
+  const wind = !plant.keeper.vip || plant.diedAt ? 'off' : fanOn ? 'fan' : 'breeze';
+  // A reading is known only through the sensor that takes it.
+  const ringOff = (type: string) => {
+    const d = plant.devices.find((x) => x.type === type);
+    if (!d || (d.unlocked && connected.includes(type))) return undefined;
+    return { locked: d.unlocked ? null : d.unlockStageLabel, onPlug: () => sendIot('place', type), sensor: d.label };
+  };
+  // The advice keeps its numbers for a child who has wired the sensor behind
+  // them; without it, the plant only looks a certain way.
+  const NEEDS: Partial<Record<string, [string, string]>> = {
+    water: ['moisture_sensor', 'Lá có vẻ hơi rũ — nối cảm biến độ ẩm đất để biết cây khát đến đâu.'],
+    fertilize: ['nutrient_sensor', 'Lá trông hơi nhạt màu — nối cảm biến dinh dưỡng để xem cây còn bao nhiêu thức ăn.'],
+    pest_check: ['camera', 'Lá có vài vết lạ — nối camera theo dõi để xem sâu bệnh có nhiều không.'],
+  };
+  const need = plant.nextStep.action ? NEEDS[plant.nextStep.action] : undefined;
+  const todoWhy = need && !connected.includes(need[0]) ? need[1] : plant.nextStep.why;
   // What a wired sensor says, in the same words and colours as the rings below.
   const sensorRead = (d: PlantDevice): SensorRead | null => {
     const pct = (v: number) => `${Math.round(v)}%`;
@@ -581,7 +668,7 @@ export default function PlantDetail() {
               <span>{plant.nickname}</span>
             </div>
 
-            <Link to={`/tree?id=${plant.productId}`} className="pd-hero-album">
+            <Link to={`/tree?id=${plant.productId}&plant=${plant.id}`} className="pd-hero-album">
               <SproutyIcon name="album" size={19} />
               Album kỷ niệm
               <SproutyIcon name="arrow-right" size={16} />
@@ -589,11 +676,11 @@ export default function PlantDetail() {
           </div>
 
           <div className="pd-hero-grid">
-            <div className="pd-art-pane">
+            <div className={`pd-art-pane${dead ? ' is-dead' : ''}`} style={SUN_AT[garden?.scene ?? 'natural'] as CSSProperties}>
               {/* Care happens on the plant itself: the tools sit under the
                   3D model and are dragged onto it. */}
               <CareGame
-                disabled={harvested}
+                disabled={harvested || dead}
                 plant={{
                   stage: plant.stage,
                   progress: plant.stageProgress,
@@ -611,6 +698,7 @@ export default function PlantDetail() {
                     icon: slot.icon,
                     hint: slot.hint,
                     recommended: slot.action === recommended,
+                    task: plant.tasks.find((t) => t.action === slot.action),
                     wait: formatCountdown(left),
                     state: !slot.allowedInStage
                       ? 'locked'
@@ -634,6 +722,7 @@ export default function PlantDetail() {
                   isNight={!plant.environment.isDay}
                   decoration={garden?.decoration}
                   gadgets={wired.map((d) => ({ type: d.type, on: d.kind === 'sensor' || d.autoMode }))}
+                  wind={wind}
                 /></Suspense>
                 <div className="pd-clock">
                   <SproutyIcon name={garden?.scene === 'night' ? 'moon' : garden && garden.scene !== 'natural' ? 'sparkle' : plant.environment.isDay ? 'sun' : 'moon'} size={17} />
@@ -659,6 +748,23 @@ export default function PlantDetail() {
                   onOpenBoard={openIot}
                 />
               </CareGame>
+              {/* Died of neglect. Nothing is lost but the plant: the kit, the
+                  album and the journal stay, and a new seed goes in for free. */}
+              {dead && (
+                <div className="pd-dead" role="status">
+                  <span className="pd-dead-icon">
+                    <SproutyIcon name="leaf" size={30} />
+                  </span>
+                  <strong>Cây đã héo khô</strong>
+                  <p>
+                    {plant.nickname} không được chăm quá lâu nên đã không qua khỏi. Bộ kit vẫn còn — gieo hạt mới
+                    miễn phí, lần này nhớ ghé chăm đều tay nhé.
+                  </p>
+                  <button className="btn btn-primary" disabled={replanting} onClick={() => void replant()}>
+                    <SproutyIcon name="seed" size={18} /> {replanting ? 'Đang gieo…' : 'Gieo lại từ hạt'}
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="pd-head-pane">
@@ -703,8 +809,23 @@ export default function PlantDetail() {
               <div className="pd-badges">
                 <span className={`pd-badge pd-badge-health pd-h-${plant.healthState.id}`}>
                   <SproutyIcon name="heart" size={17} />
-                  {plant.healthState.label} {Math.round(plant.health)}%
+                  {plant.healthState.label}{dead ? '' : ` ${Math.round(plant.health)}%`}
                 </span>
+                {plant.keeper.on && !dead && (
+                  <span
+                    className="pd-badge pd-badge-keeper"
+                    title="Bộ chăm tự động (VIP) đang bật: khi cây sắp héo nó tự tưới, bón phân, bắt sâu để cây không héo khô. Cây vẫn chỉ lớn khi bạn tự chăm."
+                  >
+                    <SproutyIcon name="shield" size={17} />
+                    Bộ chăm tự động
+                  </span>
+                )}
+                {plant.attempt > 1 && (
+                  <span className="pd-badge pd-badge-attempt">
+                    <SproutyIcon name="seed" size={17} />
+                    Lần trồng thứ {plant.attempt}
+                  </span>
+                )}
                 {plant.careStreak > 0 && (
                   <span className="pd-badge pd-badge-streak">
                     <SproutyIcon name="bolt" size={17} />
@@ -723,27 +844,81 @@ export default function PlantDetail() {
                 </div>
                 <div className="pd-progress-track">
                   <div className="pd-progress-fill" style={{ width: `${Math.round(plant.stageProgress)}%` }} />
+                  {/* How far the plant gets on its own; past here takes care. */}
+                  <i
+                    className="pd-progress-cap"
+                    style={{ left: `${plant.passiveCap}%` }}
+                    title="Cây tự lớn được tới đây — phần còn lại cần bạn chăm"
+                  />
                 </div>
+                {/* What the stage asks for, besides the points, before the
+                    plant moves on. */}
+                {plant.tasks.length > 0 && !dead && (
+                  <div className={`pd-tasks${plant.tasksDone ? ' is-done' : ''}`}>
+                    <span className="pd-tasks-title">
+                      {plant.tasksDone
+                        ? 'Xong nhiệm vụ chặng này'
+                        : plant.pointsFull
+                          ? 'Đủ điểm rồi — làm nốt nhiệm vụ để lên chặng'
+                          : 'Nhiệm vụ để lên chặng'}
+                    </span>
+                    <ul>
+                      {plant.tasks.map((t) => (
+                        <li key={t.action} className={t.done >= t.need ? 'is-done' : ''}>
+                          <SproutyIcon name={t.done >= t.need ? 'check' : t.icon} size={14} />
+                          {t.label}
+                          <b>
+                            {t.done}/{t.need}
+                          </b>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <p>{plant.stageStory}</p>
               </div>
 
               {/* What to do next, said once, beside the plant it is about. It
                   used to be a banner further down repeating what the care
                   tools already said. */}
-              <div className={`pd-todo${harvested ? ' is-done' : ''}`}>
-                <span className="pd-todo-icon">
-                  <SproutyIcon name={harvested ? 'trophy' : plant.nextStep.icon} size={24} />
-                </span>
-                <div>
-                  <span className="pd-todo-kicker">{harvested ? 'Đã hoàn thành' : 'Việc nên làm'}</span>
-                  <strong>
-                    {harvested
-                      ? `Bạn đã thu hoạch ${plant.harvestLabel}!`
-                      : plant.nextStep.label || 'Cây đang tự lớn'}
-                  </strong>
-                  <p>{harvested ? 'Mở một bộ kit mới để trồng cây khác nhé.' : plant.nextStep.why}</p>
+              {!dead && (
+                <div className={`pd-todo${harvested ? ' is-done' : ''}${critical ? ' is-danger' : ''}`}>
+                  <span className="pd-todo-icon">
+                    <SproutyIcon name={harvested ? 'trophy' : critical ? 'warning' : plant.nextStep.icon} size={24} />
+                  </span>
+                  <div>
+                    <span className="pd-todo-kicker">
+                      {harvested ? 'Đã hoàn thành' : critical ? `Cứu cây ngay — còn khoảng ${hoursLeftText}` : 'Việc nên làm'}
+                    </span>
+                    <strong>
+                      {harvested
+                        ? `Bạn đã thu hoạch ${plant.harvestLabel}!`
+                        : plant.nextStep.label || 'Chờ dụng cụ hồi lại'}
+                    </strong>
+                    <p>
+                      {harvested
+                        ? 'Mở một bộ kit mới để trồng cây khác nhé.'
+                        : critical
+                          ? `Cây đang héo nặng, để lâu nữa sẽ héo khô. ${todoWhy}`
+                          : todoWhy}
+                    </p>
+                    {/* The care kit would have saved it: say so, the right
+                        way for this account. */}
+                    {critical && !plant.keeper.vip && (
+                      <Link className="pd-todo-vip" to="/vip">
+                        Bận quá? VIP có Bộ chăm tự động giữ cây không bao giờ héo khô
+                        <SproutyIcon name="arrow-right" size={14} />
+                      </Link>
+                    )}
+                    {critical && plant.keeper.vip && !plant.keeper.on && (
+                      <button type="button" className="pd-todo-vip" onClick={() => openIot('auto_care')}>
+                        Lắp và bật Bộ chăm tự động trong Trạm IoT để cây không héo khô
+                        <SproutyIcon name="arrow-right" size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="pd-guide-row">
                 <button className="guide-open-btn pd-guide-btn" onClick={openGuide}>
@@ -820,8 +995,8 @@ export default function PlantDetail() {
                     <SproutyIcon name="chart" size={21} /> Trạm IoT
                   </h2>
                   <p>
-                    Linh kiện lắp vào bảng mạch sẽ được gắn vào chậu cây ở trên. Xanh là cây đang vui,
-                    vàng là hơi mệt, đỏ là cần giúp ngay.
+                    Mỗi chỉ số cần cảm biến của nó: cắm vào bảng mạch là đọc được ngay, và linh kiện
+                    cũng gắn vào chậu cây ở trên. Xanh là cây đang vui, vàng là hơi mệt, đỏ là cần giúp ngay.
                     <br />
                     <span className="pd-panel-fine">
                       Chặng này cây thích đất ẩm {plant.idealMoisture[0]}–{plant.idealMoisture[1]}%
@@ -837,6 +1012,7 @@ export default function PlantDetail() {
                     label="Nước trong đất"
                     ideal={plant.idealMoisture}
                     value={plant.moisture}
+                    off={ringOff('moisture_sensor')}
                     band={
                       metricBand(plant.moisture, plant.idealMoisture) as 'good' | 'warn' | 'bad'
                     }
@@ -848,6 +1024,7 @@ export default function PlantDetail() {
                     unit="°C"
                     ideal={plant.idealTemp}
                     value={plant.environment.temperature}
+                    off={ringOff('thermo_sensor')}
                     band={
                       metricBand(plant.environment.temperature, plant.idealTemp) as
                         'good' | 'warn' | 'bad'
@@ -858,6 +1035,7 @@ export default function PlantDetail() {
                     kind="light"
                     label="Ánh sáng"
                     value={plant.environment.light}
+                    off={ringOff('light_sensor')}
                     band={
                       plant.environment.light > 35
                         ? 'good'
@@ -871,6 +1049,7 @@ export default function PlantDetail() {
                     kind="nutrient"
                     label="Thức ăn của cây"
                     value={plant.nutrient}
+                    off={ringOff('nutrient_sensor')}
                     band={plant.nutrient > 45 ? 'good' : plant.nutrient > 28 ? 'warn' : 'bad'}
                   />
                   <MetricRing
@@ -878,6 +1057,7 @@ export default function PlantDetail() {
                     kind="pest"
                     label="Sâu bệnh"
                     value={plant.pestRisk}
+                    off={ringOff('camera')}
                     band={plant.pestRisk < 40 ? 'good' : plant.pestRisk < 58 ? 'warn' : 'bad'}
                   />
                 </div>
@@ -896,7 +1076,7 @@ export default function PlantDetail() {
                   <summary>
                     <SproutyIcon name="chart" size={17} /> Biểu đồ cảm biến 24 giờ
                   </summary>
-                  <SensorChart readings={plant.readings} />
+                  <SensorChart readings={plant.readings} wired={connected} />
                 </details>
               </div>
 
@@ -960,12 +1140,16 @@ export default function PlantDetail() {
                         <li className="history-empty">Chưa có lần chăm cây nào — kéo một dụng cụ lên cây để bắt đầu.</li>
                       )}
                       {plant.history.map((entry) => (
-                        <li key={entry.id} className={entry.warned ? 'warned' : ''}>
+                        <li key={entry.id} className={entry.auto ? 'is-auto' : entry.warned ? 'warned' : ''}>
                           <span className="history-icon">
-                            <SproutyIcon name={entry.icon} size={17} />
+                            <SproutyIcon name={entry.auto ? 'shield' : entry.icon} size={17} />
                           </span>
                           <div>
-                            <strong>{entry.label}</strong>
+                            <strong>
+                              {entry.auto
+                                ? `Bộ chăm tự động: ${entry.label.toLowerCase()}${entry.count > 1 ? ` ×${entry.count}` : ''}`
+                                : entry.label}
+                            </strong>
                             <span>
                               {new Date(entry.createdAt).toLocaleString('vi-VN', {
                                 day: '2-digit',

@@ -9,6 +9,7 @@ import { plantBackdrop } from './plant-backdrop';
 import { buildAmbience, sceneLighting, type Ambience } from './garden-ambience';
 import type { SceneKey } from './garden-looks';
 import { buildGadgets, type Gadget, type Gadgets } from './plant-devices';
+import { WIND, applyWind, windUniforms, type Wind, type WindUniforms } from './plant-wind';
 
 type Props = ModelOptions & {
   /** The garden's scene; `natural` follows the clock through `isNight`. */
@@ -17,10 +18,13 @@ type Props = ModelOptions & {
   isNight?: boolean;
   /** The parts wired on the IoT board, built into the pot. */
   gadgets?: Gadget[];
+  /** A VIP plant sways ("breeze"), more with the IoT fan on ("fan"). */
+  wind?: Wind;
 };
 type Viewer = {
   scene: T.Scene; camera: T.PerspectiveCamera; renderer: T.WebGLRenderer; controls: OrbitControls;
   draw: () => void; model?: T.Group; ambience?: Ambience | null; gadgets?: Gadgets | null;
+  wind: WindUniforms; windTarget: (typeof WIND)[Wind]; windSpeed: number;
   hemi: T.HemisphereLight; sun: T.DirectionalLight; rim: T.DirectionalLight; env: T.Texture;
 };
 
@@ -64,7 +68,7 @@ export default function PlantViewer3D(props:Props) {
     const env=pmrem.fromScene(room,.04).texture;
     room.dispose(); pmrem.dispose();
     const draw=()=>renderer.render(scene3,camera);
-    const engine:Viewer={scene:scene3,camera,renderer,controls,draw,hemi,sun,rim,env};viewer.current=engine;
+    const engine:Viewer={scene:scene3,camera,renderer,controls,draw,hemi,sun,rim,env,wind:windUniforms(),windTarget:WIND.off,windSpeed:WIND.off.speed};viewer.current=engine;
     const canvas=renderer.domElement;
     canvas.tabIndex=0;canvas.setAttribute('role','img');
     canvas.setAttribute('aria-label','Mô hình cây 3D. Kéo để xoay, cuộn để phóng to. Dùng phím mũi tên để xoay, dấu cộng trừ để zoom, Home để đặt lại.');
@@ -99,9 +103,21 @@ export default function PlantViewer3D(props:Props) {
     const started=performance.now();
     const tick=(now:number)=>{
       frame=requestAnimationFrame(tick);
-      if((!engine.ambience && !engine.gadgets?.animated) || !onScreen || document.hidden) return;
+      // The wind eases in and out, so switching the fan on or off is a gust
+      // rising or dying away, not a jump.
+      const w=engine.wind, target=engine.windTarget;
+      const windy=target.bend>0 || w.uWindBend.value>.0005;
+      if((!engine.ambience && !engine.gadgets?.animated && !windy) || !onScreen || document.hidden) return;
       if(now-last<1000/AMBIENT_FPS) return;
+      const dt=Math.min(.1,(now-last)/1000);
       last=now;
+      if(windy){
+        const k=Math.min(1,dt*1.5);
+        w.uWindBend.value+=(target.bend-w.uWindBend.value)*k;
+        w.uWindFlutter.value+=(target.flutter-w.uWindFlutter.value)*k;
+        engine.windSpeed+=(target.speed-engine.windSpeed)*k;
+        w.uWindTime.value+=dt*engine.windSpeed;
+      }
       engine.ambience?.update((now-started)/1000);
       engine.gadgets?.update((now-started)/1000);
       draw();
@@ -133,9 +149,17 @@ export default function PlantViewer3D(props:Props) {
       const material=obj.material as T.MeshStandardMaterial;
       if(material.userData?.glossy){material.envMap=engine.env;material.envMapIntensity=.9;material.needsUpdate=true;}
     });
+    // Only the plant bends; the pot, the soil and the devices stay put.
+    applyWind(model.getObjectByName('plant'),engine.wind);
     const shell=model.getObjectByName('soil-shell');if(shell)shell.visible=!(props.form==='root' && rootsRef.current);
     engine.draw();
   },[props.stage,props.progress,props.health,props.form,props.fruitShape,props.fruitColor,props.flowerColor,props.decoration]);
+
+  // How hard the wind blows; the tick eases towards it.
+  useEffect(()=>{
+    const engine=viewer.current;if(!engine)return;
+    engine.windTarget=WIND[props.wind ?? 'off'];
+  },[props.wind]);
 
   // The place around it: sky, light, and whatever drifts through the air.
   useEffect(()=>{

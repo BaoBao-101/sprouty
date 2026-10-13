@@ -105,6 +105,10 @@ function publicWorkshop(workshop, taken) {
     seatsLeft: Math.max(0, workshop.capacity - taken),
     isFull: taken >= workshop.capacity,
     upcoming: isUpcoming(workshop),
+    // Registration closes when the session starts (POST /workshops/register
+    // refuses after that), so a session already running is not offered —
+    // it used to show "Đăng ký" and then answer "đã diễn ra".
+    bookable: workshop.dateTime > new Date(),
   };
 }
 
@@ -120,9 +124,15 @@ function isUpcoming(workshop) {
 export default async function workshopRoutes(fastify) {
   // GET /api/v1/workshops
   fastify.get('/workshops', async () => {
-    // Drafts and cancelled sessions are not offered to customers.
+    // Drafts and cancelled sessions are not offered to customers, and nor is
+    // one that is over: the page only ever listed upcoming sessions, and the
+    // rest was every past session sent to every visitor, forever.
+    const now = new Date();
     const workshops = await fastify.prisma.workshop.findMany({
-      where: { status: 'published' },
+      where: {
+        status: 'published',
+        OR: [{ endTime: { gt: now } }, { endTime: null, dateTime: { gt: now } }],
+      },
       orderBy: { dateTime: 'asc' },
       include: {
         registrations: {
@@ -416,6 +426,13 @@ export default async function workshopRoutes(fastify) {
     }
     if (registration.amount <= 0) {
       return reply.code(409).send({ message: 'Buổi workshop này miễn phí.' });
+    }
+    if (registration.workshop.status === 'cancelled') {
+      return reply.code(409).send({ message: 'Sprouty đã huỷ buổi workshop này, bạn không cần thanh toán.' });
+    }
+    // Paying at the door by QR is fine; paying for a session that is over is not.
+    if ((registration.workshop.endTime ?? registration.workshop.dateTime) < new Date()) {
+      return reply.code(409).send({ message: 'Buổi workshop này đã kết thúc.' });
     }
 
     // Switching to online is the point of asking for the QR.

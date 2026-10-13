@@ -46,7 +46,9 @@ export default async function adminUserRoutes(fastify) {
     // like any other column and an expired plan drops out on its own.
     const now = new Date();
     const where = {};
-    if (role) where.role = String(role);
+    // 'staff' is everyone who works here: employees and admins together.
+    if (role === 'staff') where.role = { in: ['employee', 'admin'] };
+    else if (role) where.role = String(role);
     if (status) where.status = String(status);
     if (vip === '1' || vip === 'true') { where.role = 'customer'; where.vipUntil = { gt: now }; }
     if (search) {
@@ -72,13 +74,35 @@ export default async function adminUserRoutes(fastify) {
 
     const counts = { customer: 0, employee: 0, admin: 0 };
     for (const row of roleCounts) counts[row.role] = row._count._all;
-    const [disabledCount, vipCount] = await Promise.all([
+    const weekAgo = new Date(now.getTime() - 7 * 86_400_000);
+    const customerIds = users.filter((u) => u.role === 'customer').map((u) => u.id);
+    const [disabledCount, vipCount, newWeek, gifts] = await Promise.all([
       fastify.prisma.user.count({ where: { status: 'disabled' } }),
       fastify.prisma.user.count({ where: { role: 'customer', vipUntil: { gt: now } } }),
+      fastify.prisma.user.count({ where: { createdAt: { gte: weekAgo } } }),
+      // Which of these customers hold VIP an admin gave them: only that part
+      // can be taken back (DELETE /users/:id/grant-vip); time they bought is
+      // theirs. The page offers "thu hồi" only where there is something to take.
+      customerIds.length
+        ? fastify.prisma.order.findMany({
+          where: {
+            userId: { in: customerIds },
+            note: 'admin.grant_vip',
+            status: { not: 'cancelled' },
+            paidAt: { not: null },
+            items: { some: { product: { category: 'membership' } } },
+          },
+          select: { userId: true },
+        })
+        : [],
     ]);
+    const gifted = new Set(gifts.map((g) => g.userId));
 
     return {
-      users: users.map(({ vipUntil, ...u }) => ({ ...u, ...tierOf({ vipUntil: u.role === 'customer' ? vipUntil : null }, now) })),
+      users: users.map(({ vipUntil, ...u }) => {
+        const tier = tierOf({ vipUntil: u.role === 'customer' ? vipUntil : null }, now);
+        return { ...u, ...tier, vipGifted: Boolean(tier.isVip && gifted.has(u.id)) };
+      }),
       total,
       page: pageNum,
       limit: pageSize,
@@ -87,6 +111,7 @@ export default async function adminUserRoutes(fastify) {
         ...counts,
         vip: vipCount,
         disabled: disabledCount,
+        newWeek,
         all: counts.customer + counts.employee + counts.admin,
       },
     };

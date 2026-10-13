@@ -16,6 +16,25 @@ const updateSchema = z.object({
   expiresAt: z.string().datetime().optional().nullable(),
 });
 
+// Codes a paid order issues are labelled this way (routes/orders.js); every
+// other code was made by hand — gifts, workshops, promotions.
+const ORDER_LABEL = 'Mã sau mua hàng';
+/**
+ * A code a paid order issued belongs to the customer who paid: staff can look
+ * it up but not switch it off or take back what it granted. Only codes made by
+ * hand — gifts, workshops, promotions — can be stopped.
+ */
+function isOrderCode(code) {
+  return code.label.startsWith(ORDER_LABEL);
+}
+const PAID_CODE = 'Mã này thuộc đơn khách đã thanh toán — không thể tắt hay thu hồi.';
+
+function sourceWhere(source) {
+  if (source === 'order') return { label: { startsWith: ORDER_LABEL } };
+  if (source === 'manual') return { NOT: { label: { startsWith: ORDER_LABEL } } };
+  return {};
+}
+
 function generateCode() {
   return `SPR-${randomBytes(4).toString('hex').toUpperCase()}-${randomBytes(4).toString('hex').toUpperCase()}`;
 }
@@ -24,8 +43,12 @@ export default async function adminRedeemCodeRoutes(fastify) {
   fastify.get('/redeem-codes', { preHandler: [requireAdmin] }, async (req) => {
     const paging = readPaging(req.query);
 
-    const where = {};
+    // Which codes: made by hand, issued by orders, or all; and, for the
+    // order ones, those nobody has activated yet — customers to nudge.
+    const bySource = sourceWhere(String(req.query.source || ''));
+    const where = { ...bySource };
     if (req.query.status) where.status = String(req.query.status);
+    if (req.query.unused === '1') Object.assign(where, { usedCount: 0, status: 'active' });
     // The code itself is stored hashed, so it cannot be searched. The label
     // and the description are what an admin remembers about a batch anyway.
     const or = searchOr(req.query.search, ['label', 'description']);
@@ -35,7 +58,7 @@ export default async function adminRedeemCodeRoutes(fastify) {
       fastify.prisma.redeemCode.findMany({
         where,
         include: {
-          product: { select: { id: true, name: true } },
+          product: { select: { id: true, name: true, category: true } },
           _count: { select: { redemptions: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -45,15 +68,24 @@ export default async function adminRedeemCodeRoutes(fastify) {
       fastify.prisma.redeemCode.count({ where }),
       // Counts label the filter buttons, so they span every row rather than
       // the page in hand.
-      fastify.prisma.redeemCode.groupBy({ by: ['status'], _count: { _all: true } }),
+      fastify.prisma.redeemCode.groupBy({ by: ['status'], where: bySource, _count: { _all: true } }),
       // Headline figures, so they are table-wide too.
       fastify.prisma.redeemCode.aggregate({ _sum: { usedCount: true } }),
+    ]);
+    const [manual, order, orderUnused, manualActive] = await Promise.all([
+      fastify.prisma.redeemCode.count({ where: sourceWhere('manual') }),
+      fastify.prisma.redeemCode.count({ where: sourceWhere('order') }),
+      fastify.prisma.redeemCode.count({ where: { ...sourceWhere('order'), usedCount: 0, status: 'active' } }),
+      fastify.prisma.redeemCode.count({ where: { ...sourceWhere('manual'), status: 'active' } }),
     ]);
 
     return {
       ...paged(codes, total, paging, 'codes'),
       counts: Object.fromEntries(statusCounts.map((r) => [r.status, r._count._all])),
       usedTotal: usedAgg._sum.usedCount || 0,
+      sources: { manual, order },
+      orderUnused,
+      manualActive,
     };
   });
 
@@ -98,6 +130,9 @@ export default async function adminRedeemCodeRoutes(fastify) {
     const parsed = parseOrThrow(updateSchema, req.body);
     const existing = await fastify.prisma.redeemCode.findUnique({ where: { id: req.params.id } });
     if (!existing) return reply.code(404).send({ message: 'Không tìm thấy mã.' });
+    if (isOrderCode(existing) && parsed.status && parsed.status !== existing.status) {
+      return reply.code(409).send({ message: PAID_CODE });
+    }
     const code = await fastify.prisma.redeemCode.update({
       where: { id: existing.id },
       data: {
@@ -113,6 +148,9 @@ export default async function adminRedeemCodeRoutes(fastify) {
   fastify.delete('/redeem-codes/:id', { preHandler: [requireAdmin, requireCsrf] }, async (req, reply) => {
     const existing = await fastify.prisma.redeemCode.findUnique({ where: { id: req.params.id } });
     if (!existing) return reply.code(404).send({ message: 'Không tìm thấy mã.' });
+    if (isOrderCode(existing)) return reply.code(409).send({ message: PAID_CODE });
+    // Stops the codes of a batch nobody has used yet; whoever already
+    // activated one keeps what it gave them.
     const code = await fastify.prisma.redeemCode.update({
       where: { id: existing.id },
       data: { status: 'disabled' },
@@ -142,6 +180,8 @@ export default async function adminRedeemCodeRoutes(fastify) {
     if (!redemption || redemption.redeemCodeId !== id) {
       return reply.code(404).send({ message: 'Không tìm thấy lượt kích hoạt.' });
     }
+    const owner = await fastify.prisma.redeemCode.findUnique({ where: { id }, select: { label: true } });
+    if (owner && isOrderCode(owner)) return reply.code(409).send({ message: PAID_CODE });
     await fastify.prisma.$transaction(async (tx) => {
       await tx.userEntitlement.deleteMany({ where: { source: 'redeem_code', sourceId: redemptionId } });
       await tx.redeemCodeRedemption.delete({ where: { id: redemptionId } });

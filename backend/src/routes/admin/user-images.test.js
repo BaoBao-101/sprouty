@@ -78,7 +78,7 @@ test('album overview groups owner-product pairs before pagination', async () => 
     ? Array.from({ length: 11 }, (_, index) => ({ userId: `owner-${index}`, productId: 1, _count: { _all: 7 }, _max: { createdAt: '2026-10-11' } }))
     : [{ status: 'active', _count: { _all: 77 } }];
   db.userProductImage.findFirst = async args => { db.events.push(['cover', args]); return { userId: 'owner-10', productId: 1 }; };
-  db.virtualPlant.findUnique = async () => null;
+  db.virtualPlant.findFirst = async () => null;
   const result = await request(db, 'GET', '/user-images?view=albums&page=2');
   assert.equal(result.statusCode, 200, result.body);
   assert.equal(result.json().total, 11);

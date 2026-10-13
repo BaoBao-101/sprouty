@@ -29,13 +29,21 @@ import './MyWorkshops.css';
  * because paying is the approval and an unpaid seat is not held regardless of
  * what anyone ticked.
  */
+/** Sprouty called the session off: the booking itself was never cancelled. */
+const sessionCancelled = (r: MyWorkshopRegistration) => r.workshop.status === 'cancelled';
+
 function bookingState(r: MyWorkshopRegistration) {
   if (r.status === 'cancelled') return { label: 'Đã huỷ', cls: 'cancelled' };
+  if (sessionCancelled(r)) return { label: 'Sprouty huỷ buổi', cls: 'cancelled' };
   // Attending outranks paying once it has happened: by then the question
   // is no longer whether the seat is held, it is whether the child went.
   if (r.checkedInAt) return { label: 'Đã tham gia', cls: 'attended' };
-  if (r.paidAt) return { label: 'Đã thanh toán', cls: 'paid' };
+  // Over, and nobody ticked them off — which may only mean the door list
+  // was not used, so this says what is certain and nothing more.
+  if (!r.upcoming) return { label: 'Đã diễn ra', cls: 'cancelled' };
+  // A free seat is stored as paid when it is booked; nothing was paid.
   if (r.amount === 0) return { label: 'Đã giữ chỗ', cls: 'paid' };
+  if (r.paidAt) return { label: 'Đã thanh toán', cls: 'paid' };
   return { label: 'Chưa thanh toán', cls: 'unpaid' };
 }
 
@@ -119,8 +127,9 @@ export default function MyWorkshops() {
     );
   }
 
-  const upcoming = rows.filter((r) => r.upcoming && r.status !== 'cancelled');
-  const others = rows.filter((r) => !r.upcoming || r.status === 'cancelled');
+  const live = (r: MyWorkshopRegistration) => r.upcoming && r.status !== 'cancelled' && !sessionCancelled(r);
+  const upcoming = rows.filter(live);
+  const others = rows.filter((r) => !live(r));
 
   // Paged in the browser: a family has a handful of bookings, and the list
   // is already in hand. Paging is here to stop four tall ticket cards
@@ -132,10 +141,11 @@ export default function MyWorkshops() {
     const w = reg.workshop;
     // An unpaid booking on a paid session is the one that can lose its place,
     // so it is the one that gets a call to action.
-    const needsPayment = !reg.paidAt && reg.amount > 0 && reg.status !== 'cancelled' && reg.upcoming;
+    const dropped = sessionCancelled(reg) && reg.status !== 'cancelled';
+    const needsPayment = !reg.paidAt && reg.amount > 0 && reg.status !== 'cancelled' && reg.upcoming && !dropped;
 
     return (
-      <article className={`myws-card${reg.status === 'cancelled' ? ' cancelled' : ''}`} key={reg.id}>
+      <article className={`myws-card${reg.status === 'cancelled' || dropped ? ' cancelled' : ''}`} key={reg.id}>
         <div className="myws-photo">
           {w.imageUrl ? <img src={w.imageUrl} alt="" /> : <span><SproutyIcon name="ticket" size={30} /></span>}
         </div>
@@ -172,6 +182,15 @@ export default function MyWorkshops() {
             )}
           </div>
 
+          {dropped && (
+            <div className="myws-warn">
+              <SproutyIcon name="warning" size={16} /> Sprouty đã huỷ buổi này.{' '}
+              {reg.paidAt
+                ? `Bạn đã thanh toán ${formatPrice(reg.amount)} — vui lòng liên hệ Sprouty để được hoàn tiền.`
+                : 'Bạn không cần làm gì thêm.'}
+            </div>
+          )}
+
           {needsPayment && reg.paymentMethod === 'onsite' && (
             <div className="myws-warn">
               <SproutyIcon name="warning" size={16} /> Suất này chưa được đảm bảo. Khi buổi học kín chỗ, chúng tôi ưu tiên những người
@@ -184,7 +203,7 @@ export default function MyWorkshops() {
               code is what staff ask for at the door, the QR is the same
               string for a phone camera, and once somebody ticks it off here
               is where the parent sees that it happened. */}
-          {reg.status !== 'cancelled' && (
+          {reg.status !== 'cancelled' && !dropped && (
             <div className={`myws-ticket${reg.checkedInAt ? ' used' : ''}`}>
               <TicketQr value={reg.ticket} size={104} />
               <div className="myws-ticket-body">
@@ -220,7 +239,7 @@ export default function MyWorkshops() {
                 {busyId === reg.id ? 'Đang tải…' : <><SproutyIcon name="card" size={16} /> Thanh toán ngay</>}
               </button>
             )}
-            {reg.upcoming && reg.status !== 'cancelled' && (
+            {reg.upcoming && reg.status !== 'cancelled' && !dropped && (
               <button
                 className="btn btn-ghost btn-sm"
                 disabled={busyId === reg.id}

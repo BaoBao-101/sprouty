@@ -22,6 +22,7 @@ import {
   plantDetailDto,
   plantPromptContext,
   renamePlant,
+  replantPlant,
   setDeviceAuto,
 } from '../services/plants.js';
 import { redeemCode } from '../services/redeem.js';
@@ -165,6 +166,18 @@ export default async function plantRoutes(fastify) {
       harvested: Boolean(outcome.harvested),
       streak: outcome.streak ?? detail.careStreak,
     };
+  });
+
+  // POST /api/v1/me/plants/:plantId/replant — a plant that died, sown again
+  // from seed on the same kit. Free: the kit was bought once.
+  fastify.post('/me/plants/:plantId/replant', {
+    preHandler: [requireCustomer, requireCsrf],
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (req) => {
+    const now = new Date();
+    const plant = await replantPlant(fastify.prisma, req.user.id, req.params.plantId, { now });
+    const detail = await plantDetailDto(fastify.prisma, plant, { now });
+    return { message: 'Đã gieo lại hạt mới — lần này chăm đều tay nhé!', plant: detail };
   });
 
   // PATCH /api/v1/me/plants/:plantId/devices — automation on or off.

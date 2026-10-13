@@ -33,6 +33,26 @@ test('delivery cannot skip steps, reopen terminal orders or ship unpaid orders',
   }
 });
 
+test('an order with nothing to post is completed, not "shipped"', () => {
+  const previous = process.env.PHYSICAL_CATEGORIES;
+  try {
+    const paid = { status: 'processing', paidAt: new Date() };
+    const kit = { ...paid, items: [{ product: { category: 'kit' } }] };
+    const vip = { ...paid, items: [{ product: { category: 'membership' } }] };
+
+    process.env.PHYSICAL_CATEGORIES = 'kit';
+    assert.deepEqual(allowedOrderTransitions(kit), ['shipped']);
+    assert.deepEqual(allowedOrderTransitions(vip), ['delivered']);
+
+    process.env.PHYSICAL_CATEGORIES = '';
+    assert.deepEqual(allowedOrderTransitions(kit), ['delivered']);
+    // Unpaid stays unpaid whatever is in it.
+    assert.deepEqual(allowedOrderTransitions({ ...vip, paidAt: null }), []);
+  } finally {
+    process.env.PHYSICAL_CATEGORIES = previous;
+  }
+});
+
 const cases = [
   ['orders', 'POST', '/orders', ['admin', 'employee']],
   ['plants', 'POST', '/me/plants/activate', ['admin', 'employee']],
@@ -42,7 +62,7 @@ const cases = [
   ['chat', 'POST', '/chat', ['admin', 'employee']],
   ['user-images', 'POST', '/my-products/test/images', ['admin', 'employee']],
   ['videos', 'POST', '/videos/test/progress', ['admin', 'employee']],
-  ['admin/attendance', 'GET', '/attendance', ['admin', 'customer']],
+  ['admin/attendance', 'GET', '/attendance/mine', ['admin', 'customer']],
   ['admin/orders', 'PATCH', '/orders/test/status', ['admin', 'customer']],
   ['admin/orders', 'POST', '/orders/test/mark-paid', ['employee', 'customer']],
   ['admin/products', 'POST', '/products', ['employee', 'customer']],

@@ -12,7 +12,8 @@ const Home = lazy(() => import('@/pages/public/Home'));
 const Shop = lazy(() => import('@/pages/public/Shop'));
 const ProductDetail = lazy(() => import('@/pages/public/ProductDetail'));
 const CartPage = lazy(() => import('@/pages/public/CartPage'));
-const Payment = lazy(() => import('@/pages/public/Payment'));
+const Payment = lazy(() => import('@/pages/public/Payment'));
+const Checkout = lazy(() => import('@/pages/public/Checkout'));
 const Workshop = lazy(() => import('@/pages/public/Workshop'));
 const AiAssistant = lazy(() => import('@/pages/public/AiAssistant'));
 const Blog = lazy(() => import('@/pages/public/Blog'));
@@ -47,7 +48,8 @@ const AdminProducts = lazy(() => import('@/pages/admin/Products'));
 
 // Employee
 const EmployeeOrders = lazy(() => import('@/pages/employee/Orders'));
-const EmployeeAttendance = lazy(() => import('@/pages/employee/Attendance'));
+const EmployeeWorkshops = lazy(() => import('@/pages/employee/Workshops'));
+const EmployeeWorkshopDetail = lazy(() => import('@/pages/employee/WorkshopDetail'));
 const EmployeeProducts = lazy(() => import('@/pages/employee/Products'));
 
 /** The old site was a set of .html files; keep those URLs working. */
@@ -136,6 +138,7 @@ export function App() {
             <Route path="/vip" element={<Vip />} />
 
             <Route element={<ProtectedRoute />}>
+              <Route path="/checkout" element={<Checkout />} />
               <Route path="/payment" element={<Payment />} />
               <Route path="/account" element={<Account />} />
               <Route path="/profile" element={<Profile />} />
@@ -175,7 +178,10 @@ export function App() {
             <Route path="/employee" element={<EmployeeLayout />}>
               <Route index element={<Navigate to="/employee/orders" replace />} />
               <Route path="orders" element={<EmployeeOrders />} />
-              <Route path="attendance" element={<EmployeeAttendance />} />
+              <Route path="workshops" element={<EmployeeWorkshops />} />
+              <Route path="workshops/:id" element={<EmployeeWorkshopDetail />} />
+              {/* The screen's old name, kept for bookmarks. */}
+              <Route path="attendance" element={<Navigate to="/employee/workshops" replace />} />
               <Route path="products" element={<EmployeeProducts />} />
             </Route>
           </Route>

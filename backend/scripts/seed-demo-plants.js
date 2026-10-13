@@ -19,7 +19,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { DEVICES, STAGES, devicesUnlockedAt, speciesFor } from '../src/services/plant-sim.js';
+import { DEVICES, STAGES, devicesUnlockedAt, speciesFor, stageLabel } from '../src/services/plant-sim.js';
 
 const prisma = new PrismaClient();
 
@@ -117,7 +117,7 @@ async function main() {
             category: 'kit',
             speciesKey: key,
             ageRange: '4–10 tuổi',
-            collection: 'Sprouty Demo',
+            collection: 'Bản demo',
             emoji: '🌱',
             bgColor: '#F0FDF4',
             includes: ['Cây mô phỏng', 'Cảm biến IoT ảo', 'Plant Buddy AI'],
@@ -143,7 +143,7 @@ async function main() {
     let product = productBySpecies[spec.species];
     if (usedProducts.has(product.id)) {
       const species = speciesFor({ speciesKey: spec.species });
-      const altName = `Demo · ${species.label} (${spec.stage})`;
+      const altName = `Demo · ${species.label} (${stageLabel(spec.stage).toLowerCase()})`;
       const existing = await prisma.product.findFirst({ where: { name: altName } });
       product = existing
         ? await prisma.product.update({ where: { id: existing.id }, data: { speciesKey: spec.species, status: 'draft' } })

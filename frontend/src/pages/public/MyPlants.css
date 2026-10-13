@@ -350,6 +350,9 @@
 .pc-health-healthy  { color: var(--primary-600); border-color: var(--parchment-2); --icon-accent: var(--primary-300) }
 .pc-health-stressed { color: #B4700A; border-color: #FCE0A8; --icon-accent: var(--accent-yellow) }
 .pc-health-wilting  { color: var(--rose); border-color: var(--pink); --icon-accent: var(--rose) }
+/* Close to dying, and dead: say so loudly on the card too. */
+.pc-health-critical { color: #fff; background: #C2273F; border-color: #C2273F; --icon-accent: #FFD0D7 }
+.pc-health-dead { color: #fff; background: #6B5B4E; border-color: #6B5B4E; --icon-accent: #D9CBBE }
 
 .pc-done-flag {
   position: absolute;

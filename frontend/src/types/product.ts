@@ -19,7 +19,7 @@ export interface Product {
   name: string;
   /** Emoji fallback shown when the product image fails to load. */
   em: string;
-  /** Collection, e.g. "Sprouty Starter". */
+  /** Collection, e.g. "Bộ khởi đầu". */
   col: string;
   /** Category: 'kit' | 'book' | 'membership'. */
   cat: string;

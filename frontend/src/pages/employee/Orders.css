@@ -1,56 +1,120 @@
-/* Page styles for Orders. Lifted out of the <style> block that used to sit
-   in the <head> of employee/orders.html. */
+/* Đơn hàng (nhân viên): the work queue. Shared KPI tiles come from
+   admin-ui.css (.ax-kpi); everything here is "eo-". */
 
-body{background:#F8F9FC}
-/* ── Sidebar — same layout and tokens as pages/admin/index.html so the
-   staff area looks like one product: brand pinned on top, nav scrolls,
-   logout pinned at the bottom. ─────────────────────────────────────── */
-.emp-sidebar{width:236px;position:fixed;top:0;bottom:0;left:0;z-index:40;background:var(--ink);display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.07)}
-.sb-brand{flex-shrink:0;padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
-.emp-sidebar-logo{height:32px;width:auto;object-fit:contain;display:block;margin:0 auto 6px}
-.emp-sidebar .brand-sub{color:rgba(255,255,255,.4);font-size:.65rem;font-family:var(--font-h);font-weight:700;display:block;text-align:center;text-transform:uppercase;letter-spacing:.1em}
-.sb-nav{flex:1;min-height:0;overflow-y:auto;padding:12px 12px 6px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) transparent}
-.sb-nav::-webkit-scrollbar{width:6px}
-.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:3px}
-.sb-nav::-webkit-scrollbar-track{background:transparent}
-.sb-group{display:block;font-family:var(--font-h);font-size:.62rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.28);padding:0 12px;margin:16px 0 6px}
-.sb-nav>.sb-group:first-child{margin-top:2px}
-.emp-sidebar a{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:var(--r-md);color:rgba(255,255,255,.62);text-decoration:none;font-family:var(--font-h);font-size:.85rem;font-weight:600;margin-bottom:2px;transition:background .15s,color .15s}
-.emp-sidebar a:hover{background:rgba(255,255,255,.08);color:#fff}
-.emp-sidebar a.active{background:var(--orange);color:#fff;box-shadow:0 3px 10px rgba(0,0,0,.28)}
-.sb-ico{width:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;line-height:1}
-.sb-ico img{width:17px;height:17px;object-fit:contain;display:block}
-.sb-foot{flex-shrink:0;padding:10px 12px 14px;border-top:1px solid rgba(255,255,255,.08)}
-.sb-logout{color:#FF9B9B}
-.sb-logout:hover{background:rgba(239,68,68,.18);color:#FFB4B4}
-.sb-toggle,.sb-backdrop{display:none}
-.emp-main{margin-left:236px;padding:28px 32px;min-height:100vh}
-.admin-head{margin-bottom:22px}
-.admin-head h1{font-family:var(--font-display);font-size:1.6rem;font-weight:700;color:var(--ink);margin:0}
-.admin-head p{font-size:.85rem;color:var(--ink-4);margin:4px 0 0}
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px}
-.filters{display:flex;gap:10px;flex-wrap:wrap}
-.filter-btn{padding:7px 14px;border-radius:var(--r-full);font-size:.78rem;font-family:var(--font-h);font-weight:700;border:2px solid var(--parchment);background:var(--surface);cursor:pointer;transition:all .15s}
-.filter-btn.active,.filter-btn:hover{border-color:var(--orange);color:var(--orange);background:var(--orange-pale)}
-.search-box{display:flex;gap:8px}
-.search-box input{padding:8px 14px;border:1.5px solid var(--parchment);border-radius:var(--r-md);font-size:.87rem;font-family:var(--font-body);min-width:200px}
-.search-box input:focus{outline:none;border-color:var(--orange)}
-.emp-table{width:100%;border-collapse:collapse;background:var(--surface);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh-sm)}
-.emp-table th{background:var(--parchment);padding:11px 14px;text-align:left;font-family:var(--font-h);font-size:.75rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
-.emp-table td{padding:12px 14px;border-bottom:1px solid var(--parchment);font-size:.85rem;vertical-align:middle}
-.emp-table tr:last-child td{border-bottom:none}
-.emp-table tr:hover td{background:var(--cream-2)}
-.status-select{padding:4px 8px;border-radius:var(--r-sm);border:1.5px solid var(--parchment);font-size:.78rem;font-family:var(--font-h);font-weight:700;cursor:pointer}
-.pagination{display:flex;gap:8px;margin-top:20px;align-items:center;justify-content:flex-end}
-.pagination button{padding:6px 12px;border-radius:var(--r-md);border:1.5px solid var(--parchment);background:var(--surface);cursor:pointer;font-family:var(--font-h);font-size:.82rem}
-.pagination button:disabled{opacity:.4;cursor:not-allowed}
-.pagination button.active{background:var(--orange);color:#fff;border-color:var(--orange)}
-/* Under 900px the sidebar used to be display:none, leaving staff with no
-   navigation at all on a phone. It is now a slide-in drawer. */
-@media(max-width:900px){
-  .emp-sidebar{transform:translateX(-100%);transition:transform .25s ease;box-shadow:var(--sh-xl)}
-  .emp-sidebar.open{transform:translateX(0)}
-  .emp-main{margin-left:0;padding:68px 16px 16px}
-  .sb-toggle{display:flex;align-items:center;justify-content:center;position:fixed;top:12px;left:12px;z-index:50;width:44px;height:44px;border-radius:var(--r-md);border:none;background:var(--ink);color:#fff;font-size:1.25rem;cursor:pointer;box-shadow:var(--sh-md)}
-  .sb-backdrop.open{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:39}
+.eo-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 14px }
+.eo-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px }
+.eo-tabs::-webkit-scrollbar { display: none }
+.eo-tab {
+  flex: none; display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 14px; border-radius: 99px;
+  border: 1px solid var(--border-c); background: var(--surface); font: inherit; font-size: .85rem; font-weight: 700; color: var(--ink-3); cursor: pointer;
 }
+.eo-tab em { min-width: 22px; padding: 1px 7px; border-radius: 99px; background: var(--cream-2); font-style: normal; font-size: .72rem; text-align: center; color: var(--ink-3) }
+.eo-tab:hover { border-color: #CBD5E1 }
+.eo-tab.is-on { border-color: var(--accent, #15803D); background: var(--accent, #15803D); color: #fff }
+.eo-tab.is-on em { background: rgba(255, 255, 255, .22); color: #fff }
+
+.eo-list { display: grid; gap: 12px }
+.eo-list.is-loading { opacity: .6; transition: opacity .2s }
+.eo-card { border-radius: 16px; background: var(--surface); border: 1px solid var(--border-c); overflow: hidden }
+.eo-card.s-processing { border-left: 4px solid #22C55E }
+.eo-card.s-shipped { border-left: 4px solid #3B82F6 }
+.eo-card.s-pending { border-left: 4px solid #F59E0B }
+.eo-card.is-slow { box-shadow: 0 0 0 2px #FDE68A }
+
+.eo-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; padding: 12px 16px; border-bottom: 1px solid var(--border-c); background: #FCFDFB }
+.eo-id { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px }
+.eo-id code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .95rem; font-weight: 800; color: var(--ink) }
+.eo-id span { font-size: .8rem; color: var(--ink-4) }
+.eo-slow { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px; background: #FEF3C7; color: #B45309; font-style: normal; font-size: .72rem; font-weight: 800 }
+.eo-pills { display: flex; align-items: center; gap: 6px; flex-wrap: wrap }
+.eo-status { padding: 3px 10px; border-radius: 99px; font-size: .74rem; font-weight: 800; background: #F1F5F9; color: #475569 }
+.eo-status.s-pending { background: #FEF3C7; color: #B45309 }
+.eo-status.s-processing { background: #DCFCE7; color: #15803D }
+.eo-status.s-shipped { background: #DBEAFE; color: #1D4ED8 }
+.eo-status.s-delivered { background: #F0FDF4; color: #166534 }
+.eo-pay { display: inline-flex; align-items: center; gap: 5px; font-size: .74rem; font-weight: 700 }
+.eo-pay i { width: 7px; height: 7px; border-radius: 50%; background: currentColor }
+.eo-pay.is-paid { color: #15803D }
+.eo-pay.is-unpaid { color: #C2410C }
+
+.eo-body { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 220px; gap: 16px 20px; padding: 14px 16px 16px }
+.eo-label { display: block; margin-bottom: 4px; font-size: .68rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-4) }
+.eo-who { display: grid; align-content: start; gap: 3px; min-width: 0 }
+.eo-who strong { font-size: .95rem; color: var(--ink) }
+.eo-line { display: flex; align-items: center; gap: 6px; font-size: .86rem }
+.eo-line a { color: var(--accent, #15803D); font-weight: 700; text-decoration: none }
+.eo-address { display: flex; align-items: flex-start; gap: 6px; font-size: .86rem; line-height: 1.45; color: var(--ink-2) }
+.eo-address span { min-width: 0; overflow-wrap: anywhere }
+.eo-digital { display: flex; align-items: flex-start; gap: 6px; margin-top: 2px; font-size: .8rem; line-height: 1.45; color: var(--ink-4) }
+.eo-digital svg { flex: none; margin-top: 2px }
+.eo-copy {
+  flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border-c);
+  background: var(--surface); color: var(--ink-4); cursor: pointer;
+}
+.eo-copy:hover { color: var(--ink); border-color: #CBD5E1 }
+
+.eo-items { min-width: 0 }
+.eo-items ul { list-style: none; display: grid; gap: 6px; margin: 0; padding: 0 }
+.eo-items li { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 8px; font-size: .86rem }
+.eo-thumb { display: grid; place-items: center; width: 34px; height: 34px; overflow: hidden; border-radius: 9px; background: #F1F5EC; color: #6E8F68 }
+.eo-thumb img { width: 100%; height: 100%; object-fit: cover }
+.eo-item-name { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2) }
+.eo-item-name em { padding: 0 6px; border-radius: 99px; background: #E0F2FE; color: #0369A1; font-style: normal; font-size: .66rem; font-weight: 800 }
+.eo-items li b { font-size: .86rem; color: var(--ink) }
+.eo-note { display: flex; align-items: flex-start; gap: 6px; margin: 10px 0 0; padding: 8px 10px; border-radius: 10px; background: #FFFBEB; border: 1px solid #FDE68A; font-size: .8rem; line-height: 1.45; color: #78350F }
+.eo-note svg { flex: none; margin-top: 2px }
+
+.eo-act { display: grid; align-content: start; justify-items: stretch; gap: 8px }
+.eo-total { display: flex; align-items: baseline; justify-content: space-between; gap: 8px }
+.eo-total em { font-style: normal; font-size: .78rem; color: var(--ink-4) }
+.eo-total strong { font-size: 1.2rem; font-weight: 800; color: var(--ink) }
+.eo-buttons { display: grid; gap: 6px }
+.eo-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; padding: 0 14px; border-radius: 10px;
+  border: 1px solid transparent; font: inherit; font-size: .86rem; font-weight: 800; cursor: pointer; transition: background .15s;
+}
+.eo-btn.is-primary { background: var(--accent, #15803D); color: #fff }
+.eo-btn.is-primary:hover:not(:disabled) { background: #166534 }
+.eo-btn.is-danger { border-color: #FECDD3; background: #FFF1F2; color: #BE123C }
+.eo-btn.is-danger:hover:not(:disabled) { background: #FFE4E6 }
+.eo-btn:disabled { opacity: .6; cursor: progress }
+.eo-hint { display: flex; align-items: center; gap: 5px; font-size: .78rem; line-height: 1.45; color: var(--ink-4) }
+.eo-hint.is-done { color: #15803D; font-weight: 700 }
+
+.eo-error { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; padding: 12px 14px; border-radius: 12px; background: #FFF1F2; color: #BE123C }
+.eo-empty { display: grid; justify-items: center; gap: 6px; padding: 40px 20px; border-radius: 16px; border: 1px dashed #CBD5E1; background: var(--surface); text-align: center }
+.eo-empty > span { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: #DCFCE7; color: #15803D }
+.eo-empty h3 { margin: 6px 0 0; font-size: 1.05rem; color: var(--ink) }
+.eo-empty p { margin: 0; font-size: .86rem; color: var(--ink-4) }
+.eo-card.is-skeleton { display: grid; gap: 10px; padding: 16px }
+.eo-card.is-skeleton span { height: 14px; border-radius: 7px; background: linear-gradient(110deg, #EEF2F6 30%, #F7F9FB 50%, #EEF2F6 70%); background-size: 200% 100%; animation: eo-shimmer 1.3s linear infinite }
+.eo-card.is-skeleton span:nth-child(2) { width: 60% }
+.eo-card.is-skeleton span:nth-child(3) { height: 40px }
+@keyframes eo-shimmer { to { background-position: -200% 0 } }
+
+@media (max-width: 1100px) {
+  .eo-body { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) }
+  .eo-act { grid-column: 1 / -1; grid-template-columns: auto 1fr; align-items: center }
+  .eo-buttons { justify-content: end; grid-auto-flow: column }
+  .eo-hint { grid-column: 1 / -1 }
+}
+@media (max-width: 640px) {
+  .eo-toolbar > :last-child { width: 100% }
+  .eo-body { grid-template-columns: 1fr; padding: 12px 14px 14px }
+  .eo-act { grid-template-columns: 1fr }
+  .eo-buttons { grid-auto-flow: row; justify-content: stretch }
+  .eo-head { padding: 10px 14px }
+}
+@media (prefers-reduced-motion: reduce) { .eo-card.is-skeleton span { animation: none } }
+
+/* The parcel, once sent: carrier, tracking code, when. */
+.eo-parcel { order: 5; grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; padding: 10px 12px; border-radius: 12px; background: #EFF6FF; border: 1px solid #DBEAFE }
+.eo-parcel .eo-label { margin: 0 }
+.eo-parcel-line { display: inline-flex; align-items: center; gap: 8px; font-size: .86rem; color: #1E3A8A }
+.eo-parcel-line code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 800; letter-spacing: .03em }
+.eo-parcel-when { font-size: .78rem; color: #3B5BA9 }
+.eo-ship { display: grid; gap: 4px }
+.eo-ship-address { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 10px; padding: 10px 12px; border-radius: 10px; background: var(--cream-2); font-size: .88rem; line-height: 1.5; color: var(--ink-2) }
+.eo-ship-address svg { flex: none; margin-top: 3px; color: var(--ink-4) }
+.eo-optional { font-style: normal; font-weight: 500; color: var(--ink-4) }
+.eo-digital.is-missing { color: #B45309; font-weight: 600 }

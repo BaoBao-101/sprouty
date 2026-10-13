@@ -24,6 +24,8 @@ export type IconName =
   | 'moisture' | 'thermo' | 'light' | 'camera' | 'nutrient' | 'pump' | 'bulb' | 'fan'
   // interface
   | 'clock' | 'gift' | 'ticket' | 'check' | 'lock' | 'battery' | 'plus' | 'trophy'
+  // bare strokes, for steppers and small round buttons
+  | 'add' | 'minus' | 'copy'
   | 'heart' | 'bolt' | 'info' | 'bell' | 'chat' | 'sparkle' | 'chart' | 'pot'
   | 'moon' | 'arrow-right' | 'arrow-down' | 'close' | 'pencil' | 'trash' | 'cart' | 'album'
   | 'warning' | 'microphone' | 'plant-chat'
@@ -347,6 +349,8 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <path d="M12 8.2v7.6M8.2 12h7.6" {...S} strokeWidth={2.2} />
     </>
   ),
+  add: <path d="M12 5.5v13M5.5 12h13" {...S} strokeWidth={2.2} />,
+  minus: <path d="M5.5 12h13" {...S} strokeWidth={2.2} />,
   trophy: (
     <>
       <path d="M7.4 3.8h9.2v5.4a4.6 4.6 0 0 1-9.2 0V3.8Z" {...fillProps(0.34)} />
@@ -426,6 +430,13 @@ const PATHS: Record<IconName, React.ReactNode> = {
     </>
   ),
   'arrow-right': <path d="M4.4 12h15M13.4 6.2 19.4 12l-6 5.8" {...S} strokeWidth={2.2} />,
+  copy: (
+    <>
+      <rect x="8.5" y="8.5" width="11" height="11" rx="2.6" {...fillProps(0.26)} />
+      <rect x="8.5" y="8.5" width="11" height="11" rx="2.6" {...S} />
+      <path d="M15.5 8.5V6.6a2.1 2.1 0 0 0-2.1-2.1H6.6a2.1 2.1 0 0 0-2.1 2.1v6.8c0 1.16.94 2.1 2.1 2.1h1.9" {...S} />
+    </>
+  ),
   pencil: (
     <>
       <path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4Z" {...fillProps(0.26)} />

@@ -3,14 +3,11 @@ import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
 import './Returns.css';
 
 /**
- * Refund policy for a digital product.
+ * Refund policy for a kit: a box posted to the customer (seeds, soil, pot)
+ * plus an activation code for the 3D plant, issued the moment it is paid.
  *
- * The previous version was written for a shipped box: seven days from delivery,
- * return the goods in their packaging, damage in transit, COD refunds. None of
- * that exists now — nothing is posted, and what the customer buys is an
- * activation code.
- *
- * So the line that decides everything here is whether the code has been
+ * A box that arrives damaged, short or wrong is replaced. For the money, the
+ * line that decides everything is still whether the code has been
  * redeemed. An unused code is a product that was never delivered in any
  * meaningful sense and is refunded without argument; a redeemed one has been
  * consumed, the same way an opened seed packet used to be. Refunds for our own
@@ -29,8 +26,8 @@ export default function Returns() {
           <span style={{ fontFamily: "var(--font-h)", fontSize: ".78rem", fontWeight: "700", letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(255,255,255,.6)", display: "block", marginBottom: "12px" }}>Minh bạch & Rõ ràng</span>
           <h1>Chính sách hoàn tiền</h1>
           <p className="lead" style={{ maxWidth: "560px", margin: "12px auto 0" }}>
-            Sprouty bán sản phẩm số — không giao hàng, không đổi trả hàng hoá. Điều quyết định là
-            bạn đã dùng mã kích hoạt hay chưa.
+            Mỗi bộ kit gồm hộp hạt giống gửi tận nhà và mã kích hoạt cây 3D. Hộp giao lỗi được gửi
+            bù; hoàn tiền tuỳ vào việc bạn đã dùng mã kích hoạt hay chưa.
           </p>
         </div>
       </div>
@@ -54,33 +51,34 @@ export default function Returns() {
 
             {/* Content */}
             <div className="policy-content">
-              <div className="last-updated"><SproutyIcon name="calendar" size={15} /> Cập nhật lần cuối: 07/10/2026</div>
+              <div className="last-updated"><SproutyIcon name="calendar" size={15} /> Cập nhật lần cuối: 13/10/2026</div>
 
               <div className="policy-card green" style={{ marginBottom: "32px" }}>
                 <h4><SproutyIcon name="shield" size={18} /> Cam kết của Sprouty</h4>
                 <p>
                   <strong>Mã chưa kích hoạt — hoàn tiền 100%, không hỏi lý do</strong>, trong vòng 7
-                  ngày kể từ khi thanh toán. Nếu lỗi thuộc về hệ thống của chúng tôi, bạn được hoàn
-                  tiền bất kể đã dùng hay chưa và không giới hạn thời gian.
+                  ngày kể từ khi thanh toán (hộp kit đã gửi thì gửi trả lại hộp còn nguyên). Hộp
+                  kit hỏng, thiếu hay giao sai được gửi bù miễn phí. Nếu lỗi thuộc về hệ thống của
+                  chúng tôi, bạn được hoàn tiền bất kể đã dùng hay chưa và không giới hạn thời gian.
                 </p>
               </div>
 
               <h2 id="tong-quan">1. Bạn đang mua gì</h2>
               <p>
-                Sprouty <strong>không giao sản phẩm vật lý</strong>. Khi bạn thanh toán, hệ thống
-                phát ra một <strong>mã kích hoạt</strong>. Nhập mã đó ở mục{' '}
-                <Link to="/my-plants">Cây của tôi</Link> là bạn bắt đầu nuôi một cây mô phỏng cùng
-                bộ thiết bị IoT ảo trên web.
+                Mỗi bộ kit gồm hai phần. <strong>Hộp kit</strong> (hạt giống, đất, chậu) được đóng
+                gói và gửi tới địa chỉ bạn nhập khi đặt hàng. <strong>Mã kích hoạt</strong> có ngay
+                khi bạn thanh toán: nhập mã ở mục <Link to="/my-plants">Cây của tôi</Link> là bé bắt
+                đầu nuôi cây 3D cùng bộ thiết bị IoT ảo trên web, kể cả khi hộp chưa tới.
               </p>
               <p>
-                Vì vậy ở đây không có khái niệm "gửi hàng về", "hư hỏng khi vận chuyển" hay "còn
-                nguyên hộp". Thay vào đó, ranh giới duy nhất là: <strong>mã đã được kích hoạt hay
-                chưa</strong>.
+                Hộp kit giao tới bị <strong>hỏng, thiếu món hoặc sai giống</strong>: báo Sprouty trong
+                7 ngày kể từ khi nhận (kèm ảnh) để được gửi bù miễn phí. Với việc hoàn tiền, ranh giới
+                là: <strong>mã đã được kích hoạt hay chưa</strong>.
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", margin: "20px 0" }}>
                 <div className="policy-card green">
                   <h4><SproutyIcon name="check" size={18} /> Mã chưa kích hoạt</h4>
-                  <p>Xem như chưa nhận sản phẩm. Hoàn tiền 100% trong 7 ngày, không cần nêu lý do.</p>
+                  <p>Hoàn tiền 100% trong 7 ngày, không cần nêu lý do. Nếu hộp kit đã được gửi, bạn gửi trả hộp còn nguyên.</p>
                 </div>
                 <div className="policy-card orange">
                   <h4><SproutyIcon name="warning" size={18} /> Mã đã kích hoạt</h4>
@@ -106,6 +104,7 @@ export default function Returns() {
               <ul>
                 <li><strong>Thanh toán trùng</strong> — bị trừ tiền hai lần cho cùng một đơn</li>
                 <li><strong>Đã trừ tiền nhưng không nhận được mã</strong> kích hoạt</li>
+                <li><strong>Không nhận được hộp kit</strong> sau khi đơn báo đã giao, và đơn vị vận chuyển xác nhận thất lạc</li>
                 <li><strong>Mã không kích hoạt được</strong> dù đã nhập đúng</li>
                 <li><strong>Sai sản phẩm</strong> — mã mở ra giống cây khác với mô tả bạn đã mua</li>
                 <li><strong>Lỗi hệ thống kéo dài</strong> khiến bạn không chăm cây được (xem mục 6)</li>

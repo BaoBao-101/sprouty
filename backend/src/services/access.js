@@ -52,8 +52,8 @@ export async function hasEntitlement(prisma, userId, feature, productId = null) 
  */
 export async function hasPlantForProduct(prisma, userId, productId) {
   if (!userId || !productId) return false;
-  const plant = await prisma.virtualPlant.findUnique({
-    where: { userId_productId: { userId, productId: Number(productId) } },
+  const plant = await prisma.virtualPlant.findFirst({
+    where: { userId, productId: Number(productId) },
     select: { id: true },
   });
   return Boolean(plant);

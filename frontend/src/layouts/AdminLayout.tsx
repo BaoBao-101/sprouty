@@ -1,4 +1,6 @@
+import { useRef } from 'react';
 import { Outlet } from 'react-router-dom';
+import { useStackedTables } from '@/services/stacked-tables';
 import { StaffSidebar, type SidebarGroup } from './StaffSidebar';
 import { AdminIcon, type AdminIconName } from '@/components/icons/AdminIcon';
 
@@ -38,10 +40,12 @@ const GROUPS: SidebarGroup[] = [
 ];
 
 export function AdminLayout() {
+  const main = useRef<HTMLElement>(null);
+  useStackedTables(main);
   return (
     <div className="staff-root">
       <StaffSidebar subtitle="Quản trị" groups={GROUPS} />
-      <main className="staff-main">
+      <main className="staff-main" ref={main}>
         <Outlet />
       </main>
     </div>

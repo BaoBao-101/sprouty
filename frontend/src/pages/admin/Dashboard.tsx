@@ -30,9 +30,9 @@ const axisMoney = (value: number) => value >= 1e9 ? `${n(Math.round(value / 1e8)
 const actionLabels: Record<string, string> = {
   'user.create': 'Tạo tài khoản', 'user.update': 'Cập nhật tài khoản', 'user.password.change': 'Đổi mật khẩu',
   'user.password.reset': 'Đặt lại mật khẩu', 'user.grant_vip': 'Cấp tặng VIP', 'user.revoke_vip': 'Thu hồi VIP tặng',
-  'order.marked_paid': 'Ghi nhận thanh toán', 'order.status.updated': 'Cập nhật giao hàng',
+  'order.marked_paid': 'Ghi nhận thanh toán', 'order.status.updated': 'Cập nhật giao hàng', 'order.shipping.updated': 'Khách đổi địa chỉ giao', 'order.received': 'Khách xác nhận đã nhận hàng',
   'product.create': 'Thêm sản phẩm', 'product.update': 'Cập nhật sản phẩm', 'product.delete': 'Xóa sản phẩm',
-  'workshop.create': 'Tạo workshop', 'workshop.update': 'Cập nhật workshop', 'workshop.delete': 'Xóa workshop',
+  'workshop.create': 'Tạo workshop', 'workshop.update': 'Cập nhật workshop', 'workshop.delete': 'Xóa workshop', 'workshop.staff.updated': 'Phân công nhân viên workshop',
   'blog.create': 'Tạo bài viết', 'blog.update': 'Cập nhật bài viết', 'user_image.hidden': 'Ẩn ảnh khách hàng',
 };
 function Empty({ children }: { children: React.ReactNode }) { return <div className="db-empty"><AdminIcon name="inbox" size={26} /><p>{children}</p></div>; }

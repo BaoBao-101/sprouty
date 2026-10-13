@@ -19,7 +19,7 @@ const MAX_LEN = 300;
 function suggestionsFor(category: string, speciesLabel?: string): string[] {
   if (category === 'membership') {
     return [
-      'Tối đa 25 lá kỷ niệm mỗi kit',
+      'Ảnh, video kỷ niệm không giới hạn',
       'Plant Buddy AI không giới hạn lượt hỏi',
       '3 khung cảnh 3D: Đêm đầy sao, Nắng mùa thu, Xuân hoa anh đào',
       '3 mẫu chậu VIP: đất nung khắc vân, gốm men ngọc, sứ men lam',
@@ -42,7 +42,7 @@ function suggestionsFor(category: string, speciesLabel?: string): string[] {
     plant,
     'Mã kích hoạt — gieo hạt ngay trên web',
     'Cảm biến độ ẩm đất & nhiệt độ',
-    'Mở dần 8 thiết bị IoT ảo',
+    'Mở dần 7 thiết bị IoT ảo',
     'Plant Buddy AI hướng dẫn từng bước',
     'Video hướng dẫn chăm cây',
     'Album Cây Kỷ Niệm',

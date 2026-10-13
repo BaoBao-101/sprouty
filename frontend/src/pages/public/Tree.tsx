@@ -1,5 +1,5 @@
 import { confirmAction } from '@/services/dialog';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
@@ -8,6 +8,9 @@ import { PlantArt, type PlantStageId } from '@/components/PlantArt';
 import type { FruitShape, PlantForm } from '@/components/PlantForms';
 import './Tree.css';
 import { MemoryTreeArt } from '@/components/MemoryTreeArt';
+import type { PotKey, SceneKey } from '@/components/garden-looks';
+
+const PlantThumbnail3D = lazy(() => import('@/components/PlantThumbnail3D'));
 
 interface Leaf {
   id: string;
@@ -25,8 +28,12 @@ interface Leaf {
 /** What GET /my-products/:id/images returns, now that it describes a journey. */
 interface AlbumData {
   images: Leaf[];
-  maxLeaves: number | null;
+  /** Leaves allowed on each stage's branch; null for VIP (no limit). */
+  leavesPerStage: number | null;
+  vip?: boolean;
   product: { id: number; name: string } | null;
+  /** Every plant this account grows from the kit; each has its own album. */
+  plants?: Array<{ id: string; nickname: string }>;
   plant: {
     id: string;
     nickname: string;
@@ -45,8 +52,6 @@ interface AlbumData {
   };
   stages: Array<{ id: PlantStageId; label: string; icon: string }>;
 }
-
-const DEFAULT_MAX_LEAVES = 10;
 
 function useAlbumDialog(onClose: () => void, busy = false) {
   const ref = useRef<HTMLDivElement>(null);
@@ -118,32 +123,58 @@ function resizeToDataUrl(file: File, maxDim = 640, quality = 0.72): Promise<stri
   });
 }
 
+const VIDEO_NAME = /\.(mp4|m4v|mov|qt|webm|mkv|avi|3gp|3gpp|3g2|mpeg|mpg|mpe|ogv|wmv|asf|flv)$/i;
+
+/**
+ * Adding a leaf.
+ *
+ * The photo on the left, everything to decide on the right, and the buttons
+ * always in view. It used to be one tall column: a large preview pushed the
+ * name, the note and "Đăng lên cây" below the fold, so the dialog had to be
+ * scrolled to finish. The stage is a set of buttons rather than a dropdown,
+ * each saying how full its branch is, so a full one is seen before it is
+ * picked rather than refused after.
+ */
 function ComposeModal({
   file: initialFile,
   onClose,
   onUploaded,
   productId,
+  plantId,
   stages,
   initialStage,
+  stageCounts,
+  perStage,
+  currentStage,
 }: {
   file: File;
   onClose: () => void;
   onUploaded: (leaf: Leaf) => void;
   productId: string;
+  /** Whose album the leaf goes into. */
+  plantId: string;
   stages: AlbumData['stages'];
   initialStage: string;
+  /** Leaves already on each branch. */
+  stageCounts: Map<string, number>;
+  /** Leaves allowed per branch; null for VIP. */
+  perStage: number | null;
+  currentStage?: string;
 }) {
+  const isFull = (id: string) => perStage !== null && (stageCounts.get(id) || 0) >= perStage;
   const [file, setFile] = useState<File | null>(initialFile);
   const replaceInput = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [caption, setCaption] = useState('');
-  const [stage, setStage] = useState(initialStage);
+  const [stage, setStage] = useState(
+    initialStage && !isFull(initialStage) ? initialStage : stages.find((s) => !isFull(s.id))?.id || '',
+  );
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
   const dialog = useAlbumDialog(onClose, busy);
 
-  const video = !!file && (file.type.startsWith('video/') || /\.(mp4|m4v|mov|qt|webm|mkv|avi|3gp|3gpp|3g2|mpeg|mpg|mpe|ogv|wmv|asf|flv)$/i.test(file.name));
+  const video = !!file && (file.type.startsWith('video/') || VIDEO_NAME.test(file.name));
 
   useEffect(() => {
     if (!file) { setPreviewUrl(''); return; }
@@ -180,18 +211,18 @@ function ComposeModal({
   }
 
   async function submit() {
-    if (!file || busy || suggesting) return;
+    if (!file || busy || suggesting || !stage) return;
     setBusy(true);
     const form = new FormData();
     // Text fields go before the file so Fastify's multipart parser exposes
     // them on req.file().fields.
     if (caption.trim()) form.append('title', caption.trim());
     if (note.trim()) form.append('note', note.trim());
-    if (stage) form.append('stage', stage);
+    form.append('stage', stage);
     form.append('image', file);
 
     try {
-      const { image } = await API.myImages.upload(productId, form);
+      const { image } = await API.myImages.upload(productId, form, plantId);
       showToast('Một chiếc lá mới đã nở!', 'success');
       onUploaded(image);
       onClose();
@@ -204,85 +235,133 @@ function ComposeModal({
 
   return (
     <div
-      className="modal-overlay open album-dialog-overlay"
+      className="lf-overlay"
       onClick={(e) => {
         if (e.target === e.currentTarget && !busy) onClose();
       }}
     >
-      <div className="leaf-modal-card" {...dialog} aria-label="Thêm khoảnh khắc mới">
-        <div className="leaf-dialog-heading"><span>NHẬT KÝ LỚN LÊN</span><h2>Một khoảnh khắc, một chiếc lá mới</h2><p>Xem trước và viết vài dòng cho kỷ niệm của bạn.</p></div>
-        <button className="leaf-modal-close" disabled={busy} onClick={onClose} aria-label="Đóng">
-          ✕
-        </button>
-
-        <label className="album-stage-field">Giai đoạn trong ảnh
-          <select className="form-input" value={stage} onChange={(event) => setStage(event.target.value)} disabled={busy}>
-            <option value="">Giai đoạn hiện tại của cây</option>
-            {stages.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-          </select>
-          <small>Bạn có thể bổ sung ảnh cho những chặng đã qua.</small>
-        </label>
-        <input ref={replaceInput} type="file" hidden disabled={busy || suggesting} onChange={event => {
-          const next = event.target.files?.[0];
-          event.target.value = '';
-          if (next) { setPreviewUrl(''); setFile(next); }
-        }} />
-        {file ? <>
-          <div className="leaf-media-frame">
-            {previewUrl && <AlbumMedia key={previewUrl} src={previewUrl} video={video} title={file.name} />}
-          </div>
-          <div className="leaf-file-actions">
-            <span title={file.name}>{file.name}</span>
-            <button className="btn btn-outline btn-sm" disabled={busy || suggesting} onClick={() => replaceInput.current?.click()}><SproutyIcon name="camera" size={16} /> Đổi ảnh/video</button>
-            <button className="btn btn-ghost btn-sm leaf-remove-file" disabled={busy || suggesting} onClick={() => { setFile(null); setPreviewUrl(''); }}><SproutyIcon name="trash" size={16} /> Gỡ tệp</button>
-          </div>
-        </> : <button className="leaf-file-empty" disabled={busy || suggesting} onClick={() => replaceInput.current?.click()}>
-          <SproutyIcon name="camera" size={32} /><strong>Chọn ảnh hoặc video khác</strong><span>Tên, ghi chú và giai đoạn của bạn vẫn được giữ lại.</span>
-        </button>}
-
-        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          <input
-            className="form-input"
-            placeholder="Đặt tên cho khoảnh khắc này"
-            style={{ flex: 1 }}
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-          />
-          {/* Captioning looks at a photo, so it makes no sense for a clip. */}
-          {file && !video && (
-            <button
-              className="btn btn-outline btn-sm"
-              style={{ whiteSpace: 'nowrap' }}
-              disabled={suggesting || busy}
-              onClick={suggest}
-            >
-              {suggesting ? 'Đang xem ảnh...' : <><SproutyIcon name="sparkle" size={15} /> AI gợi ý</>}
+      <div className="lf-dialog" {...dialog} aria-label="Thêm lá mới">
+        <div className="lf-media">
+          {file ? (
+            <>
+              <div className="lf-media-frame">
+                {previewUrl && <AlbumMedia key={previewUrl} src={previewUrl} video={video} title={file.name} />}
+              </div>
+              <div className="lf-media-bar">
+                <span title={file.name}>
+                  <SproutyIcon name={video ? 'camera' : 'album'} size={15} />
+                  {file.name}
+                </span>
+                <button type="button" disabled={busy || suggesting} onClick={() => replaceInput.current?.click()}>Đổi tệp</button>
+              </div>
+            </>
+          ) : (
+            <button type="button" className="lf-media-empty" disabled={busy || suggesting} onClick={() => replaceInput.current?.click()}>
+              <SproutyIcon name="camera" size={32} />
+              <strong>Chọn ảnh hoặc video</strong>
+              <span>Tên, nhật ký và chặng bạn chọn vẫn được giữ lại.</span>
             </button>
           )}
+          <input ref={replaceInput} type="file" hidden disabled={busy || suggesting} onChange={(event) => {
+            const next = event.target.files?.[0];
+            event.target.value = '';
+            if (next) { setPreviewUrl(''); setFile(next); }
+          }} />
         </div>
 
-        <textarea
-          className="form-input"
-          rows={3}
-          placeholder="Viết nhật ký cho khoảnh khắc này (không bắt buộc)"
-          style={{ marginBottom: 12, resize: 'vertical' }}
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-        />
+        <div className="lf-side">
+          <header className="lf-head">
+            <div>
+              <span className="lf-kicker">Thêm lá mới</span>
+              <h2>Một khoảnh khắc, một chiếc lá</h2>
+            </div>
+            <button type="button" className="lf-close" disabled={busy} onClick={onClose} aria-label="Đóng">
+              <SproutyIcon name="close" size={18} />
+            </button>
+          </header>
 
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button className="btn btn-ghost btn-sm" disabled={busy} onClick={onClose}>
-            Hủy
-          </button>
-          <button className="btn btn-primary btn-sm" disabled={busy || suggesting || !file} onClick={submit}>
-            {busy ? 'Đang đăng...' : <><SproutyIcon name="sprout" size={16} /> Đăng lên cây</>}
-          </button>
+          <div className="lf-body">
+            <fieldset className="lf-field">
+              <legend>Ảnh này ở chặng nào?</legend>
+              <div className="lf-stages" role="radiogroup" aria-label="Chặng">
+                {stages.map((item) => {
+                  const full = isFull(item.id);
+                  const n = stageCounts.get(item.id) || 0;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={stage === item.id}
+                      disabled={full || busy}
+                      className={`lf-stage${stage === item.id ? ' is-on' : ''}${full ? ' is-full' : ''}`}
+                      onClick={() => setStage(item.id)}
+                      title={full ? `Chặng này đã đủ ${perStage} lá` : undefined}
+                    >
+                      <SproutyIcon name={item.icon as IconName} size={16} />
+                      <span>
+                        {item.label}
+                        {item.id === currentStage && <i>hiện tại</i>}
+                      </span>
+                      <em>{full ? 'Đã đủ' : perStage !== null ? `${n}/${perStage}` : n || ''}</em>
+                    </button>
+                  );
+                })}
+              </div>
+              <small>{perStage === null ? 'Chặng đã qua vẫn thêm ảnh được.' : `Mỗi chặng tối đa ${perStage} lá. Chặng đã qua vẫn thêm ảnh được.`}</small>
+            </fieldset>
+
+            <label className="lf-field">
+              <span className="lf-label">Tên khoảnh khắc</span>
+              <span className="lf-input-row">
+                <input
+                  className="form-input"
+                  placeholder="VD: Mầm đầu tiên nhú lên"
+                  maxLength={120}
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                />
+                {/* Captioning looks at a photo, so it makes no sense for a clip. */}
+                {file && !video && (
+                  <button type="button" className="lf-ai" disabled={suggesting || busy} onClick={suggest}>
+                    <SproutyIcon name="sparkle" size={15} />
+                    {suggesting ? 'Đang xem…' : 'AI gợi ý'}
+                  </button>
+                )}
+              </span>
+            </label>
+
+            <label className="lf-field">
+              <span className="lf-label">Nhật ký <em>(không bắt buộc)</em></span>
+              <textarea
+                className="form-input"
+                rows={3}
+                maxLength={1000}
+                placeholder="Hôm nay bé thấy cây thế nào?"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </label>
+          </div>
+
+          <footer className="lf-foot">
+            <button type="button" className="btn btn-ghost" disabled={busy} onClick={onClose}>Huỷ</button>
+            <button type="button" className="btn btn-primary" disabled={busy || suggesting || !file || !stage} onClick={submit}>
+              <SproutyIcon name="sprout" size={17} />
+              {busy ? 'Đang đăng…' : 'Đăng lên cây'}
+            </button>
+          </footer>
         </div>
       </div>
     </div>
   );
 }
 
+/**
+ * Looking at a leaf: the photo large on the left, its name and diary on the
+ * right, editable in place. "Lưu" only wakes up once something has changed,
+ * and deleting sits apart on the left so it is not pressed by mistake.
+ */
 function LeafModal({
   leaf,
   onClose,
@@ -295,21 +374,27 @@ function LeafModal({
   const [title, setTitle] = useState(leaf.title || '');
   const [note, setNote] = useState(leaf.note || '');
   const [failed, setFailed] = useState(false);
-  const dialog = useAlbumDialog(onClose);
+  const [busy, setBusy] = useState(false);
+  const dialog = useAlbumDialog(onClose, busy);
+  const dirty = title.trim() !== (leaf.title || '') || note.trim() !== (leaf.note || '');
+  const hidden = leaf.status === 'hidden';
 
   async function save() {
+    setBusy(true);
     try {
-      await API.myImages.update(leaf.id, { title, note });
+      await API.myImages.update(leaf.id, { title: title.trim(), note: note.trim() });
       showToast('Đã lưu', 'success');
       onChanged();
       onClose();
     } catch (err: any) {
       showToast(err?.message || 'Không thể lưu', 'error');
+      setBusy(false);
     }
   }
 
   async function remove() {
-    if (!await confirmAction('Xoá chiếc lá này khỏi cây?')) return;
+    if (!await confirmAction('Xoá chiếc lá này khỏi cây? Ảnh sẽ không còn trong album.', { confirmLabel: 'Xoá lá' })) return;
+    setBusy(true);
     try {
       await API.myImages.remove(leaf.id);
       showToast('Đã xoá lá', 'success');
@@ -317,63 +402,77 @@ function LeafModal({
       onClose();
     } catch (err: any) {
       showToast(err?.message || 'Không thể xoá', 'error');
+      setBusy(false);
     }
   }
 
   return (
     <div
-      className="modal-overlay open album-dialog-overlay"
+      className="lf-overlay"
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget && !busy) onClose();
       }}
     >
-      <div className="leaf-modal-card leaf-viewer" {...dialog} aria-label="Xem khoảnh khắc">
-        <div className="leaf-dialog-heading"><span>{leaf.stageLabel || 'KỶ NIỆM CỦA CÂY'}</span><h2>{leaf.title || 'Một ngày cây lớn lên'}</h2><p>{leaf.createdAt ? new Date(leaf.createdAt).toLocaleDateString('vi-VN') : 'Đã lưu trong album'} · Một chút xanh, một chút thương.</p></div>
-        <button className="leaf-modal-close" onClick={onClose} aria-label="Đóng">
-          ✕
-        </button>
-
-        <div className="leaf-media-frame">
-          {leaf.status === 'hidden' ? (
-            <p style={{ padding: 24, textAlign: 'center', color: 'var(--ink-4)' }}>Nội dung này đã được quản trị viên ẩn. Bạn vẫn có thể sửa ghi chú hoặc gỡ khoảnh khắc khỏi album.</p>
-          ) : failed ? (
-            <div className="album-media-fallback"><SproutyIcon name="album" size={36} /><p>Trình duyệt chưa xem trực tiếp được tệp này.</p><a href={leaf.url} target="_blank" rel="noopener noreferrer" download>Mở / tải tệp gốc ↗</a></div>
-          ) : isVideo(leaf) ? (
-            <video src={leaf.url} controls onError={() => setFailed(true)} />
-          ) : (
-            <img src={leaf.url} alt={leaf.title || 'Kỷ niệm'} onError={() => setFailed(true)} />
+      <div className="lf-dialog" {...dialog} aria-label="Xem khoảnh khắc">
+        <div className="lf-media">
+          <div className="lf-media-frame">
+            {hidden ? (
+              <p className="lf-media-note">Nội dung này đã được quản trị viên ẩn. Bạn vẫn có thể sửa tên, nhật ký hoặc xoá lá khỏi album.</p>
+            ) : failed ? (
+              <div className="album-media-fallback"><SproutyIcon name="album" size={36} /><p>Trình duyệt chưa xem trực tiếp được tệp này.</p><a href={leaf.url} target="_blank" rel="noopener noreferrer" download>Mở / tải tệp gốc ↗</a></div>
+            ) : isVideo(leaf) ? (
+              <video src={leaf.url} controls onError={() => setFailed(true)} />
+            ) : (
+              <img src={leaf.url} alt={leaf.title || 'Kỷ niệm'} onError={() => setFailed(true)} />
+            )}
+          </div>
+          {!hidden && !failed && leaf.url && (
+            <div className="lf-media-bar">
+              <span>{isVideo(leaf) ? 'Video' : 'Ảnh'}{leaf.createdAt ? ` · ${new Date(leaf.createdAt).toLocaleDateString('vi-VN')}` : ''}</span>
+              <a href={leaf.url} target="_blank" rel="noopener noreferrer">Mở tệp gốc</a>
+            </div>
           )}
         </div>
 
-        <input
-          className="form-input"
-          placeholder="Đặt tên cho khoảnh khắc này"
-          style={{ marginBottom: 10 }}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-        <textarea
-          className="form-input"
-          rows={3}
-          placeholder="Viết nhật ký cho khoảnh khắc này (không bắt buộc)"
-          style={{ marginBottom: 12, resize: 'vertical' }}
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-        />
+        <div className="lf-side">
+          <header className="lf-head">
+            <div>
+              <span className="lf-kicker">{leaf.stageLabel ? `Chặng ${leaf.stageLabel}` : 'Kỷ niệm của cây'}</span>
+              <h2>{leaf.title || 'Một ngày cây lớn lên'}</h2>
+            </div>
+            <button type="button" className="lf-close" disabled={busy} onClick={onClose} aria-label="Đóng">
+              <SproutyIcon name="close" size={18} />
+            </button>
+          </header>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <button className="btn btn-primary btn-sm" onClick={save}>
-            Lưu
-          </button>
-          <button
-            className="btn btn-ghost btn-sm"
-            style={{ color: 'var(--rose)' }}
-            onClick={remove}
-          >
-            Xoá lá này
-          </button>
+          <div className="lf-body">
+            <label className="lf-field">
+              <span className="lf-label">Tên khoảnh khắc</span>
+              <input className="form-input" placeholder="Đặt tên cho khoảnh khắc này" maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} />
+            </label>
+            <label className="lf-field">
+              <span className="lf-label">Nhật ký</span>
+              <textarea
+                className="form-input"
+                rows={5}
+                maxLength={1000}
+                placeholder="Viết vài dòng cho khoảnh khắc này"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </label>
+          </div>
+
+          <footer className="lf-foot">
+            <button type="button" className="btn btn-ghost lf-delete" disabled={busy} onClick={remove}>
+              <SproutyIcon name="trash" size={16} />
+              Xoá lá
+            </button>
+            <button type="button" className="btn btn-primary" disabled={busy || !dirty} onClick={save}>
+              {busy ? 'Đang lưu…' : 'Lưu thay đổi'}
+            </button>
+          </footer>
         </div>
-
       </div>
     </div>
   );
@@ -383,13 +482,16 @@ export default function Tree() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const productId = searchParams.get('id') || '';
+  // Which plant's album: one account may grow the same kit more than once.
+  const plantParam = searchParams.get('plant') || '';
 
   const [album, setAlbum] = useState<AlbumData | null>(null);
   const [leaves, setLeaves] = useState<Leaf[]>([]);
-  const [maxLeaves, setMaxLeaves] = useState<number | null>(DEFAULT_MAX_LEAVES);
   const [loading, setLoading] = useState(true);
 
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  /** The branch the next upload goes to, chosen by the button pressed. */
+  const [uploadTarget, setUploadTarget] = useState('');
   const [openLeaf, setOpenLeaf] = useState<Leaf | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const [selectedStage, setSelectedStage] = useState<string>('all');
@@ -401,27 +503,67 @@ export default function Tree() {
   const loadLeaves = useCallback(() => {
     if (!productId) return;
     API.myImages
-      .list(productId)
+      .list(productId, plantParam)
       .then((data: AlbumData) => {
         setAlbum(data);
         setLeaves(data.images || []);
-        if (data.maxLeaves !== undefined) setMaxLeaves(data.maxLeaves);
       })
       .catch((err: any) => {
         showToast(err?.message || 'Không tải được album', 'error');
         setLeaves([]);
       })
       .finally(() => setLoading(false));
-  }, [productId]);
+  }, [productId, plantParam]);
 
   useEffect(loadLeaves, [loadLeaves]);
 
-  const full = maxLeaves !== null && leaves.length >= maxLeaves;
   const species = album?.species;
+
+  // A regular account fills each branch with up to `perStage` leaves; VIP
+  // (null) has no limit. Counted from what is on screen, so deleting a leaf
+  // opens its place straight away.
+  const perStage = album ? album.leavesPerStage ?? null : null;
+  const counts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const leaf of leaves) if (leaf.stage) map.set(leaf.stage, (map.get(leaf.stage) || 0) + 1);
+    return map;
+  }, [leaves]);
+  const fullStages = useMemo(
+    () => new Set((album?.stages || []).filter((s) => perStage !== null && (counts.get(s.id) || 0) >= perStage).map((s) => s.id as string)),
+    [album, counts, perStage],
+  );
+  const countLabel = (stageId: string) => `${counts.get(stageId) || 0}${perStage !== null ? `/${perStage}` : ''}`;
+
+  function pickFile(stageId: string) {
+    setUploadTarget(stageId);
+    fileInput.current?.click();
+  }
+
+  // The account's garden scene and pot, so the plant here looks as it does
+  // on its own page.
+  const [look, setLook] = useState<{ scene: SceneKey; decoration: PotKey } | undefined>();
+  useEffect(() => {
+    let active = true;
+    API.garden
+      .benefits()
+      .then((data: { scene: SceneKey; decoration: PotKey }) => active && setLook({ scene: data.scene, decoration: data.decoration }))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
   const plant = album?.plant;
   const title = plant?.nickname || album?.product?.name || 'Album kỷ niệm';
-  const uploadStage = selectedStage === 'all' || selectedStage === 'unknown' ? plant?.stage || '' : selectedStage;
-  const currentStageLabel = album?.stages.find((stage) => stage.id === uploadStage)?.label || '';
+  const stageLabelOf = (id: string) => album?.stages.find((stage) => stage.id === id)?.label || '';
+  const specific = selectedStage !== 'all' && selectedStage !== 'unknown';
+  // Where "Thêm ảnh" puts a photo: the branch being looked at, or else the
+  // plant's current stage, or else the first branch with room left.
+  const addTarget = specific
+    ? (fullStages.has(selectedStage) ? '' : selectedStage)
+    : plant?.stage && !fullStages.has(plant.stage)
+      ? plant.stage
+      : album?.stages.find((s) => !fullStages.has(s.id))?.id || '';
+  const allFull = !!album?.stages.length && fullStages.size === album.stages.length;
 
   /**
    * Photos grouped by the stage they were taken at, newest stage first, so the
@@ -478,21 +620,39 @@ export default function Tree() {
           </div>
 
           <div className="album-hero-row">
-            {/* The plant itself, drawn in its own species' form. This page used
-                to show one bare-branch tree for every product, so a carrot and a
-                sunflower shared an illustration that was neither of them. */}
+            {/* The plant itself, as the same 3D model the plant page and the
+                garden cards show, in the account's scene and pot. It was a flat
+                drawing here — a different-looking plant, its sun and pot cut
+                off by the frame. The drawing stays as the stand-in while the
+                model renders, or where WebGL is not available. */}
             {plant && species && (
               <div className="album-plant">
-                <PlantArt
-                  stage={plant.stage}
-                  progress={plant.stageProgress}
-                  health={plant.health}
-                  form={species.form}
-                  fruitShape={species.fruitShape}
-                  fruitColor={species.fruitColor}
-                  flowerColor={species.flowerColor}
-                  size={170}
-                />
+                <Suspense
+                  fallback={
+                    <PlantArt
+                      stage={plant.stage}
+                      progress={plant.stageProgress}
+                      health={plant.health}
+                      form={species.form}
+                      fruitShape={species.fruitShape}
+                      fruitColor={species.fruitColor}
+                      flowerColor={species.flowerColor}
+                      size={200}
+                    />
+                  }
+                >
+                  <PlantThumbnail3D
+                    stage={plant.stage}
+                    progress={plant.stageProgress}
+                    health={plant.health}
+                    form={species.form}
+                    fruitShape={species.fruitShape}
+                    fruitColor={species.fruitColor}
+                    flowerColor={species.flowerColor}
+                    scene={look?.scene}
+                    decoration={look?.decoration}
+                  />
+                </Suspense>
               </div>
             )}
 
@@ -507,8 +667,22 @@ export default function Tree() {
               <div className="album-hero-meta">
                 <span className="album-count">
                   <SproutyIcon name="album" size={16} />
-                  {leaves.length}{maxLeaves === null ? ' · Không giới hạn' : `/${maxLeaves}`} khoảnh khắc
+                  {leaves.length} khoảnh khắc · {perStage === null ? 'VIP, không giới hạn' : `${perStage} lá mỗi chặng`}
                 </span>
+                {(album?.plants?.length || 0) > 1 && (
+                  <span className="album-switch" role="group" aria-label="Album của cây">
+                    {album!.plants!.map((p) => (
+                      <Link
+                        key={p.id}
+                        to={`/tree?id=${productId}&plant=${p.id}`}
+                        className={p.id === plant?.id ? 'is-on' : undefined}
+                        aria-current={p.id === plant?.id ? 'page' : undefined}
+                      >
+                        {p.nickname}
+                      </Link>
+                    ))}
+                  </span>
+                )}
                 {plant && (
                   <Link to={`/plant/${plant.id}`} className="album-back-plant">
                     <SproutyIcon name="sprout" size={16} />
@@ -535,86 +709,108 @@ export default function Tree() {
                   const cover = photos.find((leaf) => leaf.status !== 'hidden' && !isVideo(leaf));
                   return <button key={stage.id} style={{ left: [23, 43, 66, 15, 38, 61, 82, 72][index] + '%', top: [26, 18, 27, 47, 43, 48, 49, 67][index] + '%' }} className={'memory-branch' + (selectedStage === stage.id ? ' is-selected' : '')} aria-pressed={selectedStage === stage.id} onClick={() => setSelectedStage(stage.id)}>
                     <span className="memory-branch-photo">{cover ? <img src={cover.url} alt="" loading="lazy" /> : <SproutyIcon name={stage.icon as IconName} size={28} />}</span>
-                    <span className="memory-branch-copy"><small>CHẶNG {String(index + 1).padStart(2, '0')}{plant?.stage === stage.id ? ' · HIỆN TẠI' : ''}</small><strong>{stage.label}</strong><span>{photos.length ? photos.length + ' kỷ niệm' : 'Thêm chiếc lá đầu tiên'}</span></span>
+                    <span className="memory-branch-copy"><small>CHẶNG {String(index + 1).padStart(2, '0')}{plant?.stage === stage.id ? ' · HIỆN TẠI' : ''}</small><strong>{stage.label}</strong><span>{photos.length ? `${countLabel(stage.id)} lá${fullStages.has(stage.id) ? ' · đã đủ' : ''}` : 'Thêm chiếc lá đầu tiên'}</span></span>
                   </button>;
                 })}
               </div>
               <div className="memory-tree-root">Bắt đầu từ một hạt nhỏ</div>
             </div>
-            <aside className="memory-tree-note"><span className="album-eyebrow">MỖI CHẶNG, MỘT NHÁNH THƯƠNG</span><h3>Ảnh của bạn,<br />lớn cùng cây.</h3><p>Chạm vào một nhánh để xem lại kỷ niệm hoặc thêm ảnh cho chặng ấy. Những chặng đã qua luôn ở đây.</p><div className="memory-selection"><SproutyIcon name="album" size={22} /><strong>{selectedStage === 'all' ? 'Đang xem tất cả các chặng' : album.stages.find((stage) => stage.id === selectedStage)?.label}</strong></div><button className="btn btn-primary" disabled={full || loading || !album} onClick={() => fileInput.current?.click()}><SproutyIcon name="plus" size={18} /> Thêm ảnh lên cây</button><button className="btn btn-ghost" aria-pressed={selectedStage === 'all'} onClick={() => setSelectedStage('all')}>Xem toàn bộ kỷ niệm ({leaves.length})</button><small>Giai đoạn của ảnh được chọn khi đăng, độc lập với tiến độ chăm cây.</small></aside>
+            <aside className="memory-tree-note"><span className="album-eyebrow">MỖI CHẶNG, MỘT NHÁNH THƯƠNG</span><h3>Ảnh của bạn,<br />lớn cùng cây.</h3><p>Chạm vào một nhánh để xem lại kỷ niệm hoặc thêm ảnh cho chặng ấy. Những chặng đã qua luôn ở đây.</p><div className="memory-selection"><SproutyIcon name="album" size={22} /><strong>{selectedStage === 'all' ? 'Đang xem tất cả các chặng' : album.stages.find((stage) => stage.id === selectedStage)?.label}</strong></div><button className="btn btn-primary" disabled={!addTarget || loading || !album} onClick={() => pickFile(addTarget)}><SproutyIcon name="plus" size={18} /> Thêm ảnh lên cây</button><button className="btn btn-ghost" aria-pressed={selectedStage === 'all'} onClick={() => setSelectedStage('all')}>Xem toàn bộ kỷ niệm ({leaves.length})</button><small>{perStage === null ? 'VIP: thêm bao nhiêu lá cũng được, ở bất kỳ chặng nào.' : <>Mỗi chặng {perStage} lá. <Link to="/vip">VIP</Link> thêm không giới hạn.</>}</small></aside>
           </div>}
-          <button className="album-add" disabled={full || loading || !album} onClick={() => fileInput.current?.click()}>
-            <span className="album-add-icon">
-              <SproutyIcon name={full ? 'check' : 'camera'} size={26} />
-            </span>
-            <span className="album-add-copy">
-              <strong>{full ? 'Album đã đầy' : 'Thêm khoảnh khắc mới'}</strong>
-              <em>
-                {full
-                  ? `Đã lưu đủ ${maxLeaves} khoảnh khắc cho cây này.`
-                  : currentStageLabel
-                    ? `Ảnh sẽ được ghi vào chặng “${currentStageLabel}”`
-                    : 'Chọn ảnh hoặc video từ máy của bạn'}
-              </em>
-            </span>
-            {!full && <span className="album-add-action"><SproutyIcon name="plus" size={18} /> Chọn ảnh / video</span>}
-          </button>
+          {/* One slim bar: what is being shown, and the one way to add to it. */}
+          <div className="ab-toolbar">
+            <div className="ab-toolbar-title">
+              <strong>{specific ? stageLabelOf(selectedStage) : selectedStage === 'unknown' ? 'Chưa rõ chặng' : 'Tất cả kỷ niệm'}</strong>
+              <span>
+                {specific
+                  ? `${countLabel(selectedStage)} lá`
+                  : `${leaves.length} lá${perStage !== null ? ` · ${perStage} lá mỗi chặng` : ''}`}
+              </span>
+            </div>
+            {selectedStage !== 'all' && (
+              <button type="button" className="ab-link" onClick={() => setSelectedStage('all')}>Xem tất cả</button>
+            )}
+            <button type="button" className="btn btn-primary ab-add" disabled={!addTarget || loading || !album} onClick={() => pickFile(addTarget)}>
+              <SproutyIcon name="plus" size={16} />
+              Thêm ảnh / video
+            </button>
+          </div>
+          {!loading && album && (specific ? fullStages.has(selectedStage) : allFull) && (
+            <p className="ab-hint">
+              <SproutyIcon name="info" size={15} />
+              <span>
+                {specific ? `Chặng “${stageLabelOf(selectedStage)}” đã đủ ${perStage} lá.` : `Mọi chặng đã đủ ${perStage} lá.`}{' '}
+                Xoá bớt một lá cũ để thay, hoặc <Link to="/vip">nâng cấp VIP</Link> để thêm không giới hạn.
+              </span>
+            </p>
+          )}
 
           {loading && <p className="album-muted">Đang mở album…</p>}
 
-          {!loading && leaves.length === 0 && (
-            <div className="album-empty">
-              <span className="album-empty-icon">
-                <SproutyIcon name="camera" size={36} />
-              </span>
-              <h3>Album còn trống</h3>
-              <p>
-                Mỗi lần cây đổi dáng, chụp một tấm. Cuối hành trình bạn sẽ có trọn bộ ảnh từ hạt
-                giống tới ngày thu hoạch.
-              </p>
+          {!loading && leaves.length === 0 && selectedStage === 'all' && (
+            <div className="ab-empty">
+              <span className="ab-empty-icon"><SproutyIcon name="camera" size={26} /></span>
+              <div>
+                <h3>Album còn trống</h3>
+                <p>Mỗi lần cây đổi dáng, chụp một tấm. Cuối hành trình bạn có trọn bộ ảnh từ hạt giống tới ngày thu hoạch.</p>
+              </div>
             </div>
           )}
 
-          {!loading && leaves.length > 0 && selectedStage !== 'all' && !groups.some((group) => group.id === selectedStage) && <div className="album-empty"><SproutyIcon name="camera" size={32} /><h3>Nhánh này đang chờ kỷ niệm</h3><p>Thêm ảnh đầu tiên cho chặng {currentStageLabel}. Bạn vẫn có thể quay lại bổ sung bất cứ lúc nào.</p></div>}
-          {groups.filter((group) => selectedStage === 'all' || group.id === selectedStage).map((group) => (
-            <div className="album-group" key={group.id}>
-              <div className="album-group-head">
-                <span className="album-group-icon">
-                  <SproutyIcon name={group.icon} size={18} />
-                </span>
-                <h2>{group.label}</h2>
-                <span className="album-group-count">{group.items.length}</span>
-              </div>
-
-              <div className="album-grid">
-                {group.items.map((leaf) => (
-                  <button className="album-item" key={leaf.id} onClick={() => setOpenLeaf(leaf)}>
-                    <span className="album-item-media">
-                      <span className="album-item-view">{isVideo(leaf) ? '▶ Xem video' : '↗ Xem ảnh lớn'}</span>
-                      {leaf.status === 'hidden' ? (
-                        <span style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 20, color: 'var(--ink-4)' }}>Nội dung đã được quản trị viên ẩn</span>
-                      ) : isVideo(leaf) ? (
-                        <>
-                          <video src={leaf.url} muted />
-                          <span className="album-item-play">
-                            <SproutyIcon name="camera" size={18} />
-                          </span>
-                        </>
-                      ) : (
-                        <img src={leaf.url} alt={leaf.title || 'Khoảnh khắc'} loading="lazy" />
-                      )}
-                    </span>
-                    <span className="album-item-cap">
-                      <strong>{leaf.title || 'Khoảnh khắc'}</strong>
-                      {leaf.createdAt && (
-                        <em>{new Date(leaf.createdAt).toLocaleDateString('vi-VN')}</em>
-                      )}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
+          {/* A branch picked on the tree shows even when it has nothing yet,
+              so its "Thêm lá" tile is there to press. */}
+          {(selectedStage === 'all'
+            ? groups
+            : groups.filter((group) => group.id === selectedStage).concat(
+                specific && !groups.some((group) => group.id === selectedStage)
+                  ? [{ id: selectedStage, label: stageLabelOf(selectedStage), icon: (album?.stages.find((s) => s.id === selectedStage)?.icon || 'leaf') as IconName, items: [] }]
+                  : [],
+              )
+          ).map((group) => {
+            const canAdd = group.id !== 'unknown' && !fullStages.has(group.id);
+            return (
+              <section className="ab-group" key={group.id} aria-label={group.label}>
+                <header className="ab-group-head">
+                  <span className="ab-group-icon"><SproutyIcon name={group.icon} size={16} /></span>
+                  <h2>{group.label}</h2>
+                  <span className={`ab-group-count${fullStages.has(group.id) ? ' is-full' : ''}`}>
+                    {group.id === 'unknown' ? group.items.length : countLabel(group.id)} lá
+                  </span>
+                </header>
+                <div className="ab-grid">
+                  {group.items.map((leaf) => (
+                    <button type="button" className="ab-tile" key={leaf.id} onClick={() => setOpenLeaf(leaf)} aria-label={`${isVideo(leaf) ? 'Xem video' : 'Xem ảnh'}: ${leaf.title || 'Khoảnh khắc'}`}>
+                      <span className="ab-tile-media">
+                        {leaf.status === 'hidden' ? (
+                          <span className="ab-tile-hidden">Đã được quản trị viên ẩn</span>
+                        ) : isVideo(leaf) ? (
+                          <>
+                            <video src={leaf.url} muted preload="metadata" />
+                            <span className="ab-tile-play" aria-hidden="true" />
+                          </>
+                        ) : (
+                          <img src={leaf.url} alt="" loading="lazy" />
+                        )}
+                      </span>
+                      <span className="ab-tile-cap">
+                        <strong>{leaf.title || 'Khoảnh khắc'}</strong>
+                        {leaf.createdAt && <em>{new Date(leaf.createdAt).toLocaleDateString('vi-VN')}</em>}
+                      </span>
+                    </button>
+                  ))}
+                  {canAdd && (
+                    <button type="button" className="ab-tile is-add" onClick={() => pickFile(group.id)} disabled={loading}>
+                      <span className="ab-tile-media">
+                        <SproutyIcon name="plus" size={22} />
+                        <strong>Thêm lá</strong>
+                        {perStage !== null && <em>còn {perStage - (counts.get(group.id) || 0)} chỗ</em>}
+                      </span>
+                    </button>
+                  )}
+                </div>
+              </section>
+            );
+          })}
 
           <input
             ref={fileInput}
@@ -633,8 +829,12 @@ export default function Tree() {
         <ComposeModal
           file={pendingFile}
           productId={productId}
+          plantId={album?.plant?.id || plantParam}
           stages={album?.stages || []}
-          initialStage={uploadStage}
+          initialStage={uploadTarget}
+          stageCounts={counts}
+          perStage={perStage}
+          currentStage={plant?.stage}
           onClose={() => setPendingFile(null)}
           onUploaded={(leaf) => {
             setSelectedStage(leaf.stage || 'all');

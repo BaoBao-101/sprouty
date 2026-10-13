@@ -62,6 +62,14 @@ export function AiBubble() {
     return () => clearTimeout(id);
   }, []);
 
+  // The hello says its piece and goes: on a phone it sits over the page, and
+  // left there it covered whatever the visitor came to read.
+  useEffect(() => {
+    if (!nudge) return;
+    const id = setTimeout(dismissNudge, 9000);
+    return () => clearTimeout(id);
+  }, [nudge]);
+
   function dismissNudge() {
     setNudge(false);
     try {

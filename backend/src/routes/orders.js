@@ -6,6 +6,9 @@ import { auditLog } from '../services/audit.js';
 import { syncWorkshopRewards } from '../services/rewards.js';
 import { reconcile, pollingConfigured } from '../services/sepay.js';
 import { paymentMemo } from '../services/payment-memo.js';
+// Whether a basket has anything to post: one rule, shared with the staff queue.
+import { requiresShipping } from '../services/order-policy.js';
+import { settleArrived } from '../services/order-shipping.js';
 import {
   hasMembershipItem,
   membershipDaysFor,
@@ -74,24 +77,6 @@ const createOrderSchema = z.object({
 
 const NO_SHIPPING_PLACEHOLDER = 'Không áp dụng — sản phẩm số, kích hoạt ngay trên web.';
 
-/**
- * Whether anything in this basket has to be delivered.
- *
- * Nothing does. Every product is digital: a kit unlocks a simulated plant that
- * is activated with a code and lived with on the site, and a membership was
- * always digital. This is a function rather than an inlined `false` so that
- * reintroducing a physical product is one edit in one place, instead of a hunt
- * through the checkout, the address form and the post-purchase emails.
- */
-function requiresShipping(products) {
-  const physical = (process.env.PHYSICAL_CATEGORIES || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (physical.length === 0) return false;
-  return products.some((p) => physical.includes(p.category));
-}
-
 /** Delivery details, for correcting them after checkout. */
 const shippingSchema = z.object({
   shippingName: noHtml('Tên người nhận').and(
@@ -111,7 +96,12 @@ function hashPurchaseCode(code) {
   return createHash('sha256').update(normalizePurchaseCode(code)).digest('hex');
 }
 
-function buildPurchaseRedeemCode(orderId, userId, productId) {
+/**
+ * The code for one unit of one kit on one order. Unit 0 is the code every
+ * order already had (so codes issued before stay valid); a second, third…
+ * unit of the same kit gets its own, since each grows its own plant.
+ */
+function buildPurchaseRedeemCode(orderId, userId, productId, unit = 0) {
   // Finding F-12: the fallback below is a value that ships in the repository, so
   // anyone reading it could mint valid redeem codes for any order. Harmless in
   // development, fatal in production — so refuse to start down that path there
@@ -121,14 +111,14 @@ function buildPurchaseRedeemCode(orderId, userId, productId) {
     if (process.env.NODE_ENV === 'production') {
       throw new AppError('Máy chủ chưa được cấu hình đúng (REDEEM_CODE_SECRET).', 500);
     }
-    return buildWithSecret('sprouty-dev-redeem-code-secret', orderId, userId, productId);
+    return buildWithSecret('sprouty-dev-redeem-code-secret', orderId, userId, productId, unit);
   }
-  return buildWithSecret(secret, orderId, userId, productId);
+  return buildWithSecret(secret, orderId, userId, productId, unit);
 }
 
-function buildWithSecret(secret, orderId, userId, productId) {
+function buildWithSecret(secret, orderId, userId, productId, unit = 0) {
   const digest = createHmac('sha256', secret)
-    .update(`${orderId}:${userId}:${productId}`)
+    .update(unit ? `${orderId}:${userId}:${productId}:${unit}` : `${orderId}:${userId}:${productId}`)
     .digest('hex')
     .slice(0, 16)
     .toUpperCase();
@@ -167,88 +157,102 @@ async function settleIfNothingToShip(prisma, order) {
 async function ensurePurchaseRedeemCodes(prisma, order) {
   if (!order?.paidAt || order.status === 'cancelled') return [];
 
-  // Which of this order's kits the customer has already activated. Looked up
-  // once for the whole order rather than per code: the orders list renders
-  // every order a customer has, and a query per code turned one page load into
-  // dozens of round trips.
-  //
-  // Keyed on the plant, not on the redeem code's usedCount, because the plant
-  // is the thing the customer is being offered a link to — and a code redeemed
-  // and then somehow left without a plant should still read as "activate".
-  const productIds = [...new Set((order.items || []).map((i) => i.productId))];
-  const plants = productIds.length
-    ? await prisma.virtualPlant.findMany({
-        where: { userId: order.userId, productId: { in: productIds } },
-        select: { id: true, productId: true, nickname: true, stage: true, activatedAt: true },
-      })
-    : [];
-  const plantByProduct = new Map(plants.map((p) => [p.productId, p]));
-
-  const seen = new Set();
-  const codes = [];
+  // How many of each product the order holds: a kit bought twice is two codes
+  // and, once activated, two plants. Variants of the same kit count together,
+  // since the code is per product.
+  const units = new Map();
   for (const item of order.items || []) {
-    if (seen.has(item.productId)) continue;
-    seen.add(item.productId);
+    const entry = units.get(item.productId) || { item, qty: 0 };
+    entry.qty += item.qty || 1;
+    units.set(item.productId, entry);
+  }
 
+  const codes = [];
+  for (const { item, qty } of units.values()) {
     // VIP is switched on by the payment itself (services/membership.js).
     // Issuing a code for it asked the customer to activate something that
     // was already active — or, before that, that nothing actually read.
     if (item.product?.category === 'membership') continue;
-    const plaintext = buildPurchaseRedeemCode(order.id, order.userId, item.productId);
-    const codeHash = hashPurchaseCode(plaintext);
-    const existing = await prisma.redeemCode.findUnique({ where: { codeHash } });
-    const redeemCode = existing || await prisma.redeemCode.create({
-      data: {
-        codeHash,
-        label: `Mã sau mua hàng ${order.id.slice(-8).toUpperCase()}`,
-        description: 'Mã kích hoạt tự động sau khi thanh toán đơn hàng.',
-        features: ['instruction_videos', 'image_uploads'],
-        productId: item.productId,
-        maxUses: 1,
-        perUserLimit: 1,
-        createdByUserId: order.userId,
-      },
-    });
-    const plant = plantByProduct.get(item.productId) || null;
-
-    // A kit code is spent when its plant exists; that is the thing the
-    // customer is offered a link to. A membership code has no plant, ever,
-    // so keying it on the plant left it looking unused forever — the
-    // "gieo hạt" button kept coming back after the membership was already
-    // active, and pressing it could only fail. Those are spent when this
-    // account has a redemption for them.
-    //
-    // An unknown category keeps the old plant-based reading rather than
-    // guessing, so a caller that did not select it behaves as before.
-    const category = item.product?.category;
-    const isKit = category ? category === 'kit' : true;
-
-    let redemption = null;
-    if (!isKit && redeemCode.usedCount > 0) {
-      redemption = await prisma.redeemCodeRedemption.findFirst({
-        where: { redeemCodeId: redeemCode.id, userId: order.userId },
-        select: { redeemedAt: true },
-      });
+    // One code per unit: each grows its own plant.
+    for (let unit = 0; unit < qty; unit++) {
+      codes.push(await purchaseCodeFor(prisma, order, item, unit));
     }
-
-    codes.push({
-      code: plaintext,
-      productId: item.productId,
-      productName: item.product?.name || null,
-      kind: isKit ? 'kit' : 'membership',
-      features: redeemCode.features,
-      usedCount: redeemCode.usedCount,
-      maxUses: redeemCode.maxUses,
-      status: redeemCode.status,
-      // So the orders page can say "đã kích hoạt" and link to the plant,
-      // instead of offering an activate button for a code that is spent.
-      redeemed: isKit ? Boolean(plant) : Boolean(redemption),
-      plantId: plant?.id || null,
-      plantNickname: plant?.nickname || null,
-      activatedAt: isKit ? plant?.activatedAt || null : redemption?.redeemedAt || null,
-    });
   }
   return codes;
+}
+
+/**
+ * One unit's activation code, created on first sight, with whether it has
+ * been used and the plant it grew. A kit code is spent once a plant exists
+ * for one of this account's redemptions of it — the plant is what the
+ * customer is offered a link to, and a redemption whose plant never got made
+ * should still read as "kích hoạt" so pressing it can finish the job.
+ */
+async function purchaseCodeFor(prisma, order, item, unit) {
+  const plaintext = buildPurchaseRedeemCode(order.id, order.userId, item.productId, unit);
+  const codeHash = hashPurchaseCode(plaintext);
+  const existing = await prisma.redeemCode.findUnique({ where: { codeHash } });
+  const redeemCode = existing || await prisma.redeemCode.create({
+    data: {
+      codeHash,
+      label: `Mã sau mua hàng ${order.id.slice(-8).toUpperCase()}`,
+      description: 'Mã kích hoạt tự động sau khi thanh toán đơn hàng.',
+      features: ['instruction_videos', 'image_uploads'],
+      productId: item.productId,
+      maxUses: 1,
+      perUserLimit: 1,
+      createdByUserId: order.userId,
+    },
+  });
+  const mine = redeemCode.usedCount > 0
+    ? await prisma.redeemCodeRedemption.findMany({
+        where: { redeemCodeId: redeemCode.id, userId: order.userId },
+        select: { id: true, redeemedAt: true },
+      })
+    : [];
+  const plant = mine.length
+    ? await prisma.virtualPlant.findFirst({
+        where: { redemptionId: { in: mine.map((r) => r.id) } },
+        select: { id: true, productId: true, nickname: true, stage: true, activatedAt: true },
+      })
+    : null;
+
+  // A kit code is spent when its plant exists; that is the thing the
+  // customer is offered a link to. A membership code has no plant, ever,
+  // so keying it on the plant left it looking unused forever — the
+  // "gieo hạt" button kept coming back after the membership was already
+  // active, and pressing it could only fail. Those are spent when this
+  // account has a redemption for them.
+  //
+  // An unknown category keeps the old plant-based reading rather than
+  // guessing, so a caller that did not select it behaves as before.
+  const category = item.product?.category;
+  const isKit = category ? category === 'kit' : true;
+
+  let redemption = null;
+  if (!isKit && redeemCode.usedCount > 0) {
+    redemption = await prisma.redeemCodeRedemption.findFirst({
+      where: { redeemCodeId: redeemCode.id, userId: order.userId },
+      select: { redeemedAt: true },
+    });
+  }
+
+  return {
+    code: plaintext,
+    productId: item.productId,
+    productName: item.product?.name || null,
+    kind: isKit ? 'kit' : 'membership',
+    features: redeemCode.features,
+    usedCount: redeemCode.usedCount,
+    maxUses: redeemCode.maxUses,
+    status: redeemCode.status,
+    // So the orders page can say "đã kích hoạt" and link to the plant,
+    // instead of offering an activate button for a code that is spent.
+    redeemed: isKit ? Boolean(plant) : Boolean(redemption),
+    plantId: plant?.id || null,
+    plantNickname: plant?.nickname || null,
+    activatedAt: isKit ? plant?.activatedAt || null : redemption?.redeemedAt || null,
+  };
 }
 
 export default async function orderRoutes(fastify) {
@@ -338,6 +342,7 @@ export default async function orderRoutes(fastify) {
   // The counts are over the whole history, so the tabs do not renumber
   // themselves as you click between them.
   fastify.get('/orders', { preHandler: [requireCustomer] }, async (req) => {
+    await settleArrived(fastify.prisma);
     const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
     const limit = Math.min(50, Math.max(1, Number.parseInt(req.query.limit, 10) || 10));
 
@@ -368,7 +373,7 @@ export default async function orderRoutes(fastify) {
       orders.map(async (order) => {
         const redeemCodes = await ensurePurchaseRedeemCodes(fastify.prisma, order);
         await settleIfNothingToShip(fastify.prisma, order);
-        return { ...order, redeemCodes };
+        return { ...order, redeemCodes, needsShipping: requiresShipping(order.items.map((i) => i.product)) };
       }),
     );
 
@@ -429,7 +434,7 @@ export default async function orderRoutes(fastify) {
     }
 
     return {
-      order: { ...order, redeemCodes },
+      order: { ...order, redeemCodes, needsShipping: requiresShipping(order.items.map((i) => i.product)) },
       payment,
       membership,
       // Whether the payment page should offer the "pay without paying" button.
@@ -444,8 +449,12 @@ export default async function orderRoutes(fastify) {
   // The address was collected once at checkout and then frozen. A customer who
   // spotted a typo on the payment page — the one screen where they actually
   // read it back — had no way to correct it, and neither did they have one
-  // afterwards. Restricted to unpaid orders: once we are packing, a silent
-  // address change would send the parcel somewhere nobody is expecting it.
+  // afterwards. Open until the parcel is handed to the carrier — a kit paid
+  // for with a missing or wrong address has to be fixable — and never after.
+  // A change to a paid order is logged, and the employee's "giao cho vận
+  // chuyển" dialog re-reads the order when it opens, so the label is written
+  // from the address as it stands at that moment, not as the queue first
+  // showed it.
   fastify.patch('/orders/:id/shipping', { preHandler: [requireCustomer, requireCsrf] }, async (req, reply) => {
     const parsed = shippingSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -457,9 +466,14 @@ export default async function orderRoutes(fastify) {
       include: { items: { include: { product: { select: { category: true } } } } },
     });
     if (!order) return reply.code(404).send({ message: 'Không tìm thấy đơn hàng.' });
-    if (order.status !== 'pending' || order.paidAt) {
+    // Correctable until the parcel leaves: unpaid, or paid and still being
+    // packed. A kit paid for with a missing or wrong address must be fixable
+    // by the customer, not only by phoning support.
+    if (!['pending', 'processing'].includes(order.status)) {
       return reply.code(409).send({
-        message: 'Đơn đã được xử lý — vui lòng liên hệ Sprouty để đổi địa chỉ giao hàng.',
+        message: order.status === 'cancelled'
+          ? 'Đơn đã huỷ.'
+          : 'Đơn đã được gửi đi — vui lòng liên hệ Sprouty để đổi địa chỉ giao hàng.',
       });
     }
 
@@ -479,17 +493,55 @@ export default async function orderRoutes(fastify) {
       shippingAddress = shippingAddress || order.shippingAddress || NO_SHIPPING_PLACEHOLDER;
     }
 
-    const updated = await fastify.prisma.order.update({
-      where: { id: order.id },
+    // Conditional on the status, so an edit cannot land on a parcel that staff
+    // handed to the carrier a moment ago.
+    const { count } = await fastify.prisma.order.updateMany({
+      where: { id: order.id, status: { in: ['pending', 'processing'] } },
       data: {
         shippingName: parsed.data.shippingName.trim(),
         shippingPhone: parsed.data.shippingPhone.trim(),
         shippingAddress,
       },
+    });
+    if (!count) {
+      return reply.code(409).send({ message: 'Đơn vừa được gửi đi — vui lòng liên hệ Sprouty để đổi địa chỉ giao hàng.' });
+    }
+    if (order.paidAt) {
+      await auditLog(fastify.prisma, req.user.id, 'order.shipping.updated', 'Order', order.id, {
+        before: { name: order.shippingName, phone: order.shippingPhone, address: order.shippingAddress },
+        after: { name: parsed.data.shippingName.trim(), phone: parsed.data.shippingPhone.trim(), address: shippingAddress },
+      });
+    }
+    const updated = await fastify.prisma.order.findUnique({
+      where: { id: order.id },
       include: { items: { include: { product: { select: { id: true, name: true, emoji: true, images: true, category: true, membershipDays: true } } } } },
     });
 
     return { order: updated, message: 'Đã cập nhật thông tin giao hàng.' };
+  });
+
+  // POST /api/v1/orders/:id/received — "Đã nhận được hàng".
+  //
+  // The customer holding the parcel is the best witness that it arrived.
+  // Only a parcel on its way can be received, and only once: the update is
+  // conditional on the status, so a double tap or a staff confirmation at
+  // the same moment cannot record it twice.
+  fastify.post('/orders/:id/received', { preHandler: [requireCustomer, requireCsrf] }, async (req, reply) => {
+    const order = await fastify.prisma.order.findFirst({
+      where: { id: req.params.id, userId: req.user.id },
+      select: { id: true, status: true },
+    });
+    if (!order) return reply.code(404).send({ message: 'Không tìm thấy đơn hàng.' });
+    if (order.status === 'delivered') return { message: 'Đơn đã được ghi nhận là đã nhận hàng.' };
+    if (order.status !== 'shipped') {
+      return reply.code(409).send({ message: 'Đơn chưa được gửi đi nên chưa thể xác nhận đã nhận.' });
+    }
+    const { count } = await fastify.prisma.order.updateMany({
+      where: { id: order.id, status: 'shipped' },
+      data: { status: 'delivered', deliveredAt: new Date(), deliveredBy: 'customer' },
+    });
+    if (count) await auditLog(fastify.prisma, req.user.id, 'order.received', 'Order', order.id, { by: 'customer' });
+    return { message: 'Cảm ơn bạn! Đơn hàng đã hoàn tất.' };
   });
 
   // PATCH /api/v1/orders/:id/cancel — customer cancels their own order before payment

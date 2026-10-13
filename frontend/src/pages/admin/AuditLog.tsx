@@ -47,6 +47,9 @@ const DOMAIN_LABEL: Record<string, string> = {
   redeem_code: 'Mã kích hoạt',
   blog: 'Blog',
   order: 'Đơn hàng',
+  payment: 'Thanh toán',
+  membership: 'Gói VIP',
+  plant: 'Cây',
 };
 
 const DOMAIN_TONE: Record<string, string> = {
@@ -58,21 +61,59 @@ const DOMAIN_TONE: Record<string, string> = {
   redeem_code: 'orange',
   blog: 'green',
   order: 'blue',
+  payment: 'green',
+  membership: 'amber',
+  plant: 'green',
 };
 
-/** Vietnamese for the actions the codebase actually writes. */
+/**
+ * A name for every action the server writes (grep for auditLog/logAudit in
+ * backend/src). Kept complete: an action missing here shows as its raw key,
+ * which is how "user.vip.grant" sat in this list for months while the server
+ * wrote "user.grant_vip".
+ */
 const ACTION_LABEL: Record<string, string> = {
   'user.create': 'Tạo tài khoản',
   'user.update': 'Sửa tài khoản',
+  'user.profile.update': 'Sửa hồ sơ',
   'user.password.change': 'Tự đổi mật khẩu',
   'user.password.reset': 'Đặt lại mật khẩu',
-  'user.vip.grant': 'Cấp VIP',
-  'user.vip.revoke': 'Thu hồi VIP',
+  'user.grant_vip': 'Tặng VIP',
+  'user.revoke_vip': 'Thu hồi VIP tặng',
+  'membership.checkout': 'Đặt mua gói VIP',
+  'order.marked_paid': 'Ghi nhận đơn đã thanh toán',
+  'order.status.updated': 'Cập nhật trạng thái đơn',
+  'order.shipping.updated': 'Khách đổi địa chỉ giao',
+  'order.received': 'Khách xác nhận đã nhận hàng',
+  'payment.received': 'Nhận tiền chuyển khoản',
+  'payment.simulated': 'Thanh toán thử',
+  'payment.amount_mismatch': 'Tiền về lệch số tiền đơn',
+  'product.image.upload': 'Tải ảnh sản phẩm',
+  'redeem_code.create': 'Tạo mã kích hoạt',
+  'redeem_code.update': 'Sửa mã kích hoạt',
+  'redeem_code.disable': 'Ngừng phát mã',
+  'redeem_code.redeem': 'Khách dùng mã kích hoạt',
+  'redeem_code.revoke_redemption': 'Thu hồi lượt dùng mã',
+  'redeem_code.duplicate_attempt': 'Thử dùng lại mã đã hết lượt',
+  'plant.activated': 'Kích hoạt cây',
   'workshop.create': 'Tạo workshop',
   'workshop.update': 'Sửa workshop',
   'workshop.delete': 'Xoá workshop',
+  'workshop.staff.updated': 'Phân công nhân viên workshop',
+  'workshop.cover.upload': 'Tải ảnh bìa workshop',
+  'workshop.payment.received': 'Nhận tiền workshop',
   'workshop.registration.delete': 'Huỷ lượt đăng ký',
+  'workshop.registration.marked_paid': 'Ghi nhận vé workshop đã trả',
+  'workshop.registration.cash_collected': 'Nhân viên thu tiền mặt tại buổi',
+  'workshop.checkin': 'Điểm danh',
+  'workshop.checkin.undo': 'Bỏ điểm danh',
+  'blog.create': 'Tạo bài viết',
+  'blog.update': 'Sửa bài viết',
+  'blog.delete': 'Xoá bài viết',
+  'blog.cover': 'Đổi ảnh bìa bài viết',
+  'blog.image.upload': 'Tải ảnh bài viết',
   'instruction_video.create': 'Thêm video',
+  'instruction_video.update': 'Sửa video',
   'instruction_video.archive': 'Lưu trữ video',
   'instruction_video.thumbnail': 'Đổi ảnh thu nhỏ video',
   'user_image.active': 'Hiện ảnh khách',

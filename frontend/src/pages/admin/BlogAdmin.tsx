@@ -241,22 +241,11 @@ export default function BlogAdmin() {
     }
   }
 
-  async function archive(post: Post) {
-    if (!await confirmAction(`Lưu trữ bài “${post.title}”?\n\nBài sẽ không còn hiện trên trang blog, nhưng vẫn giữ lại để mở lại sau.`)) return;
-    try {
-      await API.admin.blog.status(post.id, 'archived');
-      showToast('Đã lưu trữ', 'success');
-      load();
-    } catch (err: any) {
-      showToast(err?.message || 'Không lưu trữ được', 'error');
-    }
-  }
-
   async function remove(post: Post) {
     const live = post.status === 'published' ? '\nBài đang hiển thị trên trang blog sẽ biến mất ngay.' : '';
     if (
       !await confirmAction(
-        `Xoá vĩnh viễn bài “${post.title}”?${live}\n\nẢnh bìa và ảnh trong bài cũng bị xoá. Thao tác này không hoàn tác được — nếu chỉ muốn ẩn bài, hãy chọn “Lưu trữ”.`,
+        `Xoá vĩnh viễn bài “${post.title}”?${live}\n\nẢnh bìa và ảnh trong bài cũng bị xoá. Thao tác này không hoàn tác được — nếu chỉ muốn ẩn bài, hãy đổi trạng thái sang “Lưu trữ”.`,
       )
     )
       return;
@@ -400,11 +389,6 @@ export default function BlogAdmin() {
                       <button className="act-btn act-edit" onClick={() => openEditor(post)}>
                         Sửa
                       </button>
-                      {post.status !== 'archived' && (
-                        <button className="act-btn act-archive" onClick={() => archive(post)}>
-                          Lưu trữ
-                        </button>
-                      )}
                       <button className="act-btn act-del" onClick={() => remove(post)}>
                         Xoá
                       </button>

@@ -1622,7 +1622,7 @@
 .pd-art-pane .cg-scene.is-playing .plant-viewer > .plant-viewer-hint:first-of-type { opacity: 0; pointer-events: none }
 .cg-scene.has-stage .cg-status,
 .cg-scene.has-stage .cg-gain { z-index: 3 }
-.cg-scene.has-stage .cg-fx,
+.cg-scene.has-stage .ca,
 .cg-scene.has-stage .cg-target { z-index: 2 }
 
 /* What to do next: warm, so it reads before anything else in the column. */
@@ -1683,3 +1683,85 @@
 .coach-panel .coach-input .form-input:focus { border-color: #628054; box-shadow: 0 0 0 2px #e8efdf; }
 /* Keep the brand mark readable on the filled assistant action. */
 .coach-ask > img { filter: brightness(0) invert(1); }
+
+/* ── A reading without its sensor ──────────────────────────────────────────
+   Nothing is measured until the sensor is wired, so the ring is empty and
+   offers to wire it. A sensor of a later stage says when it opens. */
+.ring.ring-off { --icon-accent: var(--parchment-2); background: transparent; border-style: dashed; color: var(--ink-4) }
+.ring.ring-off .ring-track { stroke-dasharray: 4 5 }
+.ring.ring-off .ring-read strong { color: var(--ink-4) }
+.ring.ring-off.is-locked { opacity: .7 }
+.ring-plug {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; padding: 3px 10px; border-radius: 999px;
+  border: 1.5px solid var(--primary-300); background: var(--surface); color: var(--primary-600);
+  font: inherit; font-size: .72rem; font-weight: 800; white-space: nowrap; cursor: pointer;
+}
+.ring-plug:hover { background: var(--primary-100) }
+.ring-lock { margin-top: 2px; font-size: .7rem; color: var(--ink-4); line-height: 1.3 }
+@media (max-width: 420px) {
+  .ring-plug { padding: 2px 7px; font-size: .64rem }
+  .ring-lock { font-size: .62rem }
+}
+
+/* ── Life and death ────────────────────────────────────────────────────────
+   A stage asks for tasks as well as points; a plant left at "héo nặng" too
+   long dies and is sown again; VIP's gardener keeps it from getting there. */
+.pd-h-critical { color: #fff; background: #C2273F; --icon-accent: #FFD0D7 }
+.pd-h-dead { color: #fff; background: #6B5B4E; --icon-accent: #D9CBBE }
+.pd-badge-keeper { color: #7A5410; background: #FFF4D6; --icon-accent: #E7B53A }
+.pd-badge-attempt { color: var(--ink-3); --icon-accent: #C9A46A }
+
+/* A notch on the bar where growing on its own stops. */
+.pd-progress-track { position: relative }
+.pd-progress-cap {
+  position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px;
+  background: rgba(255, 255, 255, .8); border-radius: 2px;
+}
+
+/* The stage's tasks, ticked off as they are done. */
+.pd-tasks { display: grid; gap: 6px }
+.pd-tasks-title { font-size: .74rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: rgba(255, 255, 255, .75) }
+.pd-tasks.is-done .pd-tasks-title { color: var(--accent-yellow) }
+.pd-tasks ul { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none }
+.pd-tasks li {
+  --icon-accent: rgba(255, 255, 255, .5);
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px 4px 8px; border-radius: 999px;
+  background: rgba(255, 255, 255, .14); border: 1.5px solid rgba(255, 255, 255, .22);
+  color: #fff; font-size: .8rem; font-weight: 700;
+}
+.pd-tasks li b { font-weight: 800; color: var(--accent-yellow) }
+.pd-tasks li.is-done { background: rgba(167, 230, 160, .22); border-color: rgba(187, 247, 208, .5) }
+.pd-tasks li.is-done b { color: #BBF7D0 }
+
+/* In danger, the next-step card turns red and counts down. */
+.pd-todo.is-danger { background: #FFF1F2; box-shadow: 0 0 0 3px rgba(225, 29, 72, .35), 0 8px 22px rgba(0, 0, 0, .12) }
+.pd-todo.is-danger .pd-todo-icon { background: #E11D48; animation: pd-pulse 1.6s ease-in-out infinite }
+.pd-todo.is-danger .pd-todo-kicker { color: #BE123C }
+@keyframes pd-pulse { 50% { transform: scale(1.08) } }
+.pd-todo-vip {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; padding: 0; border: none; background: none;
+  font: inherit; font-size: .8rem; font-weight: 700; color: #9A6B0E; text-align: left; cursor: pointer;
+}
+.pd-todo-vip:hover { text-decoration: underline }
+
+/* Dead: the picture greys, and a card offers the new seed. */
+.pd-art-pane.is-dead .plant-viewer-stage { filter: grayscale(.75) sepia(.25) brightness(.95) }
+.pd-dead {
+  position: absolute; inset: 10px; z-index: 4; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 10px; padding: 24px; border-radius: 22px; text-align: center;
+  background: rgba(250, 247, 240, .84); backdrop-filter: blur(2px);
+}
+.pd-dead-icon {
+  --icon-accent: #C9A46A; display: grid; place-items: center; width: 60px; height: 60px; border-radius: 50%;
+  background: #EFE6D8; color: #8B6B47;
+}
+.pd-dead strong { font-family: var(--font-display); font-size: 1.4rem; color: #5C4632 }
+.pd-dead p { max-width: 380px; margin: 0; font-size: .92rem; line-height: 1.6; color: var(--ink-3) }
+
+/* The journal marks what the gardener did. */
+.history-list li.is-auto .history-icon { --icon-accent: #E7B53A; background: #FFF4D6; color: #9A6B0E }
+.history-list li.is-auto strong { color: #7A5410 }
+
+@media (prefers-reduced-motion: reduce) {
+  .pd-todo.is-danger .pd-todo-icon { animation: none }
+}

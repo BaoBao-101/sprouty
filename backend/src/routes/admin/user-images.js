@@ -60,7 +60,8 @@ export default async function adminUserImageRoutes(fastify) {
         const pair = { userId: group.userId, productId: group.productId };
         const [cover, plant] = await Promise.all([
           fastify.prisma.userProductImage.findFirst({ where: { AND: [where, pair] }, include, orderBy: { createdAt: 'desc' } }),
-          fastify.prisma.virtualPlant.findUnique({ where: { userId_productId: pair } }),
+          // The kit's first plant names the album; one account may grow it twice.
+          fastify.prisma.virtualPlant.findFirst({ where: pair, orderBy: { activatedAt: 'asc' } }),
         ]);
         return { ...pair, count: group._count._all, latestAt: group._max.createdAt, cover: imageJourney(cover, plant) };
       }));

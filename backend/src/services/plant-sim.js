@@ -95,7 +95,7 @@ const STAGE_INDEX = new Map(STAGES.map((s, i) => [s.id, i]));
 /**
  * How fast the soil dries, relative to a mature plant in an open pot. A seed
  * and a sprout are under a covered starter dome; from `seedling` on the plant
- * is in the open and the automatic pump is available to help.
+ * is in the open.
  */
 const STAGE_DRY_FACTOR = {
   seed: 0.5,
@@ -107,6 +107,73 @@ const STAGE_DRY_FACTOR = {
   fruiting: 1,
   mature: 0.9,
 };
+
+// ── Life, death and the gardener ─────────────────────────────────────────────
+
+/**
+ * Growth that arrives on its own — a healthy plant left alone — stops halfway
+ * through a stage. The rest, and the step to the next stage, take the care
+ * the child gives: the stage's tasks done and its points earned.
+ */
+export const PASSIVE_CAP = 50;
+
+/**
+ * At or under CRITICAL_HEALTH a plant is "héo nặng"; kept there DEATH_HOURS in
+ * a row (simulated hours) it dies. Watered and then left alone, a plant gets
+ * there in about two days, so it dies after roughly six: a long weekend away
+ * is survivable, a forgotten week is not. A dead plant is replanted from seed
+ * on the same kit for free (services/plants.js), so nothing is bought twice.
+ */
+export const CRITICAL_HEALTH = 10;
+export const DEATH_HOURS = 96;
+
+/**
+ * VIP's automatic care kit ("Bộ chăm tự động"), wired on the IoT board and
+ * switched on, steps in once health falls under KEEPER_RESCUE_BELOW and never
+ * lets it under KEEPER_HEALTH_FLOOR. It never grows the plant.
+ */
+export const KEEPER_RESCUE_BELOW = 45;
+export const KEEPER_HEALTH_FLOOR = 40;
+
+/**
+ * What each stage asks of the child, on top of its points, before the plant
+ * moves on: care actions and how many times. Only actions the stage allows,
+ * with counts the cooldowns fit into the stage's length — and never "Đưa ra
+ * nắng": it only works by day, and a child who visits after school would be
+ * stuck at that stage for good.
+ */
+const STAGE_TASKS = {
+  seed: [['water', 2], ['mist', 2]],
+  sprout: [['water', 2], ['mist', 1], ['pest_check', 1]],
+  seedling: [['water', 3], ['fertilize', 1], ['prune', 1]],
+  vegetative: [['water', 3], ['fertilize', 1], ['prune', 1], ['loosen_soil', 1]],
+  budding: [['water', 2], ['pest_check', 1], ['prune', 1], ['loosen_soil', 1]],
+  flowering: [['water', 2], ['pollinate', 2], ['pest_check', 1]],
+  fruiting: [['water', 3], ['fertilize', 1], ['pest_check', 1]],
+  mature: [],
+};
+
+/** One stage's tasks for this species: a plant grown for its leaves is not pollinated. */
+export function stageTasks(stageId, product = null) {
+  const pollinates = speciesFor(product).pollinate;
+  return (STAGE_TASKS[stageId] || []).map(([action, need]) =>
+    action === 'pollinate' && !pollinates ? ['mist', need] : [action, need]);
+}
+
+/** Each task of the stage with how many times it has been done, and whether all are. */
+export function taskProgress(stageId, counts = {}, product = null) {
+  const tasks = stageTasks(stageId, product).map(([action, need]) => {
+    const meta = careMeta(action);
+    return {
+      action,
+      label: meta?.label || action,
+      icon: meta?.icon || 'leaf',
+      need,
+      done: Math.min(need, counts[action] || 0),
+    };
+  });
+  return { tasks, done: tasks.every((t) => t.done >= t.need) };
+}
 
 export function stageMeta(stageId, product = null) {
   const base = STAGES[STAGE_INDEX.get(stageId) ?? 0];
@@ -220,6 +287,13 @@ const LEGACY_NAME_TO_KEY = {
   FirePepper: 'pepper',
   SunFlower: 'sunflower',
   Tomato: 'tomato',
+  // The same products, since the catalogue went Vietnamese.
+  'Đậu Leo Xanh': 'bean',
+  'Cà Rốt Cam': 'carrot',
+  'Bắp Ngô Vàng': 'corn',
+  'Ớt Lửa': 'pepper',
+  'Hướng Dương': 'sunflower',
+  'Cà Chua Đỏ': 'tomato',
 };
 
 export function isSpeciesKey(key) {
@@ -298,9 +372,11 @@ export const DEVICES = [
     about: 'Đo lượng dinh dưỡng còn lại trong đất. Dưới 30% là cây đang đói.',
   },
   {
-    type: 'water_pump', label: 'Bơm tưới tự động', icon: 'pump', unlockStage: 'seedling',
-    kind: 'actuator', unit: '',
-    about: 'Bật tự động: tự tưới khi đất khô dưới mức tốt của giai đoạn hiện tại. Giữ cây sống và khoẻ lúc bạn đi vắng, nhưng không giúp cây lớn nhanh hơn — chỉ bạn tự chăm mới được điểm phát triển.',
+    // VIP only. The rescue described in tick(); a regular account sees it
+    // locked in the tray.
+    type: 'auto_care', label: 'Bộ chăm tự động', icon: 'shield', unlockStage: 'seed',
+    kind: 'actuator', unit: '', vipOnly: true,
+    about: 'Ống tưới nhỏ giọt, bơm châm phân và bẫy sâu dán vàng. Khi cây sắp héo, bộ này tự tưới, bón phân và bắt sâu để cây không bao giờ héo khô. Không giúp cây lớn — chỉ bạn tự chăm mới được điểm.',
   },
   {
     type: 'grow_light', label: 'Đèn trồng cây', icon: 'bulb', unlockStage: 'vegetative',
@@ -349,10 +425,16 @@ export const CARE_ACTIONS = [
         };
       }
       const need = clamp01((hi - state.moisture) / (hi - lo + 18));
+      // A deep watering soaks dry soil to the middle of the band in one go —
+      // a child back to a wilting plant has to be able to save it in one
+      // visit. On soil that is already damp it only tops up.
+      const fill = state.moisture < lo
+        ? (lo + hi) / 2 - state.moisture
+        : Math.min(34, hi + 8 - state.moisture);
       return {
         growth: 12 * need,
         deltas: {
-          moisture: +Math.max(8, Math.min(34, hi + 8 - state.moisture)),
+          moisture: +Math.max(8, fill),
           health: need > 0.35 ? +3 : 0,
         },
         note: need > 0.35 ? 'Đúng lúc cây đang khát!' : 'Đất vẫn còn ẩm, cây uống được một ít.',
@@ -576,7 +658,15 @@ export function environmentAt(plantId, at, devices = {}) {
  * anything worth telling the owner about. Callers persist the result; see
  * services/plants.js.
  */
-export function tick(plant, { now = new Date(), devices = {}, product = null } = {}) {
+export function tick(plant, {
+  now = new Date(),
+  devices = {},
+  product = null,
+  // Whether this stage's tasks are all done; without them it cannot be left.
+  tasksDone = false,
+  // When the owner's VIP runs out: until then the gardener looks after the plant.
+  keeperUntil = null,
+} = {}) {
   const lastTick = new Date(plant.lastTickAt);
   // Guard against a clock that went backwards: a negative elapsed time would
   // run the decay in reverse and hand out free moisture.
@@ -591,10 +681,29 @@ export function tick(plant, { now = new Date(), devices = {}, product = null } =
     stage: plant.stage,
     stageProgress: plant.stageProgress,
     growthPoints: plant.growthPoints,
+    wiltHours: plant.wiltHours || 0,
+    diedAt: plant.diedAt || null,
   };
   const events = [];
   const stagesCrossed = [];
-  let pumpRan = false;
+  const keeperActs = {};
+  const keeperEnd = keeperUntil ? new Date(keeperUntil).getTime() : 0;
+  // A harvested plant has finished its journey; it only waits.
+  const mortal = !plant.harvestedAt;
+  let canAdvance = tasksDone;
+
+  // A dead plant stays as it was left until it is replanted.
+  if (state.diedAt) {
+    return {
+      state: { ...state },
+      stagesCrossed,
+      events,
+      batteries: {},
+      hoursElapsed: round1(hours),
+      unlockedDevices: devicesUnlockedAt(state.stage),
+      keeperActs,
+    };
+  }
 
   // Batteries are stepped inside the slice loop below, alongside everything
   // else. Charging them from a single reading taken at `now` meant a plant
@@ -626,27 +735,18 @@ export function tick(plant, { now = new Date(), devices = {}, product = null } =
     //
     // Scaled down for the first two stages: a seed and a sprout sit in a small
     // covered starter pot, which is both true of real propagation and necessary
-    // here — the automatic pump only unlocks at `seedling`, so before then a
-    // child who visits once a day is the plant's only water source, and at the
-    // full rate they could not keep up no matter how diligent they were.
+    // here — a child who visits once a day is a seedling's only water source,
+    // and at the full rate they could not keep up no matter how diligent.
     const dryRate = (1.6 + Math.max(0, env.temperature - 24) * 0.18 + (env.light / 100) * 0.7)
       * STAGE_DRY_FACTOR[state.stage];
     state.moisture = clamp(state.moisture - dryRate * slice, 0, 100);
 
-    // An automatic pump tops the soil up, which keeps the plant alive but earns
-    // no growth — that is reserved for care the owner performs.
-    //
-    // It waters to the *stage's* comfort band, not to a fixed number. A single
-    // threshold meant a seedling, whose ideal is 55–80%, was topped up to 58%
-    // and left to fall again, so its average moisture sat below the band and it
-    // was permanently stressed however long the pump ran — the opposite of what
-    // the device promises the customer.
-    const pump = devices.water_pump;
-    const pumpFloor = Math.max(24, stage.idealMoisture[0] - 6);
-    if (pump?.unlocked && pump.autoMode && state.moisture < pumpFloor && batteries.water_pump > 5) {
-      state.moisture = clamp(stage.idealMoisture[1] - 4, state.moisture, 100);
-      pumpRan = true;
-    }
+    // Watering is the child's job. There was an automatic pump; it was taken
+    // out — on a regular account the little it did was not worth a device.
+    // What looks after a plant now is VIP's care kit, and only while it is
+    // switched on and the membership lasts.
+    const kit = devices.auto_care;
+    const keeper = sliceAt.getTime() < keeperEnd && Boolean(kit?.unlocked && kit.autoMode);
 
     // Solar charge by day, steady drain always, more of it when a device is
     // running itself. Balanced so a device left on automatic breaks even over a
@@ -673,6 +773,27 @@ export function tick(plant, { now = new Date(), devices = {}, product = null } =
       - (devices.fan?.unlocked && devices.fan.autoMode ? 0.25 : 0);
     state.pestRisk = clamp(state.pestRisk + Math.max(0, pestRate) * slice, 0, 100);
 
+    // VIP's care kit — a drip line, a nutrient doser and a sticky pest trap —
+    // rescues rather than tends: it steps in only once the plant is wilting,
+    // and brings it back just far enough. A plant left to it looks tired, not
+    // thriving, so the child still has a reason to come. It earns nothing and
+    // ticks off no task: the plant only grows for the child.
+    if (keeper && state.stage !== 'mature' && state.health < KEEPER_RESCUE_BELOW) {
+      const at = stageIndex(state.stage);
+      if (state.moisture < stage.idealMoisture[0]) {
+        state.moisture = stage.idealMoisture[0] + 2;
+        keeperActs.water = (keeperActs.water || 0) + 1;
+      }
+      if (at >= 2 && state.nutrient < 30) {
+        state.nutrient = 40;
+        keeperActs.fertilize = (keeperActs.fertilize || 0) + 1;
+      }
+      if (at >= 1 && state.pestRisk > 55) {
+        state.pestRisk = 35;
+        keeperActs.pest_check = (keeperActs.pest_check || 0) + 1;
+      }
+    }
+
     // Health follows how close conditions are to this stage's comfort band.
     const [moLo, moHi] = stage.idealMoisture;
     const [tLo, tHi] = stage.idealTemp;
@@ -691,31 +812,42 @@ export function tick(plant, { now = new Date(), devices = {}, product = null } =
     // over a school week has to be winnable back, or the child stops opening
     // the page at all.
     const comfort = stress < 0.6 ? 1.8 : -stress;
-    // Floored at 5, never zero: this is a children's product, and a plant that
-    // died while its owner was at school would be a punishment, not a lesson.
+    // Health bottoms out at 5 rather than 0, so the plant reads as wilting —
+    // and can still be saved — while it is at its worst.
     state.health = clamp(state.health + comfort * slice, 5, 100);
+    if (keeper) state.health = Math.max(state.health, KEEPER_HEALTH_FLOOR);
 
-    // Passive growth, gated on health and on there being light to grow by.
-    if (state.stage !== 'mature') {
+    // Too long at the bottom and the plant dies. A ripe plant only waits to
+    // be harvested, and has nothing left to care for, so it does not.
+    if (mortal && state.stage !== 'mature' && state.health <= CRITICAL_HEALTH) {
+      state.wiltHours += slice;
+      if (state.wiltHours >= DEATH_HOURS) {
+        state.diedAt = sliceAt;
+        break;
+      }
+    } else {
+      state.wiltHours = 0;
+    }
+
+    // Passive growth, gated on health and on there being light to grow by,
+    // and only up to PASSIVE_CAP of the stage.
+    if (state.stage !== 'mature' && state.stageProgress < PASSIVE_CAP) {
       const healthFactor = clamp01((state.health - 35) / 55);
       const lightFactor = 0.35 + (env.light / 100) * 0.65;
       const gain = stage.passivePerHour * slice * healthFactor * lightFactor;
-      state.growthPoints += gain;
-      state.stageProgress += (gain / stage.growthNeeded) * 100;
+      const pct = Math.min(PASSIVE_CAP - state.stageProgress, (gain / stage.growthNeeded) * 100);
+      state.stageProgress += pct;
+      state.growthPoints += (pct / 100) * stage.growthNeeded;
     }
 
-    // Advance as many stages as the accumulated progress covers.
-    while (state.stageProgress >= 100 && state.stage !== 'mature') {
-      const from = stageMeta(state.stage, product);
+    // Points alone do not move a plant on: the stage's tasks have to be done.
+    // One stage at most, since the next one's tasks have not been started.
+    if (canAdvance && state.stageProgress >= 100 && state.stage !== 'mature') {
       const next = STAGES[stageIndex(state.stage) + 1];
-      // Carry the surplus over rather than discarding it, so a plant read late
-      // is not quietly robbed of the growth it had already earned.
-      const carry = state.stageProgress - 100;
       state.stage = next.id;
-      state.stageProgress = next.id === 'mature'
-        ? 100
-        : clamp((carry * from.growthNeeded) / (stageMeta(next.id, product).growthNeeded || 1), 0, 99);
+      state.stageProgress = next.id === 'mature' ? 100 : 0;
       stagesCrossed.push(next.id);
+      canAdvance = false;
     }
   }
 
@@ -731,8 +863,16 @@ export function tick(plant, { now = new Date(), devices = {}, product = null } =
   if (state.pestRisk > 55) {
     events.push({ level: 'warn', text: 'Nguy cơ sâu bệnh đang cao, nên soi kỹ mặt dưới lá.' });
   }
-  if (pumpRan) {
-    events.push({ level: 'info', text: 'Bơm tự động đã tưới giúp bạn khi đất khô.' });
+  const KEEPER_WORDS = { water: 'tưới nước', fertilize: 'bón phân', pest_check: 'bắt sâu' };
+  const kept = Object.entries(keeperActs).map(([action, n]) => `${KEEPER_WORDS[action]} ${n} lần`);
+  if (kept.length) {
+    events.push({ level: 'info', text: `Bộ chăm tự động đã cứu cây: ${kept.join(', ')}.` });
+  }
+  if (state.diedAt) {
+    events.push({ level: 'warn', text: 'Cây đã héo khô vì bị bỏ quên quá lâu. Trồng lại từ hạt để bắt đầu lại nhé.' });
+  } else if (state.wiltHours > 0) {
+    const left = Math.max(1, Math.ceil((DEATH_HOURS - state.wiltHours) / timeScale()));
+    events.push({ level: 'warn', text: `Cây đang héo nặng — còn khoảng ${left} giờ để cứu cây!` });
   }
   for (const id of stagesCrossed) {
     events.push({
@@ -753,12 +893,16 @@ export function tick(plant, { now = new Date(), devices = {}, product = null } =
       stage: state.stage,
       stageProgress: Math.min(100, round1(state.stageProgress)),
       growthPoints: round1(state.growthPoints),
+      wiltHours: round1(state.wiltHours),
+      diedAt: state.diedAt,
     },
     stagesCrossed,
     events,
     batteries,
     hoursElapsed: round1(hours),
     unlockedDevices: devicesUnlockedAt(state.stage),
+    // What the gardener did, by action, for the care log.
+    keeperActs,
   };
 }
 
@@ -767,7 +911,7 @@ export function tick(plant, { now = new Date(), devices = {}, product = null } =
  * eligibility are the caller's job (they need the database); this is only the
  * arithmetic, so it stays testable on its own.
  */
-export function applyCare(actionId, state, env, product = null) {
+export function applyCare(actionId, state, env, product = null, { tasksDoneAfter = true } = {}) {
   const meta = careMeta(actionId);
   if (!meta) return null;
   const stage = stageMeta(state.stage, product);
@@ -779,27 +923,32 @@ export function applyCare(actionId, state, env, product = null) {
     next[key] = clamp(round1((next[key] ?? 0) + delta), floor, 100);
   }
 
-  const growth = clamp(result.growth || 0, 0, meta.maxGrowth || 0);
+  // Points fill the stage up to 100% and stop there: a stage whose tasks are
+  // not done holds the plant, and the surplus is not banked for later.
+  let growth = clamp(result.growth || 0, 0, meta.maxGrowth || 0);
   const stagesCrossed = [];
   if (growth > 0 && next.stage !== 'mature') {
+    const pct = Math.min(100 - next.stageProgress, (growth / stage.growthNeeded) * 100);
+    growth = Math.max(0, (pct / 100) * stage.growthNeeded);
     next.growthPoints = round1(next.growthPoints + growth);
-    next.stageProgress += (growth / stage.growthNeeded) * 100;
-    while (next.stageProgress >= 100 && next.stage !== 'mature') {
-      const from = stageMeta(next.stage, product);
-      const upcoming = STAGES[stageIndex(next.stage) + 1];
-      const carry = next.stageProgress - 100;
-      next.stage = upcoming.id;
-      next.stageProgress = upcoming.id === 'mature'
-        ? 100
-        : clamp((carry * from.growthNeeded) / (stageMeta(upcoming.id, product).growthNeeded || 1), 0, 99);
-      stagesCrossed.push(upcoming.id);
-    }
+    next.stageProgress += pct;
+  }
+  // The step to the next stage takes the stage's tasks as well as its points.
+  const full = next.stageProgress >= 100 - 1e-9;
+  if (tasksDoneAfter && full && next.stage !== 'mature') {
+    const upcoming = STAGES[stageIndex(next.stage) + 1];
+    next.stage = upcoming.id;
+    next.stageProgress = upcoming.id === 'mature' ? 100 : 0;
+    stagesCrossed.push(upcoming.id);
   }
   next.stageProgress = Math.min(100, round1(next.stageProgress));
 
   const messages = [];
   if (result.warn) messages.push({ level: 'warn', text: result.warn });
   else if (result.note) messages.push({ level: 'good', text: result.note });
+  if (full && !stagesCrossed.length && next.stage !== 'mature') {
+    messages.push({ level: 'info', text: 'Đủ điểm chặng này rồi — làm nốt nhiệm vụ để cây lên chặng mới.' });
+  }
   for (const id of stagesCrossed) {
     messages.push({
       level: 'good',
@@ -817,7 +966,7 @@ export function applyCare(actionId, state, env, product = null) {
  * and what the AI coach is told to build its advice around, so the two can
  * never contradict each other.
  */
-export function nextStepFor(state, env, availability, product = null) {
+export function nextStepFor(state, env, availability, product = null, { tasks = [], pointsFull = false } = {}) {
   const stage = stageMeta(state.stage, product);
   const ready = (id) => availability[id]?.ready;
   const candidates = [];
@@ -862,6 +1011,22 @@ export function nextStepFor(state, env, availability, product = null) {
     candidates.push({ action: 'mist', urgency: 20, why: 'Phun sương nhẹ cho lá sạch và mát.' });
   }
 
+  // The stage's unfinished tasks: what still stands between the plant and the
+  // next stage. Most pressing once the points are already there.
+  for (const task of tasks) {
+    if (task.done >= task.need || !ready(task.action)) continue;
+    const why = pointsFull
+      ? `Đủ điểm rồi! Còn nhiệm vụ "${task.label}" (${task.done}/${task.need}) là cây lên chặng mới.`
+      : `Nhiệm vụ chặng này: ${task.label.toLowerCase()} ${task.done}/${task.need}.`;
+    const urgency = pointsFull ? 90 : 50;
+    const existing = candidates.find((c) => c.action === task.action);
+    // A real need (dry soil, pests) keeps its own reason and only gets more
+    // pressing; a routine suggestion is replaced by the task it also is.
+    if (existing && existing.urgency >= 60) existing.urgency += pointsFull ? 30 : 12;
+    else if (existing) Object.assign(existing, { why, urgency: Math.max(existing.urgency, urgency) });
+    else candidates.push({ action: task.action, urgency, why });
+  }
+
   candidates.sort((a, b) => b.urgency - a.urgency);
   const best = candidates[0];
   if (!best) {
@@ -869,7 +1034,7 @@ export function nextStepFor(state, env, availability, product = null) {
       action: null,
       label: null,
       icon: 'clock',
-      why: 'Mọi việc chăm cây đều đang trong thời gian hồi — cây đang tự lớn, quay lại sau nhé.',
+      why: 'Mọi việc chăm cây đều đang trong thời gian hồi — quay lại sau nhé.',
     };
   }
   const meta = careMeta(best.action);
@@ -894,5 +1059,6 @@ export function healthLabel(health) {
   if (health >= 85) return { id: 'thriving', label: 'Xanh tốt' };
   if (health >= 65) return { id: 'healthy', label: 'Khoẻ' };
   if (health >= 40) return { id: 'stressed', label: 'Hơi mệt' };
-  return { id: 'wilting', label: 'Đang héo' };
+  if (health > CRITICAL_HEALTH) return { id: 'wilting', label: 'Đang héo' };
+  return { id: 'critical', label: 'Héo nặng' };
 }

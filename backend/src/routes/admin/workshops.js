@@ -32,6 +32,41 @@ function enrichWorkshop(w, now) {
     // route — otherwise a session in progress reads as "đã diễn ra" here
     // while it is still listed for customers.
     upcoming: (w.endTime ?? w.dateTime) > now,
+    // Between the two, the session is running: closed to bookings, not over.
+    started: w.dateTime <= now,
+    // Who runs it. Someone whose account was disabled or who stopped being
+    // an employee stays listed, marked, until an admin takes them off.
+    staff: (w.staff || []).map((s) => ({
+      id: s.user.id,
+      name: s.user.name,
+      email: s.user.email,
+      active: isOnStaff(s.user),
+    })),
+    // A published session still to come with nobody able to run it.
+    needsStaff: w.status === 'published'
+      && (w.endTime ?? w.dateTime) > now
+      && !(w.staff || []).some((s) => isOnStaff(s.user)),
+  };
+}
+
+/** Somebody who can actually be on the door: an active employee account. */
+function isOnStaff(user) {
+  return user.role === 'employee' && user.status === 'active';
+}
+
+const STAFF_INCLUDE = {
+  include: { user: { select: { id: true, name: true, email: true, role: true, status: true } } },
+  orderBy: { assignedAt: 'asc' },
+};
+
+/** The sessions that need somebody put on them. */
+function unstaffedFilter(now) {
+  return {
+    AND: [
+      whenFilter('upcoming', now),
+      { status: 'published' },
+      { staff: { none: { user: { role: 'employee', status: 'active' } } } },
+    ],
   };
 }
 
@@ -47,6 +82,7 @@ function whenFilter(when, now) {
   if (when === 'past') {
     return { OR: [{ endTime: { lt: now } }, { endTime: null, dateTime: { lt: now } }] };
   }
+  if (when === 'unstaffed') return unstaffedFilter(now);
   return null;
 }
 
@@ -98,6 +134,10 @@ const workshopSchema = z.object({
   status: z.enum(['draft', 'published', 'cancelled'], {
     errorMap: () => ({ message: 'Trạng thái phải là "draft", "published" hoặc "cancelled".' }),
   }).optional().default('published'),
+  // Who runs it. Absent on an update means "leave as it is"; [] clears it.
+  staffIds: z.array(z.string().min(1).max(64))
+    .max(10, 'Tối đa 10 người phụ trách một buổi.')
+    .optional(),
 });
 
 const updateWorkshopSchema = workshopSchema.partial();
@@ -109,6 +149,44 @@ function normalise(data) {
     if (out[key] === '') out[key] = null;
   }
   return out;
+}
+
+/**
+ * Only active employees can be put on a session: they are the ones who can
+ * open the door screen. A customer id, an admin or a disabled account is
+ * refused rather than silently dropped, so the form never saves something
+ * other than what the admin ticked.
+ */
+async function assertStaff(prisma, ids) {
+  const wanted = [...new Set(ids)];
+  if (!wanted.length) return [];
+  const people = await prisma.user.findMany({
+    where: { id: { in: wanted }, role: 'employee', status: 'active' },
+    select: { id: true, name: true },
+  });
+  if (people.length !== wanted.length) {
+    throw new AppError('Chỉ giao được cho tài khoản nhân viên đang hoạt động.', 400);
+  }
+  return people;
+}
+
+/** Makes the session's staff exactly `ids`; returns who came and went. */
+async function replaceStaff(tx, workshopId, ids) {
+  const current = await tx.workshopStaff.findMany({
+    where: { workshopId },
+    select: { userId: true, user: { select: { name: true } } },
+  });
+  const keep = new Set(ids);
+  const had = new Set(current.map((s) => s.userId));
+  const removed = current.filter((s) => !keep.has(s.userId));
+  const added = ids.filter((id) => !had.has(id));
+  if (removed.length) {
+    await tx.workshopStaff.deleteMany({ where: { workshopId, userId: { in: removed.map((s) => s.userId) } } });
+  }
+  if (added.length) {
+    await tx.workshopStaff.createMany({ data: added.map((userId) => ({ workshopId, userId })), skipDuplicates: true });
+  }
+  return { added, removed: removed.map((s) => ({ id: s.userId, name: s.user.name })) };
 }
 
 /** A session cannot end before it starts. */
@@ -154,7 +232,7 @@ export default async function adminWorkshopRoutes(fastify) {
     const when = whenFilter(req.query.when, now);
     if (when) Object.assign(where, when.OR ? { AND: [when] } : when);
 
-    const [workshops, total, upcoming, past] = await Promise.all([
+    const [workshops, total, upcoming, past, unstaffed] = await Promise.all([
       fastify.prisma.workshop.findMany({
         where,
         include: {
@@ -163,6 +241,7 @@ export default async function adminWorkshopRoutes(fastify) {
             where: { status: { not: 'cancelled' } },
             select: { childCount: true, paidAt: true, amount: true },
           },
+          staff: STAFF_INCLUDE,
         },
         // Newest first: a session next week is what staff came here for, and
         // one from two years ago is not.
@@ -173,11 +252,43 @@ export default async function adminWorkshopRoutes(fastify) {
       fastify.prisma.workshop.count({ where }),
       fastify.prisma.workshop.count({ where: whenFilter('upcoming', now) }),
       fastify.prisma.workshop.count({ where: whenFilter('past', now) }),
+      fastify.prisma.workshop.count({ where: unstaffedFilter(now) }),
     ]);
 
     return {
       ...paged(workshops.map((w) => enrichWorkshop(w, now)), total, paging, 'workshops'),
-      counts: { upcoming, past, all: upcoming + past },
+      counts: { upcoming, past, all: upcoming + past, unstaffed },
+    };
+  });
+
+  /**
+   * GET /api/v1/admin/workshops/staff-options — who can be put on a session,
+   * with what each of them already has coming, so the editor can say "đã có
+   * 3 buổi" or warn that two sessions overlap.
+   */
+  fastify.get('/workshops/staff-options', { preHandler: [requireAdmin] }, async () => {
+    const now = new Date();
+    const people = await fastify.prisma.user.findMany({
+      where: { role: 'employee', status: 'active' },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        workshopShifts: {
+          where: { workshop: { status: 'published', ...whenFilter('upcoming', now) } },
+          select: { workshop: { select: { id: true, title: true, dateTime: true, endTime: true } } },
+          orderBy: { workshop: { dateTime: 'asc' } },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+    return {
+      staff: people.map((p) => ({
+        id: p.id,
+        name: p.name,
+        email: p.email,
+        shifts: p.workshopShifts.map((s) => s.workshop),
+      })),
     };
   });
 
@@ -191,6 +302,7 @@ export default async function adminWorkshopRoutes(fastify) {
             where: { status: { not: 'cancelled' } },
             select: { childCount: true, paidAt: true, amount: true },
           },
+          staff: STAFF_INCLUDE,
         },
       }),
 
@@ -263,11 +375,17 @@ export default async function adminWorkshopRoutes(fastify) {
 
   // POST /api/v1/admin/workshops
   fastify.post('/workshops', { preHandler: writeAuth }, async (req, reply) => {
-    const data = normalise(parseOrThrow(workshopSchema, req.body));
+    const { staffIds = [], ...data } = normalise(parseOrThrow(workshopSchema, req.body));
     assertTimeOrder(data);
-    const workshop = await fastify.prisma.workshop.create({ data });
+    const people = await assertStaff(fastify.prisma, staffIds);
+    const workshop = await fastify.prisma.$transaction(async (tx) => {
+      const created = await tx.workshop.create({ data });
+      if (people.length) await replaceStaff(tx, created.id, people.map((p) => p.id));
+      return created;
+    });
     await auditLog(fastify.prisma, req.user.id, 'workshop.create', 'Workshop', workshop.id, {
       title: workshop.title,
+      staff: people.map((p) => p.name),
     });
     reply.code(201);
     return { workshop };
@@ -281,8 +399,9 @@ export default async function adminWorkshopRoutes(fastify) {
     });
     if (!existing) return reply.code(404).send({ message: 'Không tìm thấy workshop.' });
 
-    const data = normalise(parseOrThrow(updateWorkshopSchema, req.body));
+    const { staffIds, ...data } = normalise(parseOrThrow(updateWorkshopSchema, req.body));
     assertTimeOrder({ ...existing, ...data });
+    const people = staffIds === undefined ? null : await assertStaff(fastify.prisma, staffIds);
 
     // Capacity is what the public registration endpoint checks against, so
     // lowering it below the seats already booked would oversell the room.
@@ -296,10 +415,25 @@ export default async function adminWorkshopRoutes(fastify) {
       }
     }
 
-    const workshop = await fastify.prisma.workshop.update({ where: { id: existing.id }, data });
-    await auditLog(fastify.prisma, req.user.id, 'workshop.update', 'Workshop', workshop.id, {
-      changed: Object.keys(data),
-    });
+    const { workshop, change } = await fastify.prisma.$transaction(async (tx) => ({
+      workshop: await tx.workshop.update({ where: { id: existing.id }, data }),
+      change: people ? await replaceStaff(tx, existing.id, people.map((p) => p.id)) : null,
+    }));
+    if (Object.keys(data).length) {
+      await auditLog(fastify.prisma, req.user.id, 'workshop.update', 'Workshop', workshop.id, {
+        changed: Object.keys(data),
+      });
+    }
+    // Its own entry, with names: "who was taken off the 21/11 session" is a
+    // question asked of the log, and an id list cannot answer it.
+    if (change && (change.added.length || change.removed.length)) {
+      const named = new Map(people.map((p) => [p.id, p.name]));
+      await auditLog(fastify.prisma, req.user.id, 'workshop.staff.updated', 'Workshop', workshop.id, {
+        title: workshop.title,
+        added: change.added.map((id) => named.get(id)),
+        removed: change.removed.map((p) => p.name),
+      });
+    }
     return { workshop };
   });
 

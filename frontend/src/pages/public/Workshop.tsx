@@ -86,8 +86,9 @@ export default function Workshop() {
 
   useEffect(load, [load]);
 
-  // Only sessions that have not happened yet can be booked.
-  const upcoming = workshops.filter((w) => w.upcoming);
+  // Only sessions that have not started yet can be booked. `bookable` is
+  // absent from an older server, where `upcoming` was the whole answer.
+  const upcoming = workshops.filter((w) => w.upcoming && w.bookable !== false);
   const next = upcoming.find((w) => !w.isFull) || upcoming[0] || null;
   const prices = upcoming.map((w) => w.price).filter((p) => p > 0);
   const fromPrice = prices.length ? Math.min(...prices) : null;

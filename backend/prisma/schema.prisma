@@ -105,6 +105,7 @@ model User {
   sessions     Session[]
   workshopRegs WorkshopRegistration[]
   workshopCheckIns WorkshopRegistration[] @relation("WorkshopCheckIns")
+  workshopShifts   WorkshopStaff[]        @relation("WorkshopShifts")
   actorLogs    AuditLog[] @relation("ActorLogs")
   assets       Asset[] @relation("AssetOwner")
   createdVideos InstructionVideo[] @relation("InstructionVideoCreator")
@@ -186,6 +187,15 @@ model Order {
   note               String?
   paidAt             DateTime?
   sepayTransactionId Int?        @unique
+  // The parcel, for an order with something to post (PHYSICAL_CATEGORIES):
+  // when staff handed it over and to whom, and when it arrived and who said
+  // so — 'customer' (pressed "Đã nhận được hàng"), 'staff' (the carrier or
+  // the customer told them) or 'auto' (nobody did within a week of sending).
+  shippedAt          DateTime?
+  carrier            String?
+  trackingCode       String?
+  deliveredAt        DateTime?
+  deliveredBy        String?
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
 
@@ -244,8 +254,27 @@ model Workshop {
   updatedAt   DateTime       @updatedAt
 
   registrations WorkshopRegistration[]
+  staff         WorkshopStaff[]
 
   @@index([status, dateTime])
+}
+
+/// Who runs a session, set by an admin.
+///
+/// It is also what an employee may see: a session reaches their Workshop
+/// screen — its details, its register, its tickets — only once an admin has
+/// put them on it. A session nobody is on is flagged to the admin, who covers
+/// a sick colleague by putting someone else on it.
+model WorkshopStaff {
+  workshopId String
+  userId     String
+  assignedAt DateTime @default(now())
+
+  workshop Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  user     User     @relation("WorkshopShifts", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([workshopId, userId])
+  @@index([userId])
 }
 
 model WorkshopRegistration {
@@ -399,15 +428,21 @@ model UserProductImage {
   // and for a photo saved against a product the owner never activated.
   stage     PlantStage?
   status    UserImageStatus @default(active)
+  // The plant whose album this is. Each plant keeps its own album now that one
+  // account can grow the same kit twice. Null for a photo saved before the kit
+  // was activated (there was no plant to file it under).
+  plantId   String?
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  plant VirtualPlant? @relation(fields: [plantId], references: [id], onDelete: SetNull)
 
   @@index([userId, productId, status])
   @@index([productId, status])
+  @@index([plantId, status])
 }
 
 model RedeemCode {
@@ -528,10 +563,14 @@ enum PlantDeviceType {
   thermo_sensor
   light_sensor
   nutrient_sensor
+  // Retired: the automatic pump was taken out (migration plant_life_cycle).
+  // Kept in the enum so the type does not have to be rebuilt.
   water_pump
   grow_light
   fan
   camera
+  // VIP's automatic care kit: drip line, nutrient doser, sticky pest trap.
+  auto_care
 }
 
 model VirtualPlant {
@@ -563,6 +602,20 @@ model VirtualPlant {
   lastTickAt    DateTime @default(now())
   harvestedAt   DateTime?
   activatedAt   DateTime @default(now())
+
+  // Life and death. A plant kept at "héo nặng" (health <= 10) for long enough
+  // dies; `wiltHours` is how long it has been there in a row, in simulated
+  // hours, and `diedAt` when it ran out. A dead plant is replanted from seed
+  // on the same kit: `plantedAt` is when the current planting began (the
+  // stage tasks count care from then) and `attempt` which planting it is.
+  wiltHours     Float     @default(0)
+  diedAt        DateTime?
+  plantedAt     DateTime  @default(now())
+  attempt       Int       @default(1)
+  // The activation that grew it: one plant per code redeemed, so buying the
+  // same kit again grows a second plant rather than pointing at the first.
+  // Null for a plant made some other way (the demo seed).
+  redemptionId  String?   @unique
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -572,11 +625,11 @@ model VirtualPlant {
   careLogs PlantCareLog[]
   readings PlantSensorReading[]
   coachMessages PlantCoachMessage[]
+  images  UserProductImage[]
 
-  // One plant per kit per account: the activation code is single-use and
-  // per-product, so a second plant for the same kit could only come from a
-  // double-submit.
-  @@unique([userId, productId])
+  // Several plants of the same kit are allowed — one per purchase. A double
+  // submit of one code is caught by redemptionId being unique instead.
+  @@index([userId, productId])
   @@index([userId])
 }
 
@@ -608,6 +661,9 @@ model PlantCareLog {
   // action actually did instead of just saying "done".
   growth   Float           @default(0)
   detail   Json?
+  // Done by VIP's gardener rather than the child: no growth, no stage task,
+  // and no cooldown on the child's own tools.
+  auto     Boolean         @default(false)
   createdAt DateTime       @default(now())
 
   plant VirtualPlant @relation(fields: [plantId], references: [id], onDelete: Cascade)

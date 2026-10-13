@@ -134,8 +134,25 @@ export async function redeemCode(prisma, userId, code, { ip = null, nickname = n
       select: { category: true },
     });
     if (product?.category === 'kit') {
+      // Each redemption grows its own plant. A code this account already
+      // spent hands back the plant it grew — or, if that plant never got
+      // made (the request died between the two steps), grows it now.
+      let redemptionId = result.redemption?.id || null;
+      if (result.alreadyRedeemed) {
+        const mine = await prisma.redeemCodeRedemption.findMany({
+          where: { redeemCodeId: result.redeemCode.id, userId },
+          select: { id: true },
+          orderBy: { redeemedAt: 'asc' },
+        });
+        const grown = await prisma.virtualPlant.findMany({
+          where: { redemptionId: { in: mine.map((r) => r.id) } },
+          select: { redemptionId: true },
+        });
+        const done = new Set(grown.map((p) => p.redemptionId));
+        redemptionId = mine.find((r) => !done.has(r.id))?.id || mine[mine.length - 1]?.id || null;
+      }
       const planted = await createPlantForProduct(
-        prisma, userId, result.redeemCode.productId, { nickname },
+        prisma, userId, result.redeemCode.productId, { nickname, redemptionId },
       );
       plant = planted.plant;
       plantCreated = planted.created;

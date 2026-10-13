@@ -267,7 +267,7 @@ export function ProfilePanel() {
                       ? `Còn ${daysLeft} ngày · hết hạn ${formatVipDate(user.vipUntil)}`
                       : user.vipExpired
                         ? `Hết hạn ngày ${formatVipDate(user.vipUntil)}`
-                        : '10 lá kỷ niệm mỗi kit · 5 lượt hỏi AI mỗi ngày'}
+                        : '5 lá kỷ niệm mỗi chặng · 5 lượt hỏi AI mỗi ngày'}
                   </span>
                 </div>
                 <Link className={`btn ${user.isVip ? 'btn-outline' : 'btn-primary'} btn-sm`} to="/vip">
@@ -276,7 +276,8 @@ export function ProfilePanel() {
               </div>
               <ul className="prf-perks">
                 {[
-                  ['Lá kỷ niệm mỗi kit', user.isVip ? 'Không giới hạn' : '10 lá'],
+                  ['Bộ chăm tự động', user.isVip ? 'Mở trong Trạm IoT' : 'Không có'],
+                  ['Lá kỷ niệm', user.isVip ? 'Không giới hạn' : '5 lá mỗi chặng'],
                   ['Hỏi Plant Buddy AI', user.isVip ? 'Không giới hạn' : '5 lượt / ngày'],
                   ['Khung cảnh & chậu 3D', user.isVip ? '4 cảnh · 4 mẫu chậu' : 'Cảnh và chậu cơ bản'],
                 ].map(([label, value]) => (

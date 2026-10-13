@@ -2,6 +2,8 @@
   id: number;
   name: string;
   price: number;
+  speciesKey?: string | null;
+  category?: string | null;
   totalQty?: number;
   orderCount?: number;
   totalRevenue?: number;

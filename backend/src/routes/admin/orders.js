@@ -1,19 +1,25 @@
-import { allowedOrderTransitions } from '../../services/order-policy.js';
+import { allowedOrderTransitions, orderNeedsShipping } from '../../services/order-policy.js';
 import { z } from 'zod';
 import { AppError } from '../../utils/errors.js';
 import { requireEmployee, requireStaff, requireAdmin, requireCsrf } from '../../middleware/rbac.js';
 import { auditLog } from '../../services/audit.js';
 import { syncMembership } from '../../services/membership.js';
 import { syncWorkshopRewards } from '../../services/rewards.js';
+import { settleArrived } from '../../services/order-shipping.js';
+import { noHtml } from '../../utils/validation.js';
 
 const updateStatusSchema = z.object({
   status: z.enum(['pending', 'processing', 'shipped', 'delivered', 'cancelled']),
+  // With "shipped": who carries it and the code the customer tracks it by.
+  carrier: noHtml('Đơn vị vận chuyển').and(z.string().trim().max(60)).optional().nullable(),
+  trackingCode: noHtml('Mã vận đơn').and(z.string().trim().max(60)).optional().nullable(),
 });
 
 export default async function adminOrderRoutes(fastify) {
   // GET /api/v1/admin/orders
   fastify.get('/orders', { preHandler: [requireStaff] }, async (req) => {
-    const { status, search, payment, page = '1', limit = '10' } = req.query;
+    await settleArrived(fastify.prisma);
+    const { status, search, payment, sort, page = '1', limit = '10' } = req.query;
     const pageNum = Math.max(1, parseInt(page, 10));
     const pageSize = Math.min(100, Math.max(1, parseInt(limit, 10)));
 
@@ -41,22 +47,32 @@ export default async function adminOrderRoutes(fastify) {
         include: {
           user: { select: { id: true, email: true, name: true } },
           items: {
-            include: { product: { select: { id: true, name: true } } },
+            include: { product: { select: { id: true, name: true, category: true, images: true } } },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        // 'oldest' for a work queue: first come, first sent.
+        orderBy: { createdAt: sort === 'oldest' ? 'asc' : 'desc' },
         skip: (pageNum - 1) * pageSize,
         take: pageSize,
       }),
       fastify.prisma.order.count({ where }),
     ]);
 
-    return { orders, total, page: pageNum, limit: pageSize, pages: Math.ceil(total / pageSize) };
+    // What staff may do next, decided by the same policy the PATCH route
+    // enforces, so the page never offers a step the server would refuse.
+    const withActions = orders.map((order) => ({
+      ...order,
+      needsShipping: orderNeedsShipping(order),
+      nextStatuses: allowedOrderTransitions(order),
+    }));
+
+    return { orders: withActions, total, page: pageNum, limit: pageSize, pages: Math.ceil(total / pageSize) };
   });
 
   // GET /api/v1/admin/orders/counts — how many orders sit in each status, so the
   // filter tabs can show the size of each queue without one request per tab.
   fastify.get('/orders/counts', { preHandler: [requireStaff] }, async () => {
+    await settleArrived(fastify.prisma);
     const rows = await fastify.prisma.order.groupBy({
       by: ['status'],
       _count: { _all: true },
@@ -67,7 +83,15 @@ export default async function adminOrderRoutes(fastify) {
       counts[row.status] = row._count._all;
       total += row._count._all;
     }
-    return { counts, total };
+    // The two queues the page leads with besides the statuses: money not yet
+    // in, and today's orders (Vietnam's day, not the server's).
+    const offsetMs = 7 * 3_600_000;
+    const dayStart = new Date(Math.floor((Date.now() + offsetMs) / 86_400_000) * 86_400_000 - offsetMs);
+    const [unpaid, today] = await Promise.all([
+      fastify.prisma.order.count({ where: { paidAt: null, status: { not: 'cancelled' } } }),
+      fastify.prisma.order.count({ where: { createdAt: { gte: dayStart } } }),
+    ]);
+    return { counts, total, unpaid, today };
   });
 
   // PATCH /api/v1/admin/orders/:id/status
@@ -77,7 +101,10 @@ export default async function adminOrderRoutes(fastify) {
       throw new AppError(parsed.error.errors[0]?.message || 'Trạng thái không hợp lệ.', 400);
     }
 
-    const order = await fastify.prisma.order.findUnique({ where: { id: req.params.id } });
+    const order = await fastify.prisma.order.findUnique({
+      where: { id: req.params.id },
+      include: { items: { include: { product: { select: { category: true } } } } },
+    });
     if (!order) return reply.code(404).send({ message: 'Không tìm thấy đơn hàng.' });
 
     if (!allowedOrderTransitions(order).includes(parsed.data.status)) {
@@ -85,11 +112,22 @@ export default async function adminOrderRoutes(fastify) {
     }
     const changed = await fastify.prisma.order.updateMany({
       where: { id: order.id, status: order.status, paidAt: order.paidAt },
-      data: { status: parsed.data.status },
+      data: {
+        status: parsed.data.status,
+        // The parcel's journey, recorded with the step that makes it true.
+        ...(parsed.data.status === 'shipped'
+          ? { shippedAt: new Date(), carrier: parsed.data.carrier || null, trackingCode: parsed.data.trackingCode || null }
+          : {}),
+        ...(parsed.data.status === 'delivered' ? { deliveredAt: new Date(), deliveredBy: 'staff' } : {}),
+      },
     });
     if (!changed.count) throw new AppError('Đơn hàng vừa thay đổi. Vui lòng tải lại.', 409);
     const updated = await fastify.prisma.order.findUnique({ where: { id: order.id } });
-    await auditLog(fastify.prisma, req.user.id, 'order.status.updated', 'Order', order.id, { before: order.status, after: parsed.data.status });
+    await auditLog(fastify.prisma, req.user.id, 'order.status.updated', 'Order', order.id, {
+      before: order.status,
+      after: parsed.data.status,
+      ...(parsed.data.status === 'shipped' ? { carrier: parsed.data.carrier || null, trackingCode: parsed.data.trackingCode || null } : {}),
+    });
 
     // Cancelling a paid VIP order takes its days back off the account, and
     // un-cancelling one puts them back.

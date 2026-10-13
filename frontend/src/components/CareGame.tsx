@@ -3,6 +3,7 @@ import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
 import { PlantArt, type PlantStageId } from '@/components/PlantArt';
 import type { FruitShape, PlantForm } from '@/components/PlantForms';
 import type { CareActionId } from '@/types/plant';
+import { CareActor } from './CareActors';
 import './CareGame.css';
 
 /**
@@ -11,8 +12,8 @@ import './CareGame.css';
  * It was a grid of buttons: tap "Tưới nước", get a toast. Now the tools hang
  * on a belt under the plant. The child drags one onto the plant and holds it
  * there while a ring fills — about a second, the length of a real pour — and
- * then sees it happen: water falls, mist drifts, granules scatter, the sun
- * comes out, the magnifier sweeps for pests. Letting go early does nothing
+ * then sees the tool do the job (CareActors): the can tips and pours, the
+ * scissors snip, the trowel digs, a bee loops round the flowers. Letting go early does nothing
  * but say "giữ lâu hơn chút". Tapping a tool still works, for a keyboard or
  * a child who has not found the drag yet.
  *
@@ -29,24 +30,26 @@ export interface CareTool {
   /** "2 giờ 10 phút" while cooling down. */
   wait: string;
   recommended: boolean;
+  /** When the tool is one of the stage's tasks: how many times done of how many. */
+  task?: { done: number; need: number };
 }
 
 /** How long a tool has to stay on the plant. */
 const HOLD_MS = 900;
-/** How long the effect plays before the result comes back. */
-const EFFECT_MS = 1400;
+/** How long the tool takes over the job; the animations in CareActors.css match it. */
+const EFFECT_MS = 2200;
 
-/** What each tool does to the scene. */
-const EFFECT: Record<string, { kind: string; count: number; verb: string }> = {
-  water: { kind: 'drop', count: 18, verb: 'Đang tưới…' },
-  mist: { kind: 'mist', count: 22, verb: 'Đang phun sương…' },
-  fertilize: { kind: 'grain', count: 20, verb: 'Đang bón phân…' },
-  sunlight: { kind: 'ray', count: 10, verb: 'Đang đón nắng…' },
-  pest_check: { kind: 'sweep', count: 1, verb: 'Đang soi lá…' },
-  prune: { kind: 'snip', count: 6, verb: 'Đang tỉa lá…' },
-  loosen_soil: { kind: 'dust', count: 14, verb: 'Đang xới đất…' },
-  pollinate: { kind: 'pollen', count: 16, verb: 'Đang thụ phấn…' },
-  harvest: { kind: 'star', count: 14, verb: 'Đang thu hoạch…' },
+/** What the status line says while each tool works. */
+const VERB: Record<string, string> = {
+  water: 'Đang tưới…',
+  mist: 'Đang phun sương…',
+  fertilize: 'Đang bón phân…',
+  sunlight: 'Đang đón nắng…',
+  pest_check: 'Đang soi lá…',
+  prune: 'Đang tỉa lá…',
+  loosen_soil: 'Đang xới đất…',
+  pollinate: 'Đang thụ phấn…',
+  harvest: 'Đang thu hoạch…',
 };
 
 type Drag = { action: CareActionId; x: number; y: number; startX: number; startY: number; moved: boolean };
@@ -187,7 +190,7 @@ export function CareGame({
 
   const dragTool = drag ? tools.find((t) => t.action === drag.action) : null;
   const over = Boolean(drag?.moved && overZone(drag.x, drag.y));
-  const effect = playing ? EFFECT[playing.action] ?? EFFECT.water : null;
+  const verb = playing ? VERB[playing.action] ?? 'Đang chăm cây…' : null;
   const playingTool = playing ? tools.find((t) => t.action === playing.action) : null;
   const rec = tools.find((t) => t.recommended && t.state === 'ready');
   const lockedCount = tools.filter((t) => t.state === 'locked').length;
@@ -238,26 +241,13 @@ export function CareGame({
           </div>
         )}
 
-        {/* The effect: particles over the plant while the server answers. */}
-        {effect && playing && !reduced && (
-          <div className={`cg-fx fx-${effect.kind}`} key={playing.key} aria-hidden="true">
-            {Array.from({ length: effect.count }, (_, i) => (
-              <i
-                key={i}
-                style={{
-                  left: `${30 + ((i * 37) % 40)}%`,
-                  animationDelay: `${(i % 8) * 0.09}s`,
-                  ['--dx' as string]: `${((i * 53) % 60) - 30}px`,
-                }}
-              />
-            ))}
-          </div>
-        )}
+        {/* The tool doing the job over the plant while the server answers. */}
+        {playing && !reduced && <CareActor key={playing.key} action={playing.action} fruitColor={plant.fruitColor} />}
 
         {playing && (
           <div className="cg-status" role="status">
             {playingTool && <SproutyIcon name={playingTool.icon} size={16} />}
-            {effect?.verb}
+            {verb}
           </div>
         )}
         {gain && (
@@ -315,7 +305,7 @@ export function CareGame({
                 }
               }}
               title={t.state === 'cooldown' ? `${t.label}: còn ${t.wait}` : t.hint}
-              aria-label={`${t.label}${t.state === 'ready' ? '' : t.state === 'locked' ? ' (chưa tới lúc)' : ` (còn ${t.wait})`}`}
+              aria-label={`${t.label}${t.state === 'ready' ? '' : t.state === 'locked' ? ' (chưa tới lúc)' : ` (còn ${t.wait})`}${t.task ? `, nhiệm vụ ${t.task.done}/${t.task.need}` : ''}`}
             >
               {t.recommended && t.state === 'ready' && <span className="cg-flag">Nên làm</span>}
               <span className="cg-tool-icon">
@@ -325,6 +315,19 @@ export function CareGame({
                 {t.state === 'busy' && <span className="cg-tool-wait">…</span>}
               </span>
               <span className="cg-tool-label">{t.label}</span>
+            {/* A stage task: one dot per time it is needed, filled as it is
+                done. A "1/2" in the corner was hidden under the "Nên làm" flag
+                and clipped by the tool's edge. */}
+            {t.task && (
+              <span
+                className={`cg-tool-dots${t.task.done >= t.task.need ? ' is-done' : ''}`}
+                title={`Nhiệm vụ chặng này: ${t.task.done}/${t.task.need}`}
+              >
+                {Array.from({ length: t.task.need }, (_, i) => (
+                  <i key={i} className={i < t.task!.done ? 'is-on' : ''} />
+                ))}
+              </span>
+            )}
             </button>
           ))}
         </div>

@@ -1,1187 +1,240 @@
-/* Page styles for Payment. Lifted out of the <style> block that used to sit
-   in the <head> of payment.html. */
-
-/* Order on the left, everything about paying on the right. */
-.pay-layout { display:grid; grid-template-columns:1fr 380px; gap:28px; padding:36px 0 72px; align-items:start }
-.pay-card { background:var(--surface); border:1.5px solid var(--parchment-2); border-radius:var(--r-2xl); padding:28px; box-shadow:var(--sh-md) }
-.pay-summary { background:var(--surface); border:1.5px solid var(--parchment-2); border-radius:var(--r-2xl); padding:24px; position:sticky; top:108px; box-shadow:var(--sh-md) }
-.sum-row { display:flex; justify-content:space-between; align-items:center; font-size:.9rem; color:var(--ink-3); margin-bottom:10px; gap:12px }
-.sum-row strong { color:var(--ink-2); font-family:var(--font-h); text-align:right; word-break:break-all }
-.sum-divider { height:1.5px; background:var(--parchment-2); margin:14px 0 }
-.sum-total { display:flex; justify-content:space-between; align-items:center; font-family:var(--font-h); font-weight:800 }
-.sum-total-lbl { font-size:1rem; color:var(--ink) }
-.sum-total-val { font-size:1.3rem; color:var(--orange) }
-.pay-row { display:flex; justify-content:space-between; gap:8px; align-items:center; padding:8px 0; border-bottom:1px solid var(--parchment) }
-.pay-row:last-child { border-bottom:none }
-.pay-row .lbl { color:var(--ink-4); font-size:.86rem }
-.pay-row .val { font-family:var(--font-h); font-weight:700; color:var(--ink); display:flex; align-items:center; gap:8px; word-break:break-all; text-align:right }
-.pay-status { margin-top:18px; padding:11px 15px; border-radius:var(--r-md); font-size:.86rem; display:flex; align-items:center; gap:10px; justify-content:center; font-family:var(--font-h); font-weight:600 }
-.pay-status.pending { background:#FEF3C7; color:#92400E; border:1px solid #FDE68A }
-.pay-status.paid    { background:#DCFCE7; color:#166534; border:1px solid #BBF7D0 }
-.pay-status.warn    { background:#FEE2E2; color:#991B1B; border:1px solid #FECACA }
-.spinner { display:inline-block; width:14px; height:14px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin .9s linear infinite }
-@keyframes spin { to { transform:rotate(360deg) } }
-.copy-btn { background:var(--parchment); border:1.5px solid var(--parchment-2); border-radius:8px; padding:2px 9px; font-size:.74rem; cursor:pointer; color:var(--ink-2); transition:all .15s }
-.copy-btn:hover { background:var(--orange); color:#fff; border-color:var(--orange) }
-.pay-warn { margin-top:14px; padding:10px 14px; background:#FEF3C7; border:1px solid #FDE68A; border-radius:var(--r-md); color:#92400E; font-size:.82rem; font-weight:600 }
-.pay-actions { display:flex; gap:12px; margin-top:22px; flex-wrap:wrap }
-@media(max-width:1024px) { .pay-layout { grid-template-columns:1fr } .pay-summary { position:static } }
-
-/* ── Added during the React rewrite ─────────────────────────── */
-.pay-hero { background: linear-gradient(135deg,#1A1209 0%,#3D2B1F 55%,var(--terracotta) 100%); padding: 40px 0 32px }
-.pay-hero h1 { color: #fff }
-.pay-hero p { color: rgba(255,255,255,.7); margin-top: 6px; font-size: .95rem }
-.pay-hero-crumb, .pay-hero-crumb a { color: rgba(255,255,255,.45) }
-.pay-hero-crumb { margin-bottom: 12px }
-
-/* The two numbers a customer must get right, given the weight they deserve.
-   They used to be small rows under a QR that filled the page. */
-.pay-figure + .pay-figure { margin-top:12px }
-.pay-figure {
-  padding:16px 18px; background:var(--cream-2);
-  border:1.5px solid var(--parchment-2); border-radius:var(--r-lg);
-}
-.pay-figure-label {
-  display:block; font-size:.74rem; font-weight:800; letter-spacing:.06em;
-  text-transform:uppercase; color:var(--ink-4); margin-bottom:6px;
-}
-.pay-figure-amount {
-  font-family:var(--font-display); font-size:2.2rem; font-weight:800;
-  color:var(--orange); line-height:1.1; display:block;
-}
-.pay-figure-memo { display:flex; align-items:center; gap:10px; flex-wrap:wrap }
-.pay-figure-memo code {
-  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-  font-size:1.15rem; font-weight:700; letter-spacing:.09em;
-  color:var(--orange); background:var(--orange-pale);
-  padding:7px 14px; border-radius:var(--r-md); word-break:break-all;
-}
-.pay-figure-hint { display:block; margin-top:8px; font-size:.8rem; color:var(--ink-3); line-height:1.6 }
-
-.sum-qr { text-align:center; margin:16px 0 18px }
-.sum-qr img { width:100%; max-width:210px; border-radius:var(--r-md); display:block; margin:0 auto }
-.sum-qr span { display:block; margin-top:8px; font-size:.76rem; color:var(--ink-4); line-height:1.5 }
-
-/* ── Left column: what the order contains ─────────────────────
-   The page used to ask for money without ever saying what for. */
-.ord-head {
-  display:flex; gap:22px; flex-wrap:wrap; padding:14px 0 16px;
-  border-bottom:1px solid var(--parchment); font-size:.85rem; color:var(--ink-4);
-}
-.ord-head strong { color:var(--ink); font-family:var(--font-h); margin-left:5px }
-
-.ord-items { padding:6px 0 }
-.ord-item { display:flex; align-items:center; gap:14px; padding:13px 0; border-bottom:1px solid var(--cream-2) }
-.ord-item:last-child { border-bottom:none }
-.ord-item-emoji {
-  font-size:1.5rem; flex-shrink:0; width:46px; height:46px;
-  display:flex; align-items:center; justify-content:center;
-  background:var(--cream-2); border-radius:var(--r-md);
-}
-.ord-item-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px }
-.ord-item-name { font-size:1rem; font-weight:600; color:var(--ink); line-height:1.35 }
-.ord-item-sub { font-size:.83rem; color:var(--ink-4) }
-.ord-item-line {
-  flex-shrink:0; font-family:var(--font-h); font-weight:700;
-  font-size:1rem; color:var(--ink); white-space:nowrap;
-}
-
-.ord-total {
-  display:flex; justify-content:space-between; align-items:center;
-  padding-top:16px; margin-top:6px; border-top:2px solid var(--parchment);
-}
-.ord-total span { font-family:var(--font-h); font-weight:700; color:var(--ink-2) }
-.ord-total strong { font-family:var(--font-display); font-size:1.5rem; color:var(--orange) }
-
-.ord-ship { margin-top:22px; padding:14px 16px; background:var(--cream-2); border-radius:var(--r-lg); font-size:.88rem; color:var(--ink-2) }
-.ord-ship.editing { background:var(--surface); border:1.5px solid var(--orange) }
-.ord-ship-top { display:flex; align-items:center; justify-content:space-between; gap:10px }
-.ord-ship-label {
-  display:block; font-size:.7rem; font-weight:800; letter-spacing:.06em;
-  text-transform:uppercase; color:var(--ink-4); margin-bottom:5px;
-}
-/* A labelled line per value — the block used to run name and phone together
-   and leave the address grey and unlabelled below them. */
-.ord-ship-list { margin:10px 0 0; display:grid; gap:9px }
-.ord-ship-list > div { display:flex; gap:14px; align-items:flex-start }
-.ord-ship-list dt {
-  flex:0 0 118px; font-size:.79rem; color:var(--ink-4); font-weight:600; line-height:1.5;
-}
-.ord-ship-list dd {
-  margin:0; flex:1; min-width:0; font-size:.9rem; color:var(--ink);
-  font-weight:600; line-height:1.5; word-break:break-word;
-}
-@media(max-width:520px) {
-  .ord-ship-list > div { flex-direction:column; gap:1px }
-  .ord-ship-list dt { flex:none }
-}
-.ord-ship-edit {
-  border:none; background:none; cursor:pointer; padding:0;
-  color:var(--orange); font-size:.8rem; font-weight:700; margin-bottom:5px;
-}
-.ord-ship-edit:hover { text-decoration:underline }
-.ord-ship-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px }
-.ord-ship-actions { display:flex; gap:9px; justify-content:flex-end; margin-top:14px }
-@media(max-width:520px) { .ord-ship-grid { grid-template-columns:1fr } }
-
-@media(max-width:600px) {
-  .pay-figure-amount { font-size:1.8rem }
-  .ord-item-emoji { width:38px; height:38px; font-size:1.2rem }
-}
-
-
-/* ── Thanh toán thành công ───────────────────────────────────────────────────
-   The activation code is the product now — it is what turns a payment into a
-   plant — so it gets the weight on this screen rather than sitting under the
-   receipt as a footnote. */
-
-.pay-result { text-align: center }
-
-.pay-result-badge {
-  --icon-accent: var(--primary-500);
-  width: 84px;
-  height: 84px;
-  margin: 0 auto 14px;
-  display: grid;
-  place-items: center;
-  border-radius: 30px;
-  background: var(--sage-lt);
-  border: 3px solid var(--primary-300);
-  color: var(--primary-600);
-  transform: rotate(-4deg);
-}
-
-.pay-result-badge.bad {
-  --icon-accent: var(--rose);
-  background: #FFF1F2;
-  border-color: var(--pink);
-  color: var(--rose);
-}
-
-.pay-result h2 { font-family: var(--font-display); font-size: 1.5rem; margin-bottom: 6px }
-.pay-result h2.is-good { color: var(--primary-600) }
-.pay-result h2.is-bad { color: var(--rose) }
-
-.pay-result-sub {
-  color: var(--ink-3);
-  font-size: .93rem;
-  line-height: 1.65;
-  max-width: 46ch;
-  margin: 0 auto;
-}
-
-.purchase-codes { margin-top: 22px; display: flex; flex-direction: column; gap: 14px }
-
-.code-card {
-  text-align: left;
-  padding: 18px;
-  border-radius: var(--r-xl);
-  background: linear-gradient(135deg, #FFF8EC, var(--cream));
-  border: 3px dashed var(--accent-orange-soft);
-}
-
-.code-card-kicker {
-  display: inline-block;
-  font-size: .7rem;
-  font-weight: 800;
-  letter-spacing: .09em;
-  text-transform: uppercase;
-  color: var(--terracotta);
-}
-
-.code-card-product {
-  font-family: var(--font-display);
-  font-size: 1.1rem;
-  color: var(--ink);
-  margin: 2px 0 10px;
-}
-
-.code-card-value {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: var(--r-lg);
-  background: #fff;
-  border: 2px solid var(--terra-3);
-  margin-bottom: 12px;
-}
-
-.code-card-value code {
-  flex: 1;
-  min-width: 0;
-  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
-  font-size: 1.08rem;
-  font-weight: 700;
-  letter-spacing: .08em;
-  color: var(--terracotta);
-  word-break: break-all;
-}
-
-.code-card-copy {
-  flex: none;
-  padding: 8px 14px;
-  border-radius: var(--r-full);
-  border: 2px solid var(--terra-3);
-  background: var(--orange-pale);
-  color: var(--terracotta);
-  font-size: .8rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background .2s, transform .2s var(--ease);
-}
-
-.code-card-copy:hover { background: var(--terra-3); transform: translateY(-1px) }
-
-.code-card-cta {
-  --icon-accent: #fff;
-  width: 100%;
-  min-height: 52px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  border-radius: var(--r-full);
-  border: 3px solid var(--primary-500);
-  background: var(--primary-500);
-  color: #fff;
-  font-family: var(--font-display);
-  font-size: 1.02rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background .2s, transform .2s var(--ease), box-shadow .2s;
-}
-
-.code-card-cta:hover:not(:disabled) {
-  background: var(--primary-600);
-  border-color: var(--primary-600);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(46, 132, 71, .3);
-}
-
-.code-card-cta:disabled { opacity: .6; cursor: not-allowed }
-
-.code-card-note { margin: 10px 0 0; font-size: .8rem; color: var(--ink-4) }
-.code-card-note a { font-weight: 600; text-decoration: underline }
-
-/* ── Thanh toán thử (local only) ─────────────────────────────────────────────
-   Styled as the developer tool it is — grey, tagged, visually outside the real
-   checkout — so it can never be mistaken for a second way to buy. */
-
-.pay-devbox {
-  margin-top: 18px;
-  padding: 14px 16px;
-  border-radius: var(--r-lg);
-  background: #F4F4F5;
-  border: 2px dashed #C4C4CC;
-}
-
-.pay-devbox-tag {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: var(--r-full);
-  background: #52525B;
-  color: #fff;
-  font-size: .68rem;
-  font-weight: 800;
-  letter-spacing: .07em;
-  text-transform: uppercase;
-}
-
-.pay-devbox p {
-  margin: 9px 0 11px;
-  font-size: .82rem;
-  line-height: 1.6;
-  color: #52525B;
-}
-
-.pay-devbox code {
-  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
-  font-size: .78rem;
-  background: #E4E4E7;
-  padding: 1px 5px;
-  border-radius: 4px;
-}
-
-.pay-devbox-btn {
-  width: 100%;
-  min-height: 44px;
-  border-radius: var(--r-lg);
-  border: 2px solid #52525B;
-  background: #3F3F46;
-  color: #fff;
-  font-size: .88rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background .2s;
-}
-
-.pay-devbox-btn:hover:not(:disabled) { background: #27272A }
-.pay-devbox-btn:disabled { opacity: .6; cursor: not-allowed }
-
-/* The code has already been spent: the button becomes the way back to the
-   plant it produced. */
-.code-card-cta.is-done {
-  background: var(--primary-600);
-  border-color: var(--primary-600);
-  text-decoration: none;
-}
-
-.code-card-cta.is-done:hover { background: var(--primary-700); border-color: var(--primary-700); color: #fff }
-
-/* ── Paying, as a procedure ────────────────────────────────────────────────
-   This is the one page on the site where an adult moves their own money, and
-   the panel used to be a stack of facts they had to assemble into an order of
-   operations themselves. Numbered steps, the amount unmissable, and the memo
-   — the single thing that breaks the whole flow if it is edited — louder than
-   anything else here. */
-
-.pay-amount {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 16px 18px;
-  margin-bottom: 18px;
-  border-radius: var(--r-lg);
-  background: var(--primary-100);
-  border: 2px solid var(--primary-300);
-}
-
-.pay-amount > span {
-  font-family: var(--font-h);
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--primary-700);
-}
-
-.pay-amount strong {
-  font-family: var(--font-display);
-  font-size: 1.85rem;
-  line-height: 1.1;
-  color: var(--primary-700);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-}
-
-.pay-steps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.pay-step-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 7px;
-}
-
-.pay-step-n {
-  flex: none;
-  width: 27px;
-  height: 27px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--primary-500);
-  color: #fff;
-  font-family: var(--font-h);
-  font-size: 0.86rem;
-  font-weight: 800;
-}
-
-.pay-step-head h4 {
-  margin: 0;
-  font-size: 0.98rem;
-  font-weight: 700;
-  color: var(--ink);
-}
-
-.pay-step-note {
-  margin: 0 0 10px 37px;
-  font-size: 0.84rem;
-  line-height: 1.6;
-  color: var(--ink-4);
-}
-
-.pay-steps .sum-qr,
-.pay-bank {
-  margin-left: 37px;
-}
-
-/* ── The memo ──────────────────────────────────────────────────────────── */
-
-.pay-memo {
-  margin: 14px 0 0 37px;
-  padding: 13px 15px;
-  border-radius: var(--r-lg);
-  background: #FFF7ED;
-  border: 2px solid var(--accent-orange-soft);
-}
-
-.pay-memo-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-h);
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: var(--terracotta);
-  margin-bottom: 8px;
-}
-
-.pay-memo-row {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  flex-wrap: wrap;
-}
-
-/* Monospace and spaced: this gets copied by eye as often as by button, and a
-   transposed character is a payment nobody can match. */
-.pay-memo-row code {
-  flex: 1;
-  min-width: 150px;
-  padding: 10px 13px;
-  border-radius: var(--r-md);
-  background: #fff;
-  border: 1.5px solid var(--accent-orange-soft);
-  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  font-size: 1.02rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--ink);
-}
-
-.pay-memo-hint {
-  display: block;
-  margin-top: 8px;
-  font-size: 0.8rem;
-  line-height: 1.6;
-  color: var(--ink-3);
-}
-
-/* ── Waiting ───────────────────────────────────────────────────────────── */
-
-.pay-waiting {
-  display: flex;
-  align-items: flex-start;
-  gap: 11px;
-  margin-left: 37px;
-  padding: 13px 15px;
-  border-radius: var(--r-lg);
-  background: var(--cream-2);
-  border: 1.5px solid var(--parchment-2);
-}
-
-.pay-waiting strong {
-  display: block;
-  font-size: 0.9rem;
-  color: var(--ink);
-}
-
-.pay-waiting span {
-  font-size: 0.83rem;
-  line-height: 1.6;
-  color: var(--ink-3);
-}
-
-@media (max-width: 520px) {
-  .pay-steps .sum-qr,
-  .pay-bank,
-  .pay-memo,
-  .pay-waiting,
-  .pay-step-note {
-    margin-left: 0;
-  }
-}
-
-/* ── Paying is the page, not a sidebar ─────────────────────────────────────
-   The layout was 1fr + a 380px rail, with the order details given the width
-   and the payment instructions squeezed into the rail. Once those became
-   three steps with a QR, a bank block and a memo warning, the rail ran a mile
-   down the screen while the wide column sat empty beside it.
-
-   While there is money owed, paying is the main thing on the page and the
-   order is the reference next to it. Once it is settled the instructions
-   disappear, and the layout goes back to one column rather than leaving a
-   380px hole where they were. */
-
-.pay-layout {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.pay-layout.paying {
-  grid-template-columns: 330px minmax(0, 1fr);
-}
-
-/* Sticky belongs on the short column. It was on the tall one, where it could
-   never move anyway. */
-.pay-layout.paying .pay-card {
-  position: sticky;
-  top: 108px;
-}
-
-.pay-summary {
-  position: static;
-  padding: 26px 28px;
-}
-
-/* Scan it, or type it — two ways to do the same thing, so they sit side by
-   side rather than one under the other. Waiting is what follows both. */
-.pay-steps {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 26px 30px;
-  align-items: start;
-}
-
-.pay-steps > li:last-child {
-  grid-column: 1 / -1;
-}
-
-/* ── The QR, framed ────────────────────────────────────────────────────── */
-
-.pay-steps .sum-qr {
-  margin: 0 0 0 37px;
-  padding: 14px;
-  background: #fff;
-  border: 2px solid var(--parchment-2);
-  border-radius: var(--r-xl);
-  box-shadow: var(--sh-sm);
-  display: inline-block;
-}
-
-.pay-steps .sum-qr img {
-  max-width: 190px;
-  border-radius: 0;
-}
-
-/* ── Bank rows ─────────────────────────────────────────────────────────── */
-
-.pay-bank {
-  padding: 4px 14px;
-  border-radius: var(--r-lg);
-  background: var(--cream-2);
-  border: 1.5px solid var(--parchment-2);
-}
-
-.pay-memo { margin-top: 12px }
-
-/* ── Waiting ───────────────────────────────────────────────────────────── */
-
-.pay-waiting {
-  align-items: center;
-  background: var(--primary-100);
-  border-color: var(--primary-300);
-}
-
-.pay-waiting .spinner {
-  flex: none;
-  width: 18px;
-  height: 18px;
-  border-width: 2.5px;
-  color: var(--primary-600);
-}
-
-/* ── Test mode ─────────────────────────────────────────────────────────────
-   A tool, not a second way to buy. It was a slab of near-black in the middle
-   of a cream page, which made the one thing nobody should press in production
-   the loudest thing on it. */
-
-.pay-devbox {
-  margin-top: 22px;
-  background: var(--cream-2);
-  border: 1.5px dashed var(--ink-5);
-  border-radius: var(--r-lg);
-  padding: 14px 16px;
-}
-
-.pay-devbox-tag {
-  background: var(--ink-4);
-  color: #fff;
-}
-
-.pay-devbox-btn {
-  background: var(--ink-3);
-  border-radius: var(--r-md);
-}
-
-.pay-devbox-btn:hover:not(:disabled) {
-  background: var(--ink-2);
-}
-
-@media (max-width: 1024px) {
-  .pay-layout.paying { grid-template-columns: minmax(0, 1fr) }
-  .pay-layout.paying .pay-card { position: static }
-}
-
-@media (max-width: 720px) {
-  .pay-steps { grid-template-columns: minmax(0, 1fr) }
-  .pay-steps .sum-qr { margin-left: 0 }
-}
-
-/* ── Order details, in a 330px column ──────────────────────────────────────
-   Everything here was built as label-beside-value rows for a wide column. At
-   this width the value got half of what little there was, and an address wrapped
-   to four lines against its own label. Labels go above their values. */
-
-.ord-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding-bottom: 14px;
-  border-bottom: 1.5px solid var(--parchment-2);
-}
-
-.ord-code {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.ord-code em {
-  font-style: normal;
-  font-family: var(--font-h);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-4);
-}
-
-/* Monospace: this gets read out to support and typed into a bank memo. */
-.ord-code code {
-  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: var(--ink);
-}
-
-.ord-state {
-  padding: 5px 12px;
-  border-radius: var(--r-full);
-  font-family: var(--font-h);
-  font-size: 0.78rem;
-  font-weight: 700;
-  background: var(--cream-2);
-  color: var(--ink-3);
-}
-
-.ord-state.s-pending { background: #FFF7ED; color: var(--terracotta) }
-.ord-state.s-processing { background: var(--primary-100); color: var(--primary-700) }
-.ord-state.s-cancelled { background: #FEF2F2; color: var(--rose) }
-
-/* ── Items ─────────────────────────────────────────────────────────────── */
-
-.ord-item {
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.ord-item-thumb {
-  position: relative;
-  flex: none;
-  width: 54px;
-  height: 54px;
-  display: grid;
-  place-items: center;
-  border-radius: var(--r-md);
-  overflow: hidden;
-  background: var(--cream-2);
-  border: 1.5px solid var(--parchment-2);
-  font-size: 1.5rem;
-}
-
-.ord-item-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* A quantity badge, so "× 2" is not something to notice in small grey text. */
-.ord-item-qty {
-  position: absolute;
-  right: -1px;
-  bottom: -1px;
-  min-width: 21px;
-  padding: 0 5px;
-  border-radius: var(--r-full) 0 var(--r-md) 0;
-  background: var(--primary-600);
-  color: #fff;
-  font-style: normal;
-  font-family: var(--font-h);
-  font-size: 0.72rem;
-  font-weight: 800;
-  text-align: center;
-  line-height: 18px;
-}
-
-.ord-item-main { gap: 4px }
-
-.ord-item-name { font-size: 0.94rem }
-
-.ord-item-sub {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex-wrap: wrap;
-}
-
-.ord-item-variant {
-  padding: 1px 7px;
-  border-radius: var(--r-full);
-  background: var(--cobalt-bg);
-  color: #0C6A95;
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-
-/* Under the name rather than off to the right: at this width a third column
-   left the product name about eleven characters. */
-.ord-item-line {
-  font-family: var(--font-h);
-  font-weight: 800;
-  font-size: 0.95rem;
-  color: var(--ink);
-}
-
-/* Matches the amount on the payment side. Two colours for the same number on
-   one screen invites the reader to look for a difference. */
-.ord-total strong { color: var(--primary-700) }
-
-/* ── Who is ordering ───────────────────────────────────────────────────── */
-
-.ord-ship {
-  background: var(--surface);
-  border: 1.5px solid var(--parchment-2);
-  padding: 16px;
-}
-
-.ord-ship-edit {
-  --icon-accent: var(--primary-300);
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border: none;
-  background: none;
-  padding: 4px 6px;
-  border-radius: var(--r-sm);
-  color: var(--primary-600);
-  font-family: var(--font-h);
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.ord-ship-edit:hover { background: var(--primary-100) }
-
-.ord-ship-list {
-  margin-top: 12px;
-  gap: 12px;
-}
-
-.ord-ship-list > div {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.ord-ship-list dt {
-  width: auto;
-  font-family: var(--font-h);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-4);
-}
-
-.ord-ship-list dd {
-  margin: 0;
-  font-size: 0.92rem;
-  font-weight: 600;
-  line-height: 1.5;
-  color: var(--ink);
-  word-break: break-word;
-}
-
-/* An address nobody has entered says so, instead of printing an em dash that
-   looks like a value. */
-.ord-ship-list dd.is-missing {
-  font-weight: 500;
-  font-style: italic;
-  color: var(--ink-4);
-}
-
-/* ── Fixes to the two rules above ──────────────────────────────────────────
-   `dt` carried `flex: 0 0 118px` from when this list was label-beside-value.
-   Turning the container into a column turned that basis from a width into a
-   HEIGHT, which is where the hand-sized gap between each label and its value
-   came from. flex-basis follows the main axis, and the main axis moved. */
-
-.ord-ship-list dt,
-.ord-ship-list dd {
-  flex: 0 0 auto;
-}
-
-/* ── Balance ───────────────────────────────────────────────────────────────
-   The QR is a fixed-size square; giving it half the panel left a column of
-   white under it as tall as the bank details beside it. It takes what it
-   needs and the transfer details take the rest. */
-
-.pay-steps {
-  grid-template-columns: auto minmax(0, 1fr);
-}
-
-.pay-layout.paying {
-  grid-template-columns: 360px minmax(0, 1fr);
-  gap: 24px;
-}
-
-@media (max-width: 1180px) {
-  .pay-steps { grid-template-columns: minmax(0, 1fr) }
-  .pay-steps .sum-qr { margin-left: 37px }
-}
-
-/* ── Bank details ──────────────────────────────────────────────────────────
-   `word-break: break-all` was splitting "Vietcombank" into "Vietcomban / k"
-   and the account number into "102090 / 2831". break-all breaks anywhere at
-   all, including mid-number — which for a figure somebody is copying into a
-   banking app is worse than an overflow would have been.
-
-   The label goes above the value for the same reason the contact block does:
-   side by side in this column there is nowhere for a long value to go. */
-
-.pay-row {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 3px;
-  padding: 10px 0;
-}
-
-.pay-row .lbl {
-  font-family: var(--font-h);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-4);
-}
-
-.pay-row .val-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.pay-row .val {
-  display: block;
-  text-align: left;
-  font-size: 1.02rem;
-  /* Never mid-word, and never mid-number. */
-  word-break: normal;
-  overflow-wrap: anywhere;
-}
-
-.pay-row .copy-btn {
-  --icon-accent: var(--primary-300);
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  border-radius: var(--r-md);
-  border: 1.5px solid var(--parchment-2);
-  background: var(--surface);
-  color: var(--primary-700);
-  font-family: var(--font-h);
-  font-size: 0.78rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.pay-row .copy-btn:hover { background: var(--primary-100); border-color: var(--primary-300) }
-
-/* ── Columns that cannot squeeze each other ────────────────────────────────
-   `auto` sized the QR column to its widest content — which is the sentence
-   under the heading, not the QR — and left the transfer details about 260px.
-   That is what made every value wrap. The QR gets a fixed share and the
-   details get the rest. */
-
-.pay-steps {
-  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
-  gap: 24px 32px;
-}
-
-/* The indent lines content up under its step number; the QR is a block, and
-   indenting it only took width away from the thing that needed it. */
-.pay-steps .sum-qr { margin-left: 0 }
-.pay-steps .sum-qr img { max-width: 100%; width: 100% }
-
-@media (max-width: 1240px) {
-  .pay-steps { grid-template-columns: minmax(0, 1fr) }
-  .pay-steps .sum-qr { max-width: 230px }
-}
-
-/* ── Two columns of comparable weight ──────────────────────────────────────
-   The order was pinned at 360px against a flexible payment column, so on a
-   wide screen it stayed a narrow strip while the other half kept growing.
-   That is what squeezed the edit form: two address boxes side by side inside
-   360px leave each about twenty characters, and the saved address wrapped to
-   three lines under its own label.
-
-   Proportional now, with the payment side keeping a slight edge because it
-   carries two sub-columns of its own. */
-
-.pay-layout.paying {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-  gap: 26px;
-}
-
-/* ── The edit form, with room ──────────────────────────────────────────── */
-
-.ord-ship.editing {
-  padding: 16px;
-}
-
-.ord-ship-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 12px;
-}
-
-.ord-ship.editing .form-input {
-  height: 42px;
-  font-size: 0.9rem;
-}
-
-.ord-ship.editing .addr-fields {
-  margin-top: 12px;
-}
-
-.ord-ship-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 9px;
-  margin-top: 14px;
-}
-
-/* Below this the two columns stop helping: an address box wants the width
-   more than the layout wants a second column. */
-@media (max-width: 1080px) {
-  .pay-layout.paying { grid-template-columns: minmax(0, 1fr) }
-  .pay-layout.paying .pay-card { position: static }
-}
-
-@media (max-width: 620px) {
-  .ord-ship-grid { grid-template-columns: minmax(0, 1fr) }
-}
-
-/* ── Two bands, not two columns ────────────────────────────────────────────
-   Side by side, each section was a tall narrow strip: the order could not fit
-   two address boxes on a row, and the transfer panel had to choose between a
-   readable QR and readable bank details. Full width each, stacked, and the
-   content inside goes across instead of down. */
-
-.pay-layout,
-.pay-layout.paying {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 22px;
-}
-
-/* Nothing to stick to any more — both bands scroll together. */
-.pay-layout.paying .pay-card {
-  position: static;
-}
-
-/* ── The order band ────────────────────────────────────────────────────── */
-
-.ord-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-  gap: 24px 32px;
-  align-items: start;
-}
-
-.ord-lines { min-width: 0 }
-
-.ord-total {
-  margin-top: 4px;
-  padding-top: 14px;
-  border-top: 2px solid var(--parchment-2);
-}
-
-/* No longer a footnote under the items — it is the column beside them. */
-.ord-ship { margin-top: 0 }
-
-/* ── The transfer band ─────────────────────────────────────────────────── */
-
-/* Three steps across, now that there is width for them. The QR keeps a fixed
-   share, the bank details take what is left, and waiting runs underneath
-   both because it follows whichever of the two you used. */
-.pay-steps {
-  grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
-  gap: 24px 36px;
-}
-
-.pay-amount {
-  max-width: 420px;
-}
-
-@media (max-width: 920px) {
-  .ord-body { grid-template-columns: minmax(0, 1fr) }
-  .pay-steps { grid-template-columns: minmax(0, 1fr) }
-  .pay-steps .sum-qr { max-width: 240px }
-  .pay-amount { max-width: none }
-}
-
-/* ── Bank details across, not down ─────────────────────────────────────────
-   Stacked, these three facts left most of a thousand-pixel band empty and
-   pushed the copy button to the far edge, a hand's width from the number it
-   copies. Three short values side by side fill the row they are given, and
-   the button sits against its own value. */
-
-.pay-bank {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 0 28px;
-  align-items: stretch;
-  padding: 14px 18px;
-}
-
-.pay-bank .pay-row {
-  padding: 0;
-  border-bottom: none;
-}
-
-/* A divider between columns reads better than one under each row, now that
-   they are columns. */
-.pay-bank .pay-row + .pay-row {
-  padding-left: 28px;
-  border-left: 1.5px solid var(--parchment-2);
-}
-
-.pay-row .val-row {
-  justify-content: flex-start;
-  gap: 12px;
-}
-
-/* ── The memo ──────────────────────────────────────────────────────────── */
-
-/* The code is sixteen characters; a box the width of the band made it look
-   like a paragraph field and left the button stranded. */
-.pay-memo-row code {
-  flex: 0 1 auto;
-  min-width: 220px;
-  max-width: 320px;
-}
-
-.pay-memo-row {
-  justify-content: flex-start;
-}
-
-@media (max-width: 760px) {
-  .pay-bank {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
-  }
-
-  .pay-bank .pay-row + .pay-row {
-    padding-left: 0;
-    padding-top: 12px;
-    border-left: none;
-    border-top: 1.5px solid var(--parchment-2);
-  }
-
-  .pay-memo-row code { max-width: none }
-}
-
-/* ── Filling the gap beside the QR ─────────────────────────────────────────
-   A QR is a tall square and the transfer details are a short block, so the
-   right half ran out of content halfway down and left a hole the size of the
-   code itself. Waiting moves up into it: the QR holds the left column for
-   both rows, and steps 2 and 3 stack down the right. */
-
-.pay-steps {
-  align-items: start;
-}
-
-.pay-steps > li:nth-child(1) {
-  grid-column: 1;
-  grid-row: 1 / span 2;
-}
-
-.pay-steps > li:nth-child(2) {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-.pay-steps > li:nth-child(3) {
-  grid-column: 2;
-  grid-row: 2;
-}
-
-/* The waiting strip no longer runs the width of the panel, so its indent can
-   go — it is a column now, not a footnote under one. */
-.pay-steps > li:nth-child(3) .pay-waiting {
-  margin-left: 37px;
-}
-
-@media (max-width: 920px) {
-  .pay-steps > li:nth-child(1),
-  .pay-steps > li:nth-child(2),
-  .pay-steps > li:nth-child(3) {
-    grid-column: 1;
-    grid-row: auto;
-  }
-}
-
-/* A membership's "done" state is a statement, not a link: there is no page
-   for a set of account features. It keeps the done styling without looking
-   pressable. */
-.code-card-cta.is-static {
-  cursor: default;
-  pointer-events: none;
-}
-
-/* ── VIP Garden orders ─────────────────────────────────────────────────── */
-
-/* In place of the contact block: what paying does, since there is nothing to
-   deliver and nothing to activate afterwards. */
-.ord-vip { background: #FFFBEB; border: 1.5px solid #FDE68A }
-.ord-vip .ord-ship-label { color: #92400E }
-.ord-vip-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px }
-.ord-vip-list li { display: flex; gap: 10px; align-items: flex-start; line-height: 1.55; color: var(--ink-2) }
-.ord-vip-list li > svg { flex: 0 0 auto; margin-top: 3px; color: var(--primary-600) }
-.ord-vip-list b { color: var(--ink) }
-
-.pay-result-badge.is-vip { background: #FEF3C7; border-color: #FCD34D }
-.pay-result-badge.is-vip img { width: 48px; height: 48px; object-fit: contain; transform: rotate(4deg) }
-
-.vip-done {
-  margin: 22px auto 0;
-  max-width: 360px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 16px 20px;
-  border-radius: var(--r-xl);
-  background: linear-gradient(135deg, #FFFBEB, #FEF3C7);
-  border: 1.5px solid #FCD34D;
-}
-.vip-done-label { font-size: .74rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #92400E }
-.vip-done strong { font-family: var(--font-display); font-size: 1.7rem; color: #78350F; line-height: 1.2 }
-.vip-done em { font-style: normal; font-size: .86rem; color: #92400E }
-.pay-actions.is-center { justify-content: center }
+/* Thanh toán: paying on the left (it is what the page is for), the order and
+   who receives it on the right, and once paid, one card with the activation
+   codes. Every class is "pm-". */
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+.pm-hero {
+  padding: 20px 0 22px;
+  background:
+    radial-gradient(70% 120% at 100% 0%, rgba(187, 247, 208, .45) 0%, transparent 60%),
+    linear-gradient(180deg, #F0FDF4 0%, var(--cream, #FFFDF8) 100%);
+  border-bottom: 1.5px solid var(--border-c, #E7EBDD);
+}
+.pm-crumb { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; font-size: .84rem; color: var(--ink-4) }
+.pm-crumb a { color: var(--ink-3); text-decoration: none; padding: 6px 0 }
+.pm-crumb a:hover { color: var(--primary-600) }
+.pm-hero h1 { margin: 0; font-size: clamp(1.6rem, 3vw, 2.2rem); color: var(--ink) }
+
+.pm-body { padding-top: 22px; padding-bottom: 72px }
+.pm-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; align-items: start; gap: 22px }
+.pm-aside { display: grid; gap: 16px; position: sticky; top: 96px }
+.pm-card { border-radius: 22px; background: var(--surface); border: 1.5px solid var(--border-c, #E7EBDD) }
+.pm-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 18px 12px }
+.pm-card-head h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-family: var(--font-h); font-size: 1rem; color: var(--ink) }
+.pm-card-head h2 img { width: 20px; height: 20px; object-fit: contain }
+.pm-link {
+  display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 0 10px; border-radius: 10px;
+  border: none; background: none; font: inherit; font-size: .84rem; font-weight: 700; color: var(--primary-600); cursor: pointer;
+}
+.pm-link:hover { background: #F0FDF4 }
+
+/* ── Copy buttons ─────────────────────────────────────────────────────── */
+.pm-copy {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 0 12px;
+  border-radius: 10px; border: 1px solid #D5E6CF; background: #F4FAF1; color: var(--primary-700);
+  font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; transition: background .15s;
+}
+.pm-copy:hover { background: #E4F3DE }
+.pm-copy.is-icon { width: 36px; padding: 0 }
+
+/* ── Paying ───────────────────────────────────────────────────────────── */
+.pm-pay { padding: 22px }
+.pm-pay-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 16px }
+.pm-pay-head h2 { margin: 0; font-family: var(--font-h); font-size: 1.25rem; color: var(--ink) }
+.pm-pay-head p { margin: 4px 0 0; font-size: .88rem; color: var(--ink-3) }
+.pm-live {
+  flex: none; display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 99px;
+  background: #FFF7E6; color: #B45309; font-size: .78rem; font-weight: 800; white-space: nowrap;
+}
+.pm-live i { width: 8px; height: 8px; border-radius: 50%; background: #F59E0B; animation: pm-pulse 1.6s ease-in-out infinite }
+@keyframes pm-pulse { 50% { box-shadow: 0 0 0 5px rgba(245, 158, 11, .2) } }
+
+.pm-amount {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 16px; margin-bottom: 18px;
+  border-radius: 16px; background: linear-gradient(180deg, #F2FBF1, #ECF7EA); border: 1px solid #CFE8CA;
+}
+.pm-amount span { flex: 1 1 auto; font-size: .9rem; font-weight: 700; color: var(--ink-2) }
+.pm-amount strong { font-family: var(--font-display); font-size: 2rem; line-height: 1; color: var(--primary-700); font-variant-numeric: tabular-nums }
+
+.pm-pay-grid { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 20px; align-items: start }
+.pm-qr { margin: 0; display: grid; gap: 10px; justify-items: center; text-align: center }
+.pm-qr-frame { display: block; width: 100%; padding: 12px; border-radius: 18px; background: #fff; border: 1.5px solid #DCE5D4 }
+.pm-qr-frame img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain }
+.pm-qr figcaption { display: grid; gap: 2px }
+.pm-qr strong { font-size: .88rem; color: var(--ink) }
+.pm-qr span { font-size: .78rem; color: var(--ink-4) }
+
+.pm-bank { display: grid; gap: 8px; min-width: 0 }
+.pm-bank-title { margin-bottom: 2px; font-size: .74rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3) }
+.pm-row {
+  display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  min-height: 52px; padding: 6px 8px 6px 14px; border-radius: 14px; background: #FAFBF7; border: 1px solid #EBF0E4;
+}
+.pm-row-label { font-size: .8rem; font-weight: 600; color: var(--ink-4) }
+.pm-row-value { min-width: 0; overflow-wrap: anywhere; font-size: 1rem; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: .01em }
+.pm-copy-gap { width: 0 }
+.pm-memo { display: grid; gap: 6px; padding: 8px; border-radius: 16px; background: #FFF8EC; border: 1px solid #F8D9A8 }
+.pm-memo .pm-row { background: #fff; border-color: #F3D5A5; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'label copy' 'value copy'; row-gap: 2px; padding-top: 8px; padding-bottom: 8px }
+/* Never cut short: this line is typed into a bank app and must be whole. */
+.pm-memo .pm-row-label { grid-area: label }
+.pm-memo .pm-row-value { grid-area: value; font-size: 1.05rem }
+.pm-memo .pm-row > .pm-copy { grid-area: copy }
+.pm-memo .pm-row-value { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: #9A3412; letter-spacing: .04em }
+.pm-memo p { display: flex; align-items: flex-start; gap: 6px; margin: 0; padding: 0 6px 2px; font-size: .78rem; line-height: 1.5; color: #9A3412 }
+.pm-memo p svg { flex: none; margin-top: 2px }
+
+.pm-waiting {
+  display: flex; align-items: center; gap: 14px; margin-top: 18px; padding: 14px 16px;
+  border-radius: 16px; background: #F4FAF1; border: 1px solid #D5E6CF;
+}
+.pm-waiting > span:last-child { display: grid; gap: 2px }
+.pm-waiting strong { font-size: .92rem; color: var(--ink) }
+.pm-waiting em { font-style: normal; font-size: .82rem; color: var(--ink-3) }
+.pm-spinner { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 3px solid #CFE8CA; border-top-color: var(--primary-600); animation: pm-spin 1s linear infinite }
+@keyframes pm-spin { to { transform: rotate(360deg) } }
+
+.pm-devbox { margin-top: 18px; padding: 14px 16px; border-radius: 16px; border: 1.5px dashed #C4B5FD; background: #FAF8FF }
+.pm-devbox-tag { display: inline-block; padding: 2px 10px; border-radius: 99px; background: #EDE9FE; color: #6D28D9; font-size: .72rem; font-weight: 800 }
+.pm-devbox p { margin: 8px 0 10px; font-size: .84rem; line-height: 1.55; color: var(--ink-3) }
+.pm-devbox code { padding: 1px 6px; border-radius: 6px; background: #EDE9FE; font-size: .78rem }
+.pm-devbox-btn {
+  min-height: 42px; padding: 0 16px; border-radius: 12px; border: none; background: #7C3AED; color: #fff;
+  font: inherit; font-size: .86rem; font-weight: 700; cursor: pointer;
+}
+.pm-devbox-btn:disabled { opacity: .6; cursor: progress }
+
+/* ── The order ────────────────────────────────────────────────────────── */
+.pm-status { padding: 4px 10px; border-radius: 99px; font-size: .74rem; font-weight: 800; white-space: nowrap; background: #F1F5F9; color: #475569 }
+.pm-status.s-pending { background: #FEF3C7; color: #B45309 }
+.pm-status.s-processing { background: #DBEAFE; color: #1D4ED8 }
+.pm-status.s-delivered { background: #DCFCE7; color: #15803D }
+.pm-code { display: flex; align-items: center; gap: 10px; margin: 0 18px 6px; padding: 8px 8px 8px 12px; border-radius: 12px; background: #FAFBF7; border: 1px solid #EBF0E4 }
+.pm-code span { font-size: .78rem; color: var(--ink-4) }
+.pm-code code { flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .98rem; font-weight: 800; color: var(--ink); letter-spacing: .04em }
+.pm-items { list-style: none; margin: 0; padding: 4px 18px }
+.pm-items li { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #F0F3EB }
+.pm-items li:last-child { border-bottom: none }
+.pm-thumb { position: relative; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 12px; background: #F4F8EE; color: #6E8F68 }
+.pm-thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px }
+.pm-thumb em {
+  position: absolute; top: -6px; right: -6px; display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px;
+  border-radius: 99px; background: var(--ink-2); color: #fff; font-style: normal; font-size: .7rem; font-weight: 800;
+}
+.pm-item-main { display: grid; gap: 2px; min-width: 0 }
+.pm-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; font-weight: 700; color: var(--ink) }
+.pm-item-sub { display: flex; align-items: center; gap: 6px; font-size: .78rem; color: var(--ink-4) }
+.pm-item-sub b { padding: 0 6px; border-radius: 99px; background: #E0F2FE; color: #0369A1; font-size: .68rem }
+.pm-item-total { font-size: .9rem; font-weight: 800; color: var(--ink); white-space: nowrap }
+.pm-total { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0 18px; padding: 14px 0 18px; border-top: 1.5px dashed #DCE5D4 }
+.pm-total span { font-size: .88rem; font-weight: 700; color: var(--ink-2) }
+.pm-total strong { font-family: var(--font-display); font-size: 1.5rem; color: #C2410C }
+
+/* ── Who receives it ──────────────────────────────────────────────────── */
+.pm-contact-list { display: grid; gap: 10px; margin: 0; padding: 0 18px 18px }
+.pm-contact-list div { display: grid; gap: 1px }
+.pm-contact-list dt { font-size: .74rem; font-weight: 700; color: var(--ink-4) }
+.pm-contact-list dd { margin: 0; font-size: .92rem; font-weight: 600; color: var(--ink); overflow-wrap: anywhere }
+.pm-contact-list dd.is-missing { font-weight: 500; font-style: italic; color: #B45309 }
+.pm-contact-edit { padding: 0 18px 18px }
+.pm-contact-edit .form-group { display: grid; gap: 6px; margin-bottom: 12px }
+.pm-contact-edit .form-label { margin: 0 }
+.pm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px }
+.pm-contact-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px }
+.pm-contact-edit .addr-fields { grid-template-columns: 1fr }
+
+.pm-checks { list-style: none; display: grid; gap: 10px; margin: 0; padding: 0 18px 18px }
+.pm-checks li { display: flex; align-items: flex-start; gap: 8px; font-size: .88rem; line-height: 1.5; color: var(--ink-2) }
+.pm-checks svg { flex: none; margin-top: 2px; color: var(--primary-600) }
+
+/* ── States ───────────────────────────────────────────────────────────── */
+.pm-state { display: grid; justify-items: center; gap: 8px; max-width: 560px; margin: 0 auto; padding: 40px 24px; text-align: center }
+.pm-state.is-inline { max-width: none; padding: 20px 0 }
+.pm-state-icon { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: #F4F8EE; color: var(--primary-600) }
+.pm-state-icon.is-bad { background: #FFF1F2; color: #BE123C }
+.pm-state h2 { margin: 6px 0 0; font-size: 1.25rem; color: var(--ink) }
+.pm-state p { margin: 0; max-width: 440px; color: var(--ink-3) }
+.pm-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 12px }
+.pm-actions .btn { min-height: 46px; display: inline-flex; align-items: center; justify-content: center }
+
+.pm-skel-card { display: grid; gap: 12px; padding: 22px }
+.pm-skel { display: block; height: 16px; border-radius: 8px; background: linear-gradient(110deg, #EEF2EA 30%, #F7F9F4 50%, #EEF2EA 70%); background-size: 200% 100%; animation: pm-shimmer 1.3s linear infinite }
+.pm-skel.is-big { height: 180px; border-radius: 16px }
+@keyframes pm-shimmer { to { background-position: -200% 0 } }
+
+/* ── Paid ─────────────────────────────────────────────────────────────── */
+.pm-result { display: grid; justify-items: center; gap: 8px; max-width: 760px; margin: 0 auto; padding: 34px 24px 28px; text-align: center }
+.pm-result-badge { display: grid; place-items: center; width: 78px; height: 78px; border-radius: 50%; background: #DCFCE7; color: #15803D; box-shadow: 0 0 0 8px #F0FDF4 }
+.pm-result-badge.is-bad { background: #FFE4E6; color: #BE123C; box-shadow: 0 0 0 8px #FFF1F2 }
+.pm-result-badge.is-vip { background: #FBF3DC; box-shadow: 0 0 0 8px #FFFBF0 }
+.pm-result-badge img { width: 42px; height: 42px; object-fit: contain }
+.pm-result h2 { margin: 12px 0 0; font-size: 1.5rem; color: #15803D }
+.pm-result h2.is-bad { color: #BE123C }
+.pm-result-sub { margin: 0; max-width: 520px; color: var(--ink-3) }
+.pm-vip-done { display: grid; gap: 2px; margin-top: 10px; padding: 14px 24px; border-radius: 16px; background: #FFFCF3; border: 1px solid #F0DDA8 }
+.pm-vip-done span { font-size: .8rem; color: var(--ink-4) }
+.pm-vip-done strong { font-family: var(--font-display); font-size: 1.4rem; color: #7A5A12 }
+.pm-vip-done em { font-style: normal; font-size: .8rem; color: var(--ink-3) }
+
+.pm-codes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; width: 100%; margin-top: 16px; text-align: left }
+.pm-code-card { display: grid; gap: 8px; padding: 16px; border-radius: 18px; background: #F7FBF5; border: 1.5px solid #CFE8CA }
+.pm-code-kicker { font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--primary-600) }
+.pm-code-product { font-family: var(--font-h); font-size: 1rem; font-weight: 700; color: var(--ink) }
+.pm-code-value { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-radius: 12px; background: #fff; border: 1.5px dashed #9FD49A }
+.pm-code-value .pm-copy { width: 40px; padding: 0 }
+.pm-code-value .pm-copy span { display: none }
+.pm-code-value code { flex: 1; min-width: 0; overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .98rem; font-weight: 800; letter-spacing: .06em; color: var(--ink) }
+.pm-code-cta {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 0 16px; border-radius: 99px;
+  border: none; background: var(--primary-600); color: #fff; font: inherit; font-weight: 800; text-decoration: none; cursor: pointer;
+}
+.pm-code-cta:hover { background: var(--primary-700) }
+.pm-code-cta:disabled { opacity: .6; cursor: progress }
+.pm-code-cta.is-done { background: #fff; color: var(--primary-700); border: 1.5px solid #CFE8CA }
+.pm-code-cta.is-static { cursor: default }
+.pm-code-note { margin: 0; font-size: .78rem; color: var(--ink-4) }
+.pm-code-note a { color: var(--primary-600); font-weight: 700 }
+
+/* ── Sizes ────────────────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .pm-layout { grid-template-columns: minmax(0, 1fr) 330px }
+  .pm-pay-grid { grid-template-columns: 1fr }
+  .pm-qr { grid-template-columns: 180px minmax(0, 1fr); align-items: center; justify-items: start; text-align: left; gap: 16px }
+}
+@media (max-width: 860px) {
+  .pm-layout { grid-template-columns: 1fr }
+  .pm-aside { position: static }
+}
+@media (max-width: 560px) {
+  .pm-hero { padding: 14px 0 16px }
+  .pm-pay { padding: 16px }
+  .pm-pay-head { flex-direction: column; gap: 8px }
+  .pm-amount strong { font-size: 1.7rem }
+  .pm-qr { grid-template-columns: 1fr; justify-items: center; text-align: center }
+  .pm-qr-frame { max-width: 260px }
+  .pm-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'label copy' 'value copy'; row-gap: 0 }
+  .pm-row-label { grid-area: label }
+  .pm-row-value { grid-area: value; white-space: normal; overflow-wrap: anywhere }
+  .pm-row > .pm-copy, .pm-row > .pm-copy-gap { grid-area: copy }
+  .pm-copy span { display: none }
+  .pm-copy { width: 40px; padding: 0 }
+  .pm-amount .pm-copy { width: auto; padding: 0 12px }
+  .pm-amount .pm-copy span { display: inline }
+  .pm-grid { grid-template-columns: 1fr }
+  .pm-actions .btn { flex: 1 1 100% }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pm-live i, .pm-spinner, .pm-skel { animation: none }
+}
+
+/* Back to the cart to change the products: below the total, quiet. */
+.pm-order-edit { margin: -6px 18px 0; padding: 0 0 14px }
+.pm-order-edit .pm-link { margin-left: -10px }
+.pm-link:disabled { opacity: .6; cursor: progress }
+
+/* After paying for a kit: the box is still on its way. */
+.pm-ship-note {
+  display: flex; align-items: flex-start; gap: 10px; max-width: 620px; margin: 16px 0 0; padding: 12px 14px; border-radius: 14px;
+  background: #EFF6FF; border: 1px solid #DBEAFE; text-align: left; font-size: .88rem; line-height: 1.55; color: #1E3A8A;
+}
+.pm-ship-note svg { flex: none; margin-top: 2px }
+.pm-ship-note a { font-weight: 700; color: #1D4ED8 }

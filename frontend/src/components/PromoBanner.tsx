@@ -63,9 +63,11 @@ interface Props {
   /** `full` for the shop and cart, `slim` for a page that already has a hero. */
   variant?: 'full' | 'slim';
   className?: string;
+  /** On the shop itself, where "Xem sản phẩm" would only lead back to it. */
+  inShop?: boolean;
 }
 
-export function PromoBanner({ variant = 'full', className = '' }: Props) {
+export function PromoBanner({ variant = 'full', className = '', inShop = false }: Props) {
   const { isLoggedIn } = useAuth();
   const rewards = useRewards();
 
@@ -73,6 +75,20 @@ export function PromoBanner({ variant = 'full', className = '' }: Props) {
   const have = rewards?.progressInCycle ?? 0;
   const toNext = rewards?.unitsToNext ?? threshold;
   const available = rewards?.availableCount ?? 0;
+
+  if (variant === 'slim') {
+    return (
+      <SlimPromo
+        className={className}
+        inShop={inShop}
+        counted={isLoggedIn && Boolean(rewards)}
+        threshold={threshold}
+        have={have}
+        toNext={toNext}
+        available={available}
+      />
+    );
+  }
 
   // A customer holding an unspent seat gets a different message: the useful
   // next action is booking it, not buying more. It still shows how close the
@@ -160,10 +176,91 @@ export function PromoBanner({ variant = 'full', className = '' }: Props) {
         )}
       </div>
 
-      <Link to="/shop" className="promo-cta">
-        {have > 0 ? `Mua thêm ${toNext}` : 'Xem sản phẩm'}
-        <SproutyIcon name="arrow-right" size={18} />
-      </Link>
+      {!inShop && (
+        <Link to="/shop" className="promo-cta">
+          {have > 0 ? `Mua thêm ${toNext}` : 'Xem sản phẩm'}
+          <SproutyIcon name="arrow-right" size={18} />
+        </Link>
+      )}
+    </div>
+  );
+}
+
+/**
+ * One line of offer for a page that has its own hero (the shop): the seats
+ * already won, as a number that stands out, and the progress to the next one
+ * as its own labelled bar — two facts the full banner ran together in a
+ * sentence. Same figures, same rule; only the layout differs.
+ */
+function SlimPromo({
+  className,
+  inShop,
+  counted,
+  threshold,
+  have,
+  toNext,
+  available,
+}: {
+  className: string;
+  inShop: boolean;
+  counted: boolean;
+  threshold: number;
+  have: number;
+  toNext: number;
+  available: number;
+}) {
+  const won = counted && available > 0;
+  return (
+    <div className={`promo-s${won ? ' is-won' : ''} ${className}`}>
+      <span className="promo-s-icon">
+        <SproutyIcon name={won ? 'ticket' : 'gift'} size={22} />
+      </span>
+      <div className="promo-s-main">
+        {won ? (
+          <p className="promo-s-title">
+            <b className="promo-s-count">{available}</b> suất workshop miễn phí đang chờ bạn
+          </p>
+        ) : (
+          <p className="promo-s-title">Mua {threshold} bộ kit trồng cây — tặng 1 suất workshop miễn phí</p>
+        )}
+        {counted ? (
+          <div className="promo-s-progress">
+            <span className="promo-s-label">{won ? 'Suất kế tiếp' : 'Tiến độ'}</span>
+            <span
+              className="promo-s-bar"
+              role="progressbar"
+              aria-label="Số sản phẩm đã mua cho suất kế tiếp"
+              aria-valuemin={0}
+              aria-valuemax={threshold}
+              aria-valuenow={have}
+            >
+              {Array.from({ length: threshold }).map((_, i) => (
+                <i key={i} className={i < have ? 'is-on' : undefined} />
+              ))}
+            </span>
+            <span className="promo-s-note">
+              <b>{have}/{threshold}</b> sản phẩm{have > 0 && toNext > 0 ? ` · còn ${toNext}` : ''}
+            </span>
+          </div>
+        ) : (
+          <p className="promo-s-sub">
+            Buổi nào cũng được, bạn tự chọn. <Link to="/login">Đăng nhập</Link> để theo dõi tiến độ.
+          </p>
+        )}
+      </div>
+      {won ? (
+        <Link to="/workshop" className="promo-s-cta">
+          Chọn workshop
+          <SproutyIcon name="arrow-right" size={17} />
+        </Link>
+      ) : (
+        !inShop && (
+          <Link to="/shop" className="promo-s-cta is-soft">
+            Xem sản phẩm
+            <SproutyIcon name="arrow-right" size={17} />
+          </Link>
+        )
+      )}
     </div>
   );
 }

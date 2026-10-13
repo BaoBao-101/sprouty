@@ -30,6 +30,7 @@ import {
   PresetChips,
   WORKSHOP_PRICE_PRESETS,
 } from '@/components/admin/fields';
+import { WorkshopStaffPicker, type StaffOption, type StaffRef } from './WorkshopStaffPicker';
 
 interface WorkshopRow {
   id: string;
@@ -48,6 +49,11 @@ interface WorkshopRow {
   bookingCount: number;
   pctFull: number;
   upcoming: boolean;
+  /** Started already; with `upcoming` still true, it is running now. */
+  started?: boolean;
+  staff?: StaffRef[];
+  /** Published, still to come, and nobody able to run it. */
+  needsStaff?: boolean;
 }
 
 interface LocationRow {
@@ -125,6 +131,20 @@ const WS_STATUS_TONE: Record<string, string> = {
   cancelled: 'rose',
 };
 
+/**
+ * What a session is now, in one pill. The stored status only says whether it
+ * was published; time does the rest. A finished session used to read
+ * "Đang mở đăng ký" next to "Đã diễn ra", with a warning under it to explain
+ * which of the two was true.
+ */
+function rowStatus(w: WorkshopRow): { label: string; tone: string } {
+  if (w.status === 'cancelled') return { label: 'Đã huỷ', tone: 'rose' };
+  if (w.status === 'draft') return w.upcoming ? { label: 'Bản nháp', tone: 'amber' } : { label: 'Nháp · đã qua ngày', tone: 'grey' };
+  if (!w.upcoming) return { label: 'Đã kết thúc', tone: 'grey' };
+  if (w.started) return { label: 'Đang diễn ra', tone: 'blue' };
+  return { label: WS_STATUS_LABEL.published, tone: WS_STATUS_TONE.published };
+}
+
 const WS_STATUS_CHOICES = [
   { value: 'published', label: 'Đang mở đăng ký', hint: 'Hiện trên trang Workshop, khách đăng ký được' },
   { value: 'draft', label: 'Bản nháp', hint: 'Chỉ nhân viên thấy, khách không thấy' },
@@ -146,7 +166,7 @@ function bookingState(r: { status: string; paidAt?: string | null; amount: numbe
   return { label: 'Chưa thanh toán', tone: 'amber' };
 }
 
-type Filter = '' | 'upcoming' | 'past';
+type Filter = '' | 'upcoming' | 'past' | 'unstaffed';
 
 export default function Workshops() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -181,6 +201,13 @@ export default function Workshops() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  // Who runs it. Kept apart from `form`, whose fields are all strings.
+  const [staffIds, setStaffIds] = useState<string[]>([]);
+  // Put on it before, and no longer able to run it: saving takes them off.
+  const [droppedStaff, setDroppedStaff] = useState<StaffRef[]>([]);
+  const [staffOptions, setStaffOptions] = useState<StaffOption[] | null>(null);
+  const [staffError, setStaffError] = useState('');
+
   const [viewing, setViewing] = useState<WorkshopRow | null>(null);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [regState, setRegState] = useState<LoadState>('loading');
@@ -209,7 +236,22 @@ export default function Workshops() {
   const set = (key: keyof typeof EMPTY_FORM) => (value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
 
+  function loadStaffOptions() {
+    setStaffOptions(null);
+    setStaffError('');
+    API.admin.workshops
+      .staffOptions()
+      .then((data: any) => setStaffOptions(data.staff || []))
+      .catch((err: any) => {
+        setStaffError(err?.message || 'Không tải được danh sách nhân viên.');
+        setStaffOptions([]);
+      });
+  }
+
   function openEditor(workshop?: WorkshopRow) {
+    loadStaffOptions();
+    setStaffIds((workshop?.staff || []).filter((s) => s.active).map((s) => s.id));
+    setDroppedStaff((workshop?.staff || []).filter((s) => !s.active));
     if (workshop) {
       setEditingId(workshop.id);
       setForm({
@@ -300,6 +342,7 @@ export default function Workshops() {
       ageRange: form.ageRange.trim(),
       price,
       status: form.status,
+      staffIds,
     };
 
     try {
@@ -395,6 +438,7 @@ export default function Workshops() {
   }
 
   const upcomingCount = counts.upcoming || 0;
+  const unstaffedCount = counts.unstaffed || 0;
   const pastCount = counts.past || 0;
   const allCount = counts.all || 0;
 
@@ -417,6 +461,7 @@ export default function Workshops() {
     { value: '', label: 'Tất cả', count: allCount },
     { value: 'upcoming', label: 'Sắp tới', count: upcomingCount },
     { value: 'past', label: 'Đã diễn ra', count: pastCount },
+    { value: 'unstaffed', label: 'Chưa có người trực', count: unstaffedCount },
   ];
 
   return (
@@ -449,7 +494,7 @@ export default function Workshops() {
           loading={loading}
           value={totals?.workshopCount ?? '—'}
           label="Tổng workshop"
-          hint={`${upcomingCount} buổi sắp tới`}
+          hint={`${upcomingCount} buổi sắp tới${unstaffedCount ? ` · ${unstaffedCount} chưa có người trực` : ''}`}
         />
         <StatCard
           icon={<AdminIcon name="seat" />}
@@ -525,20 +570,21 @@ export default function Workshops() {
                           {w.price > 0 ? `${w.price.toLocaleString('vi-VN')}đ` : 'Miễn phí'}
                         </div>
                         <div className="ws-row-pills">
-                          <Pill tone={WS_STATUS_TONE[w.status] ?? 'grey'}>
-                            {WS_STATUS_LABEL[w.status] ?? w.status}
-                          </Pill>
-                          <Pill tone={w.upcoming ? 'blue' : 'grey'}>
-                            {w.upcoming ? 'Sắp tới' : 'Đã diễn ra'}
-                          </Pill>
+                          <Pill tone={rowStatus(w).tone}>{rowStatus(w).label}</Pill>
+                          {w.needsStaff && <Pill tone="amber">Chưa có người trực</Pill>}
                         </div>
-                        {/* "Đang mở đăng ký" on a session that has already been
-                            and gone reads as if customers can see it. They
-                            cannot — the public page lists upcoming ones only. */}
-                        {w.status === 'published' && !w.upcoming && (
-                          <div className="ws-row-warn">
-                            <AdminIcon name="alert" size={15} /> Đã qua giờ diễn ra nên không hiện trên trang khách. Sửa lại thời
-                            gian nếu muốn mở đăng ký.
+                        {(w.staff?.length ?? 0) > 0 && (
+                          <div className="ws-row-staff">
+                            <AdminIcon name="users" size={13} />
+                            <span>
+                              {w.staff!.map((s, i) => (
+                                <span key={s.id} className={s.active ? '' : 'is-gone'}>
+                                  {i > 0 && ', '}
+                                  {s.name}
+                                  {!s.active && ' (ngưng hoạt động)'}
+                                </span>
+                              ))}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -785,6 +831,30 @@ export default function Workshops() {
               placeholder="VD: Sprouty Studio – TP.HCM"
               emptyHint="Chưa có địa điểm nào — gõ để thêm địa điểm đầu tiên."
             />
+          </div>
+
+          <div className="field">
+            <span className="field-label">Nhân viên phụ trách</span>
+            <WorkshopStaffPicker
+              options={staffOptions}
+              error={staffError}
+              onRetry={loadStaffOptions}
+              value={staffIds}
+              onChange={setStaffIds}
+              editingId={editingId}
+              start={form.dateTime ? fromLocalInput(form.dateTime) : null}
+              end={form.endTime ? fromLocalInput(form.endTime) : null}
+            />
+            {droppedStaff.length > 0 && (
+              <span className="field-hint warn">
+                {droppedStaff.map((s) => s.name).join(', ')} không còn là nhân viên đang hoạt động — sẽ được gỡ khỏi buổi khi lưu.
+              </span>
+            )}
+            <span className={`field-hint${!staffIds.length && form.status === 'published' && !startsInPast ? ' warn' : ''}`}>
+              {!staffIds.length && form.status === 'published' && !startsInPast
+                ? 'Chưa giao cho ai — vẫn lưu được, nhưng chưa nhân viên nào thấy buổi này cho tới khi bạn giao.'
+                : 'Chỉ người được giao mới thấy buổi này, tra vé và điểm danh được.'}
+            </span>
           </div>
 
           <div className="field">

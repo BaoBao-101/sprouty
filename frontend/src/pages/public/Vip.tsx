@@ -1,14 +1,15 @@
 import { VipBenefits } from '@/components/VipBenefits';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { loginHref } from '@/services/auth-nav';
 import { useAuth } from '@/contexts/AuthContext';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
-import { formatVipDate, planLength, vipDaysLeft } from '@/services/membership';
+import { bestValuePlanId, formatVipDate, planLength, planPerMonth, vipDaysLeft } from '@/services/membership';
 import { formatPrice } from '@/types/product';
 import { shortOrderId } from '@/types/order';
 import { SproutyIcon } from '@/components/icons/SproutyIcon';
+import { VIP_PERKS } from '@/data/vip-perks';
 import './Vip.css';
 
 interface Plan {
@@ -36,11 +37,11 @@ interface MyMembership {
   } | null;
 }
 
-/** What a year costs per month, the comparison a parent actually makes. */
-function perMonth(plan: Plan) {
-  if (plan.days < 60) return null;
-  return Math.round(plan.price / (plan.days / 30) / 1000) * 1000;
-}
+const STEPS = [
+  { title: 'Chọn gói', text: 'Gói nào cũng đủ quyền lợi.' },
+  { title: 'Quét mã QR chuyển khoản', text: 'Trang thanh toán tự nhận tiền trong vài giây.' },
+  { title: 'Tài khoản tự lên VIP', text: 'Không cần nhập mã kích hoạt.' },
+];
 
 /**
  * VIP Garden: the only place it is sold.
@@ -49,6 +50,9 @@ function perMonth(plan: Plan) {
  * came back as an activation code, and the parent had to type that code in to
  * become VIP — a second step for something they had already paid for. Now a
  * plan is bought here, on its own order, and the payment is the upgrade.
+ *
+ * Every plan gives the same benefits, so they are listed once beside the
+ * plans rather than on each card; a card is a length, a price and a button.
  */
 export default function Vip() {
   const navigate = useNavigate();
@@ -91,6 +95,10 @@ export default function Vip() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, isLoggedIn]);
 
+  // Shortest first, so the cards read as a scale from a month to a year.
+  const sorted = useMemo(() => [...plans].sort((a, b) => a.days - b.days || a.price - b.price), [plans]);
+  const bestId = useMemo(() => bestValuePlanId(plans), [plans]);
+
   async function buy(plan: Plan) {
     if (!isLoggedIn) {
       navigate(loginHref());
@@ -112,48 +120,58 @@ export default function Vip() {
 
   return (
     <>
-      <div className="vip-hero">
-        <div className="container">
-          <span className="vip-hero-kicker">
-            <img src="/assets/images/sprouty-icons/VIP.png" alt="" />
-            VIP Garden
-          </span>
-          <h1>Thêm không gian cho Cây Kỷ Niệm của bé</h1>
-          <p>
-            Nhiều lá kỷ niệm hơn, hiệu ứng theo mùa và Plant Buddy đồng hành sâu sát hơn. Thanh toán
-            xong là tài khoản tự lên VIP — không cần nhập mã.
-          </p>
+      <section className="vip-hero">
+        <div className="container vip-hero-in">
+          <div className="vip-hero-text">
+            <span className="vip-kicker">
+              <img src="/assets/images/sprouty-icons/VIP.png" alt="" />
+              VIP Garden
+            </span>
+            <h1>Thêm không gian cho Cây Kỷ Niệm của bé</h1>
+            <p>
+              Bộ chăm tự động trông cây khi bé bận, cây đung đưa theo gió, kỷ niệm không giới hạn và Plant Buddy
+              hỏi thoải mái. Thanh toán xong là tài khoản tự lên VIP — không cần nhập mã.
+            </p>
+          </div>
 
           {/* Where the account stands, before anything is offered to it. */}
-          {mine && (
-            <div className={`vip-status${isVip ? ' is-vip' : mine.vipExpired ? ' is-expired' : ''}`}>
-              <span className="vip-status-icon">
+          {mine ? (
+            <div className={`vip-me${isVip ? ' is-vip' : mine.vipExpired ? ' is-expired' : ''}`}>
+              <span className="vip-me-icon">
                 {isVip ? (
                   <img src="/assets/images/sprouty-icons/VIP.png" alt="" />
                 ) : (
-                  <SproutyIcon name="sprout" size={22} />
+                  <SproutyIcon name={mine.vipExpired ? 'clock' : 'sprout'} size={22} />
                 )}
               </span>
-              <span className="vip-status-text">
+              <span className="vip-me-text">
+                <em>Tài khoản của bạn</em>
                 <strong>
-                  {isVip
-                    ? 'Bạn đang là thành viên VIP Garden'
-                    : mine.vipExpired
-                      ? 'Gói VIP của bạn đã hết hạn'
-                      : 'Bạn đang dùng tài khoản Thường'}
+                  {isVip ? 'Thành viên VIP Garden' : mine.vipExpired ? 'VIP đã hết hạn' : 'Tài khoản Thường'}
                 </strong>
-                <em>
-                  {isVip
-                    ? `Còn ${daysLeft} ngày · hết hạn ${formatVipDate(mine.vipUntil)}`
-                    : mine.vipExpired
-                      ? `Hết hạn ngày ${formatVipDate(mine.vipUntil)} — gia hạn để dùng tiếp quyền lợi VIP.`
-                      : 'Chọn một gói bên dưới để nâng cấp.'}
-                </em>
+                <span>
+                  {isVip ? (
+                    <>Còn <b>{daysLeft} ngày</b> · hết hạn {formatVipDate(mine.vipUntil)}</>
+                  ) : mine.vipExpired ? (
+                    <>Hết hạn ngày {formatVipDate(mine.vipUntil)} — gia hạn để dùng tiếp quyền lợi VIP.</>
+                  ) : (
+                    'Chọn một gói bên dưới để nâng cấp.'
+                  )}
+                </span>
               </span>
             </div>
-          )}
+          ) : ready && !isLoggedIn ? (
+            <div className="vip-me">
+              <span className="vip-me-icon"><SproutyIcon name="user" size={22} /></span>
+              <span className="vip-me-text">
+                <em>Chưa đăng nhập</em>
+                <strong>VIP gắn vào tài khoản của bạn</strong>
+                <span><Link to={loginHref()}>Đăng nhập</Link> để chọn gói và thanh toán.</span>
+              </span>
+            </div>
+          ) : null}
         </div>
-      </div>
+      </section>
 
       <section className="vip-body">
         <div className="container">
@@ -176,30 +194,12 @@ export default function Vip() {
             </div>
           )}
 
-          <ol className="vip-how">
-            <li>
-              <span className="vip-how-n">1</span>
-              <div>
-                <strong>Chọn gói</strong>
-                <span>Theo tháng hoặc theo năm.</span>
-              </div>
-            </li>
-            <li>
-              <span className="vip-how-n">2</span>
-              <div>
-                <strong>Quét mã QR chuyển khoản</strong>
-                <span>Trang thanh toán tự nhận tiền trong vài giây.</span>
-              </div>
-            </li>
-            <li>
-              <span className="vip-how-n">3</span>
-              <div>
-                <strong>Tài khoản tự lên VIP</strong>
-                <span>Không cần nhập mã kích hoạt.</span>
-              </div>
-            </li>
-          </ol>
+          <header className="vip-head">
+            <h2>{isVip ? 'Gia hạn VIP' : 'Chọn gói VIP'}</h2>
+            <p>Gói nào cũng đủ quyền lợi — chỉ khác thời hạn và giá.</p>
+          </header>
 
+          <div className="vip-shop">
           <div className="vip-plans">
             {loadingPlans && <div className="vip-plans-msg">Đang tải gói VIP…</div>}
             {plansError && <div className="vip-plans-msg error">{plansError}</div>}
@@ -207,28 +207,36 @@ export default function Vip() {
               <div className="vip-plans-msg">Chưa có gói VIP nào.</div>
             )}
 
-            {plans.map((plan) => {
-              const best = plan.days >= 365;
-              const monthly = perMonth(plan);
+            {sorted.map((plan) => {
+              const best = plan.id === bestId;
+              const monthly = planPerMonth(plan.price, plan.days);
+              const discount = plan.oldPrice && plan.oldPrice > plan.price
+                ? Math.round((1 - plan.price / plan.oldPrice) * 100)
+                : 0;
               const isPendingPlan = pending?.planId === plan.id;
               return (
-                <div className={`vip-plan-card${best ? ' best' : ''}`} key={plan.id}>
-                  {best && <span className="vip-plan-badge">Tiết kiệm nhất</span>}
-                  {plan.images[0] && <img src={plan.images[0]} alt="" className="vip-plan-img" />}
-                  <div className="vip-plan-name">{plan.name}</div>
+                <article className={`vip-plan${best ? ' is-best' : ''}`} key={plan.id}>
+                  <header className="vip-plan-head">
+                    <h3>{plan.name}</h3>
+                    {best && <span className="vip-plan-tag">Tiết kiệm nhất</span>}
+                  </header>
                   <div className="vip-plan-price">
-                    {formatPrice(plan.price)}
-                    {plan.oldPrice && plan.oldPrice > plan.price && (
-                      <span className="vip-plan-old">{formatPrice(plan.oldPrice)}</span>
+                    <strong>{formatPrice(plan.price)}</strong>
+                    {discount > 0 && (
+                      <>
+                        <s>{formatPrice(plan.oldPrice!)}</s>
+                        <span className="vip-plan-off">-{discount}%</span>
+                      </>
                     )}
                   </div>
-                  <div className="vip-plan-period">
+                  <p className="vip-plan-per">
+                    <SproutyIcon name="calendar" size={15} />
                     {planLength(plan.days)} VIP
-                    {monthly && <> · chỉ {formatPrice(monthly)}/tháng</>}
-                  </div>
+                    {monthly ? <> · khoảng {formatPrice(monthly)}/tháng</> : null}
+                  </p>
 
                   <button
-                    className="btn btn-primary btn-lg btn-block"
+                    className="btn btn-primary btn-block vip-plan-btn"
                     disabled={buying !== null}
                     onClick={() =>
                       isPendingPlan
@@ -236,7 +244,6 @@ export default function Vip() {
                         : buy(plan)
                     }
                   >
-                    <img src="/assets/images/sprouty-icons/VIP.png" alt="" className="vip-btn-icon" />
                     {buying === plan.id
                       ? 'Đang tạo đơn…'
                       : isPendingPlan
@@ -252,12 +259,37 @@ export default function Vip() {
                             new Date(mine!.vipUntil!).getTime() + plan.days * 86_400_000,
                           ).toISOString(),
                         )}.`
-                      : 'Thanh toán chuyển khoản, VIP bật ngay khi tiền về.'}
+                      : 'Chuyển khoản, VIP bật ngay khi tiền về.'}
                   </p>
-                </div>
+                </article>
               );
             })}
           </div>
+
+          <div className="vip-perks">
+            <h3>Gói nào cũng có</h3>
+            <ul>
+              {VIP_PERKS.map((perk) => (
+                <li key={perk.label}>
+                  <span className="vip-perk-icon"><SproutyIcon name={perk.icon} size={18} /></span>
+                  {perk.label}
+                </li>
+              ))}
+            </ul>
+          </div>
+          </div>
+
+          <ol className="vip-how" aria-label="Cách nâng cấp">
+            {STEPS.map((step, i) => (
+              <li key={step.title}>
+                <span className="vip-how-n">{i + 1}</span>
+                <span>
+                  <strong>{step.title}</strong>
+                  <em>{step.text}</em>
+                </span>
+              </li>
+            ))}
+          </ol>
 
           <VipBenefits />
         </div>

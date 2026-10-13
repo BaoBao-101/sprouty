@@ -146,4 +146,20 @@ export const Cart = {
     items = [];
     save();
   },
+
+  /**
+   * Puts lines back without a toast for each: an order being edited returns
+   * its products to the cart all at once, and says so once.
+   */
+  restore(lines: Array<{ product: any; qty: number; variant?: string }>) {
+    load();
+    for (const { product, qty, variant } of lines) {
+      const line = normalize(product, variant === 'smart' && (product.smartDelta ?? product.smartPriceDelta) != null ? 'smart' : 'standard');
+      const key = lineKey(line.id, line.variant);
+      const existing = items.find((x) => lineKey(x.id, x.variant) === key);
+      if (existing) existing.qty = (existing.qty || 1) + qty;
+      else items.push({ ...line, qty });
+    }
+    save();
+  },
 };

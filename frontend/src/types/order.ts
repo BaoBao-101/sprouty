@@ -1,6 +1,7 @@
 export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 
 export interface OrderItem {
+  productId?: number;
   qty: number;
   /** Price paid per unit, captured at checkout. */
   unitPrice: number;
@@ -8,6 +9,7 @@ export interface OrderItem {
   variant?: string | null;
   /** The server selects images for this endpoint; the type never said so. */
   product?: {
+    id?: number;
     name?: string;
     emoji?: string;
     images?: string[];
@@ -61,11 +63,34 @@ export interface Order {
   shippingAddress?: string | null;
   items: OrderItem[];
   redeemCodes?: RedeemCode[];
+  /** Whether there is a parcel to send (a kit, when kits are posted). */
+  needsShipping?: boolean;
+  /** Staff lists only: the steps allowed next. */
+  nextStatuses?: OrderStatus[];
+  /** The parcel: sent when, with whom, and the code to track it by. */
+  shippedAt?: string | null;
+  carrier?: string | null;
+  trackingCode?: string | null;
+  /** Arrived when, and who confirmed it. */
+  deliveredAt?: string | null;
+  deliveredBy?: 'customer' | 'staff' | 'auto' | null;
 }
 
+/** Who said the parcel arrived, as a customer or staff member reads it. */
+export const DELIVERED_BY_VN: Record<string, string> = {
+  customer: 'Khách xác nhận đã nhận',
+  staff: 'Nhân viên xác nhận đã giao',
+  auto: 'Tự hoàn tất sau 7 ngày',
+};
+
+/** The carriers staff pick from when sending a parcel. */
+export const CARRIERS = ['Giao Hàng Nhanh', 'Giao Hàng Tiết Kiệm', 'Viettel Post', 'J&T Express', 'Ninja Van', 'VNPost', 'Sprouty tự giao'];
+
 export const ORDER_STATUS_VN: Record<OrderStatus, string> = {
-  pending: 'Chờ xác nhận',
-  processing: 'Đang xử lý',
+  // Waiting on the customer's transfer, not on anyone confirming anything.
+  pending: 'Chờ thanh toán',
+  // Paid: the code is out, the box is being packed.
+  processing: 'Đang chuẩn bị',
   shipped: 'Đang giao',
   // Not "Đã giao": this is also where an order lands whose only
   // deliverable was an activation code, and nothing was delivered to
@@ -116,6 +141,8 @@ export function shortOrderId(id: string) {
 }
 
 export function allowedOrderTransitions(order: Order): OrderStatus[] {
+  // The server says, when it has: it knows whether anything is posted.
+  if (order.nextStatuses) return order.nextStatuses;
   if (order.status === 'pending') return order.paidAt ? ['processing'] : ['cancelled'];
   if (!order.paidAt) return [];
   if (order.status === 'processing') return ['shipped'];

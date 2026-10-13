@@ -132,7 +132,13 @@ export default async function adminProductRoutes(fastify) {
     const paging = readPaging(req.query);
     const { status, category } = req.query;
 
-    const where = {};
+    // The shop's products and the VIP plans are managed apart: `scope` is
+    // "vip" for the plans, "shop" for everything else, and the counts that
+    // label the filters follow it.
+    const scope = req.query.scope === 'vip'
+      ? { category: 'membership' }
+      : req.query.scope === 'shop' ? { category: { not: 'membership' } } : {};
+    const where = { ...scope };
     if (status) where.status = String(status);
     if (category) where.category = String(category);
     const or = searchOr(req.query.search, ['name', 'description', 'speciesKey']);
@@ -149,15 +155,21 @@ export default async function adminProductRoutes(fastify) {
         take: paging.take,
       }),
       fastify.prisma.product.count({ where }),
-      fastify.prisma.product.groupBy({ by: ['status'], _count: { _all: true } }),
-      fastify.prisma.product.groupBy({ by: ['category'], _count: { _all: true } }),
+      fastify.prisma.product.groupBy({ by: ['status'], where: scope, _count: { _all: true } }),
+      fastify.prisma.product.groupBy({ by: ['category'], where: scope, _count: { _all: true } }),
       // Offered back to the editor so a new product joins an existing group
       // instead of inventing a near-duplicate spelling of one.
       fastify.prisma.product.groupBy({ by: ['collection'], _count: { _all: true } }),
     ]);
 
+    const [shopCount, vipCount] = await Promise.all([
+      fastify.prisma.product.count({ where: { category: { not: 'membership' } } }),
+      fastify.prisma.product.count({ where: { category: 'membership' } }),
+    ]);
+
     return {
       ...paged(products, total, paging, 'products'),
+      scopes: { shop: shopCount, vip: vipCount },
       counts: Object.fromEntries(statusCounts.map((r) => [r.status, r._count._all])),
       categories: categoryRows
         .filter((r) => r.category)
@@ -178,6 +190,8 @@ export default async function adminProductRoutes(fastify) {
         p.id::int AS "id",
         p.name AS "name",
         p.emoji AS "emoji",
+        p."speciesKey" AS "speciesKey",
+        p.category AS "category",
         p.price::int AS "price",
         p.status AS "status",
         COALESCE(SUM(oi.qty) FILTER (WHERE o.status != 'cancelled' AND o."paidAt" IS NOT NULL AND o.note IS DISTINCT FROM 'admin.grant_vip'), 0)::int AS "totalQty",
@@ -186,7 +200,7 @@ export default async function adminProductRoutes(fastify) {
       FROM "Product" p
       LEFT JOIN "OrderItem" oi ON oi."productId" = p.id
       LEFT JOIN "Order" o ON o.id = oi."orderId"
-      GROUP BY p.id, p.name, p.emoji, p.price, p.status
+      GROUP BY p.id, p.name, p.emoji, p."speciesKey", p.category, p.price, p.status
       ORDER BY "totalQty" DESC, p.id ASC
     `;
     return { products: rows };

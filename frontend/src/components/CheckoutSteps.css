@@ -1,0 +1,28 @@
+/* The four steps of buying, as a quiet line under a page title. */
+.ck-steps { list-style: none; display: flex; align-items: center; gap: 0; margin: 14px 0 0; padding: 0; counter-reset: none }
+.ck-steps li { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--ink-4); font-size: .84rem; font-weight: 600 }
+.ck-steps li + li::before {
+  content: ''; flex: none; width: clamp(14px, 4vw, 44px); height: 2px; margin: 0 10px; border-radius: 2px; background: #DCE5D4;
+}
+.ck-steps li.is-done + li::before, .ck-steps li.is-now::before { background: var(--primary-300) }
+.ck-dot {
+  flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  border: 1.5px solid #DCE5D4; background: var(--surface); font-size: .78rem; font-weight: 800; color: var(--ink-4);
+}
+.ck-steps li.is-done .ck-dot { border-color: var(--primary-600); background: var(--primary-600); color: #fff }
+.ck-steps li.is-now .ck-dot { border-color: var(--primary-600); color: var(--primary-700); box-shadow: 0 0 0 4px rgba(53, 168, 83, .14) }
+.ck-steps li.is-now { color: var(--ink) }
+.ck-steps li.is-done { color: var(--ink-3) }
+.ck-label { white-space: nowrap }
+/* A phone shows every dot but only the current step's name. */
+@media (max-width: 640px) {
+  .ck-steps li:not(.is-now) .ck-label { display: none }
+  .ck-steps li + li::before { margin: 0 6px }
+}
+/* A step behind that can be gone back to. */
+.ck-step-btn {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; margin: -7px -8px; padding: 0 8px;
+  border: none; border-radius: 99px; background: none; font: inherit; color: inherit; cursor: pointer; transition: background .15s;
+}
+.ck-step-btn:hover { background: #E7F5E4; color: var(--primary-700) }
+.ck-step-btn:hover .ck-label { text-decoration: underline; text-underline-offset: 3px }

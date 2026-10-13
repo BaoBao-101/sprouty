@@ -240,6 +240,8 @@ export const API = {
     list(params = {}) { return _fetch('/orders?' + new URLSearchParams(params)); },
     get(id)      { return _fetch(`/orders/${id}`); },
     cancel(id)   { return _fetch(`/orders/${id}/cancel`, { method: 'PATCH' }); },
+    /** "Đã nhận được hàng" — the customer confirms the parcel arrived. */
+    received(id) { return _fetch(`/orders/${id}/received`, { method: 'POST' }); },
     /**
      * Credits an order with no bank transaction behind it, for local testing
      * and demos. The server refuses this outright unless it was started with
@@ -257,8 +259,10 @@ export const API = {
   // The door: employees own this, so it sits beside the customer calls
   // rather than under admin.
   attendance: {
-    day(date)                     { return _fetch('/admin/attendance?' + new URLSearchParams({ date })); },
-    register(workshopId)          { return _fetch(`/admin/attendance/${workshopId}`); },
+    /** The sessions an admin put me on: from today on, or the 90 days before. */
+    mine(when = 'upcoming')       { return _fetch('/admin/attendance/mine?' + new URLSearchParams({ when })); },
+    /** One of my sessions, with its register. */
+    session(workshopId)           { return _fetch(`/admin/attendance/${workshopId}`); },
     lookup(code)                  { return _fetch('/admin/attendance/lookup?' + new URLSearchParams({ code })); },
     checkIn(workshopId, regId, attendedCount = undefined) {
       return _fetch(`/admin/attendance/${workshopId}/${regId}`, {
@@ -268,6 +272,10 @@ export const API = {
     },
     undo(workshopId, regId) {
       return _fetch(`/admin/attendance/${workshopId}/${regId}`, { method: 'DELETE' });
+    },
+    /** Paid at the door, in cash: on the session's day, the ticket's amount, once. */
+    cash(workshopId, regId) {
+      return _fetch(`/admin/attendance/${workshopId}/${regId}/cash`, { method: 'POST' });
     },
   },
 
@@ -308,7 +316,7 @@ export const API = {
       list(params = {})        { return _fetch('/admin/orders?' + new URLSearchParams(params)); },
       counts()                 { return _fetch('/admin/orders/counts'); },
       markPaid(id)             { return _fetch(`/admin/orders/${id}/mark-paid`, { method: 'POST' }); },
-      updateStatus(id, status) { return _fetch(`/admin/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }); },
+      updateStatus(id, status, parcel = {}) { return _fetch(`/admin/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, ...parcel }) }); },
     },
     redeemCodes: {
       list(params = {})  { return _fetch('/admin/redeem-codes?' + new URLSearchParams(params)); },
@@ -344,6 +352,8 @@ export const API = {
       remove(id)         { return _fetch(`/admin/workshops/${id}`, { method: 'DELETE' }); },
       registrations(id)  { return _fetch(`/admin/workshops/${id}/registrations`); },
       uploadCover(form)  { return _fetch('/admin/workshop-images', { method: 'POST', body: form }); },
+      /** Active employees, each with the sessions they already run. */
+      staffOptions()     { return _fetch('/admin/workshops/staff-options'); },
       markRegistrationPaid(id, registrationId) {
         return _fetch(`/admin/workshops/${id}/registrations/${registrationId}/mark-paid`, { method: 'POST' });
       },
@@ -377,8 +387,9 @@ export const API = {
   },
 
   myImages: {
-    list(productId)        { return _fetch(`/my-products/${productId}/images`); },
-    upload(productId, form){ return _fetch(`/my-products/${productId}/images`, { method: 'POST', body: form }); },
+    // `plantId` names whose album: one account may grow the same kit twice.
+    list(productId, plantId = '')         { return _fetch(`/my-products/${productId}/images${plantId ? `?plant=${encodeURIComponent(plantId)}` : ''}`); },
+    upload(productId, form, plantId = '') { return _fetch(`/my-products/${productId}/images${plantId ? `?plant=${encodeURIComponent(plantId)}` : ''}`, { method: 'POST', body: form }); },
     update(id, data)       { return _fetch(`/my-images/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); },
     remove(id)             { return _fetch(`/my-images/${id}`, { method: 'DELETE' }); },
   },
@@ -415,6 +426,10 @@ export const API = {
     get(id: string) { return _fetch(`/me/plants/${id}`); },
     care(id: string, action: string) {
       return _fetch(`/me/plants/${id}/care`, { method: 'POST', body: JSON.stringify({ action }) });
+    },
+    /** Sows a dead plant again from seed, on the same kit. */
+    replant(id: string) {
+      return _fetch(`/me/plants/${id}/replant`, { method: 'POST' });
     },
     setDevice(id: string, type: string, autoMode: boolean) {
       return _fetch(`/me/plants/${id}/devices`, {

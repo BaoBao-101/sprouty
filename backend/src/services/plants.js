@@ -13,9 +13,12 @@ import { SPECIES_CARE } from './species-care.js';
  */
 
 import { AppError } from '../utils/errors.js';
+import { tierOf } from './membership.js';
 import {
   CARE_ACTIONS,
+  DEATH_HOURS,
   DEVICES,
+  PASSIVE_CAP,
   STAGES,
   applyCare,
   careMeta,
@@ -28,6 +31,7 @@ import {
   stageIndex,
   stageLabel,
   stageMeta,
+  taskProgress,
   tick,
   timeScale,
 } from './plant-sim.js';
@@ -50,6 +54,8 @@ const READING_KEEP_DAYS = 10;
 
 const plantInclude = {
   devices: true,
+  // The owner's VIP end date: until then the gardener looks after the plant.
+  user: { select: { vipUntil: true } },
   product: { select: { id: true, name: true, emoji: true, bgColor: true, images: true, speciesKey: true } },
 };
 
@@ -66,6 +72,36 @@ function deviceMap(plant) {
   return map;
 }
 
+/**
+ * When the owner's VIP runs out, for the gardener. Taken from the row when it
+ * was loaded with it, and looked up otherwise — a VIP plant ticked from a page
+ * that loaded it without the owner must not wilt to death unguarded.
+ */
+async function ownerVipUntil(prisma, plant) {
+  if (plant.user !== undefined) return plant.user?.vipUntil || null;
+  const owner = await prisma.user.findUnique({ where: { id: plant.userId }, select: { vipUntil: true } });
+  return owner?.vipUntil || null;
+}
+
+/**
+ * How many times each care action was done by the child in the plant's
+ * current stage of its current planting — what the stage's tasks count.
+ * The gardener's work (`auto`) is not the child's and does not count.
+ */
+export async function stageTaskCounts(prisma, plant) {
+  const rows = await prisma.plantCareLog.groupBy({
+    by: ['action'],
+    where: {
+      plantId: plant.id,
+      stage: plant.stage,
+      auto: false,
+      createdAt: { gte: plant.plantedAt || plant.activatedAt || new Date(0) },
+    },
+    _count: { _all: true },
+  });
+  return Object.fromEntries(rows.map((r) => [r.action, r._count._all]));
+}
+
 /** Local calendar day, for the care streak. */
 function localDayKey(at) {
   const offsetHours = Number(process.env.PLANT_TZ_OFFSET || 7);
@@ -73,18 +109,19 @@ function localDayKey(at) {
 }
 
 /**
- * Creates the plant a kit unlocks, with its starter devices.
+ * Creates the plant one activation unlocks, with its starter devices.
  *
- * Returns the existing plant instead of failing when one is already there: the
- * activation endpoint is a form a child double-taps, and the second tap should
- * land them on their plant rather than on an error.
+ * One plant per redemption, not per kit: a customer who buys the same kit
+ * again activates a second code and grows a second plant. Returns the plant
+ * already grown from this redemption instead of failing: the activation form
+ * is one a child double-taps, and the second tap should land them on their
+ * plant rather than on an error.
  */
-export async function createPlantForProduct(prisma, userId, productId, { nickname } = {}) {
-  const existing = await prisma.virtualPlant.findUnique({
-    where: { userId_productId: { userId, productId } },
-    include: plantInclude,
-  });
-  if (existing) return { plant: existing, created: false };
+export async function createPlantForProduct(prisma, userId, productId, { nickname, redemptionId = null } = {}) {
+  if (redemptionId) {
+    const existing = await prisma.virtualPlant.findUnique({ where: { redemptionId }, include: plantInclude });
+    if (existing) return { plant: existing, created: false };
+  }
 
   const product = await prisma.product.findUnique({
     where: { id: productId },
@@ -110,21 +147,31 @@ export async function createPlantForProduct(prisma, userId, productId, { nicknam
   });
 
   const unlocked = new Set(smart ? DEVICES.map((d) => d.type) : devicesUnlockedAt('seed'));
-  const plant = await prisma.virtualPlant.create({
-    data: {
-      userId,
-      productId,
-      nickname: (nickname || product.name).slice(0, 40),
-      devices: {
-        create: DEVICES.map((device) => ({
-          type: device.type,
-          unlocked: unlocked.has(device.type),
-        })),
+  try {
+    const plant = await prisma.virtualPlant.create({
+      data: {
+        userId,
+        productId,
+        redemptionId,
+        nickname: (nickname || product.name).slice(0, 40),
+        devices: {
+          create: DEVICES.map((device) => ({
+            type: device.type,
+            unlocked: unlocked.has(device.type),
+          })),
+        },
       },
-    },
-    include: plantInclude,
-  });
-  return { plant, created: true };
+      include: plantInclude,
+    });
+    return { plant, created: true };
+  } catch (err) {
+    // Two taps raced past the lookup above: the other one planted it.
+    if (err?.code === 'P2002' && redemptionId) {
+      const plant = await prisma.virtualPlant.findUnique({ where: { redemptionId }, include: plantInclude });
+      if (plant) return { plant, created: false };
+    }
+    throw err;
+  }
 }
 
 /**
@@ -145,14 +192,44 @@ export async function loadAndTick(prisma, userId, plantId, { now = new Date() } 
 }
 
 /**
+ * Gives a plant a row for every device it lacks — one added to the kit after
+ * the plant was created, like the care kit. Unlocked as the stage allows.
+ */
+async function ensureDevices(prisma, plant) {
+  if (!plant.devices) return;
+  const have = new Set(plant.devices.map((d) => d.type));
+  const open = new Set(devicesUnlockedAt(plant.stage));
+  for (const meta of DEVICES) {
+    if (have.has(meta.type)) continue;
+    const row = await prisma.plantDevice.upsert({
+      where: { plantId_type: { plantId: plant.id, type: meta.type } },
+      update: {},
+      create: { plantId: plant.id, type: meta.type, unlocked: open.has(meta.type) },
+    });
+    plant.devices.push(row);
+  }
+}
+
+/**
  * Runs the simulation forward on an already-loaded row and persists it.
  * Separate from `loadAndTick` so the list endpoint can tick many plants
  * without a query each.
  */
 export async function advance(prisma, plant, now = new Date()) {
+  // A dead plant waits, unchanged, to be replanted.
+  if (plant.diedAt) return { plant, events: [], newlyUnlocked: [], hoursElapsed: 0 };
+
+  await ensureDevices(prisma, plant);
   const devices = deviceMap(plant);
   const product = plant.product || null;
-  const result = tick(plant, { now, devices, product });
+  const counts = await stageTaskCounts(prisma, plant);
+  const result = tick(plant, {
+    now,
+    devices,
+    product,
+    tasksDone: taskProgress(plant.stage, counts, product).done,
+    keeperUntil: await ownerVipUntil(prisma, plant),
+  });
 
   // Unlock whatever the new stage reached. A device never re-locks: a stage
   // cannot go backwards, and a dashboard that lost a sensor would read as a
@@ -186,6 +263,12 @@ export async function advance(prisma, plant, now = new Date()) {
       include: plantInclude,
     }),
     ...deviceUpdates,
+    // What the gardener did while nobody was looking, one line per kind of
+    // job, in the journal beside the child's own care.
+    ...Object.entries(result.keeperActs || {}).map(([action, count]) =>
+      prisma.plantCareLog.create({
+        data: { plantId: plant.id, action, stage: plant.stage, growth: 0, auto: true, detail: { keeper: true, count } },
+      })),
   ]);
 
   await recordReading(prisma, updated, now, devices).catch(() => {});
@@ -237,7 +320,8 @@ async function recordReading(prisma, plant, now, devices) {
 export async function careAvailability(prisma, plantId, stage, now = new Date()) {
   const rows = await prisma.plantCareLog.groupBy({
     by: ['action'],
-    where: { plantId },
+    // The gardener's work does not put the child's tools on cooldown.
+    where: { plantId, auto: false },
     _max: { createdAt: true },
   });
   const lastByAction = new Map(rows.map((r) => [r.action, r._max.createdAt]));
@@ -288,6 +372,9 @@ export async function performCare(prisma, userId, plantId, actionId, { now = new
 
   if (plant.harvestedAt) {
     throw new AppError('Cây này đã được thu hoạch — hãy mở một cây mới nhé!', 409);
+  }
+  if (plant.diedAt) {
+    throw new AppError('Cây đã héo khô — trồng lại từ hạt để chăm tiếp nhé.', 409);
   }
   if (!meta.stages.includes(plant.stage)) {
     throw new AppError(
@@ -341,6 +428,11 @@ export async function performCare(prisma, userId, plantId, actionId, { now = new
     };
   }
 
+  // This action counts towards the stage's tasks; with it, are they all done?
+  // Only then can the points move the plant on.
+  const counts = await stageTaskCounts(prisma, plant);
+  const before = taskProgress(plant.stage, counts, product);
+  const after = taskProgress(plant.stage, { ...counts, [actionId]: (counts[actionId] || 0) + 1 }, product);
   const outcome = applyCare(actionId, {
     moisture: plant.moisture,
     nutrient: plant.nutrient,
@@ -349,7 +441,17 @@ export async function performCare(prisma, userId, plantId, actionId, { now = new
     stage: plant.stage,
     stageProgress: plant.stageProgress,
     growthPoints: plant.growthPoints,
-  }, env, product);
+  }, env, product, { tasksDoneAfter: after.done });
+  const task = after.tasks.find((t) => t.action === actionId);
+  const ticked = task && before.tasks.find((t) => t.action === actionId).done < task.done;
+  if (ticked && !outcome.stagesCrossed.length) {
+    outcome.messages.push({
+      level: 'good',
+      text: after.done
+        ? 'Xong hết nhiệm vụ chặng này! Tích đủ điểm là cây lên chặng mới.'
+        : `Nhiệm vụ "${task.label}": ${task.done}/${task.need}.`,
+    });
+  }
 
   // A day only counts once, so opening the page five times does not build a
   // streak out of one afternoon.
@@ -377,6 +479,8 @@ export async function performCare(prisma, userId, plantId, actionId, { now = new
         careStreak: streak,
         lastCareDate: today,
         lastTickAt: now,
+        // Care brings a plant back from the brink.
+        ...(outcome.state.health > 10 ? { wiltHours: 0 } : {}),
       },
       include: plantInclude,
     }),
@@ -436,6 +540,7 @@ export async function setDeviceAuto(prisma, userId, plantId, type, autoMode) {
     include: { devices: true },
   });
   if (!plant) throw new AppError('Không tìm thấy cây này.', 404);
+  if (plant.diedAt) throw new AppError('Cây đã héo khô — trồng lại từ hạt trước đã nhé.', 409);
 
   const device = plant.devices.find((d) => d.type === type);
   const meta = DEVICES.find((d) => d.type === type);
@@ -445,6 +550,9 @@ export async function setDeviceAuto(prisma, userId, plantId, type, autoMode) {
   }
   if (meta.kind !== 'actuator') {
     throw new AppError(`${meta.label} là cảm biến, luôn đo tự động.`, 400);
+  }
+  if (meta.vipOnly && autoMode && !tierOf({ vipUntil: await ownerVipUntil(prisma, plant) }).isVip) {
+    throw new AppError(`${meta.label} dành cho tài khoản VIP.`, 403);
   }
 
   await prisma.plantDevice.update({ where: { id: device.id }, data: { autoMode } });
@@ -505,6 +613,41 @@ export async function clearCoachHistory(prisma, userId, plantId) {
   await prisma.plantCoachMessage.deleteMany({ where: { plantId: plant.id } });
 }
 
+/**
+ * Plants a dead plant again from seed, on the same kit, for free. The journal
+ * and the album stay — they are the story of the planting that did not make
+ * it — and the stage tasks count from now. Devices stay unlocked (the kit
+ * still has them) but are switched off, as on a new plant.
+ */
+export async function replantPlant(prisma, userId, plantId, { now = new Date() } = {}) {
+  const plant = await prisma.virtualPlant.findFirst({ where: { id: plantId, userId }, select: { id: true, diedAt: true, attempt: true } });
+  if (!plant) throw new AppError('Không tìm thấy cây này.', 404);
+  if (!plant.diedAt) throw new AppError('Cây vẫn đang sống — cứ chăm tiếp nhé!', 409);
+  const [replanted] = await prisma.$transaction([
+    prisma.virtualPlant.update({
+      where: { id: plant.id },
+      data: {
+        stage: 'seed',
+        stageProgress: 0,
+        growthPoints: 0,
+        moisture: 60,
+        nutrient: 60,
+        health: 85,
+        pestRisk: 5,
+        wiltHours: 0,
+        diedAt: null,
+        plantedAt: now,
+        attempt: plant.attempt + 1,
+        careStreak: 0,
+        lastTickAt: now,
+      },
+      include: plantInclude,
+    }),
+    prisma.plantDevice.updateMany({ where: { plantId: plant.id }, data: { autoMode: false } }),
+  ]);
+  return replanted;
+}
+
 export async function renamePlant(prisma, userId, plantId, nickname) {
   const plant = await prisma.virtualPlant.findFirst({ where: { id: plantId, userId } });
   if (!plant) throw new AppError('Không tìm thấy cây này.', 404);
@@ -545,7 +688,9 @@ export function plantCardDto(plant) {
     stageCount: STAGES.length,
     stageProgress: plant.stageProgress,
     health: plant.health,
-    healthState: healthLabel(plant.health),
+    healthState: plant.diedAt ? { id: 'dead', label: 'Đã héo khô' } : healthLabel(plant.health),
+    diedAt: plant.diedAt || null,
+    attempt: plant.attempt || 1,
     moisture: plant.moisture,
     nutrient: plant.nutrient,
     pestRisk: plant.pestRisk,
@@ -562,6 +707,9 @@ export async function plantDetailDto(prisma, plant, { now = new Date() } = {}) {
   const env = environmentAt(plant.id, now, devices);
   const availability = await careAvailability(prisma, plant.id, plant.stage, now);
   const stage = stageMeta(plant.stage, product);
+  const progress = taskProgress(plant.stage, await stageTaskCounts(prisma, plant), product);
+  const pointsFull = plant.stageProgress >= 100;
+  const keeper = tierOf({ vipUntil: await ownerVipUntil(prisma, plant) }, now);
 
   const [readings, logs, coachMessages] = await Promise.all([
     prisma.plantSensorReading.findMany({
@@ -594,18 +742,39 @@ export async function plantDetailDto(prisma, plant, { now = new Date() } = {}) {
     idealMoisture: stage.idealMoisture,
     idealTemp: stage.idealTemp,
     environment: env,
-    nextStep: nextStepFor(
-      {
-        moisture: plant.moisture,
-        nutrient: plant.nutrient,
-        health: plant.health,
-        pestRisk: plant.pestRisk,
-        stage: plant.stage,
-      },
-      env,
-      availability,
-      product,
-    ),
+    // The stage's tasks, which with its points move the plant on.
+    tasks: progress.tasks,
+    tasksDone: progress.done,
+    pointsFull,
+    passiveCap: PASSIVE_CAP,
+    // How close a badly wilting plant is to dying, in real hours.
+    wilt: {
+      critical: !plant.diedAt && (plant.wiltHours || 0) > 0,
+      hoursLeft: !plant.diedAt && (plant.wiltHours || 0) > 0
+        ? Math.max(1, Math.ceil((DEATH_HOURS - plant.wiltHours) / timeScale()))
+        : null,
+    },
+    // VIP's care kit: whether the account may use it, and whether it is on.
+    keeper: {
+      vip: keeper.isVip,
+      on: keeper.isVip && Boolean((plant.devices || []).find((d) => d.type === 'auto_care')?.autoMode),
+      until: keeper.vipUntil,
+    },
+    nextStep: plant.diedAt
+      ? { action: null, label: null, icon: 'leaf', why: 'Cây đã héo khô vì bị bỏ quên quá lâu. Trồng lại từ hạt để bắt đầu lại nhé.' }
+      : nextStepFor(
+        {
+          moisture: plant.moisture,
+          nutrient: plant.nutrient,
+          health: plant.health,
+          pestRisk: plant.pestRisk,
+          stage: plant.stage,
+        },
+        env,
+        availability,
+        product,
+        { tasks: progress.tasks, pointsFull },
+      ),
     stages: STAGES.map((s) => ({
       id: s.id,
       label: stageLabel(s.id, product),
@@ -626,6 +795,9 @@ export async function plantDetailDto(prisma, plant, { now = new Date() } = {}) {
         label: meta.label,
         icon: meta.icon,
         kind: meta.kind,
+        // VIP-only, and this account is not VIP: shown, but cannot be used.
+        vipOnly: Boolean(meta.vipOnly),
+        vipLocked: Boolean(meta.vipOnly) && !keeper.isVip,
         about: meta.about,
         unit: meta.unit,
         unlockStage: meta.unlockStage,
@@ -655,6 +827,9 @@ export async function plantDetailDto(prisma, plant, { now = new Date() } = {}) {
       stageLabel: stageLabel(log.stage, product),
       growth: log.growth,
       warned: Boolean(log.detail?.warned),
+      // The gardener's work, and how many times it did that job in one go.
+      auto: Boolean(log.auto),
+      count: log.detail?.count || 1,
       createdAt: log.createdAt,
     })),
   };
@@ -678,7 +853,14 @@ export function plantPromptContext(detail) {
     `Môi trường lúc này: ${detail.environment.temperature}°C, ẩm không khí ${detail.environment.humidity}%, ` +
       `ánh sáng ${Math.round(detail.environment.light)}% (${detail.environment.isDay ? 'ban ngày' : 'ban đêm'}).`,
     `Việc nên làm tiếp theo (hệ thống đã tính): ${detail.nextStep.label || 'chờ hồi chiêu'} — ${detail.nextStep.why}`,
+    `Nhiệm vụ chặng này (phải xong cùng với đủ điểm mới lên chặng): ${
+      detail.tasks.length ? detail.tasks.map((t) => `${t.label} ${t.done}/${t.need}`).join(', ') : 'không có'
+    }.`,
   ];
+  if (detail.diedAt) lines.push('Cây đã héo khô (chết) vì bị bỏ quên quá lâu; có thể trồng lại từ hạt miễn phí.');
+  else if (detail.wilt.critical) lines.push(`Cây đang héo nặng: còn khoảng ${detail.wilt.hoursLeft} giờ nữa là chết nếu không được chăm.`);
+  if (detail.keeper.on) lines.push('Bộ chăm tự động (VIP) đang bật: khi cây sắp héo nó tự tưới, bón phân, bắt sâu để cây không chết, nhưng không giúp cây lên chặng.');
+  else if (detail.keeper.vip) lines.push('Chủ cây là VIP nhưng chưa bật Bộ chăm tự động trong Trạm IoT.');
 
   const ready = detail.care.filter((c) => c.ready).map((c) => c.label);
   const cooling = detail.care

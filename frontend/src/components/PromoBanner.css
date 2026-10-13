@@ -213,3 +213,44 @@
   width: 24px;
   height: 24px;
 }
+
+/* ── Slim: one row on a page with its own hero (the shop) ───────────────── */
+.promo-s {
+  display: flex; align-items: center; gap: 14px; padding: 12px 14px 12px 12px;
+  border-radius: 18px; border: 1.5px solid #F6D9AE; background: #FFFAF2;
+}
+.promo-s.is-won { border-color: #BBE5C6; background: #F3FBF5 }
+.promo-s-icon {
+  flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px;
+  background: #FFEBCC; color: #C2410C;
+}
+.promo-s.is-won .promo-s-icon { background: #DCF3E2; color: var(--primary-600) }
+.promo-s-main { flex: 1; display: grid; gap: 6px; min-width: 0 }
+.promo-s-title { margin: 0; font-family: var(--font-h); font-size: .94rem; font-weight: 700; line-height: 1.4; color: var(--ink) }
+.promo-s-count {
+  display: inline-grid; place-items: center; min-width: 30px; height: 30px; margin-right: 4px; padding: 0 8px; border-radius: 10px;
+  background: var(--primary-600); color: #fff; font-family: var(--font-display); font-size: 1.15rem; vertical-align: -3px;
+}
+.promo-s-sub { margin: 0; font-size: .84rem; color: var(--ink-3) }
+.promo-s-sub a { font-weight: 700; color: var(--primary-600) }
+.promo-s-progress { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px }
+.promo-s-label { font-size: .72rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-4) }
+.promo-s-bar { display: inline-flex; gap: 4px }
+.promo-s-bar i { width: 34px; height: 8px; border-radius: 99px; background: #EADFCB }
+.promo-s.is-won .promo-s-bar i { background: #D5E9DA }
+.promo-s-bar i.is-on { background: var(--orange) }
+.promo-s.is-won .promo-s-bar i.is-on { background: var(--primary-500) }
+.promo-s-note { font-size: .8rem; color: var(--ink-3) }
+.promo-s-note b { color: var(--ink) }
+.promo-s-cta {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 18px; border-radius: var(--r-full);
+  background: var(--primary-600); color: #fff; font-family: var(--font-h); font-size: .88rem; font-weight: 700; text-decoration: none; transition: background .15s;
+}
+.promo-s-cta:hover { background: var(--primary-700) }
+.promo-s-cta.is-soft { background: #fff; color: var(--primary-600); border: 1.5px solid var(--parchment-2) }
+@media (max-width: 640px) {
+  .promo-s { flex-wrap: wrap; align-items: flex-start }
+  .promo-s-main { flex-basis: calc(100% - 58px) }
+  .promo-s-cta { width: 100%; justify-content: center }
+  .promo-s-bar i { width: 26px }
+}

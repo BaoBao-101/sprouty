@@ -41,10 +41,10 @@ const PITCH: Record<Mode, { title: string; lines: string[]; foot: string }> = {
     title: 'Bắt đầu vườn đầu tiên',
     lines: [
       'Nuôi cây từ hạt tới ngày thu hoạch',
-      'Mở dần 8 thiết bị IoT ảo',
+      'Mở dần 7 thiết bị IoT ảo',
       'Mua 3 sản phẩm — tặng 1 workshop',
     ],
-    foot: 'Miễn phí tạo tài khoản. Không cần thẻ, không giao hàng.',
+    foot: 'Miễn phí tạo tài khoản, không cần thẻ ngân hàng.',
   },
 };
 

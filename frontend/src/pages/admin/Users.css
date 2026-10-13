@@ -1,0 +1,111 @@
+/* Người dùng: one calm row per account; everything you can do to an account
+   lives in its "Quản lý" box (ManageUserModal). */
+
+.usr-table-scroll { overflow-x: auto }
+.usr-table td { vertical-align: middle }
+.usr-row-link { cursor: pointer }
+.usr-row-link:hover td { background: #FAFCF8 }
+.usr-row-link.is-disabled .usr-name, .usr-row-link.is-disabled .usr-avatar { opacity: .55 }
+
+.usr-cell { display: flex; align-items: center; gap: 10px; min-width: 0 }
+.usr-avatar {
+  flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+  font-size: .76rem; font-weight: 800; background: #EEF2EA; color: #4B5E4D;
+}
+.usr-avatar.is-employee { background: #E0F2FE; color: #0369A1 }
+.usr-avatar.is-admin { background: #FEF3C7; color: #92400E }
+.usr-who { display: grid; gap: 1px; min-width: 0 }
+.usr-name { display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--ink); font-size: .9rem }
+.usr-email { font-size: .78rem; color: var(--ink-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 320px }
+.usr-you { padding: 0 7px; border-radius: 99px; background: #DCFCE7; color: #15803D; font-size: .66rem; font-weight: 800 }
+
+.usr-role-pill {
+  display: inline-block; padding: 3px 10px; border-radius: 99px; white-space: nowrap;
+  font-size: .76rem; font-weight: 700; background: #F1F5F9; color: #475569;
+}
+.usr-role-pill.is-employee { background: #E0F2FE; color: #0369A1 }
+.usr-role-pill.is-admin { background: #FEF3C7; color: #92400E }
+
+.usr-plan { display: inline-flex; align-items: flex-start; gap: 6px; font-size: .82rem; color: var(--ink-3); white-space: nowrap }
+.usr-plan > span { display: grid; gap: 1px }
+.usr-plan em { font-style: normal; font-size: .72rem; font-weight: 600; color: #B45309 }
+.usr-plan.is-vip { font-weight: 700; color: #92400E }
+.usr-plan.is-vip svg { flex: none; margin-top: 1px; color: #D97706 }
+.usr-plan.is-expired { color: var(--ink-4) }
+.usr-plan.is-none { color: var(--ink-5) }
+
+.usr-state { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; font-weight: 700; white-space: nowrap }
+.usr-state i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none }
+.usr-state.is-active { color: #15803D }
+.usr-state.is-disabled { color: #BE123C }
+.usr-date { font-size: .82rem; color: var(--ink-4); white-space: nowrap }
+.usr-actions { text-align: right }
+
+.usr-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 0 14px; border-radius: 9px;
+  border: 1px solid var(--border-c); background: var(--surface); color: var(--ink-2);
+  font: inherit; font-size: .8rem; font-weight: 700; white-space: nowrap; cursor: pointer; transition: background .15s, border-color .15s;
+}
+.usr-btn:hover:not(:disabled) { background: var(--cream-2); border-color: #CBD5E1 }
+.usr-btn:disabled { opacity: .5; cursor: not-allowed }
+.usr-btn.is-primary { border-color: #BBF7D0; background: #F0FDF4; color: #15803D }
+.usr-btn.is-vip { border-color: #FCD34D; background: #FFFBEB; color: #92400E }
+.usr-btn.is-vip:hover:not(:disabled) { background: #FEF3C7 }
+.usr-btn.is-danger { border-color: #FECDD3; background: #FFF1F2; color: #BE123C }
+.usr-btn.is-danger:hover:not(:disabled) { background: #FFE4E6; border-color: #FDA4AF }
+
+/* ── The "Quản lý" box ─────────────────────────────────────────────── */
+.usr-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 18px }
+.usr-summary > div { display: grid; gap: 3px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2, #F8FAF6); border: 1px solid var(--border-c) }
+.usr-summary span { font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-4) }
+.usr-summary b { font-size: .84rem; color: var(--ink); min-width: 0 }
+.usr-summary .usr-plan { white-space: normal }
+
+.usr-section { padding: 14px 0; border-top: 1px solid var(--border-c) }
+.usr-section h3 { margin: 0 0 10px; font-size: .74rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-4) }
+.usr-section.is-danger h3 { color: #BE123C }
+
+.usr-roles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px }
+.usr-role {
+  display: grid; gap: 2px; padding: 10px 12px; border-radius: 12px; text-align: left; cursor: pointer;
+  border: 1.5px solid var(--border-c); background: var(--surface); font: inherit;
+}
+.usr-role strong { font-size: .86rem; color: var(--ink) }
+.usr-role em { font-style: normal; font-size: .74rem; color: var(--ink-4) }
+.usr-role.is-on { border-color: #15803D; background: #F0FDF4; box-shadow: 0 0 0 3px rgba(21, 128, 61, .1) }
+.usr-role:disabled { cursor: not-allowed; opacity: .6 }
+.usr-note { display: flex; align-items: flex-start; gap: 6px; margin: 10px 0 0; font-size: .78rem; color: var(--ink-4) }
+.usr-note svg { flex: none; margin-top: 2px }
+.usr-save {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding: 10px 12px;
+  border-radius: 12px; background: #FFFBEB; border: 1px solid #FDE68A; font-size: .8rem; color: #78350F;
+}
+.usr-save > span { flex: 1 1 220px }
+
+.usr-row { display: flex; align-items: center; justify-content: space-between; gap: 14px }
+.usr-row > span { display: grid; gap: 2px; min-width: 0 }
+.usr-row b { font-size: .88rem; color: var(--ink) }
+.usr-row em { font-style: normal; font-size: .78rem; line-height: 1.45; color: var(--ink-4) }
+
+@media (max-width: 640px) {
+  .usr-summary { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  .usr-roles { grid-template-columns: 1fr }
+  .usr-row { flex-direction: column; align-items: stretch }
+  .usr-row .usr-btn { width: 100% }
+  .usr-email { max-width: 200px }
+}
+
+/* ── "Thêm người dùng" ─────────────────────────────────────────────── */
+.usr-form .usr-roles { margin-top: 2px }
+.usr-warn { color: #B45309 }
+.usr-password { display: flex; gap: 8px }
+.usr-password .form-input { flex: 1; min-width: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .02em }
+.usr-password .usr-btn { min-height: 44px }
+.usr-created { display: flex; align-items: center; gap: 12px; margin-bottom: 14px }
+.usr-created p { margin: 0; font-size: .86rem; line-height: 1.5; color: var(--ink-3) }
+.usr-created-icon { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: #DCFCE7; color: #15803D }
+.usr-creds { display: grid; gap: 8px; margin: 0 0 12px }
+.usr-creds > div { display: grid; gap: 2px; padding: 10px 14px; border-radius: 12px; background: var(--surface-2, #F8FAF6); border: 1px solid var(--border-c) }
+.usr-creds dt { font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-4) }
+.usr-creds dd { margin: 0; font-weight: 700; color: var(--ink); overflow-wrap: anywhere }
+.usr-creds dd.is-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1.05rem }

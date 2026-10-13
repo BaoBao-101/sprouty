@@ -8,7 +8,7 @@ import type { DeviceType } from '@/types/plant';
  * sensor there changed nothing on the plant. Now whatever is wired on the
  * board stands in the pot too — probes in the soil, a lamp over the leaves —
  * and what is switched on does something you can see: the lamp lights the
- * plant, the pump drips, the fan turns.
+ * plant, the fan turns, the care kit drips.
  *
  * Soil surface is y=0 and the pot rim sits at a radius of about 0.65, as in
  * plant-model.ts. Angles are around the pot; the camera looks from about 55°.
@@ -145,27 +145,35 @@ export function buildGadgets(list: Gadget[], plantTop: number): Gadgets | null {
         );
         beam.renderOrder = 1;
       }
-    } else if (type === 'water_pump') {
-      // A hose up the side of the pot and over the rim, ending in a dripper.
-      const a = 76;
-      const path = new T.CatmullRomCurve3([
-        around(a, 0.66, -0.55), around(a, 0.7, 0.06), around(a, 0.6, 0.15), around(a, 0.42, 0.1), around(a, 0.36, 0.05),
-      ]);
-      const hose = new T.MeshStandardMaterial({
-        color: on ? '#4FB3E8' : '#9FB7C4', transparent: true, opacity: 0.9, roughness: 0.25,
-      });
-      add(group, new T.TubeGeometry(path, 32, 0.013, 8, false), hose);
-      const tip = around(a, 0.36, 0.05);
-      add(group, new T.CylinderGeometry(0.02, 0.012, 0.035, 12), dark, tip.x, tip.y, tip.z);
+    } else if (type === 'auto_care') {
+      // VIP's care kit, built like the real thing: a controller on the rim, a
+      // drip ring round the stem fed from it, and a yellow sticky trap. On, the
+      // light is green and the drippers pulse.
+      const a = 196;
+      const box = part(a, 0.66, 0.06, faceIn(a));
+      add(box, new T.BoxGeometry(0.11, 0.08, 0.07), new T.MeshStandardMaterial({ color: '#5F8A5B', roughness: 0.5 }), 0, 0, 0);
+      add(box, new T.SphereGeometry(0.01, 10, 8), led(on), 0.03, 0.025, 0.036);
+      const hose = new T.MeshStandardMaterial({ color: on ? '#4FB3E8' : '#8FA3AD', roughness: 0.35 });
+      // The drip ring on the soil, round the stem.
+      const ring = add(group, new T.TorusGeometry(0.2, 0.011, 8, 48), hose, 0, 0.012, 0);
+      ring.rotation.x = Math.PI / 2;
+      const feed = new T.CatmullRomCurve3([around(a, 0.62, 0.05), around(a, 0.5, 0.06), around(a, 0.3, 0.02), around(a, 0.2, 0.012)]);
+      add(group, new T.TubeGeometry(feed, 16, 0.009, 6, false), hose);
+      const drops: T.Mesh[] = [];
+      for (let i = 0; i < 6; i += 1) {
+        const p = around(i * 60 + 15, 0.2, 0.012);
+        drops.push(add(group, new T.SphereGeometry(0.014, 10, 8), new T.MeshStandardMaterial({ color: '#38BDF8', transparent: true, opacity: on ? 0.9 : 0, roughness: 0.1 }), p.x, p.y, p.z));
+      }
+      // The sticky trap on its stake.
+      const trap = part(-62, 0.56, 0, faceOut(-62));
+      add(trap, new T.CylinderGeometry(0.007, 0.007, 0.26, 8), new T.MeshStandardMaterial({ color: '#B08A5A', roughness: 0.8 }), 0, 0.08, 0);
+      add(trap, new T.BoxGeometry(0.09, 0.12, 0.004), new T.MeshStandardMaterial({ color: '#F2D33C', roughness: 0.6 }), 0, 0.22, 0);
       if (on) {
-        const water = new T.MeshStandardMaterial({ color: '#38BDF8', transparent: true, opacity: 0.85, roughness: 0.1 });
-        const drops = [0, 1, 2].map(() => add(group, new T.SphereGeometry(0.011, 10, 8), water, tip.x, tip.y, tip.z));
         updates.push((t) => {
           drops.forEach((d, i) => {
-            const k = (t * 0.9 + i / 3) % 1;
-            d.position.y = tip.y - 0.03 - k * 0.06;
-            d.scale.setScalar(1 - k * 0.6);
-            (d.material as T.MeshStandardMaterial).opacity = 0.85 * (1 - k);
+            const k = (t * 0.8 + i / 6) % 1;
+            d.scale.setScalar(0.4 + k);
+            (d.material as T.MeshStandardMaterial).opacity = 0.9 * (1 - k);
           });
         });
       }

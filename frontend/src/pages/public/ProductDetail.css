@@ -111,7 +111,7 @@
 }
 .pdp-facts li > span:last-child { display: flex; flex-direction: column; min-width: 0 }
 .pdp-facts em { font-style: normal; font-size: .76rem; color: var(--ink-4) }
-.pdp-facts strong { font-family: var(--font-h); font-size: .95rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.pdp-facts strong { font-family: var(--font-h); font-size: .95rem; line-height: 1.3; color: var(--ink); overflow-wrap: anywhere }
 
 /* ── Details ────────────────────────────────────────────────────────────── */
 .pdp-details { padding: 40px 0 8px; scroll-margin-top: 100px }
@@ -207,4 +207,6 @@
   .pdp-mobile-bar strong { font-family: var(--font-display); font-size: 1.25rem; color: var(--orange); line-height: 1.1 }
   .pdp-mobile-bar em { font-style: normal; font-size: .74rem; color: var(--ink-4) }
   .pdp-mobile-bar .btn { display: inline-flex; align-items: center; gap: 6px }
+  /* The assistant floats above the buy bar, not over its button. */
+  body:has(.pdp-mobile-bar) .aib { bottom: calc(84px + env(safe-area-inset-bottom)) }
 }

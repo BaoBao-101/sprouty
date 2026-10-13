@@ -14,6 +14,8 @@ export interface PublicWorkshop {
   seatsLeft: number;
   isFull: boolean;
   upcoming: boolean;
+  /** Still open for registration: it has not started. */
+  bookable?: boolean;
 }
 
 /** Bank-transfer instructions for one booking. */

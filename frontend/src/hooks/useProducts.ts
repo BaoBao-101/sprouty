@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { fetchProducts } from '@/services/products';
 import { Cart } from '@/services/cart';
 import type { Product } from '@/types/product';
@@ -11,10 +11,12 @@ interface State {
 
 /**
  * Loads the catalogue once and registers it with the cart, so `add(id)` can
- * resolve a product without the caller passing the whole object.
+ * resolve a product without the caller passing the whole object. `reload`
+ * asks again, for a "Thử lại" after a failed load.
  */
 export function useProducts(params?: Record<string, unknown>) {
   const [state, setState] = useState<State>({ products: [], loading: true, error: null });
+  const [attempt, setAttempt] = useState(0);
   const key = JSON.stringify(params ?? {});
 
   useEffect(() => {
@@ -41,7 +43,8 @@ export function useProducts(params?: Record<string, unknown>) {
     };
     // `params` is an object literal at most call sites, so compare by content.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  }, [key, attempt]);
 
-  return state;
+  const reload = useCallback(() => setAttempt((n) => n + 1), []);
+  return { ...state, reload };
 }

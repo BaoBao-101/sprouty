@@ -67,8 +67,9 @@ export function IotDock({
     };
   }, [open]);
 
-  const on = devices.filter((d) => d.unlocked && wired.includes(d.type));
-  const spare = devices.filter((d) => d.unlocked && !wired.includes(d.type));
+  const usable = (d: PlantDevice) => d.unlocked && !d.vipLocked;
+  const on = devices.filter((d) => usable(d) && wired.includes(d.type));
+  const spare = devices.filter((d) => usable(d) && !wired.includes(d.type));
   // Sensors with a number show it; the camera and the actuators are either working or not.
   const readers = on.filter((d) => d.kind === 'sensor' && d.type !== 'camera');
   const workers = on.filter((d) => d.kind === 'actuator' || d.type === 'camera');

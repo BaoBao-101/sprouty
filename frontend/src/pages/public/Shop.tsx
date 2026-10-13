@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ProductCard } from '@/components/ProductCard';
-import { ProductListItem } from '@/components/ProductListItem';
 import { useProducts } from '@/hooks/useProducts';
-import { fetchSpeciesFilters } from '@/services/products';
+import { useCart } from '@/contexts/CartContext';
+import { fetchSpeciesFilters, productFallbackImage, productImage } from '@/services/products';
 import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
-import type { Product } from '@/types/product';
+import { PromoBanner } from '@/components/PromoBanner';
+import { BADGE_LABEL, formatPrice, type Product } from '@/types/product';
+import './Shop.css';
 
 interface SpeciesFilter {
   key: string;
@@ -14,24 +15,23 @@ interface SpeciesFilter {
   count: number;
   harvest: string;
 }
-import { PromoBanner } from '@/components/PromoBanner';
-import './Shop.css';
 
 type Category = 'all' | 'kit' | 'book';
 type AgeBand = 'all' | '4-6' | '6-9' | '9-12';
 type Badge = 'all' | 'hot' | 'new' | 'sale';
 type PricePreset = 'all' | 'u70' | '70-90' | 'o90';
 type Sort = '' | 'pa' | 'pd' | 'az' | 'pop';
-type View = 'grid' | 'list';
+/** Each filter, so a count can leave its own group out (see `passes`). */
+type Group = 'species' | 'age' | 'price' | 'badge' | 'category';
 
-const CATEGORIES: Array<{ value: Category; icon: IconName; label: string }> = [
-  { value: 'all', icon: 'cart', label: 'Tất cả' },
-  { value: 'kit', icon: 'sprout', label: 'Bộ kit trồng cây' },
-  { value: 'book', icon: 'book', label: 'Sách hướng dẫn' },
+const CATEGORIES: Array<{ value: Category; label: string }> = [
+  { value: 'all', label: 'Tất cả' },
+  { value: 'kit', label: 'Bộ kit trồng cây' },
+  { value: 'book', label: 'Sách hướng dẫn' },
 ];
 
 const AGE_BANDS: Array<{ value: AgeBand; label: string }> = [
-  { value: 'all', label: 'Tất cả' },
+  { value: 'all', label: 'Mọi tuổi' },
   { value: '4-6', label: '4–6 tuổi' },
   { value: '6-9', label: '6–9 tuổi' },
   { value: '9-12', label: '9–12 tuổi' },
@@ -45,17 +45,25 @@ const BADGES: Array<{ value: Badge; label: string }> = [
 ];
 
 const PRICE_PRESETS: Array<{ value: PricePreset; label: string; min: string; max: string }> = [
-  { value: 'all', label: 'Tất cả', min: '', max: '' },
+  { value: 'all', label: 'Mọi giá', min: '', max: '' },
   { value: 'u70', label: 'Dưới 70K', min: '', max: '69999' },
   { value: '70-90', label: '70–90K', min: '70000', max: '90000' },
   { value: 'o90', label: 'Trên 90K', min: '90001', max: '' },
 ];
 
-const CATEGORY_TAG: Record<string, string> = {
-  kit: 'Bộ kit',
-  book: 'Sách hướng dẫn',
-  membership: 'Gói thành viên',
-};
+const SORTS: Array<{ value: Sort; label: string }> = [
+  { value: '', label: 'Gợi ý' },
+  { value: 'pop', label: 'Bán chạy' },
+  { value: 'pa', label: 'Giá thấp → cao' },
+  { value: 'pd', label: 'Giá cao → thấp' },
+  { value: 'az', label: 'Tên A → Z' },
+];
+
+const STEPS: Array<{ icon: IconName; title: string; text: string }> = [
+  { icon: 'seed', title: 'Gieo hạt thật', text: 'Hạt, đất và chậu có sẵn trong hộp' },
+  { icon: 'sprout', title: 'Kích hoạt cây 3D', text: 'Nhập mã trong hộp, cây mọc trên Sprouty' },
+  { icon: 'album', title: 'Lưu kỷ niệm', text: 'Ảnh và video bé chăm cây mỗi ngày' },
+];
 
 /** The age label is free text ("4–10 tuổi"), so a band matches if any of its
  *  years appears in the label. Same rule the old shop page used. */
@@ -70,8 +78,136 @@ function matchesAge(product: Product, band: AgeBand) {
   return AGE_YEARS[band].some((year) => product.age.includes(year));
 }
 
+/** The price bounds as numbers; an empty or unreadable box is no bound. */
+function priceBounds(minText: string, maxText: string) {
+  const min = minText === '' ? 0 : Math.max(0, parseInt(minText, 10) || 0);
+  const rawMax = maxText === '' ? Infinity : parseInt(maxText, 10);
+  const max = Number.isNaN(rawMax) ? Infinity : Math.max(min, rawMax);
+  return { min, max };
+}
+
+const speciesIcon = (icon?: string): IconName => (icon as IconName) || 'sprout';
+/** The most one order line accepts (backend/src/routes/orders.js). */
+const MAX_QTY = 99;
+const digitsOnly = (value: string) => value.replace(/\D/g, '').slice(0, 9);
+const asMoney = (digits: string) => (digits ? Number(digits).toLocaleString('vi-VN') : '');
+
+/**
+ * One product in the grid. The image and text open the product; the button
+ * adds it to the cart and says so in words — the old round "+" was easy to
+ * miss, and on a phone it was squeezed down to a sliver beside a long price.
+ * Name and description are clamped, and the price and button sit at the
+ * bottom, so every card in a row lines up whatever the text.
+ */
+function ShopCard({ product }: { product: Product }) {
+  const { add, items, setQty, remove } = useCart();
+  // The card adds the standard kit; the Smart one is chosen on the product page.
+  const inCart = items.find((line) => line.id === product.id && (line.variant || 'standard') === 'standard')?.qty || 0;
+  const primary = productImage(product);
+  const [src, setSrc] = useState(primary);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => { setSrc(primary); setFailed(false); }, [product.id, primary]);
+
+  function onImageError() {
+    const fallback = productFallbackImage(product);
+    if (src !== fallback) setSrc(fallback);
+    else setFailed(true);
+  }
+
+  const discount = product.old && product.old > product.price ? Math.round((1 - product.price / product.old) * 100) : 0;
+
+  return (
+    <article className="sp-card">
+      <Link to={`/shop/${product.id}`} className="sp-card-link">
+        <span className="sp-card-img" style={failed ? undefined : { background: product.bg }}>
+          {failed ? (
+            // No photo of its own: say so, in the shop's look, rather than
+            // borrowing another product's picture.
+            <span className="sp-card-noimg">
+              <SproutyIcon name={speciesIcon(product.species?.icon)} size={40} />
+              <em>Ảnh đang cập nhật</em>
+            </span>
+          ) : (
+            <img src={src} alt="" loading="lazy" decoding="async" onError={onImageError} />
+          )}
+          {product.badge && <span className={`sp-badge is-${product.badge}`}>{BADGE_LABEL[product.badge]}</span>}
+        </span>
+        <span className="sp-card-body">
+          <span className="sp-card-meta">
+            {product.species && <SproutyIcon name={speciesIcon(product.species.icon)} size={14} />}
+            <span>{product.species?.label || product.col}</span>
+            {product.age && (
+              <>
+                <i aria-hidden="true">·</i>
+                <span>{product.age}</span>
+              </>
+            )}
+          </span>
+          <strong className="sp-card-name">{product.name}</strong>
+          <span className="sp-card-desc">{product.desc}</span>
+        </span>
+      </Link>
+      <div className="sp-card-foot">
+        <span className="sp-price">
+          <b>{formatPrice(product.price)}</b>
+          {discount > 0 && (
+            <>
+              <s>{formatPrice(product.old!)}</s>
+              <em>-{discount}%</em>
+            </>
+          )}
+        </span>
+        {inCart > 0 ? (
+          // Once it is in the cart the button becomes the quantity, so a
+          // second one is a tap away and taking it out does not need the cart.
+          <div className="sp-stepper" role="group" aria-label={`${product.name} trong giỏ`}>
+            <button
+              type="button"
+              aria-label={inCart > 1 ? 'Bớt một' : 'Bỏ khỏi giỏ'}
+              onClick={() => (inCart > 1 ? setQty(product.id, 'standard', inCart - 1) : remove(product.id, 'standard'))}
+            >
+              <SproutyIcon name="minus" size={16} />
+            </button>
+            <Link to="/cart" className="sp-stepper-qty" aria-live="polite">
+              <b>{inCart}</b> trong giỏ
+            </Link>
+            <button
+              type="button"
+              aria-label="Thêm một"
+              disabled={inCart >= MAX_QTY}
+              onClick={() => setQty(product.id, 'standard', inCart + 1)}
+            >
+              <SproutyIcon name="add" size={16} />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="sp-add"
+            aria-label={`Thêm ${product.name} vào giỏ`}
+            onClick={() => add(product.id, 1, product)}
+          >
+            <SproutyIcon name="cart" size={16} />
+            <span>Thêm vào giỏ</span>
+          </button>
+        )}
+      </div>
+    </article>
+  );
+}
+
+/**
+ * The shop.
+ *
+ * Every filter lives in one place — beside the grid on a wide screen, in a
+ * sheet from the bottom on a phone or tablet — with the plant first, since
+ * it is what a parent chooses by. (The plants used to be a second row of
+ * filters above the grid as well, which read as two separate filter boxes.)
+ * What is switched on shows as tags above the grid, each removable. Each
+ * option's count is what you would get by picking it, given the rest.
+ */
 export default function Shop() {
-  const { products, loading, error } = useProducts();
+  const { products, loading, error, reload } = useProducts();
   const [searchParams] = useSearchParams();
 
   // The homepage age cards link here with ?age=4-6.
@@ -81,7 +217,7 @@ export default function Shop() {
   // Which plant the kit grows. Fetched rather than hardcoded: the catalogue
   // lives in the simulation, and a species added there should appear here
   // without a second edit.
-  const [species, setSpecies] = useState<string>('all');
+  const [species, setSpecies] = useState<string>(searchParams.get('species') || 'all');
   const [speciesOptions, setSpeciesOptions] = useState<SpeciesFilter[]>([]);
   const [age, setAge] = useState<AgeBand>(AGE_BANDS.some((a) => a.value === initialAge) ? initialAge : 'all');
   const [badge, setBadge] = useState<Badge>('all');
@@ -90,8 +226,14 @@ export default function Shop() {
   const [priceMax, setPriceMax] = useState('');
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<Sort>('');
-  const [view, setView] = useState<View>('grid');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // "Thử lại" asks for the plants again too: they load on their own, and a
+  // failed load used to leave the group missing until a full page reload.
+  const [speciesAttempt, setSpeciesAttempt] = useState(0);
+  const retry = () => {
+    reload();
+    setSpeciesAttempt((n) => n + 1);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -100,12 +242,25 @@ export default function Shop() {
         if (!cancelled) setSpeciesOptions(list);
       })
       .catch(() => {
-        /* The section simply does not render; every other filter still works. */
+        /* The group simply does not render; every other filter still works. */
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [speciesAttempt]);
+
+  // The sheet covers the page; the page behind it should not scroll.
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setDrawerOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [drawerOpen]);
 
   function applyPricePreset(preset: PricePreset) {
     const chosen = PRICE_PRESETS.find((p) => p.value === preset)!;
@@ -114,391 +269,341 @@ export default function Shop() {
     setPriceMax(chosen.max);
   }
 
-  function resetFilters() {
+  function clearFilters() {
     setCategory('all');
     setSpecies('all');
     setAge('all');
     setBadge('all');
     applyPricePreset('all');
+  }
+
+  function resetAll() {
+    clearFilters();
     setQuery('');
     setSort('');
   }
 
+  const { min, max } = priceBounds(priceMin, priceMax);
+  const q = query.trim().toLowerCase();
+
+  /** Whether a product passes every filter but `skip`. */
+  const passes = (p: Product, skip?: Group) => {
+    if (skip !== 'category' && category !== 'all' && p.cat !== category) return false;
+    if (skip !== 'species' && species !== 'all' && p.species?.key !== species) return false;
+    if (skip !== 'badge' && badge !== 'all' && p.badge !== badge) return false;
+    if (skip !== 'age' && !matchesAge(p, age)) return false;
+    if (skip !== 'price' && ((max !== Infinity && p.price > max) || (min > 0 && p.price < min))) return false;
+    if (q) {
+      const haystack = `${p.name} ${p.desc} ${p.col} ${p.age} ${p.species?.label || ''}`.toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    return true;
+  };
+
   const results = useMemo(() => {
-    const min = priceMin.trim() === '' ? 0 : Math.max(0, parseInt(priceMin, 10) || 0);
-    const rawMax = priceMax.trim() === '' ? Infinity : parseInt(priceMax, 10);
-    const max = Number.isNaN(rawMax) ? Infinity : Math.max(min, rawMax);
-    const q = query.trim().toLowerCase();
-
-    const list = products.filter((p) => {
-      if (category !== 'all' && p.cat !== category) return false;
-      if (species !== 'all' && p.species?.key !== species) return false;
-      if (badge !== 'all' && p.badge !== badge) return false;
-      if (!matchesAge(p, age)) return false;
-      if (max !== Infinity && p.price > max) return false;
-      if (min > 0 && p.price < min) return false;
-      if (q) {
-        const haystack = `${p.name} ${p.desc} ${p.col} ${p.age}`.toLowerCase();
-        if (!haystack.includes(q)) return false;
-      }
-      return true;
-    });
-
+    const list = products.filter((p) => passes(p));
     if (sort === 'pa') list.sort((a, b) => a.price - b.price);
     else if (sort === 'pd') list.sort((a, b) => b.price - a.price);
     else if (sort === 'az') list.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
     else if (sort === 'pop') list.sort((a, b) => Number(b.badge === 'hot') - Number(a.badge === 'hot'));
-
     return list;
-  }, [products, category, species, age, badge, priceMin, priceMax, query, sort]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, category, species, age, badge, min, max, q, sort]);
 
-  const countByCategory = useMemo(
-    () => ({
-      all: products.length,
-      kit: products.filter((p) => p.cat === 'kit').length,
-      book: products.filter((p) => p.cat === 'book').length,
-    }),
-    [products],
-  );
+  /** How many products picking an option would show, the other filters kept. */
+  const countIf = (group: Group, test: (p: Product) => boolean) =>
+    products.reduce((n, p) => n + (passes(p, group) && test(p) ? 1 : 0), 0);
 
+  const chosenSpecies = speciesOptions.find((o) => o.key === species);
   const activeTags = [
-    category !== 'all' && { label: CATEGORY_TAG[category] ?? category, clear: () => setCategory('all') },
-    species !== 'all' && {
-      label: speciesOptions.find((o) => o.key === species)?.label ?? species,
-      clear: () => setSpecies('all'),
-    },
-    badge !== 'all' && {
-      label: BADGES.find((b) => b.value === badge)!.label,
-      clear: () => setBadge('all'),
-    },
-    age !== 'all' && { label: `${age} tuổi`, clear: () => setAge('all') },
-    pricePreset !== 'all' && {
-      label: `Giá: ${PRICE_PRESETS.find((p) => p.value === pricePreset)!.label}`,
+    species !== 'all' && { label: chosenSpecies?.label || species, clear: () => setSpecies('all') },
+    age !== 'all' && { label: AGE_BANDS.find((a) => a.value === age)!.label, clear: () => setAge('all') },
+    (pricePreset !== 'all' || priceMin || priceMax) && {
+      label: pricePreset !== 'all'
+        ? PRICE_PRESETS.find((p) => p.value === pricePreset)!.label
+        : `${priceMin ? formatPrice(+priceMin) : '0đ'} – ${priceMax ? formatPrice(+priceMax) : 'không giới hạn'}`,
       clear: () => applyPricePreset('all'),
     },
+    badge !== 'all' && { label: BADGES.find((b) => b.value === badge)!.label, clear: () => setBadge('all') },
+    category !== 'all' && { label: CATEGORIES.find((c) => c.value === category)!.label, clear: () => setCategory('all') },
   ].filter(Boolean) as Array<{ label: string; clear: () => void }>;
 
-  /** One panel, rendered twice: in the sidebar and inside the mobile drawer. */
+  const anyFilter = activeTags.length > 0 || q !== '';
+
+  /** One panel, rendered twice: beside the grid and inside the sheet. */
   const filterPanel = (
     <>
-      <div className="filter-section">
-        <div className="filter-section-label">Loại sản phẩm</div>
-        <div className="filter-chips">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c.value}
-              className={`filter-chip${category === c.value ? ' active' : ''}`}
-              onClick={() => setCategory(c.value)}
-            >
-              <span>
-                <span className="filter-chip-icon"><SproutyIcon name={c.icon} size={16} /></span>
-                {c.label}
-              </span>
-              <span className="filter-chip-count">{countByCategory[c.value]}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Which plant the kit grows — the question a parent actually asks after
-          "is this a kit?", and the one thing the sidebar had no answer for. */}
       {speciesOptions.length > 0 && (
-        <div className="filter-section">
-          <div className="filter-section-label">Giống cây</div>
-          <div className="species-filter">
-            <button
-              className={`species-pick${species === 'all' ? ' active' : ''}`}
-              onClick={() => setSpecies('all')}
-            >
-              <span className="species-pick-icon">
-                <SproutyIcon name="leaf" size={19} />
-              </span>
-              <span className="species-pick-body">
-                <strong>Tất cả giống</strong>
-              </span>
-              <span className="species-pick-count">
-                {speciesOptions.reduce((n, o) => n + o.count, 0)}
-              </span>
+        <fieldset className="sp-group">
+          <legend>Giống cây</legend>
+          <div className="sp-plants">
+            <button type="button" aria-pressed={species === 'all'} className={`sp-plant${species === 'all' ? ' is-on' : ''}`} onClick={() => setSpecies('all')}>
+              <span className="sp-plant-icon"><SproutyIcon name="leaf" size={17} /></span>
+              <span className="sp-plant-name">Tất cả cây</span>
+              <em>{countIf('species', () => true)}</em>
             </button>
-
-            {speciesOptions.map((option) => (
-              <button
-                key={option.key}
-                className={`species-pick${species === option.key ? ' active' : ''}`}
-                onClick={() => setSpecies(option.key)}
-                title={`Thu hoạch ${option.harvest}`}
-              >
-                <span className="species-pick-icon">
-                  <SproutyIcon name={option.icon as IconName} size={19} />
-                </span>
-                <span className="species-pick-body">
-                  <strong>{option.label}</strong>
-                  <em>thu hoạch {option.harvest}</em>
-                </span>
-                <span className="species-pick-count">{option.count}</span>
-              </button>
-            ))}
+            {speciesOptions.map((option) => {
+              const n = countIf('species', (p) => p.species?.key === option.key);
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  aria-pressed={species === option.key}
+                  className={`sp-plant${species === option.key ? ' is-on' : ''}${n === 0 ? ' is-empty' : ''}`}
+                  onClick={() => setSpecies(species === option.key ? 'all' : option.key)}
+                  title={`Thu hoạch ${option.harvest}`}
+                >
+                  <span className="sp-plant-icon"><SproutyIcon name={speciesIcon(option.icon)} size={17} /></span>
+                  <span className="sp-plant-name">{option.label}</span>
+                  <em>{n}</em>
+                </button>
+              );
+            })}
           </div>
-        </div>
+        </fieldset>
       )}
 
-      <div className="filter-section">
-        <div className="filter-section-label">Độ tuổi</div>
-        <div className="filter-age-grid">
+      <fieldset className="sp-group">
+        <legend>Độ tuổi</legend>
+        <div className="sp-chips">
           {AGE_BANDS.map((a) => (
-            <button
-              key={a.value}
-              className={`filter-age-btn${age === a.value ? ' active' : ''}`}
-              onClick={() => setAge(a.value)}
-            >
+            <button key={a.value} type="button" aria-pressed={age === a.value} className={`sp-chip${age === a.value ? ' is-on' : ''}`} onClick={() => setAge(a.value)}>
               {a.label}
+              {a.value !== 'all' && <em>{countIf('age', (p) => matchesAge(p, a.value))}</em>}
             </button>
           ))}
         </div>
-      </div>
+      </fieldset>
 
-      <div className="filter-section">
-        <div className="filter-section-label">Khoảng giá</div>
-        <div className="price-inputs">
-          <div className="price-input-wrap">
-            <label htmlFor="priceMin">Từ (đ)</label>
-            <input
-              className="price-input"
-              type="number"
-              id="priceMin"
-              min={0}
-              placeholder="Tối thiểu"
-              value={priceMin}
-              onChange={(e) => {
-                setPriceMin(e.target.value);
-                setPricePreset('all');
-              }}
-            />
-          </div>
-          <div className="price-input-wrap">
-            <label htmlFor="priceMax">Đến (đ)</label>
-            <input
-              className="price-input"
-              type="number"
-              id="priceMax"
-              min={0}
-              placeholder="Tối đa"
-              value={priceMax}
-              onChange={(e) => {
-                setPriceMax(e.target.value);
-                setPricePreset('all');
-              }}
-            />
-          </div>
+      <fieldset className="sp-group">
+        <legend>Khoảng giá</legend>
+        <div className="sp-chips">
+          {PRICE_PRESETS.map((p) => {
+            const b = priceBounds(p.min, p.max);
+            return (
+              <button key={p.value} type="button" aria-pressed={pricePreset === p.value} className={`sp-chip${pricePreset === p.value ? ' is-on' : ''}`} onClick={() => applyPricePreset(p.value)}>
+                {p.label}
+                {p.value !== 'all' && <em>{countIf('price', (x) => x.price >= b.min && x.price <= b.max)}</em>}
+              </button>
+            );
+          })}
         </div>
-        <div className="price-quick">
-          {PRICE_PRESETS.map((p) => (
-            <button
-              key={p.value}
-              className={`price-quick-btn${pricePreset === p.value ? ' active' : ''}`}
-              onClick={() => applyPricePreset(p.value)}
-            >
-              {p.label}
-            </button>
-          ))}
+        <div className="sp-range">
+          <label>
+            <span>Từ</span>
+            <span className="sp-money">
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="0"
+                aria-label="Giá từ"
+                value={asMoney(priceMin)}
+                onChange={(e) => { setPriceMin(digitsOnly(e.target.value)); setPricePreset('all'); }}
+              />
+              <i>đ</i>
+            </span>
+          </label>
+          <label>
+            <span>Đến</span>
+            <span className="sp-money">
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="Tối đa"
+                aria-label="Giá đến"
+                value={asMoney(priceMax)}
+                onChange={(e) => { setPriceMax(digitsOnly(e.target.value)); setPricePreset('all'); }}
+              />
+              <i>đ</i>
+            </span>
+          </label>
         </div>
-      </div>
+      </fieldset>
 
-      <div className="filter-section">
-        <div className="filter-section-label">Nhãn sản phẩm</div>
-        <div className="filter-badge-row">
+      <fieldset className="sp-group">
+        <legend>Nhãn</legend>
+        <div className="sp-chips">
           {BADGES.map((b) => (
-            <button
-              key={b.value}
-              className={`badge-pill ${b.value === 'all' ? 'all' : b.value}${badge === b.value ? ' active' : ''}`}
-              onClick={() => setBadge(b.value)}
-            >
+            <button key={b.value} type="button" aria-pressed={badge === b.value} className={`sp-chip${badge === b.value ? ' is-on' : ''}`} onClick={() => setBadge(b.value)}>
               {b.label}
+              {b.value !== 'all' && <em>{countIf('badge', (p) => p.badge === b.value)}</em>}
             </button>
           ))}
         </div>
-      </div>
+      </fieldset>
+
+      <fieldset className="sp-group">
+        <legend>Loại sản phẩm</legend>
+        <div className="sp-kinds">
+          {CATEGORIES.map((c) => (
+            <button key={c.value} type="button" aria-pressed={category === c.value} className={`sp-kind${category === c.value ? ' is-on' : ''}`} onClick={() => setCategory(c.value)}>
+              <span>{c.label}</span>
+              <em>{countIf('category', (p) => c.value === 'all' || p.cat === c.value)}</em>
+            </button>
+          ))}
+        </div>
+      </fieldset>
     </>
   );
 
   return (
     <>
-      <div className="shop-hero">
-        <div className="shop-hero-glow" />
-        <div className="container">
-          <div className="breadcrumb shop-hero-crumb">
-            <Link to="/">Trang chủ</Link> › Cửa hàng
+      <section className="sp-hero">
+        <div className="container sp-hero-in">
+          <div className="sp-hero-text">
+            <nav className="sp-crumb" aria-label="Đường dẫn">
+              <Link to="/">Trang chủ</Link>
+              <span aria-hidden="true">/</span>
+              <span>Cửa hàng</span>
+            </nav>
+            <h1>Chọn một hạt giống cho bé</h1>
+            <p>Mỗi bộ kit có hạt giống thật để gieo ở nhà và một cây 3D trên Sprouty để bé chăm mỗi ngày.</p>
+            <label className="sp-search">
+              <SproutyIcon name="search" size={19} />
+              <input
+                type="search"
+                placeholder="Tìm tên cây, chủ đề, độ tuổi…"
+                aria-label="Tìm sản phẩm"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              {query && (
+                <button type="button" aria-label="Xoá tìm kiếm" onClick={() => setQuery('')}>
+                  <SproutyIcon name="close" size={16} />
+                </button>
+              )}
+            </label>
           </div>
-          <h1>Cửa hàng Sprouty</h1>
-          <p>Bộ kit cây mô phỏng và thiết bị IoT ảo cho cả gia đình.</p>
-        </div>
-      </div>
-
-      <div className="container">
-        <PromoBanner className="shop-promo" />
-        <div className="shop-wrap">
-          <aside className="filter-sidebar">
-            <div className="filter-head">
-              <div className="filter-head-left">
-                <span className="filter-head-icon"><SproutyIcon name="filter" size={18} /></span>
-                <h3>Bộ lọc</h3>
-                <span className={`filter-active-count${activeTags.length ? ' show' : ''}`}>
-                  {activeTags.length}
+          <ol className="sp-steps" aria-label="Một bộ kit gồm gì">
+            {STEPS.map((step) => (
+              <li key={step.title}>
+                <span className="sp-step-icon"><SproutyIcon name={step.icon} size={20} /></span>
+                <span>
+                  <strong>{step.title}</strong>
+                  <em>{step.text}</em>
                 </span>
-              </div>
-              <button className="filter-reset" onClick={resetFilters}>
-                Xoá tất cả
-              </button>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <div className="container sp-body">
+        <PromoBanner variant="slim" className="sp-promo" inShop />
+
+        <div className="sp-layout">
+          <aside className="sp-filters" aria-label="Bộ lọc">
+            <div className="sp-filters-head">
+              <h2><SproutyIcon name="filter" size={17} /> Bộ lọc</h2>
+              {activeTags.length > 0 && (
+                <button type="button" className="sp-link" onClick={clearFilters}>
+                  Xoá bộ lọc
+                </button>
+              )}
             </div>
             {filterPanel}
           </aside>
 
-          <div className="products-main">
-            <button className="filter-mobile-toggle" onClick={() => setDrawerOpen(true)}>
-              <div className="filter-mobile-toggle-left">
-                <SproutyIcon name="filter" size={18} />
-                <span>Bộ lọc &amp; Sắp xếp</span>
-                {activeTags.length > 0 && (
-                  <span className="filter-active-count show">{activeTags.length}</span>
+          <div className="sp-main">
+            <div className="sp-toolbar">
+              <p className="sp-count" aria-live="polite">
+                {loading ? 'Đang tải sản phẩm…' : error ? 'Chưa tải được' : (
+                  <>
+                    <b>{results.length}</b> sản phẩm
+                    {q && <> cho “{query.trim()}”</>}
+                  </>
                 )}
-              </div>
-              <div className="filter-mobile-toggle-right">
-                <span style={{ fontSize: '.78rem', color: 'var(--ink-4)' }}>
-                  {results.length} sản phẩm
-                </span>
-                <span style={{ color: 'var(--ink-4)', fontSize: '.9rem' }}>›</span>
-              </div>
-            </button>
-
-            <div className="shop-toolbar">
-              <div className="search-field">
-                <span className="search-field-icon"><SproutyIcon name="search" size={17} /></span>
-                <input
-                  type="search"
-                  placeholder="Tìm tên, chủ đề, độ tuổi..."
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
-                <button
-                  className={`search-clear${query ? ' show' : ''}`}
-                  onClick={() => setQuery('')}
-                  title="Xoá tìm kiếm"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="sort-wrapper">
-                <select
-                  className="sort-select"
-                  value={sort}
-                  onChange={(e) => setSort(e.target.value as Sort)}
-                >
-                  <option value="">Mặc định</option>
-                  <option value="pa">Giá: thấp → cao</option>
-                  <option value="pd">Giá: cao → thấp</option>
-                  <option value="az">Tên A → Z</option>
-                  <option value="pop">Phổ biến nhất</option>
+              </p>
+              <button type="button" className="sp-filter-btn" onClick={() => setDrawerOpen(true)}>
+                <SproutyIcon name="filter" size={17} />
+                Bộ lọc
+                {activeTags.length > 0 && <em>{activeTags.length}</em>}
+              </button>
+              <label className="sp-sort">
+                <span>Sắp xếp</span>
+                <select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
+                  {SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
-              </div>
-
-              <div className="view-toggle">
-                <button
-                  className={`view-btn${view === 'grid' ? ' active' : ''}`}
-                  onClick={() => setView('grid')}
-                  title="Dạng lưới"
-                >
-                  ⊞
-                </button>
-                <button
-                  className={`view-btn${view === 'list' ? ' active' : ''}`}
-                  onClick={() => setView('list')}
-                  title="Dạng danh sách"
-                >
-                  ≡
-                </button>
-              </div>
-
-              <div className="result-count">
-                {loading ? 'Đang tải...' : <><strong>{results.length}</strong> sản phẩm</>}
-              </div>
+              </label>
             </div>
 
             {activeTags.length > 0 && (
-              <div className="active-filters">
+              <div className="sp-tags">
                 {activeTags.map((tag) => (
-                  <span className="active-filter-tag" key={tag.label}>
+                  <button type="button" className="sp-tag" key={tag.label} onClick={tag.clear} aria-label={`Bỏ lọc ${tag.label}`}>
                     {tag.label}
-                    <button onClick={tag.clear} title="Bỏ lọc">
-                      ✕
-                    </button>
-                  </span>
+                    <SproutyIcon name="close" size={13} />
+                  </button>
+                ))}
+                {activeTags.length > 1 && (
+                  <button type="button" className="sp-link" onClick={clearFilters}>Xoá tất cả</button>
+                )}
+              </div>
+            )}
+
+            {error && !loading && (
+              <div className="sp-empty is-error" role="alert">
+                <span className="sp-empty-icon"><SproutyIcon name="warning" size={28} /></span>
+                <h3>Chưa tải được sản phẩm</h3>
+                <p>{error}</p>
+                <button type="button" className="btn btn-primary" onClick={retry}>Thử lại</button>
+              </div>
+            )}
+
+            {loading && (
+              <div className="sp-grid" aria-hidden="true">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div className="sp-card is-skeleton" key={i}>
+                    <span className="sp-card-img" />
+                    <span className="sp-skel" />
+                    <span className="sp-skel is-short" />
+                  </div>
                 ))}
               </div>
             )}
 
-            {error && <div className="shop-message">{error}</div>}
-
             {!error && !loading && results.length === 0 && (
-              <div className="empty-state">
-                <div className="empty-state-emoji"><SproutyIcon name="search" size={40} /></div>
-                <h3>Không tìm thấy sản phẩm nào</h3>
-                <p>Thử thay đổi bộ lọc hoặc từ khoá tìm kiếm của bạn.</p>
-                <button className="btn btn-primary btn-lg" onClick={resetFilters}>
-                  Xoá tất cả bộ lọc
-                </button>
+              <div className="sp-empty">
+                <span className="sp-empty-icon"><SproutyIcon name="search" size={28} /></span>
+                <h3>Chưa có sản phẩm hợp</h3>
+                <p>Thử bỏ bớt bộ lọc, chọn giống cây khác hoặc đổi từ khoá.</p>
+                {anyFilter && <button type="button" className="btn btn-primary" onClick={resetAll}>Xem tất cả sản phẩm</button>}
               </div>
             )}
 
-            {results.length > 0 && (
-              <div className={view === 'list' ? 'grid-list' : 'grid-3col'}>
-                {results.map((p) =>
-                  view === 'list' ? (
-                    <ProductListItem key={p.id} product={p} />
-                  ) : (
-                    <ProductCard key={p.id} product={p} />
-                  ),
-                )}
+            {!error && !loading && results.length > 0 && (
+              <div className="sp-grid">
+                {results.map((p) => <ShopCard key={p.id} product={p} />)}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      <div
-        className={`filter-mobile-drawer${drawerOpen ? ' open' : ''}`}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) setDrawerOpen(false);
-        }}
-      >
-        <div className="filter-drawer-panel">
-          <div className="filter-drawer-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <SproutyIcon name="filter" size={18} />
-              <span className="filter-drawer-title">Bộ lọc sản phẩm</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <button className="filter-drawer-reset" onClick={resetFilters}>
-                Xoá tất cả
-              </button>
-              <button className="filter-drawer-close" onClick={() => setDrawerOpen(false)} aria-label="Đóng">
-                ✕
+      {drawerOpen && (
+        <div
+          className="sp-sheet-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setDrawerOpen(false);
+          }}
+        >
+          <div className="sp-sheet" role="dialog" aria-modal="true" aria-label="Bộ lọc sản phẩm">
+            <div className="sp-sheet-head">
+              <h2>Bộ lọc</h2>
+              <button type="button" className="sp-sheet-close" aria-label="Đóng" onClick={() => setDrawerOpen(false)}>
+                <SproutyIcon name="close" size={18} />
               </button>
             </div>
-          </div>
-
-          <div style={{ padding: '4px 0 16px' }}>{filterPanel}</div>
-
-          <div className="filter-drawer-footer">
-            <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setDrawerOpen(false)}>
-              Đóng
-            </button>
-            <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => setDrawerOpen(false)}>
-              Xem {results.length} sản phẩm
-            </button>
+            <div className="sp-sheet-body">{filterPanel}</div>
+            <div className="sp-sheet-foot">
+              <button type="button" className="btn btn-ghost" onClick={clearFilters} disabled={activeTags.length === 0}>Xoá bộ lọc</button>
+              <button type="button" className="btn btn-primary" onClick={() => setDrawerOpen(false)}>
+                Xem {results.length} sản phẩm
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

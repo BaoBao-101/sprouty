@@ -2,7 +2,14 @@ import { AppError } from '../utils/errors.js';
 import { isVipNow } from './membership.js';
 
 export const aiLimit = (vip) => vip ? null : 5;
-export const leafLimit = (vip) => vip ? null : 10;
+/**
+ * Memory leaves (photos and videos) a plant's album holds per growth stage.
+ * The album is a tree with a branch for each stage, so the allowance is per
+ * branch: a regular account fills each of the eight with up to this many, and
+ * VIP has no limit at all (null). Leaves already saved are never taken away.
+ */
+export const LEAVES_PER_STAGE = 5;
+export const leafLimit = (vip) => vip ? null : LEAVES_PER_STAGE;
 export const usageDay = (now = new Date()) => new Date(now.getTime() + 7 * 3600000).toISOString().slice(0, 10);
 export const effectiveGarden = (vip, pref = {}) => ({
   scene: vip ? (pref.scene || 'natural') : 'natural',
@@ -16,7 +23,7 @@ export async function benefitsFor(prisma, userId) {
     prisma.$queryRaw`SELECT "used" FROM "AiDailyUsage" WHERE "userId" = ${userId} AND "day" = ${day}`,
     prisma.$queryRaw`SELECT "scene", "decoration" FROM "GardenPreference" WHERE "userId" = ${userId}`,
   ]);
-  return { vip, maxLeaves: leafLimit(vip), aiLimit: aiLimit(vip), aiUsed: usage[0]?.used || 0,
+  return { vip, leavesPerStage: leafLimit(vip), aiLimit: aiLimit(vip), aiUsed: usage[0]?.used || 0,
     resetsTimezone: 'Asia/Ho_Chi_Minh', ...effectiveGarden(vip, prefs[0]) };
 }
 

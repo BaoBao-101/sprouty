@@ -1,0 +1,46 @@
+/* Thông tin nhận hàng: the form in sections on the left, the order on the
+   right. The page frame, summary card and phone bar come from CartPage.css. */
+
+.ck-form { display: grid; gap: 14px; min-width: 0 }
+.ck-section { padding: 18px 20px 6px }
+.ck-section.has-error { border-color: #FBCFD5 }
+.ck-section-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px }
+.ck-section-icon { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: var(--primary-100); color: var(--primary-600) }
+.ck-section-head h2 { margin: 0; font-family: var(--font-h); font-size: 1.02rem; color: var(--ink) }
+.ck-section-head h2 em { font-style: normal; font-weight: 500; font-size: .86rem; color: var(--ink-4) }
+.ck-section-head p { margin: 2px 0 0; font-size: .82rem; color: var(--ink-4) }
+.ck-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px }
+.ck-form .form-group { display: grid; gap: 6px; margin-bottom: 14px }
+.ck-form .form-label { margin: 0 }
+.ck-form .form-input { min-height: 46px }
+.ck-form .has-error .form-input, .ck-section.has-error .form-input:placeholder-shown { border-color: #FDA4AF; background: #FFFBFB }
+.ck-note { width: 100%; min-height: 0; margin-bottom: 14px; resize: vertical }
+.ct-field-error { display: block; margin: -6px 0 12px; font-size: .8rem; font-weight: 600; color: #BE123C }
+.ck-form .form-group .ct-field-error { margin: 0 }
+.ct-remember { display: flex; align-items: center; gap: 6px; margin: 0; padding: 0 4px; font-size: .8rem; color: var(--ink-4) }
+
+/* The order, beside the form. */
+.ck-sum-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px }
+.ck-sum-head h2 { margin: 0; font-family: var(--font-h); font-size: 1.05rem; color: var(--ink) }
+.ck-edit { min-height: 36px; display: inline-flex; align-items: center; font-size: .84rem; font-weight: 700; color: var(--primary-600); text-decoration: none }
+.ck-edit:hover { text-decoration: underline; text-underline-offset: 3px }
+.ck-lines { list-style: none; display: grid; gap: 10px; margin: 0 0 14px; padding: 0 0 14px; border-bottom: 1px solid #EEF1E8; max-height: 280px; overflow-y: auto }
+.ck-lines li { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 12px }
+.ck-thumb { position: relative; display: block }
+.ck-thumb .ct-thumb { border-radius: 12px }
+.ck-thumb em {
+  position: absolute; top: -6px; right: -6px; display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px;
+  border-radius: 99px; background: var(--ink-2); color: #fff; font-style: normal; font-size: .7rem; font-weight: 800;
+}
+.ck-line-text { display: grid; gap: 1px; min-width: 0 }
+.ck-line-text b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; color: var(--ink) }
+.ck-line-text span { font-size: .78rem; color: var(--ink-4) }
+.ck-lines strong { font-size: .9rem; color: var(--ink); white-space: nowrap }
+.ck-failure { margin-top: 12px }
+.ck-next { display: flex; align-items: flex-start; gap: 6px; margin: 12px 0 0; font-size: .78rem; line-height: 1.45; color: var(--ink-4) }
+.ck-next svg { flex: none; margin-top: 2px; color: var(--primary-600) }
+
+@media (max-width: 560px) {
+  .ck-section { padding: 16px 14px 4px }
+  .ck-grid { grid-template-columns: 1fr }
+}

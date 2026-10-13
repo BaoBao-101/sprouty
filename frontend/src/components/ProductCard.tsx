@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
 import { productImage, productFallbackImage } from '@/services/products';
 import { BADGE_LABEL, formatPrice, type Product } from '@/types/product';
+import { SproutyIcon } from '@/components/icons/SproutyIcon';
 
 export function ProductCard({ product }: { product: Product }) {
   const navigate = useNavigate();
@@ -54,7 +55,7 @@ export function ProductCard({ product }: { product: Product }) {
         <div className="product-desc">{product.desc}</div>
 
         <div className="product-footer">
-          <div>
+          <div className="product-prices">
             {product.old && <span className="product-old-price">{formatPrice(product.old)}</span>}
             <span className="product-price">{formatPrice(product.price)}</span>
           </div>
@@ -67,7 +68,7 @@ export function ProductCard({ product }: { product: Product }) {
               add(product.id, 1, product);
             }}
           >
-            +
+            <SproutyIcon name="add" size={18} />
           </button>
         </div>
       </div>

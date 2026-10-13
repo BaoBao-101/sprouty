@@ -554,7 +554,9 @@
 
 .staff-root .ad-blank-hint {
   font-size: 0.82rem;
-  margin: 0 0 12px;
+  /* Centred under the title: the base rule caps its width, and a left
+     margin of 0 parked the capped box at the left of a wide panel. */
+  margin: 0 auto 12px;
 }
 
 /* ── Dialogs ───────────────────────────────────────────────────────────── */

@@ -1,6 +1,7 @@
 import { confirmAction } from '@/services/dialog';
 import { useState } from 'react';
 import { ProductEditor, type AdminProduct } from './ProductEditor';
+import { VipPlanEditor } from './admin/VipPlanEditor';
 import { VideoPanel } from './VideoPanel';
 import { useAuth } from '@/contexts/AuthContext';
 import { API } from '@/services/api';
@@ -43,11 +44,99 @@ const STATUS_TONE: Record<string, string> = {
   archived: 'grey',
 };
 
+/** The species catalogue's names (services/plant-sim.js SPECIES). */
+const SPECIES_LABEL: Record<string, string> = {
+  bean: 'Cây đậu',
+  carrot: 'Cà rốt',
+  corn: 'Bắp ngô',
+  pepper: 'Ớt',
+  sunflower: 'Hướng dương',
+  tomato: 'Cà chua',
+  herb: 'Rau thơm',
+};
+
 const CATEGORY_LABEL: Record<string, string> = {
   kit: 'Kit trồng cây',
   book: 'Hướng dẫn chăm cây',
   membership: 'Gói thành viên',
 };
+
+/**
+ * A VIP plan, as a plan: how long it lasts and what that comes to a month,
+ * rather than an age range and a species it does not have.
+ */
+function PlanRow({
+  product,
+  canEdit,
+  onEdit,
+  onDeleted,
+}: {
+  product: AdminProduct;
+  canEdit: boolean;
+  onEdit: () => void;
+  onDeleted: () => void;
+}) {
+  const [deleting, setDeleting] = useState(false);
+  const days = product.membershipDays || 30;
+  const months = days / 30;
+
+  async function remove() {
+    if (!await confirmAction(`Xoá gói “${product.name}”?\n\nNếu gói đã có người mua, nó sẽ được chuyển sang Lưu trữ thay vì xoá hẳn.`)) return;
+    setDeleting(true);
+    try {
+      const result = await API.admin.products.remove(product.id);
+      showToast(result.message || 'Đã xoá gói', 'success');
+      onDeleted();
+    } catch (err: any) {
+      showToast(`Lỗi: ${err?.message}`, 'error');
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <tr className={deleting ? 'row-busy' : undefined}>
+      <td>
+        <div className="vp-plan">
+          <span className="vp-plan-icon" aria-hidden="true"><img src="/assets/images/sprouty-icons/VIP.png" alt="" /></span>
+          <span>
+            <span className="vp-plan-name">{product.name}</span>
+            <span className="admin-cell-sub">#{product.id}</span>
+          </span>
+        </div>
+      </td>
+      <td>
+        <div style={{ fontWeight: 700 }}>{days} ngày</div>
+        <div className="admin-cell-sub">{months >= 1 ? `≈ ${(Math.round(months * 10) / 10).toLocaleString('vi-VN')} tháng` : 'Dưới 1 tháng'}</div>
+      </td>
+      <td className="ad-num">
+        <div className="admin-money">{formatPrice(product.price)}</div>
+        {!!product.oldPrice && product.oldPrice > product.price && (
+          <div className="prod-old-price">{formatPrice(product.oldPrice)}</div>
+        )}
+      </td>
+      <td className="ad-num">{formatPrice(Math.round(product.price / Math.max(months, 1 / 30)))}</td>
+      <td>
+        <Pill tone={STATUS_TONE[product.status] ?? 'grey'}>{STATUS_LABEL[product.status] ?? product.status}</Pill>
+      </td>
+      {canEdit && (
+        <td>
+          <div className="ad-row-actions">
+            {canEdit && (
+              <button className="ad-icon-btn" onClick={onEdit} title="Sửa gói" aria-label="Sửa gói">
+                <AdminIcon name="edit" size={16} />
+              </button>
+            )}
+            {canEdit && (
+              <button className="ad-icon-btn danger" onClick={remove} disabled={deleting} title="Xoá gói" aria-label="Xoá gói">
+                <AdminIcon name="trash" size={16} />
+              </button>
+            )}
+          </div>
+        </td>
+      )}
+    </tr>
+  );
+}
 
 function ProductRow({
   product,
@@ -102,7 +191,7 @@ function ProductRow({
         <div className="admin-cell-sub">
           #{product.id}
           {product.collection ? ` · ${product.collection}` : ''}
-          {product.speciesKey ? ` · giống ${product.speciesKey}` : ''}
+          {product.speciesKey ? ` · giống ${SPECIES_LABEL[product.speciesKey] ?? product.speciesKey}` : ''}
         </div>
       </td>
 
@@ -125,29 +214,31 @@ function ProductRow({
         </Pill>
       </td>
 
-      <td>
-        <div className="ad-row-actions">
-          {canEdit && (
-            <button className="ad-icon-btn" onClick={onEdit} title="Sửa sản phẩm" aria-label="Sửa sản phẩm">
-              <AdminIcon name="edit" size={16} />
-            </button>
-          )}
-          {canEdit && <button className="ad-icon-btn" onClick={onVideos} title="Video hướng dẫn" aria-label="Video hướng dẫn">
-            <AdminIcon name="video" size={16} />
-          </button>}
-          {canEdit && (
-            <button
-              className="ad-icon-btn danger"
-              onClick={remove}
-              disabled={deleting}
-              title="Xoá sản phẩm"
-              aria-label="Xoá sản phẩm"
-            >
-              <AdminIcon name="trash" size={16} />
-            </button>
-          )}
-        </div>
-      </td>
+      {canEdit && (
+        <td>
+          <div className="ad-row-actions">
+            {canEdit && (
+              <button className="ad-icon-btn" onClick={onEdit} title="Sửa sản phẩm" aria-label="Sửa sản phẩm">
+                <AdminIcon name="edit" size={16} />
+              </button>
+            )}
+            {canEdit && <button className="ad-icon-btn" onClick={onVideos} title="Video hướng dẫn" aria-label="Video hướng dẫn">
+              <AdminIcon name="video" size={16} />
+            </button>}
+            {canEdit && (
+              <button
+                className="ad-icon-btn danger"
+                onClick={remove}
+                disabled={deleting}
+                title="Xoá sản phẩm"
+                aria-label="Xoá sản phẩm"
+              >
+                <AdminIcon name="trash" size={16} />
+              </button>
+            )}
+          </div>
+        </td>
+      )}
     </tr>
   );
 }
@@ -155,9 +246,19 @@ function ProductRow({
 export function ProductManager() {
   const { isAdmin } = useAuth();
 
+  // The shop's products and the VIP plans are separate lists: a plan has a
+  // length and a monthly price, not an age range, a species or videos.
+  const [scope, setScope] = useState<'shop' | 'vip'>('shop');
   const [status, setStatus] = useState('');
   const [category, setCategory] = useState('');
   const [search, setSearch] = useState('');
+  const vip = scope === 'vip';
+
+  function switchScope(next: 'shop' | 'vip') {
+    setScope(next);
+    setStatus('');
+    setCategory('');
+  }
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<AdminProduct | null>(null);
@@ -177,7 +278,7 @@ export function ProductManager() {
   } = usePagedList<AdminProduct>(
     (params) => API.admin.products.list(params),
     'products',
-    { status, category, search: search.trim() },
+    { scope, status, category: vip ? '' : category, search: search.trim() },
     { errorText: 'Không tải được sản phẩm.' },
   );
 
@@ -196,6 +297,7 @@ export function ProductManager() {
   // Offered from what the catalogue actually contains, so a category nobody
   // uses does not sit there as a filter that always returns nothing.
   const categories: Array<{ value: string; count: number }> = raw?.categories || [];
+  const scopes: { shop: number; vip: number } = raw?.scopes || { shop: 0, vip: 0 };
 
   const filtering = Boolean(status || category || search.trim());
 
@@ -218,7 +320,7 @@ export function ProductManager() {
               }}
             >
               <AdminIcon name="plus" size={17} />
-              Thêm sản phẩm
+              {vip ? 'Thêm gói VIP' : 'Thêm sản phẩm'}
             </button>
           )
         }
@@ -230,7 +332,7 @@ export function ProductManager() {
           tone="orange"
           loading={state === 'loading'}
           value={all}
-          label="Tổng sản phẩm"
+          label={vip ? 'Tổng gói VIP' : 'Tổng sản phẩm'}
         />
         <StatCard
           icon={<AdminIcon name="check" />}
@@ -238,7 +340,7 @@ export function ProductManager() {
           loading={state === 'loading'}
           value={published}
           label="Đang bán"
-          hint="Khách nhìn thấy trên shop"
+          hint={vip ? 'Khách mua được ở trang VIP' : 'Khách nhìn thấy trên shop'}
         />
         <StatCard
           icon={<AdminIcon name="edit" />}
@@ -246,7 +348,7 @@ export function ProductManager() {
           loading={state === 'loading'}
           value={draft}
           label="Bản nháp"
-          hint="Chưa lên shop"
+          hint={vip ? 'Chưa mở bán' : 'Chưa lên shop'}
         />
         <StatCard
           icon={<AdminIcon name="layers" />}
@@ -263,10 +365,19 @@ export function ProductManager() {
         </div>
       )}
 
+      <div className="vp-tabs" role="tablist" aria-label="Loại sản phẩm">
+        <button type="button" role="tab" aria-selected={!vip} className={`vp-tab${!vip ? ' is-active' : ''}`} onClick={() => switchScope('shop')}>
+          <AdminIcon name="products" size={16} /> Sản phẩm bán <span>{scopes.shop}</span>
+        </button>
+        <button type="button" role="tab" aria-selected={vip} className={`vp-tab is-vip${vip ? ' is-active' : ''}`} onClick={() => switchScope('vip')}>
+          <img src="/assets/images/sprouty-icons/VIP.png" alt="" /> Gói VIP <span>{scopes.vip}</span>
+        </button>
+      </div>
+
       <Toolbar>
         <FilterPills options={statusFilters} value={status} onChange={setStatus} />
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          {categories.length > 1 && (
+          {!vip && categories.length > 1 && (
             <select
               className="form-select"
               value={category}
@@ -284,7 +395,7 @@ export function ProductManager() {
           )}
           <SearchBox
             value={search}
-            placeholder="Tìm theo tên, mô tả hoặc giống cây…"
+            placeholder={vip ? 'Tìm gói VIP…' : 'Tìm theo tên, mô tả hoặc giống cây…'}
             onChange={setSearch}
           />
         </div>
@@ -293,35 +404,59 @@ export function ProductManager() {
       <Panel flush>
         <table className="admin-table">
           <thead>
-            <tr>
-              <th style={{ width: 72 }}>Ảnh</th>
-              <th>Sản phẩm</th>
-              <th>Danh mục</th>
-              <th className="ad-num">Giá</th>
-              <th>Độ tuổi</th>
-              <th>Trạng thái</th>
-              <th style={{ width: 118 }}>Thao tác</th>
-            </tr>
+            {vip ? (
+              <tr>
+                <th>Gói</th>
+                <th>Thời hạn</th>
+                <th className="ad-num">Giá</th>
+                <th className="ad-num">Quy ra mỗi tháng</th>
+                <th>Trạng thái</th>
+                {isAdmin && <th style={{ width: 90 }}>Thao tác</th>}
+              </tr>
+            ) : (
+              <tr>
+                <th style={{ width: 72 }}>Ảnh</th>
+                <th>Sản phẩm</th>
+                <th>Danh mục</th>
+                <th className="ad-num">Giá</th>
+                <th>Độ tuổi</th>
+                <th>Trạng thái</th>
+                {isAdmin && <th style={{ width: 118 }}>Thao tác</th>}
+              </tr>
+            )}
           </thead>
           <tbody>
             <TableStates
               state={state}
               error={error}
               isEmpty={products.length === 0}
-              columns={7}
+              columns={(vip ? 5 : 6) + (isAdmin ? 1 : 0)}
               emptyIcon={<AdminIcon name="products" size={24} />}
-              emptyTitle={filtering ? 'Không tìm thấy sản phẩm nào' : 'Chưa có sản phẩm'}
+              emptyTitle={filtering ? 'Không tìm thấy mục nào' : vip ? 'Chưa có gói VIP' : 'Chưa có sản phẩm'}
               emptyHint={
                 filtering
                   ? 'Thử bỏ bộ lọc hoặc đổi từ khoá.'
                   : isAdmin
-                    ? 'Bấm “Thêm sản phẩm” để tạo sản phẩm đầu tiên.'
+                    ? vip ? 'Bấm “Thêm gói VIP” để tạo gói tháng hoặc gói năm.' : 'Bấm “Thêm sản phẩm” để tạo sản phẩm đầu tiên.'
                     : undefined
               }
               onRetry={load}
             />
 
-            {state === 'ready' &&
+            {state === 'ready' && vip &&
+              products.map((product) => (
+                <PlanRow
+                  key={product.id}
+                  product={product}
+                  canEdit={isAdmin}
+                  onEdit={() => {
+                    setEditing(product);
+                    setEditorOpen(true);
+                  }}
+                  onDeleted={load}
+                />
+              ))}
+            {state === 'ready' && !vip &&
               products.map((product) => (
                 <ProductRow
                   key={product.id}
@@ -341,9 +476,15 @@ export function ProductManager() {
         <Pagination page={page} pages={pages} total={total} unit="sản phẩm" onChange={setPage} />
       </Panel>
 
-      {editorOpen && isAdmin && (
+      {/* A plan is a length and a price — its own short form, not the
+          five-step product wizard. */}
+      {editorOpen && isAdmin && (editing ? editing.category === 'membership' : vip) && (
+        <VipPlanEditor editing={editing} onClose={() => setEditorOpen(false)} onSaved={load} />
+      )}
+      {editorOpen && isAdmin && !(editing ? editing.category === 'membership' : vip) && (
         <ProductEditor
           editing={editing}
+          defaultCategory={vip ? 'membership' : undefined}
           collections={raw?.collections || []}
           onClose={() => setEditorOpen(false)}
           onSaved={load}

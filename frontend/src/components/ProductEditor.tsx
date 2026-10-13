@@ -246,11 +246,14 @@ function ImageRow({
 
 export function ProductEditor({
   editing,
+  defaultCategory,
   collections = [],
   onClose,
   onSaved,
 }: {
   editing: AdminProduct | null;
+  /** For a new product: the category to start in — a VIP plan from the VIP tab. */
+  defaultCategory?: 'kit' | 'book' | 'membership';
   /** The groups already in the catalogue, passed down rather than fetched
       again — the list page has just asked for exactly this. */
   collections?: Array<{ value: string; count: number }>;
@@ -259,7 +262,9 @@ export function ProductEditor({
 }) {
   // Videos are managed separately after the product has an id.
   const [product, setProduct] = useState<AdminProduct | null>(editing);
-  const [form, setForm] = useState<FormState>(() => (editing ? toForm(editing) : EMPTY));
+  const [form, setForm] = useState<FormState>(() =>
+    editing ? toForm(editing) : { ...EMPTY, category: defaultCategory ?? EMPTY.category },
+  );
   const [tab, setTab] = useState<TabKey>('basic');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -658,7 +663,7 @@ export function ProductEditor({
                     value={form.collection}
                     onChange={set('collection')}
                     options={collections}
-                    placeholder="VD: Sprouty Starter"
+                    placeholder="VD: Bộ khởi đầu"
                     emptyHint="Chưa có bộ sưu tập nào — gõ để tạo nhóm đầu tiên."
                   />
                   <span className="field-hint">Nhóm sản phẩm lại với nhau trên cửa hàng</span>
