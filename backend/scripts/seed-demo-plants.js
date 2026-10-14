@@ -30,7 +30,9 @@ if (!email) {
   console.error('Cần email. Ví dụ: node scripts/seed-demo-plants.js ten@example.com 123456');
   process.exit(1);
 }
-if (process.env.NODE_ENV === 'production') {
+// A demo server running in production mode can opt in, on purpose, with
+// DEMO_SEED_FORCE=1 (scripts/seed-video-demo.js passes it through).
+if (process.env.NODE_ENV === 'production' && process.env.DEMO_SEED_FORCE !== '1') {
   console.error('Script này tạo đơn hàng giả — không chạy trên production.');
   process.exit(1);
 }
