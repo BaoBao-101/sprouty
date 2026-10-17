@@ -24,6 +24,9 @@ import {
   splitAddress,
   type AddressParts,
 } from '@/components/AddressFields';
+import { ReviewDialog, type ReviewTarget } from '@/components/reviews/ReviewDialog';
+import { Stars } from '@/components/reviews/Stars';
+import type { EligibleProduct, MyReview, ReviewOptions } from '@/types/review';
 import './Account.css';
 
 /** Placeholders stored where an order had no address to give. */
@@ -286,7 +289,25 @@ function ItemThumb({ order, item }: { order: Order; item: Order['items'][number]
   );
 }
 
-function OrderCard({ order, onCancelled }: { order: Order; onCancelled: () => void }) {
+/** What the order cards need to know about this customer's reviews. */
+interface ReviewState {
+  mine: Map<number, MyReview>;
+  eligible: Set<number>;
+}
+
+function OrderCard({
+  order,
+  onCancelled,
+  reviews,
+  onReview,
+  onReceived,
+}: {
+  order: Order;
+  onCancelled: () => void;
+  reviews?: ReviewState | null;
+  onReview?: (product: ReviewTarget, existing: MyReview | null) => void;
+  onReceived?: (order: Order) => void;
+}) {
   const [cancelling, setCancelling] = useState(false);
   const pending = order.status === 'pending';
   const codes = order.redeemCodes || [];
@@ -309,6 +330,8 @@ function OrderCard({ order, onCancelled }: { order: Order; onCancelled: () => vo
       const { message } = await API.orders.received(order.id);
       showToast(message || 'Đơn hàng đã hoàn tất.', 'success');
       onCancelled();
+      // The moment it arrived is the moment to ask how it is.
+      onReceived?.(order);
     } catch (err: any) {
       showToast(err?.message || 'Chưa xác nhận được. Vui lòng thử lại.', 'error');
       setReceiving(false);
@@ -353,6 +376,30 @@ function OrderCard({ order, onCancelled }: { order: Order; onCancelled: () => vo
             </span>
             <span className="od-item-qty">× {item.qty}</span>
             <span className="od-item-price">{formatPrice(item.unitPrice * item.qty)}</span>
+            {(() => {
+              // Delivered kits can be reviewed; one review per product,
+              // so a kit bought twice shows the same review on both.
+              const productId = item.productId ?? item.product?.id;
+              if (order.status !== 'delivered' || vip || !productId || !reviews || !onReview) return null;
+              const mine = reviews.mine.get(productId) || null;
+              if (!mine && !reviews.eligible.has(productId)) return null;
+              const target: ReviewTarget = {
+                id: productId,
+                name: item.product?.name || 'Sản phẩm',
+                image: item.product ? productGalleryImages(item.product)[0] || null : null,
+              };
+              return mine ? (
+                <button type="button" className="od-review is-done" onClick={() => onReview(target, mine)}>
+                  <Stars value={mine.rating} size={13} />
+                  <span>Sửa đánh giá</span>
+                </button>
+              ) : (
+                <button type="button" className="od-review" onClick={() => onReview(target, null)}>
+                  <SproutyIcon name="star" size={14} />
+                  <span>Đánh giá</span>
+                </button>
+              );
+            })()}
           </li>
         ))}
       </ul>
@@ -508,6 +555,34 @@ export default function Account() {
     setPage(1);
   }
 
+  // ── Reviews: what is reviewed, what still can be, and the dialog ──
+  const [reviewData, setReviewData] = useState<{ reviews: MyReview[]; eligible: EligibleProduct[]; options: ReviewOptions } | null>(null);
+  const [writing, setWriting] = useState<{ product: ReviewTarget; existing: MyReview | null } | null>(null);
+
+  const loadReviews = useCallback(() => API.reviews.mine().then((data: any) => {
+    setReviewData(data);
+    return data as { reviews: MyReview[]; eligible: EligibleProduct[] };
+  }).catch(() => null), []);
+
+  useEffect(() => { void loadReviews(); }, [loadReviews]);
+
+  const reviewState: ReviewState | null = reviewData
+    ? {
+        mine: new Map(reviewData.reviews.map((r) => [r.productId, r])),
+        eligible: new Set(reviewData.eligible.map((e) => e.productId)),
+      }
+    : null;
+  // Received, and not yet reviewed: the prompt above the list.
+  const toReview = reviewData ? reviewData.eligible.filter((e) => !reviewState!.mine.has(e.productId)) : [];
+
+  async function askForReview(order: Order) {
+    const data = await loadReviews();
+    if (!data) return;
+    const reviewed = new Set(data.reviews.map((r) => r.productId));
+    const next = data.eligible.find((e) => !reviewed.has(e.productId) && order.items.some((i) => (i.productId ?? i.product?.id) === e.productId));
+    if (next) setWriting({ product: { id: next.product.id, name: next.product.name, image: next.product.image }, existing: null });
+  }
+
   // Headline figures span the whole history, not the page being shown.
   const orderCount = Object.values(counts).reduce((n, c) => n + c, 0);
   const pendingCount = counts.pending || 0;
@@ -540,6 +615,25 @@ export default function Account() {
             <span className="od-alert-icon"><SproutyIcon name="clock" size={18} /></span>
             <span><b>{pendingCount} đơn chưa thanh toán.</b> Thanh toán xong là có mã kích hoạt để gieo hạt.</span>
             <button type="button" className="od-btn" onClick={() => pickFilter('pending')}>Xem các đơn này</button>
+          </div>
+        )}
+
+        {toReview.length > 0 && (
+          <div className="od-review-ask">
+            <span className="od-review-ask-thumb">
+              {toReview[0].product.image ? <img src={toReview[0].product.image} alt="" /> : <SproutyIcon name="pot" size={20} />}
+            </span>
+            <span className="od-review-ask-text">
+              <b>{toReview.length === 1 ? `Bé thấy ${toReview[0].product.name} thế nào?` : `${toReview.length} sản phẩm đang chờ bạn đánh giá`}</b>
+              <em>Vài dòng của bạn giúp phụ huynh khác chọn đúng bộ kit.</em>
+            </span>
+            <button
+              type="button"
+              className="od-btn is-primary"
+              onClick={() => setWriting({ product: { id: toReview[0].product.id, name: toReview[0].product.name, image: toReview[0].product.image }, existing: null })}
+            >
+              <SproutyIcon name="star" size={15} /> Đánh giá ngay
+            </button>
           </div>
         )}
 
@@ -607,13 +701,30 @@ export default function Account() {
         {orders.length > 0 && (
           <div className={`od-list${loading ? ' is-loading' : ''}`}>
             {orders.map((order) => (
-              <OrderCard key={order.id} order={order} onCancelled={loadOrders} />
+              <OrderCard
+                key={order.id}
+                order={order}
+                onCancelled={loadOrders}
+                reviews={reviewState}
+                onReview={(product, existing) => setWriting({ product, existing })}
+                onReceived={askForReview}
+              />
             ))}
           </div>
         )}
 
         <Pager page={page} pages={pages} total={total} unit="đơn hàng" onChange={setPage} />
       </div>
+
+      {writing && (
+        <ReviewDialog
+          target={writing.product}
+          existing={writing.existing}
+          options={reviewData?.options}
+          onClose={() => setWriting(null)}
+          onSaved={() => { void loadReviews(); }}
+        />
+      )}
     </>
   );
 }

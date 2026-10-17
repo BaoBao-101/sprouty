@@ -34,6 +34,8 @@ export function normalizeProduct(p: any): Product {
     badge: p.badge || null,
     images: p.images || [],
     status: p.status || 'published',
+    rating: Number(p.ratingAvg ?? p.rating) || 0,
+    reviewCount: Number(p.ratingCount ?? p.reviewCount) || 0,
   };
 }
 

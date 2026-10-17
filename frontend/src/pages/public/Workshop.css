@@ -513,6 +513,19 @@
 .ws-hero-v2 .ws-hero-copy > p { margin: 16px 0 0; max-width: 520px; font-size: 1.05rem; line-height: 1.7; color: rgba(255, 255, 255, .88) }
 .ws-hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px }
 .ws-hero-actions .btn { display: inline-flex; align-items: center; gap: 8px }
+/* The families' score, linking down to what they wrote. */
+.ws-hero-score {
+  display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; min-height: 40px; margin-top: 18px; padding: 6px 14px;
+  border-radius: var(--r-full); background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .22);
+  color: #fff; font-size: .88rem; text-decoration: none;
+}
+.ws-hero-score:hover { background: rgba(255, 255, 255, .2); color: #fff }
+.ws-hero-score b { font-family: var(--font-display); font-size: 1.02rem }
+.ws-hero-score em { font-style: normal; color: rgba(255, 255, 255, .82) }
+
+/* What families said: hidden until there is something to show or ask. */
+.ws-reviews { background: var(--cream-2) }
+.ws-reviews[hidden] { display: none }
 
 .ws-next {
   display: flex; flex-direction: column; gap: 12px; padding: 22px;

@@ -283,3 +283,8 @@
   .sp-stepper { grid-template-columns: 40px 1fr 40px; min-height: 40px }
   .sp-stepper-qty { font-size: .78rem }
 }
+
+/* Stars from real reviews, under the name. */
+.sp-card-rating { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; font-size: .8rem; color: var(--ink-4) }
+.sp-card-rating b { color: var(--ink); font-weight: 700 }
+.sp-card-rating em { font-style: normal }

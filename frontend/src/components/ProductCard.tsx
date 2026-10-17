@@ -4,6 +4,7 @@ import { useCart } from '@/contexts/CartContext';
 import { productImage, productFallbackImage } from '@/services/products';
 import { BADGE_LABEL, formatPrice, type Product } from '@/types/product';
 import { SproutyIcon } from '@/components/icons/SproutyIcon';
+import { Stars } from '@/components/reviews/Stars';
 
 export function ProductCard({ product }: { product: Product }) {
   const navigate = useNavigate();
@@ -52,6 +53,13 @@ export function ProductCard({ product }: { product: Product }) {
           {product.species?.label || product.col} · {product.age}
         </div>
         <div className="product-name">{product.name}</div>
+        {product.reviewCount ? (
+          <div className="product-rating">
+            <Stars value={product.rating || 0} size={12} />
+            <b>{(product.rating || 0).toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</b>
+            <em>({product.reviewCount})</em>
+          </div>
+        ) : null}
         <div className="product-desc">{product.desc}</div>
 
         <div className="product-footer">

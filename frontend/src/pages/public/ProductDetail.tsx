@@ -1,4 +1,6 @@
 import { ProductVideos } from '@/components/ProductVideos';
+import { ProductReviews } from '@/components/reviews/ProductReviews';
+import { Stars } from '@/components/reviews/Stars';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ProductCard } from '@/components/ProductCard';
@@ -26,38 +28,6 @@ const BADGE_TAG: Record<string, { label: string; tone: string }> = {
 const cap = (t: string) => (t ? t.charAt(0).toUpperCase() + t.slice(1) : t);
 
 const THUMB_BACKGROUNDS = ['#F8F8F8', '#FFF0E8', '#F0FDF4'];
-
-const REVIEW_BARS: Array<[string, string, number]> = [
-  ['5 sao', '80%', 14],
-  ['4 sao', '12%', 2],
-  ['3 sao', '5%', 1],
-  ['2 sao', '2%', 1],
-  ['1 sao', '1%', 0],
-];
-
-const REVIEWS = [
-  {
-    av: 'L',
-    name: 'Nguyễn Thị Lan',
-    loc: 'Quận 7 · Mua tháng 2/2026',
-    bg: 'var(--terracotta)',
-    text: 'Bé nhà mình mê lắm! Làm xong còn khoe với cả nhà.',
-  },
-  {
-    av: 'H',
-    name: 'Trần Văn Hùng',
-    loc: 'Bình Thạnh · Mua tháng 1/2026',
-    bg: 'var(--green)',
-    text: 'Video hướng dẫn rõ ràng từng bước, bé 7 tuổi tự làm được.',
-  },
-  {
-    av: 'P',
-    name: 'Phạm Quỳnh Mai',
-    loc: 'Quận 3 · Mua tháng 3/2026',
-    bg: '#3B82F6',
-    text: 'Quà sinh nhật hoàn hảo! Con mình 8 tuổi mất cả buổi chiều với nó.',
-  },
-];
 
 type Tab = 'info' | 'videos' | 'reviews';
 type Variant = 'standard' | 'smart';
@@ -133,7 +103,10 @@ export default function ProductDetail() {
 
   const [qty, setQty] = useState(1);
   const [variant, setVariant] = useState<Variant>('standard');
-  const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'videos' ? 'videos' : 'info');
+  const [tab, setTab] = useState<Tab>(() => {
+    const asked = searchParams.get('tab');
+    return asked === 'videos' || asked === 'reviews' ? asked : 'info';
+  });
   // How many instruction videos the kit has; it used to read a hard-coded 0.
   const [videoCount, setVideoCount] = useState<number | null>(null);
   useEffect(() => {
@@ -262,9 +235,15 @@ export default function ProductDetail() {
             </span>
             <h1 className="pdp-name">{product.name}</h1>
 
+            {/* The score from real reviews. It used to be a fixed "4.9 · 18
+                đánh giá" on every product, with three invented reviewers. */}
             <div className="pdp-rating">
-              <span className="pdp-stars" aria-hidden="true">★★★★★</span>
-              <span>4.9</span>
+              {product.reviewCount ? (
+                <>
+                  <Stars value={product.rating || 0} size={17} />
+                  <span>{(product.rating || 0).toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
+                </>
+              ) : null}
               <button
                 className="pdp-rating-link"
                 onClick={() => {
@@ -272,7 +251,7 @@ export default function ProductDetail() {
                   document.getElementById('chi-tiet')?.scrollIntoView({ behavior: 'smooth' });
                 }}
               >
-                18 đánh giá
+                {product.reviewCount ? `${product.reviewCount} đánh giá` : 'Chưa có đánh giá'}
               </button>
             </div>
 
@@ -395,7 +374,7 @@ export default function ProductDetail() {
               [
                 ['info', 'Tổng quan'],
                 ['videos', `Video hướng dẫn${videoCount !== null ? ` (${videoCount})` : ''}`],
-                ['reviews', 'Đánh giá (18)'],
+                ['reviews', `Đánh giá${product.reviewCount ? ` (${product.reviewCount})` : ''}`],
               ] as const
             ).map(([key, label]) => (
               <button
@@ -479,43 +458,11 @@ export default function ProductDetail() {
           )}
 
           {tab === 'reviews' && (
-            <div className="pdp-pane pdp-reviews">
-              <div className="pdp-review-summary">
-                <div className="pdp-review-score">
-                  <strong>4.9</strong>
-                  <span className="pdp-stars">★★★★★</span>
-                  <em>18 đánh giá</em>
-                </div>
-                <div className="pdp-review-bars">
-                  {REVIEW_BARS.map(([label, width, count]) => (
-                    <div className="pdp-review-bar" key={label}>
-                      <span>{label}</span>
-                      <i>
-                        <b style={{ width }} />
-                      </i>
-                      <span>{count}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pdp-review-list">
-                {REVIEWS.map((review) => (
-                  <article className="pdp-review" key={review.name}>
-                    <header>
-                      <span className="pdp-review-av" style={{ background: review.bg }}>
-                        {review.av}
-                      </span>
-                      <span>
-                        <strong>{review.name}</strong>
-                        <em>{review.loc}</em>
-                      </span>
-                      <span className="pdp-stars">★★★★★</span>
-                    </header>
-                    <p>“{review.text}”</p>
-                  </article>
-                ))}
-              </div>
+            <div className="pdp-pane">
+              <ProductReviews
+                product={{ id: product.id, name: product.name, image: productGalleryImages(product)[0] || null }}
+                onChanged={(rating, reviewCount) => setProduct((p) => (p ? { ...p, rating, reviewCount } : p))}
+              />
             </div>
           )}
         </section>

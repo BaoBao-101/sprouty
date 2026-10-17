@@ -409,6 +409,25 @@
 .ew-crew svg { flex: none; color: var(--accent) }
 .ew-desc { margin: 0; white-space: pre-line; font-size: .92rem; line-height: 1.7; color: var(--ink-2) }
 
+/* What the families thought, read-only. */
+.ew-fb-empty { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: .88rem; color: var(--ink-3) }
+.ew-fb-empty svg { flex: none; margin-top: 2px; color: #D99A2B }
+.ew-fb { list-style: none; margin: 0; padding: 0; display: grid }
+.ew-fb li { display: grid; gap: 7px; padding: 14px 0; border-top: 1px solid var(--border-c) }
+.ew-fb li:first-child { padding-top: 0; border-top: none }
+.ew-fb li:last-child { padding-bottom: 0 }
+.ew-fb-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; min-width: 0 }
+.ew-fb-head b { min-width: 0; font-size: .9rem; color: var(--ink); overflow-wrap: anywhere }
+.ew-fb-head em { margin-left: auto; font-style: normal; font-size: .78rem; color: var(--ink-4) }
+.ew-fb-tags { display: flex; flex-wrap: wrap; gap: 6px }
+.ew-fb-tags span { padding: 2px 9px; border-radius: 99px; background: var(--surface-2, #F6FAF3); border: 1px solid var(--border-c); font-size: .76rem; font-weight: 600; color: var(--ink-3) }
+.ew-fb-text { margin: 0; white-space: pre-line; font-size: .9rem; line-height: 1.6; color: var(--ink-2); overflow-wrap: anywhere }
+.ew-fb-photos { display: flex; flex-wrap: wrap; gap: 8px }
+.ew-fb-photos a { display: block; width: 64px; height: 64px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-c) }
+.ew-fb-photos img { width: 100%; height: 100%; object-fit: cover; display: block }
+.ew-fb-reply { margin: 0; padding: 9px 12px; border-radius: 10px; background: #F2F8EE; font-size: .84rem; line-height: 1.55; color: var(--ink-2) }
+.ew-fb-reply b { color: var(--accent) }
+
 .ew-banner {
   display: flex; align-items: flex-start; gap: 8px; margin-bottom: 18px; padding: 12px 14px;
   border-radius: var(--r-md); font-size: .88rem; line-height: 1.5;

@@ -1705,3 +1705,8 @@ input[type="range"]::-webkit-slider-thumb:hover { transform:scale(1.2) }
   .act-btn { min-height: 40px }
   .aib-nudge-x::before { content: ''; position: absolute; inset: -9px; border-radius: 50% }
 }
+
+/* Stars from real reviews on the shared product card. */
+.product-rating{display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;margin:2px 0 4px;font-size:.78rem;color:var(--ink-4)}
+.product-rating b{color:var(--ink);font-weight:700}
+.product-rating em{font-style:normal}

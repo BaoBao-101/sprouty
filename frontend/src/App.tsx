@@ -40,6 +40,7 @@ const AdminUsers = lazy(() => import('@/pages/admin/Users'));
 const AdminOrders = lazy(() => import('@/pages/admin/Orders'));
 const AdminSales = lazy(() => import('@/pages/admin/Sales'));
 const AdminWorkshops = lazy(() => import('@/pages/admin/Workshops'));
+const AdminReviews = lazy(() => import('@/pages/admin/Reviews'));
 const AdminRedeemCodes = lazy(() => import('@/pages/admin/RedeemCodes'));
 const AdminBlog = lazy(() => import('@/pages/admin/BlogAdmin'));
 const AdminUserImages = lazy(() => import('@/pages/admin/UserImages'));
@@ -166,6 +167,7 @@ export function App() {
               <Route path="orders" element={<AdminOrders />} />
               <Route path="sales" element={<AdminSales />} />
               <Route path="workshops" element={<AdminWorkshops />} />
+              <Route path="reviews" element={<AdminReviews />} />
               <Route path="redeem" element={<AdminRedeemCodes />} />
               <Route path="blog" element={<AdminBlog />} />
               <Route path="user-images" element={<AdminUserImages />} />

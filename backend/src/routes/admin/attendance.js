@@ -1,6 +1,7 @@
 import { requireEmployee, requireCsrf } from '../../middleware/rbac.js';
 import { auditLog } from '../../services/audit.js';
 import { AppError } from '../../utils/errors.js';
+import { publicReview, workshopRatingSummary } from '../../services/reviews.js';
 
 /**
  * The employee's workshops: the sessions an admin put them on, and the door.
@@ -203,7 +204,9 @@ export default async function attendanceRoutes(fastify) {
 
   /**
    * GET /api/v1/admin/attendance/:workshopId — one of my sessions: what it is,
-   * who else is on it, and the register.
+   * who else is on it, the register, and what the families who came thought
+   * of it. The feedback is what the public page shows: published reviews,
+   * names masked the same way.
    */
   fastify.get('/attendance/:workshopId', { preHandler: [requireEmployee] }, async (req, reply) => {
     if (!await isAssigned(fastify.prisma, req.params.workshopId, req.user.id)) {
@@ -226,6 +229,17 @@ export default async function attendanceRoutes(fastify) {
     // bottom.
     rows.sort((a, b) => Number(Boolean(a.checkedInAt)) - Number(Boolean(b.checkedInAt)));
 
+    const [summary, reviews] = await Promise.all([
+      workshopRatingSummary(fastify.prisma, workshop.id),
+      fastify.prisma.workshopReview.findMany({
+        where: { workshopId: workshop.id, status: 'published' },
+        include: { user: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+        // All of them: one per family that was there, so a session can only
+        // have as many as it had bookings. The page shows them five at a time.
+      }),
+    ]);
+
     return {
       workshop: {
         ...sessionDto(workshop, req.user.id),
@@ -235,6 +249,7 @@ export default async function attendanceRoutes(fastify) {
         price: workshop.price,
       },
       attendees: rows.map(attendeeDto),
+      feedback: { summary, reviews: reviews.map(publicReview) },
     };
   });
 

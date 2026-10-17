@@ -10,6 +10,26 @@ test('employee cannot bypass media permissions using a direct private asset URL'
   await assetAccessGuard({ params: { '*': 'user_image/test.jpg' }, user: { role: 'admin' } });
 });
 
+test('a review photo is public only while it is on a published review', async () => {
+  // published: 'product' or 'workshop' when a published review of that kind shows it.
+  const req = (user, published) => ({
+    params: { '*': 'review_photo/owner/abc.png' },
+    user,
+    server: { prisma: {
+      asset: { findFirst: async () => ({ ownerUserId: 'owner', url: '/uploads/review_photo/owner/abc.png' }) },
+      productReview: { findFirst: async () => (published === 'product' ? { id: 'r1' } : null) },
+      workshopReview: { findFirst: async () => (published === 'workshop' ? { id: 'w1' } : null) },
+    } },
+  });
+  await assetAccessGuard(req(null, 'product'));
+  await assetAccessGuard(req(null, 'workshop'));
+  await assert.rejects(assetAccessGuard(req(null, false)), { statusCode: 401 });
+  await assert.rejects(assetAccessGuard(req({ id: 'other', role: 'customer' }, false)), { statusCode: 403 });
+  await assert.rejects(assetAccessGuard(req({ id: 'staff', role: 'employee' }, false)), { statusCode: 403 });
+  await assetAccessGuard(req({ id: 'owner', role: 'customer' }, false));
+  await assetAccessGuard(req({ id: 'boss', role: 'admin' }, false));
+});
+
 test('roles are exclusive; shared staff access must be explicit', () => {
   for (const [guard, allowed] of [
     [requireCustomer, ['customer']], [requireEmployee, ['employee']],
@@ -62,6 +82,13 @@ const cases = [
   ['chat', 'POST', '/chat', ['admin', 'employee']],
   ['user-images', 'POST', '/my-products/test/images', ['admin', 'employee']],
   ['videos', 'POST', '/videos/test/progress', ['admin', 'employee']],
+  ['reviews', 'POST', '/me/reviews', ['admin', 'employee']],
+  ['reviews', 'GET', '/me/reviews', ['admin', 'employee']],
+  ['reviews', 'POST', '/me/review-images', ['admin', 'employee']],
+  ['reviews', 'GET', '/me/workshop-reviews', ['admin', 'employee']],
+  ['reviews', 'POST', '/me/workshop-reviews', ['admin', 'employee']],
+  ['reviews', 'PATCH', '/me/workshop-reviews/test', ['admin', 'employee']],
+  ['reviews', 'DELETE', '/me/workshop-reviews/test', ['admin', 'employee']],
   ['admin/attendance', 'GET', '/attendance/mine', ['admin', 'customer']],
   ['admin/orders', 'PATCH', '/orders/test/status', ['admin', 'customer']],
   ['admin/orders', 'POST', '/orders/test/mark-paid', ['employee', 'customer']],
@@ -70,6 +97,12 @@ const cases = [
   ['admin/blog', 'POST', '/blog', ['employee', 'customer']],
   ['admin/user-images', 'PATCH', '/user-images/test/status', ['employee', 'customer']],
   ['admin/users', 'GET', '/users', ['employee', 'customer']],
+  ['admin/reviews', 'GET', '/reviews', ['employee', 'customer']],
+  ['admin/reviews', 'PATCH', '/reviews/test/reply', ['employee', 'customer']],
+  ['admin/reviews', 'PATCH', '/reviews/test/status', ['employee', 'customer']],
+  ['admin/reviews', 'GET', '/workshop-reviews', ['employee', 'customer']],
+  ['admin/reviews', 'PATCH', '/workshop-reviews/test/reply', ['employee', 'customer']],
+  ['admin/reviews', 'PATCH', '/workshop-reviews/test/status', ['employee', 'customer']],
 ];
 
 for (const [module, method, url, denied] of cases) {

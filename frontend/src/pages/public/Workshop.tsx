@@ -9,6 +9,9 @@ import { SproutyIcon, type IconName as SproutyIconName } from '@/components/icon
 import { formatWorkshopWhen, type PublicWorkshop } from '@/types/workshop';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoginRequiredDialog, type LoginGate } from '@/components/LoginRequiredDialog';
+import { WorkshopReviewsSection } from '@/components/reviews/WorkshopReviews';
+import { Stars } from '@/components/reviews/Stars';
+import type { RatingSummary } from '@/types/review';
 import './Workshop.css';
 
 /** What happens in a session, in the order it happens. */
@@ -48,6 +51,8 @@ export default function Workshop() {
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [booking, setBooking] = useState<PublicWorkshop | null>(null);
   const { isLoggedIn } = useAuth();
+  // The families' score, reported by the reviews section further down.
+  const [score, setScore] = useState<RatingSummary | null>(null);
 
   /**
    * Booking needs an account, so a signed-out visitor goes to sign in first
@@ -146,6 +151,13 @@ export default function Workshop() {
                 Một buổi gồm gì?
               </a>
             </div>
+            {score && score.count > 0 && (
+              <a href="#danh-gia" className="ws-hero-score">
+                <Stars value={score.average} size={16} />
+                <b>{score.average.toLocaleString('vi-VN', { minimumFractionDigits: 1 })}/5</b>
+                <em>{score.count} đánh giá từ phụ huynh đã tham gia</em>
+              </a>
+            )}
           </div>
 
           {/* The soonest session with seats, so the page answers "khi nào?"
@@ -413,6 +425,9 @@ export default function Workshop() {
         </div>
         <Lightbox images={LB_IMAGES} index={lightbox} onClose={() => setLightbox(null)} onNavigate={navigate} />
       </section>
+
+      {/* ── What families said, once there is something to show ─────── */}
+      <WorkshopReviewsSection onSummary={setScore} />
 
       {/* ── How booking works ────────────────────────────────────────── */}
       <section className="section ws-section ws-how-wrap">

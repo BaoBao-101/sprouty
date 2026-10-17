@@ -14,7 +14,13 @@ import {
   type MyWorkshopRegistration,
   type WorkshopPayment,
 } from '@/types/workshop';
+import { ReviewDialog } from '@/components/reviews/ReviewDialog';
+import { QuickStars, Stars } from '@/components/reviews/Stars';
+import type { EligibleWorkshop, MyWorkshopReview, ReviewOptions } from '@/types/review';
 import './MyWorkshops.css';
+
+/** The session a review form is open for. */
+type ReviewSession = Pick<MyWorkshopRegistration['workshop'], 'id' | 'title' | 'imageUrl' | 'dateTime' | 'endTime'>;
 
 /**
  * The customer's own workshop bookings.
@@ -76,6 +82,21 @@ export default function MyWorkshops() {
   }, [isLoggedIn]);
 
   useEffect(load, [load]);
+
+  // ── Reviews: a session the child was checked in at can be reviewed, once ──
+  const [reviewData, setReviewData] = useState<{ reviews: MyWorkshopReview[]; eligible: EligibleWorkshop[]; options: ReviewOptions } | null>(null);
+  const [writing, setWriting] = useState<{ session: ReviewSession; existing: MyWorkshopReview | null; stars?: number } | null>(null);
+
+  const loadReviews = useCallback(() => {
+    if (!isLoggedIn) return;
+    API.workshopReviews.mine().then((data: any) => setReviewData(data)).catch(() => {});
+  }, [isLoggedIn]);
+
+  useEffect(loadReviews, [loadReviews]);
+
+  const reviewOf = new Map((reviewData?.reviews || []).map((r) => [r.workshopId, r]));
+  const canReview = new Set((reviewData?.eligible || []).map((e) => e.workshopId));
+  const toReview = (reviewData?.eligible || []).filter((e) => !reviewOf.has(e.workshopId));
 
   async function openPayment(reg: MyWorkshopRegistration) {
     setBusyId(reg.id);
@@ -239,7 +260,7 @@ export default function MyWorkshops() {
                 {busyId === reg.id ? 'Đang tải…' : <><SproutyIcon name="card" size={16} /> Thanh toán ngay</>}
               </button>
             )}
-            {reg.upcoming && reg.status !== 'cancelled' && !dropped && (
+            {reg.upcoming && reg.status !== 'cancelled' && !dropped && !reg.checkedInAt && (
               <button
                 className="btn btn-ghost btn-sm"
                 disabled={busyId === reg.id}
@@ -248,6 +269,17 @@ export default function MyWorkshops() {
                 Huỷ đăng ký
               </button>
             )}
+            {/* Attended: the session can be reviewed, once per family. */}
+            {reg.status === 'cancelled' || dropped ? null : reviewOf.has(w.id) ? (
+              <button type="button" className="myws-review is-done" onClick={() => setWriting({ session: w, existing: reviewOf.get(w.id)! })}>
+                <Stars value={reviewOf.get(w.id)!.rating} size={13} />
+                {reviewOf.get(w.id)!.status === 'hidden' ? 'Đánh giá đang ẩn · Sửa' : 'Sửa đánh giá'}
+              </button>
+            ) : canReview.has(w.id) && reg.checkedInAt ? (
+              <button type="button" className="myws-review" onClick={() => setWriting({ session: w, existing: null })}>
+                <SproutyIcon name="star" size={15} /> Đánh giá buổi học
+              </button>
+            ) : null}
           </div>
         </div>
       </article>
@@ -280,6 +312,24 @@ export default function MyWorkshops() {
         </div>
       )}
 
+      {/* Attended and not yet reviewed: the prompt above the list. A tap on a
+          star opens the form with that many chosen. */}
+      {state === 'ready' && toReview.length > 0 && (
+        <div className="myws-review-ask">
+          <span className="myws-review-ask-thumb">
+            {toReview[0].workshop.imageUrl ? <img src={toReview[0].workshop.imageUrl} alt="" /> : <SproutyIcon name="ticket" size={20} />}
+          </span>
+          <span className="myws-review-ask-text">
+            <b>{toReview.length === 1 ? `Bé thấy buổi "${toReview[0].workshop.title}" thế nào?` : `${toReview.length} buổi bé đã tham gia đang chờ bạn đánh giá`}</b>
+            <em>Chạm vào số sao để bắt đầu — vài dòng của bạn giúp phụ huynh khác chọn buổi phù hợp.</em>
+          </span>
+          <QuickStars
+            label={`Chấm sao cho buổi ${toReview[0].workshop.title}`}
+            onPick={(stars) => setWriting({ session: toReview[0].workshop, existing: null, stars })}
+          />
+        </div>
+      )}
+
       {state === 'ready' && upcoming.length > 0 && (
         <>
           <h2 className="myws-section">Sắp tới ({upcoming.length})</h2>
@@ -306,6 +356,23 @@ export default function MyWorkshops() {
             onChange={setPastPage}
           />
         </>
+      )}
+
+      {writing && (
+        <ReviewDialog
+          target={{
+            kind: 'workshop',
+            id: writing.session.id,
+            name: writing.session.title,
+            image: writing.session.imageUrl,
+            when: formatWorkshopWhen(writing.session),
+          }}
+          existing={writing.existing}
+          initialRating={writing.stars}
+          options={reviewData?.options}
+          onClose={() => setWriting(null)}
+          onSaved={loadReviews}
+        />
       )}
 
       {payment && (

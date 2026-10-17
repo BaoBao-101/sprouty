@@ -1,5 +1,6 @@
 import { confirmAction } from '@/services/dialog';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   BlockStates,
   FilterPills,
@@ -31,6 +32,7 @@ import {
   WORKSHOP_PRICE_PRESETS,
 } from '@/components/admin/fields';
 import { WorkshopStaffPicker, type StaffOption, type StaffRef } from './WorkshopStaffPicker';
+import { Stars } from '@/components/reviews/Stars';
 
 interface WorkshopRow {
   id: string;
@@ -54,6 +56,8 @@ interface WorkshopRow {
   staff?: StaffRef[];
   /** Published, still to come, and nobody able to run it. */
   needsStaff?: boolean;
+  /** What the families who were there thought; null until someone reviews. */
+  rating?: { average: number; count: number } | null;
 }
 
 interface LocationRow {
@@ -573,6 +577,17 @@ export default function Workshops() {
                           <Pill tone={rowStatus(w).tone}>{rowStatus(w).label}</Pill>
                           {w.needsStaff && <Pill tone="amber">Chưa có người trực</Pill>}
                         </div>
+                        {w.rating && (
+                          <Link
+                            to={`/admin/reviews?type=workshop&workshopId=${w.id}`}
+                            className="ws-row-rating"
+                            title="Xem đánh giá của phụ huynh về buổi này"
+                          >
+                            <Stars value={w.rating.average} size={12} />
+                            <b>{w.rating.average.toLocaleString('vi-VN', { minimumFractionDigits: 1 })}</b>
+                            <span>· {w.rating.count} đánh giá</span>
+                          </Link>
+                        )}
                         {(w.staff?.length ?? 0) > 0 && (
                           <div className="ws-row-staff">
                             <AdminIcon name="users" size={13} />

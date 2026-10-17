@@ -1,0 +1,129 @@
+/* ── Admin: reviews ─────────────────────────────────────────────────────
+   One compact line per review; the detail opens in a dialog. */
+/* Kits or sessions: two tabs over the same tools. */
+.arv-kinds {
+  display: inline-flex; gap: 4px; max-width: 100%; margin: 0 0 18px; padding: 4px;
+  border-radius: 14px; background: var(--surface-2, #F1F5EE); border: 1px solid var(--border-c, #E5E7EB);
+}
+.arv-kind {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; border: none; border-radius: 10px;
+  background: none; color: var(--ink-3); font: inherit; font-size: .9rem; font-weight: 700; white-space: nowrap; cursor: pointer;
+}
+.arv-kind:hover { color: var(--ink) }
+.arv-kind.is-on { background: var(--surface, #fff); color: var(--ink); box-shadow: 0 1px 3px rgba(20, 35, 24, .12) }
+.arv-kind:focus-visible { outline: 2px solid var(--accent, #15803D); outline-offset: -2px }
+.arv-kind-count {
+  min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: #FDECC8; color: #92400E;
+  font-size: .72rem; font-weight: 800; line-height: 20px; text-align: center;
+}
+/* Narrowed to one session, from the workshop list. */
+.arv-scope {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin: 0 0 14px; padding: 8px 8px 8px 14px;
+  border-radius: 12px; background: #F2F8EE; border: 1px solid #D5E8CC; font-size: .88rem; color: var(--ink-3);
+}
+.arv-scope > span { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere }
+.arv-scope b { color: var(--ink) }
+
+.arv-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0 }
+.arv-rating { width: auto; min-width: 170px; height: 40px }
+
+/* ── The list ── */
+.arv-rows { list-style: none; margin: 0; padding: 0 }
+.arv-rows li + li { border-top: 1px solid var(--border-c, #E5E7EB) }
+.arv-row {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) minmax(130px, 190px) auto 18px; align-items: center; gap: 14px;
+  width: 100%; min-height: 68px; padding: 10px 18px; border: none; background: none; text-align: left;
+  font: inherit; color: var(--ink); cursor: pointer; transition: background .12s;
+}
+.arv-row:hover { background: var(--surface-2, #F8FAF7) }
+.arv-row:focus-visible { outline: 2px solid var(--accent, #15803D); outline-offset: -2px }
+.arv-row > svg { color: var(--ink-4) }
+.arv-row.is-hidden .arv-row-main, .arv-row.is-hidden .arv-row-thumb { opacity: .55 }
+.arv-row-thumb { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; overflow: hidden; background: var(--cream-2, #F6FAF3); color: var(--ink-4) }
+.arv-row-thumb img { width: 100%; height: 100%; object-fit: cover }
+.arv-row-main { display: grid; gap: 3px; min-width: 0 }
+.arv-row-title { display: flex; align-items: center; gap: 10px; min-width: 0 }
+.arv-row-title b { font-size: .92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.arv-row-title .rv-stars { flex: none }
+.arv-row-when { flex: none; padding: 1px 7px; border-radius: 6px; background: var(--surface-2, #F1F5EE); font-style: normal; font-size: .74rem; font-weight: 700; color: var(--ink-3) }
+.arv-row-snippet { font-size: .84rem; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.arv-row-snippet.is-muted { font-style: italic; color: var(--ink-4) }
+.arv-row.is-low .arv-row-snippet { color: #9A3412 }
+.arv-row-who { display: grid; gap: 1px; min-width: 0; font-size: .82rem }
+.arv-row-who b { font-weight: 600; color: var(--ink-2, var(--ink)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.arv-row-who em { font-style: normal; color: var(--ink-4) }
+.arv-row-flags { display: flex; align-items: center; justify-content: flex-end; gap: 8px }
+.arv-row-photos { display: inline-flex; align-items: center; gap: 4px; font-size: .8rem; font-weight: 700; color: var(--ink-4) }
+
+/* ── The detail ── */
+.arv-detail { display: grid; gap: 18px }
+.arv-detail-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap }
+.arv-detail-thumb { flex: none; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 14px; overflow: hidden; background: var(--cream-2, #F6FAF3); color: var(--ink-4) }
+.arv-detail-thumb img { width: 100%; height: 100%; object-fit: cover }
+.arv-detail-score { flex: 1; display: grid; gap: 4px; min-width: 0 }
+.arv-rating-label { font-size: .9rem }
+.arv-rating-label.is-1, .arv-rating-label.is-2 { color: #BE123C }
+.arv-rating-label.is-3 { color: #B45309 }
+.arv-rating-label.is-4, .arv-rating-label.is-5 { color: #15803D }
+
+.arv-facts {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px 18px; margin: 0;
+  padding: 14px 16px; border-radius: 14px; background: var(--surface-2, #F8FAF7);
+}
+.arv-facts dt { font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-4) }
+.arv-facts dd { margin: 2px 0 0; font-size: .9rem; font-weight: 600; color: var(--ink); overflow-wrap: anywhere }
+
+.arv-banner { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 12px; background: #FFF7E6; color: #92400E; font-size: .86rem; font-weight: 600 }
+.arv-detail-block { display: grid; gap: 10px }
+.arv-detail-block h3 { margin: 0; font-size: .95rem; color: var(--ink) }
+.arv-detail-block h3 em { font-style: normal; font-weight: 500; font-size: .82rem; color: var(--ink-4) }
+.arv-tags { display: flex; flex-wrap: wrap; gap: 6px }
+.arv-tags span { padding: 3px 10px; border-radius: 99px; border: 1px solid #E5ECDF; background: var(--cream-2, #F6FAF3); font-size: .78rem; font-weight: 600; color: var(--ink-3) }
+.arv-text { margin: 0; font-size: .95rem; line-height: 1.65; color: var(--ink-2, var(--ink)); white-space: pre-line; overflow-wrap: anywhere }
+.arv-text.is-empty { font-style: italic; color: var(--ink-4) }
+.arv-detail-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px }
+.arv-detail-photos a { display: block; aspect-ratio: 1; border-radius: 12px; overflow: hidden; border: 1px solid #E5ECDF; cursor: zoom-in }
+.arv-detail-photos img { width: 100%; height: 100%; object-fit: cover }
+
+.arv-templates { display: flex; flex-wrap: wrap; gap: 8px }
+.arv-template {
+  min-height: 36px; padding: 0 14px; border: 1.5px solid #D9E6D2; border-radius: 99px; background: #fff;
+  font: inherit; font-size: .84rem; font-weight: 700; color: var(--ink-3); cursor: pointer;
+}
+.arv-template:hover { border-color: #15803D; color: #15803D }
+.arv-reply-input { width: 100%; min-height: 110px; resize: vertical }
+.arv-reply-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap }
+.arv-reply-bar .arv-help { flex: 1 }
+.arv-help { margin: 0; font-size: .8rem; color: var(--ink-4) }
+.arv-danger-text { color: #BE123C }
+.btn.arv-danger { background: #BE123C; border-color: #BE123C }
+
+.arv-reasons { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px }
+.arv-reason {
+  display: flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 12px; border: 1.5px solid #E1E8DA; border-radius: 12px;
+  font-size: .88rem; font-weight: 600; color: var(--ink-2, var(--ink)); cursor: pointer;
+}
+.arv-reason.is-on { border-color: #BE123C; background: #FFF5F6 }
+.arv-reason input { accent-color: #BE123C }
+
+/* Narrow: the kit and the words, then who and when, then the state. */
+@media (max-width: 760px) {
+  .arv-row {
+    grid-template-columns: 44px minmax(0, 1fr) auto 18px;
+    grid-template-areas: 'thumb main main chev' 'thumb who flags chev';
+    gap: 4px 10px; padding: 12px 14px;
+  }
+  .arv-row-thumb { grid-area: thumb; align-self: start }
+  .arv-row-main { grid-area: main }
+  .arv-row > svg { grid-area: chev }
+  .arv-row-who { grid-area: who; display: flex; align-items: center; gap: 6px; min-width: 0 }
+  .arv-row-who b { min-width: 0 }
+  .arv-row-who em { flex: none }
+  .arv-row-who em::before { content: '· ' }
+  .arv-row-flags { grid-area: flags }
+}
+@media (max-width: 640px) {
+  .arv-tools, .arv-rating { width: 100% }
+  .arv-reply-bar .arv-help { flex-basis: 100% }
+  .arv-reply-bar .btn { flex: 1 }
+}

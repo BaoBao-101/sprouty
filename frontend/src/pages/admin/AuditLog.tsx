@@ -50,6 +50,7 @@ const DOMAIN_LABEL: Record<string, string> = {
   payment: 'Thanh toán',
   membership: 'Gói VIP',
   plant: 'Cây',
+  review: 'Đánh giá',
 };
 
 const DOMAIN_TONE: Record<string, string> = {
@@ -64,6 +65,7 @@ const DOMAIN_TONE: Record<string, string> = {
   payment: 'green',
   membership: 'amber',
   plant: 'green',
+  review: 'amber',
 };
 
 /**
@@ -100,6 +102,14 @@ const ACTION_LABEL: Record<string, string> = {
   'workshop.update': 'Sửa workshop',
   'workshop.delete': 'Xoá workshop',
   'workshop.staff.updated': 'Phân công nhân viên workshop',
+  'review.reply': 'Phản hồi đánh giá',
+  'review.reply.remove': 'Gỡ phản hồi đánh giá',
+  'review.hide': 'Ẩn đánh giá',
+  'review.show': 'Hiện lại đánh giá',
+  'review.workshop.reply': 'Phản hồi đánh giá workshop',
+  'review.workshop.reply.remove': 'Gỡ phản hồi đánh giá workshop',
+  'review.workshop.hide': 'Ẩn đánh giá workshop',
+  'review.workshop.show': 'Hiện lại đánh giá workshop',
   'workshop.cover.upload': 'Tải ảnh bìa workshop',
   'workshop.payment.received': 'Nhận tiền workshop',
   'workshop.registration.delete': 'Huỷ lượt đăng ký',

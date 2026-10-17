@@ -17,6 +17,7 @@ const GROUPS: SidebarGroup[] = [
     items: [
       { to: '/admin/orders', label: 'Giám sát đơn hàng', icon: icon('orders') },
       { to: '/admin/sales', label: 'Báo cáo bán hàng', icon: icon('sales') },
+      { to: '/admin/reviews', label: 'Đánh giá', icon: icon('star') },
       { to: '/admin/redeem', label: 'Mã kích hoạt', icon: icon('redeem') },
     ],
   },

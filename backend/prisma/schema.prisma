@@ -40,6 +40,7 @@ enum AssetKind {
   blog_cover
   blog_inline
   workshop_cover
+  review_photo
 }
 
 enum AssetStorageProvider {
@@ -106,6 +107,8 @@ model User {
   workshopRegs WorkshopRegistration[]
   workshopCheckIns WorkshopRegistration[] @relation("WorkshopCheckIns")
   workshopShifts   WorkshopStaff[]        @relation("WorkshopShifts")
+  reviews          ProductReview[]
+  workshopReviews  WorkshopReview[]
   actorLogs    AuditLog[] @relation("ActorLogs")
   assets       Asset[] @relation("AssetOwner")
   createdVideos InstructionVideo[] @relation("InstructionVideoCreator")
@@ -164,10 +167,15 @@ model Product {
   images      String[]
   videos      Json          @default("[]")
   status      ProductStatus @default(published)
+  // Published reviews only, kept here so the shop can show stars on every
+  // card without counting reviews per product on every listing.
+  ratingAvg   Float         @default(0)
+  ratingCount Int           @default(0)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   orderItems OrderItem[]
+  reviews    ProductReview[]
   assets Asset[]
   instructionVideos InstructionVideo[]
   productImages UserProductImage[]
@@ -199,8 +207,9 @@ model Order {
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
 
-  user  User        @relation(fields: [userId], references: [id])
-  items OrderItem[]
+  user    User            @relation(fields: [userId], references: [id])
+  items   OrderItem[]
+  reviews ProductReview[]
 }
 
 model OrderItem {
@@ -255,6 +264,7 @@ model Workshop {
 
   registrations WorkshopRegistration[]
   staff         WorkshopStaff[]
+  reviews       WorkshopReview[]
 
   @@index([status, dateTime])
 }
@@ -318,6 +328,7 @@ model WorkshopRegistration {
   workshop    Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
   user        User?    @relation(fields: [userId], references: [id])
   checkedInBy User?    @relation("WorkshopCheckIns", fields: [checkedInByUserId], references: [id])
+  review      WorkshopReview?
 
   @@index([workshopId, status])
   @@index([workshopId, checkedInAt])
@@ -751,4 +762,85 @@ model Reward {
   // ever insert the milestones that are missing.
   @@unique([userId, type, milestone])
   @@index([userId, status])
+}
+
+enum ReviewStatus {
+  published
+  hidden
+}
+
+/// A customer's review of a product they bought and received.
+///
+/// One per customer per product: buying the kit again lets them update the
+/// review they gave rather than adding a second voice to its score. Only an
+/// order that reached the door (status delivered) makes someone eligible, so
+/// every review on the site comes from a verified buyer. Hiding is the
+/// admin's tool for abuse; a hidden review leaves the product's score.
+model ProductReview {
+  id           String       @id @default(cuid())
+  productId    Int
+  userId       String
+  /// The delivered order that made the customer eligible.
+  orderId      String?
+  rating       Int
+  content      String?      @db.Text
+  tags         String[]     @default([])
+  /// Asset URLs the customer uploaded themselves (kind review_photo).
+  images       String[]     @default([])
+  /// Shown as "Khách hàng Sprouty" instead of the customer's name.
+  anonymous    Boolean      @default(false)
+  status       ReviewStatus @default(published)
+  hiddenReason String?
+  /// Sprouty's public answer.
+  reply        String?      @db.Text
+  repliedAt    DateTime?
+  repliedById  String?
+  editedAt     DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, productId])
+  @@index([productId, status, createdAt])
+  @@index([status, createdAt])
+}
+
+/// A parent's review of a workshop session their child attended.
+///
+/// Earned at the door, not at checkout: only a booking that staff checked in
+/// (checkedInAt set) makes someone eligible, so every review on the workshop
+/// page comes from a family that was actually there. One per family per
+/// session — booking two seats does not give two voices. Photos follow the
+/// same rules as product reviews (kind review_photo, public only while the
+/// review is published).
+model WorkshopReview {
+  id             String       @id @default(cuid())
+  workshopId     String
+  userId         String
+  /// The checked-in booking that made the parent eligible.
+  registrationId String?      @unique
+  rating         Int
+  content        String?      @db.Text
+  tags           String[]     @default([])
+  images         String[]     @default([])
+  anonymous      Boolean      @default(false)
+  status         ReviewStatus @default(published)
+  hiddenReason   String?
+  reply          String?      @db.Text
+  repliedAt      DateTime?
+  repliedById    String?
+  editedAt       DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  workshop     Workshop              @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  registration WorkshopRegistration? @relation(fields: [registrationId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, workshopId])
+  @@index([workshopId, status, createdAt])
+  @@index([status, createdAt])
 }

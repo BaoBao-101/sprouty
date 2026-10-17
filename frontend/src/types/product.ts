@@ -37,6 +37,10 @@ export interface Product {
   badge: ProductBadge;
   images: string[];
   status: string;
+  /** Average of published reviews, 0 when there are none. */
+  rating?: number;
+  /** How many published reviews. */
+  reviewCount?: number;
 }
 
 export const BADGE_LABEL: Record<Exclude<ProductBadge, null>, string> = {

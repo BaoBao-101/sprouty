@@ -5,6 +5,7 @@ import { useCart } from '@/contexts/CartContext';
 import { fetchSpeciesFilters, productFallbackImage, productImage } from '@/services/products';
 import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
 import { PromoBanner } from '@/components/PromoBanner';
+import { Stars } from '@/components/reviews/Stars';
 import { BADGE_LABEL, formatPrice, type Product } from '@/types/product';
 import './Shop.css';
 
@@ -20,7 +21,7 @@ type Category = 'all' | 'kit' | 'book';
 type AgeBand = 'all' | '4-6' | '6-9' | '9-12';
 type Badge = 'all' | 'hot' | 'new' | 'sale';
 type PricePreset = 'all' | 'u70' | '70-90' | 'o90';
-type Sort = '' | 'pa' | 'pd' | 'az' | 'pop';
+type Sort = '' | 'pa' | 'pd' | 'az' | 'pop' | 'rating';
 /** Each filter, so a count can leave its own group out (see `passes`). */
 type Group = 'species' | 'age' | 'price' | 'badge' | 'category';
 
@@ -54,6 +55,7 @@ const PRICE_PRESETS: Array<{ value: PricePreset; label: string; min: string; max
 const SORTS: Array<{ value: Sort; label: string }> = [
   { value: '', label: 'Gợi ý' },
   { value: 'pop', label: 'Bán chạy' },
+  { value: 'rating', label: 'Đánh giá cao' },
   { value: 'pa', label: 'Giá thấp → cao' },
   { value: 'pd', label: 'Giá cao → thấp' },
   { value: 'az', label: 'Tên A → Z' },
@@ -144,6 +146,13 @@ function ShopCard({ product }: { product: Product }) {
             )}
           </span>
           <strong className="sp-card-name">{product.name}</strong>
+          {product.reviewCount ? (
+            <span className="sp-card-rating">
+              <Stars value={product.rating || 0} size={13} />
+              <b>{(product.rating || 0).toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</b>
+              <em>({product.reviewCount} đánh giá)</em>
+            </span>
+          ) : null}
           <span className="sp-card-desc">{product.desc}</span>
         </span>
       </Link>
@@ -306,6 +315,7 @@ export default function Shop() {
     else if (sort === 'pd') list.sort((a, b) => b.price - a.price);
     else if (sort === 'az') list.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
     else if (sort === 'pop') list.sort((a, b) => Number(b.badge === 'hot') - Number(a.badge === 'hot'));
+    else if (sort === 'rating') list.sort((a, b) => (b.rating || 0) - (a.rating || 0) || (b.reviewCount || 0) - (a.reviewCount || 0));
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products, category, species, age, badge, min, max, q, sort]);

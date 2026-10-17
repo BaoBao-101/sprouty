@@ -255,8 +255,20 @@ export default async function adminWorkshopRoutes(fastify) {
       fastify.prisma.workshop.count({ where: unstaffedFilter(now) }),
     ]);
 
+    // What the families who were there thought, for the sessions on this page.
+    const scores = await fastify.prisma.workshopReview.groupBy({
+      by: ['workshopId'],
+      where: { workshopId: { in: workshops.map((w) => w.id) }, status: 'published' },
+      _avg: { rating: true },
+      _count: { _all: true },
+    });
+    const scoreOf = new Map(scores.map((g) => [g.workshopId, {
+      average: Math.round(g._avg.rating * 10) / 10,
+      count: g._count._all,
+    }]));
+
     return {
-      ...paged(workshops.map((w) => enrichWorkshop(w, now)), total, paging, 'workshops'),
+      ...paged(workshops.map((w) => ({ ...enrichWorkshop(w, now), rating: scoreOf.get(w.id) || null })), total, paging, 'workshops'),
       counts: { upcoming, past, all: upcoming + past, unstaffed },
     };
   });

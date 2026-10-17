@@ -48,7 +48,6 @@
 }
 .pdp-name { margin: 0; font-size: clamp(1.9rem, 3.4vw, 2.6rem); line-height: 1.15 }
 .pdp-rating { display: flex; align-items: center; gap: 8px; font-size: .9rem; font-weight: 700; color: var(--ink-2) }
-.pdp-stars { color: #F59E0B; letter-spacing: 1px }
 .pdp-rating-link { padding: 0; border: none; background: none; font: inherit; font-weight: 600; color: var(--ink-4); text-decoration: underline; cursor: pointer }
 .pdp-rating-link:hover { color: var(--primary-600) }
 .pdp-desc { margin: 0; font-size: .98rem; line-height: 1.7; color: var(--ink-3) }
@@ -139,28 +138,8 @@
 .pdp-specs dt { font-size: .86rem; color: var(--ink-4) }
 .pdp-specs dd { margin: 0; font-size: .9rem; font-weight: 700; color: var(--ink); text-align: right }
 .pdp-muted { margin: 0; color: var(--ink-4) }
-.pdp-pane { min-height: 120px }
+.pdp-pane { min-height: 120px; min-width: 0 }
 
-.pdp-review-summary {
-  display: flex; gap: 28px; align-items: center; flex-wrap: wrap; padding: 20px 22px; margin-bottom: 16px;
-  border-radius: 22px; background: var(--surface); border: 1.5px solid var(--parchment-2);
-}
-.pdp-review-score { display: flex; flex-direction: column; align-items: center; gap: 2px }
-.pdp-review-score strong { font-family: var(--font-display); font-size: 2.6rem; color: var(--ink); line-height: 1 }
-.pdp-review-score em { font-style: normal; font-size: .8rem; color: var(--ink-4) }
-.pdp-review-bars { flex: 1; min-width: 220px; display: grid; gap: 6px }
-.pdp-review-bar { display: grid; grid-template-columns: 44px 1fr 24px; align-items: center; gap: 10px; font-size: .8rem; color: var(--ink-3) }
-.pdp-review-bar i { height: 8px; border-radius: 99px; background: var(--parchment); overflow: hidden }
-.pdp-review-bar b { display: block; height: 100%; border-radius: inherit; background: #F59E0B }
-.pdp-review-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px }
-.pdp-review { padding: 18px; border-radius: 20px; background: var(--surface); border: 1.5px solid var(--parchment-2) }
-.pdp-review header { display: flex; align-items: center; gap: 10px }
-.pdp-review header > span:nth-child(2) { display: flex; flex-direction: column; flex: 1; min-width: 0 }
-.pdp-review strong { font-size: .9rem; color: var(--ink) }
-.pdp-review em { font-style: normal; font-size: .74rem; color: var(--ink-4) }
-.pdp-review .pdp-stars { font-size: .8rem }
-.pdp-review-av { flex: 0 0 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; color: #fff; font-weight: 800 }
-.pdp-review p { margin: 12px 0 0; font-size: .9rem; line-height: 1.6; color: var(--ink-2) }
 
 .related-section { padding: 48px 0 72px }
 .related-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 20px }
@@ -184,7 +163,6 @@
   .pdp-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 12px }
   .pdp-facts li:nth-child(3) { border-left: none }
   .pdp-overview { grid-template-columns: minmax(0, 1fr) }
-  .pdp-review-list { grid-template-columns: minmax(0, 1fr) }
 }
 @media (max-width: 640px) {
   .pdp-variants { grid-template-columns: minmax(0, 1fr) }

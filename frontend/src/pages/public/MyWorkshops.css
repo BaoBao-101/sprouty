@@ -98,6 +98,32 @@
 }
 
 .myws-actions { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 13px }
+.myws-actions:empty { display: none }
+
+/* Reviewing a session the child attended. */
+.myws-review {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 16px; border-radius: var(--r-full);
+  border: 1.5px solid #F2C46D; background: #FFF8EC; color: #94560A; font: inherit; font-size: .84rem; font-weight: 800;
+  cursor: pointer;
+}
+.myws-review:hover { background: #FFEFD3 }
+.myws-review.is-done { border-color: #DDE7D6; background: var(--surface); color: var(--ink-3); font-weight: 700 }
+.myws-review.is-done:hover { border-color: var(--primary-300) }
+.myws-review-ask {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; margin: 0 0 18px; padding: 12px 14px;
+  border-radius: var(--r-xl); background: #F2F8EE; border: 1px solid #D5E8CC;
+}
+.myws-review-ask-thumb {
+  flex: none; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; overflow: hidden;
+  background: #fff; color: var(--primary-600);
+}
+.myws-review-ask-thumb img { width: 100%; height: 100%; object-fit: cover }
+.myws-review-ask-text { flex: 1 1 260px; display: grid; gap: 2px; min-width: 0 }
+.myws-review-ask-text b { font-size: .94rem; color: var(--ink); overflow-wrap: anywhere }
+.myws-review-ask-text em { font-style: normal; font-size: .82rem; color: var(--ink-3) }
+@media (max-width: 520px) {
+  .myws-review-ask .rv-quick { width: 100%; justify-content: space-between }
+}
 
 .myws-empty {
   text-align: center;

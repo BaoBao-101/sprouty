@@ -235,6 +235,26 @@ export const API = {
     },
   },
 
+  // Reviews of what a customer bought and received.
+  reviews: {
+    forProduct(productId, params = {}) { return _fetch(`/products/${productId}/reviews?` + new URLSearchParams(params)); },
+    mine()               { return _fetch('/me/reviews'); },
+    create(data)         { return _fetch('/me/reviews', { method: 'POST', body: JSON.stringify(data) }); },
+    update(id, data)     { return _fetch(`/me/reviews/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); },
+    remove(id)           { return _fetch(`/me/reviews/${id}`, { method: 'DELETE' }); },
+    uploadImage(form)    { return _fetch('/me/review-images', { method: 'POST', body: form }); },
+  },
+
+  // Reviews of workshop sessions, by parents whose child was checked in.
+  // Photos go through reviews.uploadImage, like a product review's.
+  workshopReviews: {
+    list(params = {})    { return _fetch('/workshop-reviews?' + new URLSearchParams(params)); },
+    mine()               { return _fetch('/me/workshop-reviews'); },
+    create(data)         { return _fetch('/me/workshop-reviews', { method: 'POST', body: JSON.stringify(data) }); },
+    update(id, data)     { return _fetch(`/me/workshop-reviews/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); },
+    remove(id)           { return _fetch(`/me/workshop-reviews/${id}`, { method: 'DELETE' }); },
+  },
+
   orders: {
     create(data) { return _fetch('/orders', { method: 'POST', body: JSON.stringify(data) }); },
     list(params = {}) { return _fetch('/orders?' + new URLSearchParams(params)); },
@@ -280,6 +300,22 @@ export const API = {
   },
 
   admin: {
+    /** Every review, with who wrote it; answer and moderate. */
+    reviews: {
+      list(params = {})         { return _fetch('/admin/reviews?' + new URLSearchParams(params)); },
+      reply(id, reply)          { return _fetch(`/admin/reviews/${id}/reply`, { method: 'PATCH', body: JSON.stringify({ reply }) }); },
+      setStatus(id, status, reason = undefined) {
+        return _fetch(`/admin/reviews/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, reason }) });
+      },
+    },
+    /** The same, for workshop sessions. */
+    workshopReviews: {
+      list(params = {})         { return _fetch('/admin/workshop-reviews?' + new URLSearchParams(params)); },
+      reply(id, reply)          { return _fetch(`/admin/workshop-reviews/${id}/reply`, { method: 'PATCH', body: JSON.stringify({ reply }) }); },
+      setStatus(id, status, reason = undefined) {
+        return _fetch(`/admin/workshop-reviews/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, reason }) });
+      },
+    },
     users: {
       list(params = {}) { return _fetch('/admin/users?' + new URLSearchParams(params)); },
       create(d)       { return _fetch('/admin/users', { method: 'POST', body: JSON.stringify(d) }); },

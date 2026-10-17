@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ProductIcon } from '@/components/ProductIcon';
 import { MeterBar, Panel, Pill } from '@/components/admin/ui';
@@ -32,7 +32,7 @@ const actionLabels: Record<string, string> = {
   'user.password.reset': 'Đặt lại mật khẩu', 'user.grant_vip': 'Cấp tặng VIP', 'user.revoke_vip': 'Thu hồi VIP tặng',
   'order.marked_paid': 'Ghi nhận thanh toán', 'order.status.updated': 'Cập nhật giao hàng', 'order.shipping.updated': 'Khách đổi địa chỉ giao', 'order.received': 'Khách xác nhận đã nhận hàng',
   'product.create': 'Thêm sản phẩm', 'product.update': 'Cập nhật sản phẩm', 'product.delete': 'Xóa sản phẩm',
-  'workshop.create': 'Tạo workshop', 'workshop.update': 'Cập nhật workshop', 'workshop.delete': 'Xóa workshop', 'workshop.staff.updated': 'Phân công nhân viên workshop',
+  'workshop.create': 'Tạo workshop', 'workshop.update': 'Cập nhật workshop', 'workshop.delete': 'Xóa workshop', 'workshop.staff.updated': 'Phân công nhân viên workshop', 'review.reply': 'Phản hồi đánh giá', 'review.reply.remove': 'Gỡ phản hồi đánh giá', 'review.hide': 'Ẩn đánh giá', 'review.show': 'Hiện lại đánh giá', 'review.workshop.reply': 'Phản hồi đánh giá workshop', 'review.workshop.reply.remove': 'Gỡ phản hồi đánh giá workshop', 'review.workshop.hide': 'Ẩn đánh giá workshop', 'review.workshop.show': 'Hiện lại đánh giá workshop',
   'blog.create': 'Tạo bài viết', 'blog.update': 'Cập nhật bài viết', 'user_image.hidden': 'Ẩn ảnh khách hàng',
 };
 function Empty({ children }: { children: React.ReactNode }) { return <div className="db-empty"><AdminIcon name="inbox" size={26} /><p>{children}</p></div>; }

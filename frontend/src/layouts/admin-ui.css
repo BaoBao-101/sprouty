@@ -839,6 +839,13 @@
 .ws-row-staff { display:flex; align-items:flex-start; gap:5px; margin-top:6px; font-size:.78rem; color:var(--ink-3) }
 .ws-row-staff svg { flex:none; margin-top:2px; color:var(--ink-4) }
 .ws-row-staff .is-gone { color:#B45309 }
+/* The families' score, a link to their reviews: compact to look at, a 40px
+   target to tap. */
+.ws-row-rating {
+  display:inline-flex; align-items:center; gap:5px; min-height:40px; margin:-6px 0 -10px; font-size:.78rem; color:var(--ink-3); text-decoration:none;
+}
+.ws-row-rating b { color:var(--ink) }
+.ws-row-rating:hover span { color:var(--primary-600); text-decoration:underline }
 /* The picker: chosen people as chips, everyone else in a list that scrolls
    in its own box, so twenty employees take the same room as five. */
 .wsp { display:grid; gap:8px; min-width:0 }

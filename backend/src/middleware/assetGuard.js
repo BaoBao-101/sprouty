@@ -46,6 +46,25 @@ export async function assetAccessGuard(req) {
   const kind = key.split('/')[0];
   if (PUBLIC_KINDS.has(kind)) return;
 
+  // A review photo is public once it is on a published review — that is what
+  // the customer posted it for. Before that (an upload not sent yet), or after
+  // an admin hid the review (perhaps for showing personal details), only its
+  // owner and the admins may open it.
+  if (kind === 'review_photo') {
+    const prisma = req.server.prisma;
+    const asset = await prisma.asset.findFirst({ where: { key }, select: { ownerUserId: true, url: true } });
+    if (!asset) throw new AppError('Không tìm thấy tệp.', 404);
+    const onShow = { where: { status: 'published', images: { has: asset.url } }, select: { id: true } };
+    const [onProduct, onWorkshop] = await Promise.all([
+      prisma.productReview.findFirst(onShow),
+      prisma.workshopReview.findFirst(onShow),
+    ]);
+    if (onProduct || onWorkshop) return;
+    if (req.user && (req.user.role === 'admin' || req.user.id === asset.ownerUserId)) return;
+    if (!req.user) throw new AppError('Bạn cần đăng nhập để xem tệp này.', 401);
+    throw new AppError('Bạn không có quyền xem tệp này.', 403);
+  }
+
   if (!req.user) throw new AppError('Bạn cần đăng nhập để xem tệp này.', 401);
   // Only administrators moderate private media; employees only read the catalogue.
   if (req.user.role === 'admin') return;

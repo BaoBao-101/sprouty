@@ -8,13 +8,18 @@
  *
  * Only sessions an admin put this employee on open here; the server says so
  * for any other, and the page passes that on rather than showing a blank.
+ *
+ * Afterwards, what the families thought: the reviews parents wrote about this
+ * session, as the public page shows them. Replying is the admin's job.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { API } from '@/services/api';
 import { AdminIcon } from '@/components/icons/AdminIcon';
-import { BlockStates, Panel, Pill, type LoadState } from '@/components/admin/ui';
+import { BlockStates, Pagination, Panel, Pill, type LoadState } from '@/components/admin/ui';
+import { Stars } from '@/components/reviews/Stars';
+import { reviewDate, type PublicReview, type RatingSummary } from '@/types/review';
 import {
   dayHeading,
   hhmm,
@@ -29,6 +34,9 @@ import './Workshops.css';
 
 type View = 'waiting' | 'arrived' | 'all';
 
+/** Parents' reviews, five to a page under the register. */
+const FEEDBACK_PAGE = 5;
+
 export default function EmployeeWorkshopDetail() {
   const { id = '' } = useParams();
   const [session, setSession] = useState<SessionDetail | null>(null);
@@ -37,6 +45,9 @@ export default function EmployeeWorkshopDetail() {
   const [error, setError] = useState('');
   const [view, setView] = useState<View>('waiting');
   const [search, setSearch] = useState('');
+  const [feedback, setFeedback] = useState<{ summary: RatingSummary; reviews: PublicReview[] } | null>(null);
+  const [feedbackPage, setFeedbackPage] = useState(1);
+  const feedbackTop = useRef<HTMLDivElement>(null);
 
   const load = useCallback(() => {
     setState('loading');
@@ -45,6 +56,7 @@ export default function EmployeeWorkshopDetail() {
       .then((data: any) => {
         setSession(data.workshop);
         setAttendees(data.attendees || []);
+        setFeedback(data.feedback || null);
         setState('ready');
       })
       .catch((err: any) => {
@@ -248,6 +260,57 @@ export default function EmployeeWorkshopDetail() {
           </p>
         )}
       </Panel>
+
+      {/* Once someone has been ticked in, a review can follow. */}
+      {feedback && (feedback.summary.count > 0 || arrived.length > 0) && (
+        <Panel
+          title={feedback.summary.count
+            ? `Phụ huynh đánh giá · ${feedback.summary.average.toLocaleString('vi-VN', { minimumFractionDigits: 1 })}/5 từ ${feedback.summary.count} gia đình`
+            : 'Phụ huynh đánh giá'}
+        >
+          {feedback.summary.count === 0 ? (
+            <p className="ew-fb-empty">
+              <AdminIcon name="star" size={16} />
+              <span>Chưa có đánh giá. Phụ huynh có bé được điểm danh sẽ được mời đánh giá buổi học trong “Workshop của tôi”.</span>
+            </p>
+          ) : (
+            <div ref={feedbackTop}>
+              <ul className="ew-fb">
+                {feedback.reviews.slice((feedbackPage - 1) * FEEDBACK_PAGE, feedbackPage * FEEDBACK_PAGE).map((r) => (
+                  <li key={r.id}>
+                    <div className="ew-fb-head">
+                      <Stars value={r.rating} size={14} />
+                      <b>{r.author}</b>
+                      <em>{reviewDate(r.createdAt)}</em>
+                    </div>
+                    {r.tags.length > 0 && <div className="ew-fb-tags">{r.tags.map((t) => <span key={t}>{t}</span>)}</div>}
+                    {r.content && <p className="ew-fb-text">{r.content}</p>}
+                    {r.images.length > 0 && (
+                      <div className="ew-fb-photos">
+                        {r.images.map((url, i) => (
+                          <a key={url} href={url} target="_blank" rel="noopener noreferrer" aria-label={`Mở ảnh ${i + 1}`}><img src={url} alt="" loading="lazy" /></a>
+                        ))}
+                      </div>
+                    )}
+                    {r.reply && <p className="ew-fb-reply"><b>Sprouty đã trả lời:</b> {r.reply.content}</p>}
+                  </li>
+                ))}
+              </ul>
+              <Pagination
+                page={feedbackPage}
+                pages={Math.ceil(feedback.reviews.length / FEEDBACK_PAGE)}
+                total={feedback.reviews.length}
+                unit="đánh giá"
+                onChange={(next) => {
+                  setFeedbackPage(next);
+                  const top = feedbackTop.current;
+                  if (top) window.scrollTo({ top: top.getBoundingClientRect().top + window.scrollY - 120, behavior: 'smooth' });
+                }}
+              />
+            </div>
+          )}
+        </Panel>
+      )}
     </>
   );
 }
