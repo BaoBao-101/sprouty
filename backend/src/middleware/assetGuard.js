@@ -1,5 +1,6 @@
 import { AppError } from '../utils/errors.js';
 import { canAccessProductFeature } from '../services/access.js';
+import { verifyMediaToken } from '../services/media-token.js';
 
 /*
  * Authorisation for the local-storage upload mount (`/uploads/*`) — finding F-02.
@@ -35,6 +36,20 @@ const FEATURE_BY_KIND = {
 const OWNER_ONLY_KINDS = new Set(['user_image']);
 
 /**
+ * The mobile app's `?mt=` pass (services/media-token.js), when there is no
+ * session. It only stands in for who is asking; every rule below still applies.
+ */
+async function userFromMediaToken(req) {
+  const userId = verifyMediaToken(req.query?.mt);
+  if (!userId) return null;
+  const user = await req.server.prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true, status: true },
+  });
+  return user && user.status === 'active' ? user : null;
+}
+
+/**
  * preHandler for @fastify/static. Must run after the session plugin, otherwise
  * `req.user` is undefined and every private asset 401s.
  */
@@ -45,6 +60,8 @@ export async function assetAccessGuard(req) {
 
   const kind = key.split('/')[0];
   if (PUBLIC_KINDS.has(kind)) return;
+
+  if (!req.user && req.query?.mt) req.user = await userFromMediaToken(req);
 
   // A review photo is public once it is on a published review — that is what
   // the customer posted it for. Before that (an upload not sent yet), or after

@@ -5,6 +5,17 @@ import { requireAuth, requireCsrf } from '../middleware/rbac.js';
 import { passwordSchema } from '../utils/password.js';
 import { auditLog } from '../services/audit.js';
 import { tierOf } from '../services/membership.js';
+import { signMediaToken } from '../services/media-token.js';
+import { deleteCustomerAccount } from '../services/account-deletion.js';
+
+/**
+ * The Sprouty mobile app says so on every request. It changes how a sign-in is
+ * handed back (a token, not a cookie — see plugins/session.js) and who may
+ * sign in: the app is for families, and a staff account with a months-long
+ * token on a phone is a risk the web's 30-minute session exists to avoid.
+ */
+const fromApp = (req) => req.headers['x-sprouty-client'] === 'app';
+const STAFF_IN_APP = 'Ứng dụng Sprouty dành cho phụ huynh. Tài khoản nhân viên và quản trị vui lòng đăng nhập trên trang web sprouty.id.vn.';
 
 /**
  * The signed-in user as the client sees it. The tier rides along so the
@@ -98,6 +109,9 @@ export default async function authRoutes(fastify) {
     if (user.status === 'disabled') {
       throw new AppError('Tài khoản đã bị vô hiệu hóa. Liên hệ quản trị viên.', 403);
     }
+    // After the password check, so the app cannot be used to learn which
+    // e-mail addresses belong to staff.
+    if (fromApp(req) && user.role !== 'customer') throw new AppError(STAFF_IN_APP, 403);
 
     // Successful login — clear any accumulated failed attempts / lock.
     if (user.failedLoginAttempts > 0 || user.lockedUntil) {
@@ -107,10 +121,11 @@ export default async function authRoutes(fastify) {
       });
     }
 
-    const { csrfToken } = await fastify.setSession(req, reply, user.id);
+    const { csrfToken, token } = await fastify.setSession(req, reply, user.id, { client: fromApp(req) ? 'app' : 'web' });
     return {
       user: publicUser({ id: user.id, email: user.email, name: user.name, role: user.role, vipUntil: user.vipUntil, createdAt: user.createdAt }),
       csrfToken,
+      ...(token ? { token } : {}),
     };
   });
 
@@ -135,12 +150,34 @@ export default async function authRoutes(fastify) {
       data: { name: name.trim(), email: normalizedEmail, passwordHash, role: 'customer' },
     });
 
-    const { csrfToken } = await fastify.setSession(req, reply, user.id);
+    const { csrfToken, token } = await fastify.setSession(req, reply, user.id, { client: fromApp(req) ? 'app' : 'web' });
     reply.code(201);
     return {
       user: publicUser({ id: user.id, email: user.email, name: user.name, role: user.role, vipUntil: user.vipUntil, createdAt: user.createdAt }),
       csrfToken,
+      ...(token ? { token } : {}),
     };
+  });
+
+  // GET /api/v1/auth/media-token — a short-lived pass the app appends to
+  // private /uploads/* URLs, which an <img> cannot otherwise authenticate.
+  fastify.get('/media-token', { preHandler: [requireAuth] }, async (req) => {
+    const { token, expiresAt } = signMediaToken(req.user.id);
+    return { token, expiresAt: expiresAt.toISOString() };
+  });
+
+  // DELETE /api/v1/auth/account — a customer deletes their own account.
+  // See services/account-deletion.js for what goes and what is kept.
+  fastify.delete('/account', {
+    preHandler: [requireAuth, requireCsrf],
+    // The password check is a guessing oracle, like change-password.
+    config: { rateLimit: { max: 5, timeWindow: '15 minutes' } },
+  }, async (req, reply) => {
+    const password = typeof req.body?.password === 'string' ? req.body.password : '';
+    await deleteCustomerAccount(fastify.prisma, { userId: req.user.id, password });
+    // The sessions are gone already; this clears the website's cookie.
+    await fastify.clearSession(req, reply);
+    return { message: 'Tài khoản đã được xoá. Cảm ơn gia đình đã đồng hành cùng Sprouty.' };
   });
 
   // POST /api/v1/auth/logout

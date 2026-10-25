@@ -116,7 +116,8 @@ await app.register(fastifyHelmet, {
   crossOriginResourcePolicy: false,
 });
 
-// CORS — same-origin in Docker (nginx handles it), explicit origins for local dev
+// CORS — same-origin in Docker (nginx handles it), explicit origins for local dev.
+// The mobile app calls the API from native code, which CORS does not apply to.
 const allowedOrigins = (process.env.ALLOWED_ORIGIN || 'http://localhost').split(',').map(s => s.trim());
 await app.register(fastifyCors, {
   // Finding F-10: rejecting by passing an Error made @fastify/cors surface it as
@@ -131,7 +132,7 @@ await app.register(fastifyCors, {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'X-CSRF-Token'],
+  allowedHeaders: ['Content-Type', 'X-CSRF-Token', 'Authorization', 'X-Sprouty-Client'],
 });
 
 // Cookie parser (needed for session cookie reading)
