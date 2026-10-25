@@ -1,0 +1,89 @@
+{
+  "expo": {
+    "name": "Sprouty",
+    "slug": "sprouty",
+    "scheme": "sprouty",
+    "version": "1.1.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FFFDF8",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "vn.id.sprouty.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "CFBundleDevelopmentRegion": "vi",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "vn.id.sprouty.app",
+      "versionCode": 2,
+      "allowBackup": false,
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFDF8",
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "monochromeImage": "./assets/adaptive-icon-mono.png"
+      },
+      "blockedPermissions": [
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.USE_EXACT_ALARM"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-font",
+      "expo-image",
+      "expo-sharing",
+      "expo-web-browser",
+      "expo-video",
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-logo.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#FFFDF8"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#2E8447"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Sprouty mở thư viện ảnh khi bạn chọn ảnh hoặc video để lưu vào album Cây kỷ niệm.",
+          "cameraPermission": "Sprouty dùng máy ảnh khi bạn chụp ảnh cây và bé để lưu vào album Cây kỷ niệm.",
+          "microphonePermission": "Sprouty dùng micro khi bạn quay video kỷ niệm cây cùng bé."
+        }
+      ],
+      "./plugins/with-release-signing",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "useLegacyPackaging": true,
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

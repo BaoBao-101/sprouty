@@ -1,0 +1,489 @@
+import { useEffect, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { router, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Icon, type IconName } from '@/components/Icon';
+import { PayPanel } from '@/components/PayPanel';
+import { ReviewSheet, type ReviewTarget } from '@/components/ReviewSheet';
+import { Stars, TicketQr } from '@/components/shop';
+import { useToast } from '@/components/Toast';
+import { Button, Card, Chip, cheer, Empty, ErrorNote, Field, H, Loading, Pill, Screen, Sheet, Stepper, T, tap } from '@/components/ui';
+import { API, imageSource } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
+import { formatDateTime, formatPrice, formatWorkshopWhen } from '@/lib/format';
+import { syncWorkshopReminders } from '@/lib/reminders';
+import type { MyWorkshopRegistration, OwnReview, PublicWorkshop, RewardSummary, ReviewOptions, Transfer } from '@/lib/types';
+import { useLoad } from '@/lib/use-load';
+import { colors, fonts, radius } from '@/theme';
+
+const AGES = ['3–4 tuổi', '4–5 tuổi', '6–7 tuổi', '8–9 tuổi', '10–12 tuổi'];
+
+const STEPS: Array<{ icon: IconName; title: string; text: string }> = [
+  { icon: 'sparkle', title: 'Vẽ chậu', text: 'Bé tự trang trí chậu cây của riêng mình với màu vẽ an toàn.' },
+  { icon: 'seed', title: 'Gieo hạt thật', text: 'Cô hướng dẫn trộn đất, gieo hạt và tưới nước lần đầu.' },
+  { icon: 'sprout', title: 'Kích hoạt Plant Buddy', text: 'Cây được “sinh ra” trên Sprouty để bé chăm tiếp ở nhà.' },
+  { icon: 'pot', title: 'Mang cây về nhà', text: 'Bé mang chậu đã gieo về, kèm chứng nhận và ảnh kỷ niệm.' },
+];
+
+const sessionCancelled = (r: MyWorkshopRegistration) => r.workshop.status === 'cancelled';
+
+function bookingState(r: MyWorkshopRegistration): { label: string; tone: 'good' | 'warn' | 'bad' | 'info' | 'neutral' } {
+  if (r.status === 'cancelled') return { label: 'Đã huỷ', tone: 'neutral' };
+  if (sessionCancelled(r)) return { label: 'Sprouty huỷ buổi', tone: 'bad' };
+  if (r.checkedInAt) return { label: 'Đã tham gia', tone: 'info' };
+  if (!r.upcoming) return { label: 'Đã diễn ra', tone: 'neutral' };
+  if (r.amount === 0) return { label: 'Đã giữ chỗ', tone: 'good' };
+  if (r.paidAt) return { label: 'Đã thanh toán', tone: 'good' };
+  return { label: 'Chưa thanh toán', tone: 'warn' };
+}
+
+/** Booking one session: who, how many children, how to pay. The transfer follows in the same sheet. */
+function BookingSheet({ workshop, rewards, onClose, onBooked }: {
+  workshop: PublicWorkshop | null; rewards: RewardSummary | null; onClose: () => void; onBooked: () => void;
+}) {
+  const { user } = useAuth();
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [childAge, setChildAge] = useState('');
+  const [seats, setSeats] = useState(1);
+  const [useRewards, setUseRewards] = useState(0);
+  const [payMethod, setPayMethod] = useState<'online' | 'onsite'>('online');
+  const [note, setNote] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<{ payment: Transfer | null; rewardUsed: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!workshop) return;
+    setName(user?.name || '');
+    setEmail(user?.email || '');
+    setChildAge('');
+    setSeats(1);
+    setPayMethod('online');
+    setNote('');
+    setError('');
+    setBusy(false);
+    setDone(null);
+    // The phone from the last checkout on this phone, so it is not typed twice.
+    AsyncStorage.getItem(`sprouty.checkout.contact.${user?.id ?? 'guest'}`)
+      .then((raw) => setPhone(raw ? JSON.parse(raw).phone || '' : ''))
+      .catch(() => setPhone(''));
+  }, [workshop, user]);
+
+  const freeSeats = rewards?.availableCount ?? 0;
+  const maxRewards = workshop && workshop.price > 0 ? Math.min(freeSeats, seats) : 0;
+  const usedRewards = Math.min(useRewards, maxRewards);
+  useEffect(() => { setUseRewards(Math.min(freeSeats, 1)); }, [workshop, freeSeats]);
+  const total = workshop ? workshop.price * (seats - usedRewards) : 0;
+
+  async function submit() {
+    if (!workshop) return;
+    setError('');
+    if (name.trim().length < 2) return setError('Nhập họ tên phụ huynh.');
+    const cleanPhone = phone.replace(/\s/g, '');
+    if (!/^0\d{8,10}$/.test(cleanPhone)) return setError('Số điện thoại chưa đúng (VD: 0909000000).');
+    if (email && !/\S+@\S+\.\S+/.test(email)) return setError('Email chưa đúng định dạng.');
+    if (seats > workshop.seatsLeft) return setError(`Chỉ còn ${workshop.seatsLeft} chỗ cho buổi này.`);
+    setBusy(true);
+    try {
+      const res = await API.workshops.register({
+        workshopId: workshop.id, guestName: name.trim(), guestPhone: cleanPhone, guestEmail: email.trim(),
+        childAge, childCount: seats, note: note.trim(), paymentMethod: total > 0 ? payMethod : 'online', rewardCount: usedRewards,
+      });
+      cheer();
+      setDone({ payment: res.payment ?? null, rewardUsed: Boolean(res.rewardApplied) });
+      onBooked();
+    } catch (err: any) {
+      setError(err?.message || 'Không đăng ký được. Vui lòng thử lại.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!workshop) return <Sheet open={false} title="" onClose={onClose}><View /></Sheet>;
+
+  if (done) {
+    return (
+      <Sheet open title={done.payment ? 'Chuyển khoản để giữ chỗ' : 'Đã ghi nhận đăng ký!'} onClose={onClose}
+        footer={<Button title={done.payment ? 'Xem vé của tôi' : 'Xong'} onPress={() => { onClose(); router.setParams({ tab: 'tickets' }); }} />}>
+        <T>
+          {done.payment
+            ? `Đã giữ chỗ tạm cho ${seats} bé ở “${workshop.title}”. Chuyển khoản xong là suất được xác nhận tự động.`
+            : done.rewardUsed && total === 0
+              ? `Đã dùng suất workshop miễn phí cho “${workshop.title}”. Chỗ của bé đã được giữ — hẹn gặp bé ở buổi học!`
+              : payMethod === 'online' && total > 0
+                ? 'Đã ghi nhận đăng ký, nhưng thanh toán online đang tạm không khả dụng. Sprouty sẽ gọi điện trong 24 giờ để xác nhận.'
+                : `Cảm ơn bạn đã đăng ký “${workshop.title}” cho ${seats} bé. Sprouty sẽ gọi điện xác nhận trong 24 giờ.`}
+        </T>
+        {done.payment && <PayPanel transfer={done.payment} returnPath="/workshop?tab=tickets" />}
+        <Card tone="soft">
+          <T><T muted>Buổi học: </T>{formatWorkshopWhen(workshop)}</T>
+          <T><T muted>Địa điểm: </T>{workshop.location}</T>
+          <T muted style={{ fontSize: 13 }}>Vé QR của bé nằm trong mục “Vé của tôi”.</T>
+        </Card>
+      </Sheet>
+    );
+  }
+
+  const maxSeats = Math.max(1, Math.min(10, workshop.seatsLeft));
+  return (
+    <Sheet open title="Đăng ký workshop" onClose={() => !busy && onClose()}
+      footer={(
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <T muted>Tạm tính</T>
+            <Text style={s.price}>{total > 0 ? formatPrice(total) : 'Miễn phí'}</Text>
+          </View>
+          <Button grow title={busy ? 'Đang gửi…' : total > 0 && payMethod === 'online' ? 'Đăng ký & thanh toán' : 'Đăng ký'} busy={busy} onPress={submit} />
+        </View>
+      )}>
+      <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+        {imageSource(workshop.imageUrl) && <Image source={imageSource(workshop.imageUrl)} style={s.thumb} contentFit="cover" />}
+        <View style={{ flex: 1 }}>
+          <T bold>{workshop.title}</T>
+          <T muted>{formatWorkshopWhen(workshop)}</T>
+        </View>
+      </View>
+      <Field label="Họ tên phụ huynh *" value={name} onChangeText={setName} autoComplete="name" />
+      <Field label="Số điện thoại *" value={phone} onChangeText={(t) => setPhone(t.replace(/[^\d]/g, '').slice(0, 11))} keyboardType="phone-pad" autoComplete="tel" placeholder="0909000000" />
+      <Field label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" />
+      <View style={{ gap: 8 }}>
+        <T bold>Tuổi của bé</T>
+        <View style={s.wrap}>{AGES.map((a) => <Chip key={a} label={a} on={childAge === a} onPress={() => setChildAge(childAge === a ? '' : a)} />)}</View>
+      </View>
+      <View style={s.rowBetween}>
+        <View style={{ flex: 1 }}><T bold>Số bé tham gia</T><T muted style={{ fontSize: 13 }}>Còn {workshop.seatsLeft} chỗ · {workshop.price > 0 ? `${formatPrice(workshop.price)}/bé` : 'miễn phí'}</T></View>
+        <Stepper value={seats} min={1} max={maxSeats} label="Số bé" onChange={setSeats} />
+      </View>
+      {maxRewards > 0 && (
+        <Card tone="soft">
+          <View style={s.rowBetween}>
+            <Icon name="gift" size={22} color={colors.greenDark} />
+            <View style={{ flex: 1 }}>
+              <T bold>Dùng suất miễn phí</T>
+              <T muted style={{ fontSize: 13 }}>Bạn có {freeSeats} suất (mua {rewards?.threshold ?? 3} tặng 1). Mỗi suất cho 1 bé.</T>
+            </View>
+            <Stepper value={usedRewards} min={0} max={maxRewards} label="Số suất miễn phí" onChange={setUseRewards} />
+          </View>
+        </Card>
+      )}
+      {total > 0 && (
+        <View style={{ gap: 8 }}>
+          <T bold>Hình thức thanh toán</T>
+          {([
+            ['online', 'card', 'Thanh toán online ngay', 'Chuyển khoản QR — chỗ được giữ chắc chắn cho bé.'],
+            ['onsite', 'ticket', 'Thanh toán tại buổi học', 'Chưa chắc còn chỗ: khi kín, suất ưu tiên người đã trả online.'],
+          ] as const).map(([value, icon, title, hint]) => (
+            <Pressable key={value} onPress={() => { tap(); setPayMethod(value); }} style={[s.choice, payMethod === value && s.choiceOn]} accessibilityRole="radio" accessibilityState={{ checked: payMethod === value }}>
+              <View style={[s.radio, payMethod === value && s.radioOn]}>{payMethod === value && <View style={s.radioDot} />}</View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}><Icon name={icon} size={16} color={colors.greenDark} /><T bold>{title}</T></View>
+                <T muted style={{ fontSize: 13, color: value === 'onsite' ? colors.warn : colors.ink3 }}>{hint}</T>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      )}
+      <Field label="Ghi chú (tuỳ chọn)" value={note} onChangeText={setNote} multiline placeholder="Yêu cầu đặc biệt, dị ứng nguyên liệu…" maxLength={500} />
+      {error ? <T style={{ color: colors.bad }}>{error}</T> : null}
+    </Sheet>
+  );
+}
+
+function SessionCard({ w, onBook }: { w: PublicWorkshop; onBook: () => void }) {
+  const pct = w.capacity > 0 ? Math.round((w.seatsTaken / w.capacity) * 100) : 0;
+  return (
+    <Card style={{ padding: 0, overflow: 'hidden', gap: 0 }}>
+      <View style={s.photo}>
+        {imageSource(w.imageUrl) ? <Image source={imageSource(w.imageUrl)} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
+          : <Icon name="ticket" size={34} color={colors.greenDark} />}
+        {!w.isFull && w.seatsLeft <= 3 && <View style={s.flag}><Text style={s.flagText}>Sắp hết chỗ</Text></View>}
+      </View>
+      <View style={{ padding: 16, gap: 10 }}>
+        <H size={18}>{w.title}</H>
+        <View style={{ gap: 6 }}>
+          <View style={s.fact}><Icon name="clock" size={16} color={colors.green} /><T style={{ flex: 1 }}>{formatWorkshopWhen(w)}</T></View>
+          <View style={s.fact}><Icon name="pin" size={16} color={colors.green} /><T style={{ flex: 1 }}>{w.location}</T></View>
+          {w.ageRange ? <View style={s.fact}><Icon name="child" size={16} color={colors.green} /><T style={{ flex: 1 }}>{w.ageRange}</T></View> : null}
+        </View>
+        {w.description ? <T muted numberOfLines={3}>{w.description}</T> : null}
+        <View style={s.seatBar}><View style={[s.seatFill, { width: `${pct}%`, backgroundColor: pct > 80 ? colors.bad : colors.green }]} /></View>
+        <T muted style={{ fontSize: 13 }}>{w.isFull ? 'Đã kín chỗ' : `Còn ${w.seatsLeft} chỗ trên tổng ${w.capacity}`}</T>
+        <View style={s.rowBetween}>
+          <View><Text style={s.price}>{w.price > 0 ? formatPrice(w.price) : 'Miễn phí'}</Text><T muted style={{ fontSize: 12.5 }}>mỗi bé</T></View>
+          <Button title={w.isFull ? 'Hết chỗ' : 'Đăng ký cho bé'} disabled={w.isFull} onPress={onBook} />
+        </View>
+      </View>
+    </Card>
+  );
+}
+
+/**
+ * Workshop: the schedule of in-person sessions, and the family's tickets — a
+ * QR code each, shown to staff at the door. Reminders for the evening before
+ * and two hours before are rescheduled each time the tickets load.
+ */
+export default function Workshop() {
+  const { user } = useAuth();
+  const toast = useToast();
+  const params = useLocalSearchParams<{ tab?: string; session?: string }>();
+  const tab = params.tab === 'tickets' ? 'tickets' : 'schedule';
+  const [booking, setBooking] = useState<PublicWorkshop | null>(null);
+  const [askLogin, setAskLogin] = useState(false);
+  const [paying, setPaying] = useState<{ reg: MyWorkshopRegistration; info: Transfer } | null>(null);
+  const [busyId, setBusyId] = useState('');
+  const [bigTicket, setBigTicket] = useState<MyWorkshopRegistration | null>(null);
+  const [writing, setWriting] = useState<{ target: ReviewTarget; existing: OwnReview | null } | null>(null);
+
+  const schedule = useLoad(async () => {
+    const [list, reviews] = await Promise.all([API.workshops.list(), API.workshopReviews.list({ limit: 1 }).catch(() => null)]);
+    return { workshops: (list.workshops || []) as PublicWorkshop[], score: reviews?.summary as { average: number; count: number } | undefined };
+  });
+
+  const mine = useLoad(async () => {
+    if (!user) return null;
+    const [regs, rewards, reviews] = await Promise.all([
+      API.workshops.mine(),
+      API.rewards.mine().catch(() => null),
+      API.workshopReviews.mine().catch(() => null),
+    ]);
+    const registrations = (regs.registrations || []) as MyWorkshopRegistration[];
+    void syncWorkshopReminders(registrations).catch(() => {});
+    return {
+      registrations,
+      rewards: rewards as RewardSummary | null,
+      reviews: reviews as { reviews: Array<OwnReview & { workshopId: string }>; eligible: Array<{ workshopId: string }>; options: ReviewOptions } | null,
+    };
+  }, [user?.id]);
+
+  const upcoming = (schedule.data?.workshops || []).filter((w) => w.upcoming && w.bookable !== false);
+
+  function start(w: PublicWorkshop) {
+    if (!user) return setAskLogin(true);
+    setBooking(w);
+  }
+
+  // /workshop?session=ID opens that session's booking straight away (from Home).
+  useEffect(() => {
+    if (!params.session || !schedule.data) return;
+    const w = schedule.data.workshops.find((x) => x.id === params.session);
+    router.setParams({ session: undefined });
+    if (w && w.upcoming && !w.isFull) start(w);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.session, schedule.data]);
+
+  async function openPayment(reg: MyWorkshopRegistration) {
+    setBusyId(reg.id);
+    try {
+      const { payment } = await API.workshops.payment(reg.id);
+      setPaying({ reg, info: payment });
+    } catch (err: any) {
+      toast(err?.message || 'Không lấy được thông tin thanh toán.', 'error');
+    } finally {
+      setBusyId('');
+    }
+  }
+
+  function cancel(reg: MyWorkshopRegistration) {
+    Alert.alert('Huỷ đăng ký?', `Huỷ “${reg.workshop.title}”? Chỗ sẽ được mở lại cho người khác, suất miễn phí đã dùng được trả lại.${reg.paidAt ? '\n\nBạn đã thanh toán — vui lòng liên hệ Sprouty để được hoàn tiền.' : ''}`, [
+      { text: 'Không', style: 'cancel' },
+      { text: 'Huỷ đăng ký', style: 'destructive', onPress: async () => {
+        setBusyId(reg.id);
+        try {
+          const { message } = await API.workshops.cancelMine(reg.id);
+          toast(message || 'Đã huỷ đăng ký', 'success');
+          await mine.reload();
+        } catch (err: any) {
+          toast(err?.message || 'Không huỷ được.', 'error');
+        } finally {
+          setBusyId('');
+        }
+      } },
+    ]);
+  }
+
+  const regs = mine.data?.registrations || [];
+  const live = (r: MyWorkshopRegistration) => r.upcoming && r.status !== 'cancelled' && !sessionCancelled(r);
+  const soon = regs.filter(live);
+  const past = regs.filter((r) => !live(r));
+  const reviewOf = new Map((mine.data?.reviews?.reviews || []).map((r) => [r.workshopId, r]));
+  const canReview = new Set((mine.data?.reviews?.eligible || []).map((e) => e.workshopId));
+  const score = schedule.data?.score;
+
+  const ticket = (reg: MyWorkshopRegistration) => {
+    const w = reg.workshop;
+    const state = bookingState(reg);
+    const dropped = sessionCancelled(reg) && reg.status !== 'cancelled';
+    const needsPayment = !reg.paidAt && reg.amount > 0 && reg.status !== 'cancelled' && reg.upcoming && !dropped;
+    const review = reviewOf.get(w.id);
+    return (
+      <Card style={(reg.status === 'cancelled' || dropped) ? { opacity: 0.7 } : undefined}>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={s.ticketThumb}>
+            {imageSource(w.imageUrl) ? <Image source={imageSource(w.imageUrl)} style={StyleSheet.absoluteFill} contentFit="cover" /> : <Icon name="ticket" size={24} color={colors.greenDark} />}
+          </View>
+          <View style={{ flex: 1, gap: 4 }}>
+            <T bold numberOfLines={2}>{w.title}</T>
+            <T muted style={{ fontSize: 13 }}>{formatWorkshopWhen(w)}</T>
+            <Pill tone={state.tone}>{state.label}</Pill>
+          </View>
+        </View>
+        <T muted style={{ fontSize: 13 }}>{w.location} · {reg.childCount} bé{reg.amount > 0 ? ` · ${formatPrice(reg.amount)}` : ''}</T>
+        {dropped && <Card tone="danger"><T>Sprouty đã huỷ buổi này. Nếu bạn đã thanh toán, Sprouty sẽ liên hệ hoàn tiền.</T></Card>}
+        {needsPayment && reg.paymentMethod === 'onsite' && (
+          <T style={{ color: colors.warn, fontSize: 13 }}>Bạn chọn trả tại buổi học — chỗ chưa được giữ chắc. Trả online để chắc chắn có chỗ cho bé.</T>
+        )}
+        {reg.status !== 'cancelled' && !dropped && (reg.upcoming || reg.checkedInAt) && (
+          <Pressable onPress={() => setBigTicket(reg)} style={[s.ticket, reg.checkedInAt && { opacity: 0.6 }]} accessibilityLabel="Phóng to vé QR">
+            <TicketQr value={reg.ticket} size={96} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <T muted style={{ fontSize: 12 }}>Mã vé của bạn</T>
+              <Text selectable style={s.ticketCode}>{reg.ticket}</Text>
+              <T muted style={{ fontSize: 12.5 }}>
+                {reg.checkedInAt ? `Đã điểm danh ${formatDateTime(reg.checkedInAt)}${reg.attendedCount ? ` · ${reg.attendedCount} bé` : ''}` : 'Chạm để phóng to, đưa nhân viên quét khi tới.'}
+              </T>
+            </View>
+          </Pressable>
+        )}
+        <View style={s.wrap}>
+          {needsPayment && <Button small icon="card" title={busyId === reg.id ? 'Đang tải…' : 'Thanh toán ngay'} busy={busyId === reg.id} onPress={() => openPayment(reg)} />}
+          {reg.upcoming && reg.status !== 'cancelled' && !dropped && !reg.checkedInAt && <Button small variant="ghost" title="Huỷ đăng ký" disabled={busyId === reg.id} onPress={() => cancel(reg)} />}
+          {reg.status !== 'cancelled' && !dropped && (review ? (
+            <Pressable style={s.reviewBtn} onPress={() => setWriting({ target: { kind: 'workshop', id: w.id, name: w.title, image: w.imageUrl || null, when: formatWorkshopWhen(w) }, existing: review })}>
+              <Stars value={review.rating} size={13} /><Text style={s.reviewText}>{review.status === 'hidden' ? 'Đang ẩn · Sửa' : 'Sửa đánh giá'}</Text>
+            </Pressable>
+          ) : canReview.has(w.id) && reg.checkedInAt ? (
+            <Button small variant="soft" icon="star" title="Đánh giá buổi học" onPress={() => setWriting({ target: { kind: 'workshop', id: w.id, name: w.title, image: w.imageUrl || null, when: formatWorkshopWhen(w) }, existing: null })} />
+          ) : null)}
+        </View>
+      </Card>
+    );
+  };
+
+  return (
+    <Screen title="Workshop" large onRefresh={() => Promise.all([schedule.reload(), mine.reload()])}>
+      <View style={s.segment}>
+        {(['schedule', 'tickets'] as const).map((key) => (
+          <Pressable key={key} onPress={() => { tap(); router.setParams({ tab: key }); }} style={[s.segBtn, tab === key && s.segOn]} accessibilityRole="tab" accessibilityState={{ selected: tab === key }}>
+            <Icon name={key === 'schedule' ? 'calendar' : 'ticket'} size={17} color={tab === key ? colors.white : colors.ink2} />
+            <Text style={[s.segText, tab === key && { color: colors.white }]}>{key === 'schedule' ? 'Lịch học' : `Vé của tôi${soon.length ? ` (${soon.length})` : ''}`}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {tab === 'schedule' ? (
+        <>
+          <Card tone="soft">
+            <H size={19}>Trồng cây cùng bé, cuối tuần này</H>
+            <T>Bé vẽ chậu, gieo hạt thật, kích hoạt Plant Buddy và mang cây về nhà chăm tiếp. Nhóm nhỏ 8–12 bé, ba mẹ ngồi cùng.</T>
+            {score && score.count > 0 ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Stars value={score.average} size={15} />
+                <T bold>{score.average.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}/5</T>
+                <T muted>· {score.count} đánh giá</T>
+              </View>
+            ) : null}
+          </Card>
+          {schedule.error ? <ErrorNote message={schedule.error} onRetry={schedule.reload} /> : null}
+          {schedule.loading && !schedule.data && <Loading label="Đang tải lịch workshop…" />}
+          {schedule.data && upcoming.length === 0 && (
+            <Empty art={imageSource('/assets/images/sprouty-icons/Workshop.png') as number} title="Chưa có buổi nào mở đăng ký" text="Sprouty sẽ báo lịch mới sớm. Quay lại sau nhé!" />
+          )}
+          {upcoming.map((w) => <SessionCard key={w.id} w={w} onBook={() => start(w)} />)}
+
+          <Card>
+            <H size={18}>Một buổi học gồm gì?</H>
+            {STEPS.map((st, i) => (
+              <View key={st.title} style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+                <View style={s.stepIcon}><Icon name={st.icon} size={20} color={colors.greenDark} /></View>
+                <View style={{ flex: 1 }}><T bold>{i + 1}. {st.title}</T><T muted>{st.text}</T></View>
+              </View>
+            ))}
+          </Card>
+        </>
+      ) : !user ? (
+        <Empty icon="ticket" title="Vé của bé ở đây" text="Đăng nhập để đăng ký workshop và giữ vé QR ngay trên điện thoại.">
+          <Button title="Đăng nhập" onPress={() => router.push('/login?next=/workshop')} />
+        </Empty>
+      ) : (
+        <>
+          {mine.error ? <ErrorNote message={mine.error} onRetry={mine.reload} /> : null}
+          {mine.loading && !mine.data && <Loading />}
+          {mine.data && regs.length === 0 && (
+            <Empty icon="ticket" title="Bé chưa có vé nào" text="Chọn một buổi trong lịch học để đăng ký cho bé.">
+              <Button title="Xem lịch học" onPress={() => router.setParams({ tab: 'schedule' })} />
+            </Empty>
+          )}
+          {soon.length > 0 && <H size={19}>Sắp tới</H>}
+          {soon.map((r) => <View key={r.id}>{ticket(r)}</View>)}
+          {past.length > 0 && <H size={19}>Đã qua</H>}
+          {past.map((r) => <View key={r.id}>{ticket(r)}</View>)}
+        </>
+      )}
+
+      <BookingSheet workshop={booking} rewards={mine.data?.rewards ?? null} onClose={() => setBooking(null)} onBooked={() => { void schedule.reload(); void mine.reload(); }} />
+
+      <Sheet open={Boolean(paying)} title="Thanh toán workshop" onClose={() => { setPaying(null); void mine.reload(); }}
+        footer={<Button title="Tôi đã chuyển khoản" onPress={() => { setPaying(null); void mine.reload(); }} />}>
+        {paying && (
+          <>
+            <T>Quét mã để thanh toán “{paying.reg.workshop.title}”. Suất được xác nhận tự động khi tiền về.</T>
+            <PayPanel transfer={paying.info} returnPath="/workshop?tab=tickets" />
+          </>
+        )}
+      </Sheet>
+
+      <Sheet open={Boolean(bigTicket)} title="Vé workshop" onClose={() => setBigTicket(null)}>
+        {bigTicket && (
+          <View style={{ alignItems: 'center', gap: 12 }}>
+            <T bold style={{ textAlign: 'center' }}>{bigTicket.workshop.title}</T>
+            <T muted style={{ textAlign: 'center' }}>{formatWorkshopWhen(bigTicket.workshop)}</T>
+            <View style={s.bigQr}><TicketQr value={bigTicket.ticket} size={240} /></View>
+            <Text selectable style={[s.ticketCode, { fontSize: 22 }]}>{bigTicket.ticket}</Text>
+            <T muted style={{ textAlign: 'center' }}>{bigTicket.childCount} bé · Đưa mã này cho nhân viên khi tới buổi học.</T>
+          </View>
+        )}
+      </Sheet>
+
+      <Sheet open={askLogin} title="Đăng nhập để đăng ký" onClose={() => setAskLogin(false)}>
+        <T muted>Chỗ chỉ được giữ sau khi bạn đăng ký xong. Đăng nhập để Sprouty gửi vé QR cho bé.</T>
+        <Button title="Đăng nhập" onPress={() => { setAskLogin(false); router.push('/login?next=/workshop'); }} />
+        <Button title="Tạo tài khoản mới" variant="ghost" onPress={() => { setAskLogin(false); router.push('/register?next=/workshop'); }} />
+      </Sheet>
+
+      <ReviewSheet target={writing?.target ?? null} existing={writing?.existing} options={mine.data?.reviews?.options}
+        onClose={() => setWriting(null)} onSaved={() => { void mine.reload(); }} />
+    </Screen>
+  );
+}
+
+const s = StyleSheet.create({
+  segment: { flexDirection: 'row', padding: 4, borderRadius: radius.pill, backgroundColor: '#EEF2E8', gap: 4 },
+  segBtn: { flex: 1, minHeight: 44, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  segOn: { backgroundColor: colors.green },
+  segText: { fontFamily: fonts.bold, fontSize: 14.5, color: colors.ink2 },
+  photo: { height: 168, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
+  flag: { position: 'absolute', top: 10, left: 10, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.warnSoft },
+  flagText: { fontFamily: fonts.bold, fontSize: 12, color: colors.warn },
+  fact: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
+  seatBar: { height: 7, borderRadius: 4, backgroundColor: '#E6ECE0', overflow: 'hidden' },
+  seatFill: { height: '100%', borderRadius: 4 },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  price: { fontFamily: fonts.bold, fontSize: 19, color: colors.price },
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  thumb: { width: 56, height: 56, borderRadius: 12 },
+  choice: { flexDirection: 'row', gap: 12, padding: 12, borderRadius: radius.sm, borderWidth: 1.5, borderColor: colors.line, backgroundColor: colors.card, alignItems: 'flex-start' },
+  choiceOn: { borderColor: colors.green, backgroundColor: colors.greenSoft },
+  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.ink5, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  radioOn: { borderColor: colors.green },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.green },
+  stepIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
+  ticketThumb: { width: 64, height: 64, borderRadius: 14, overflow: 'hidden', backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
+  ticket: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: radius.md, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#CFE9C9', backgroundColor: colors.cream2 },
+  ticketCode: { fontFamily: fonts.bold, fontSize: 16, letterSpacing: 1.5, color: colors.ink },
+  bigQr: { padding: 16, borderRadius: radius.lg, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line },
+  reviewBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 42, paddingHorizontal: 6 },
+  reviewText: { fontFamily: fonts.bold, fontSize: 13.5, color: colors.green },
+});
