@@ -1,0 +1,37 @@
+/* "Tải app Sprouty" — the download page for the mobile app. */
+
+.getapp-hero { background: var(--primary-100); border-bottom: 1.5px solid var(--parchment-2); padding: 48px 0 40px; }
+.getapp-hero-in { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 40px; align-items: center; }
+.getapp-kicker { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-h); font-weight: 700; font-size: .82rem; color: var(--primary-700); background: #fff; padding: 6px 12px; border-radius: var(--r-full); --icon-accent: var(--primary-300); }
+.getapp-copy h1 { margin: 14px 0 10px; }
+.getapp-copy > p { max-width: 560px; font-size: 1.02rem; }
+.getapp-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 22px; }
+.getapp-download { background: var(--primary-600); border-color: var(--primary-600); min-height: 52px; }
+.getapp-download:hover { background: var(--primary-700); border-color: var(--primary-700); color: #fff; }
+.getapp-download.is-off { background: var(--ink-5); border-color: var(--ink-5); color: #fff; cursor: default; }
+.getapp-store { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-h); font-weight: 600; font-size: .88rem; color: var(--ink-3); }
+.getapp-meta { margin-top: 12px; font-size: .84rem; color: var(--ink-4); }
+.getapp-qr { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px; background: #fff; border: 1.5px solid var(--parchment-2); border-radius: var(--r-xl); max-width: 240px; text-align: center; color: var(--ink); }
+.getapp-qr figcaption { font-size: .82rem; color: var(--ink-3); line-height: 1.5; }
+
+.getapp-body { padding-block: 44px 64px; display: flex; flex-direction: column; gap: 22px; }
+.getapp-features { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.getapp-features li { display: flex; gap: 12px; padding: 16px; background: var(--surface); border: 1.5px solid var(--parchment-2); border-radius: var(--r-lg); }
+.getapp-features li > span:last-child { display: flex; flex-direction: column; gap: 4px; }
+.getapp-features strong { font-family: var(--font-h); color: var(--ink); }
+.getapp-features em { font-style: normal; font-size: .88rem; color: var(--ink-3); line-height: 1.55; }
+.getapp-icon { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 14px; background: var(--primary-100); color: var(--primary-700); flex-shrink: 0; --icon-accent: var(--primary-300); }
+.getapp-install { padding: 22px; background: var(--surface); border: 1.5px solid var(--parchment-2); border-radius: var(--r-xl); }
+.getapp-install ol { margin: 12px 0 0; padding-left: 22px; color: var(--ink-2); line-height: 1.8; }
+.getapp-note { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 14px; font-size: .86rem; }
+
+@media (max-width: 900px) {
+  .getapp-features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .getapp-hero { padding: 32px 0 28px; }
+  .getapp-hero-in { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .getapp-qr { display: none; }
+  .getapp-download { width: 100%; justify-content: center; }
+  .getapp-features { grid-template-columns: minmax(0, 1fr); }
+}

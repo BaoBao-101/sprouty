@@ -31,7 +31,9 @@ export type IconName =
   | 'warning' | 'microphone' | 'plant-chat'
   // site-wide
   | 'search' | 'mail' | 'phone' | 'pin' | 'calendar' | 'user' | 'child' | 'settings'
-  | 'logout' | 'card' | 'return' | 'book' | 'shield' | 'star' | 'home' | 'filter';
+  | 'logout' | 'card' | 'return' | 'book' | 'shield' | 'star' | 'home' | 'filter'
+  // the mobile app
+  | 'share' | 'qr';
 
 interface Props {
   name: IconName;
@@ -430,6 +432,28 @@ const PATHS: Record<IconName, React.ReactNode> = {
     </>
   ),
   'arrow-right': <path d="M4.4 12h15M13.4 6.2 19.4 12l-6 5.8" {...S} strokeWidth={2.2} />,
+  share: (
+    <>
+      <circle cx="17.6" cy="5.8" r="2.6" {...fillProps(0.3)} />
+      <circle cx="6.4" cy="12" r="2.6" {...fillProps(0.3)} />
+      <circle cx="17.6" cy="18.2" r="2.6" {...fillProps(0.3)} />
+      <circle cx="17.6" cy="5.8" r="2.6" {...S} />
+      <circle cx="6.4" cy="12" r="2.6" {...S} />
+      <circle cx="17.6" cy="18.2" r="2.6" {...S} />
+      <path d="m8.7 10.8 6.6-3.7M8.7 13.2l6.6 3.7" {...S} />
+    </>
+  ),
+  qr: (
+    <>
+      <rect x="4" y="4" width="6.4" height="6.4" rx="1.4" {...fillProps(0.3)} />
+      <rect x="13.6" y="4" width="6.4" height="6.4" rx="1.4" {...fillProps(0.3)} />
+      <rect x="4" y="13.6" width="6.4" height="6.4" rx="1.4" {...fillProps(0.3)} />
+      <rect x="4" y="4" width="6.4" height="6.4" rx="1.4" {...S} />
+      <rect x="13.6" y="4" width="6.4" height="6.4" rx="1.4" {...S} />
+      <rect x="4" y="13.6" width="6.4" height="6.4" rx="1.4" {...S} />
+      <path d="M13.6 13.6h2.6v2.6M20 13.6v.1M13.6 20h.1M17.4 20H20v-3.2" {...S} />
+    </>
+  ),
   copy: (
     <>
       <rect x="8.5" y="8.5" width="11" height="11" rx="2.6" {...fillProps(0.26)} />

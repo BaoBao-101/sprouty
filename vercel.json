@@ -13,7 +13,7 @@
       "destination": "https://api.sprouty.id.vn/uploads/:path*"
     },
     {
-      "source": "/((?!assets/|api/|uploads/).*)",
+      "source": "/((?!assets/|api/|uploads/|downloads/).*)",
       "destination": "/index.html"
     }
   ]

@@ -25,6 +25,7 @@ const Returns = lazy(() => import('@/pages/public/Returns'));
 const Privacy = lazy(() => import('@/pages/public/Privacy'));
 const Vip = lazy(() => import('@/pages/public/Vip'));
 const Auth = lazy(() => import('@/pages/public/Auth'));
+const GetApp = lazy(() => import('@/pages/public/GetApp'));
 
 // Signed-in customer
 const Account = lazy(() => import('@/pages/public/Account'));
@@ -137,6 +138,7 @@ export function App() {
             <Route path="/returns" element={<Returns />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/vip" element={<Vip />} />
+            <Route path="/tai-app" element={<GetApp />} />
 
             <Route element={<ProtectedRoute />}>
               <Route path="/checkout" element={<Checkout />} />

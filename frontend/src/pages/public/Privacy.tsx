@@ -9,7 +9,7 @@ export default function Privacy() {
           <div className="breadcrumb" style={{ color: "rgba(255,255,255,.52)", marginBottom: "16px" }}>
             <Link to="/" style={{ color: "rgba(255,255,255,.52)" }}>Trang chủ</Link> › <span>Chính sách bảo mật</span>
           </div>
-          <span className="eyebrow" style={{ background: "rgba(255,255,255,.12)", color: "rgba(255,255,255,.82)", borderColor: "rgba(255,255,255,.18)" }}>Cập nhật lần cuối: 02/07/2026</span>
+          <span className="eyebrow" style={{ background: "rgba(255,255,255,.12)", color: "rgba(255,255,255,.82)", borderColor: "rgba(255,255,255,.18)" }}>Cập nhật lần cuối: 22/10/2026</span>
           <h1>Chính sách quyền riêng tư & sử dụng hình ảnh</h1>
           <p>Sprouty được xây dựng cho gia đình và trẻ em. Kỷ niệm, ảnh, video và nhật ký cây của bạn thuộc về gia đình bạn; chúng tôi chỉ lưu trữ để bạn xem lại trong Cây Kỷ Niệm.</p>
         </div>
@@ -24,6 +24,7 @@ export default function Privacy() {
             <a href="#bao-mat">3. Bảo mật dữ liệu</a>
             <a href="#xoa">4. Quyền xóa dữ liệu</a>
             <a href="#chia-se">5. Không bán dữ liệu</a>
+            <a href="#ung-dung">6. Ứng dụng điện thoại</a>
             <a href="#lien-he">Liên hệ</a>
           </aside>
 
@@ -71,6 +72,7 @@ export default function Privacy() {
               <h2>4. Quyền được lãng quên</h2>
               <ul>
                 <li>Bạn có thể xóa ảnh, video, nhật ký hoặc yêu cầu xóa tài khoản gia đình.</li>
+                <li>Trong ứng dụng Sprouty, bạn tự xóa tài khoản tại <strong>Của tôi → Xoá tài khoản</strong>: cây, album, ảnh, đánh giá và thông tin đăng nhập bị xóa ngay; đơn hàng đã thanh toán chỉ còn số tiền và ngày cho sổ sách kế toán, không còn tên, số điện thoại hay địa chỉ.</li>
                 <li>Sau khi xóa, nội dung được gỡ khỏi hệ thống theo quy trình xóa dữ liệu và không được dùng cho mục đích khác.</li>
                 <li>Nếu cần hỗ trợ xóa tài khoản hoặc dữ liệu, hãy liên hệ đội ngũ Sprouty qua trang Liên hệ.</li>
               </ul>
@@ -82,6 +84,17 @@ export default function Privacy() {
                 <li>Sprouty không phân tích ảnh của trẻ để hiển thị quảng cáo.</li>
                 <li>Sprouty không bán dữ liệu gia đình cho bên môi giới dữ liệu hoặc công ty quảng cáo.</li>
                 <li>Thông tin chỉ được chia sẻ với đối tác hạ tầng cần thiết hoặc cơ quan có thẩm quyền khi pháp luật yêu cầu.</li>
+              </ul>
+            </article>
+
+            <article className="privacy-card" id="ung-dung">
+              <h2>6. Ứng dụng Sprouty trên điện thoại</h2>
+              <ul>
+                <li><strong>Đăng nhập:</strong> ứng dụng lưu một mã phiên đăng nhập trong bộ nhớ riêng của ứng dụng để bạn không phải đăng nhập lại mỗi ngày. Mã này không được sao lưu lên đám mây và bị xóa khi bạn đăng xuất.</li>
+                <li><strong>Máy ảnh và thư viện ảnh:</strong> chỉ được dùng khi bạn chủ động chọn chụp hoặc tải ảnh lên album, đánh giá hay Plant Buddy.</li>
+                <li><strong>Thông báo:</strong> lời nhắc chăm cây và lịch workshop được hẹn giờ ngay trên điện thoại của bạn; Sprouty không theo dõi bạn qua thông báo.</li>
+                <li><strong>Thanh toán:</strong> khi bạn chọn mở app ngân hàng, Sprouty chỉ chuyển số tài khoản nhận, số tiền và nội dung chuyển khoản sang app ngân hàng bạn chọn. Sprouty không đọc được tài khoản ngân hàng của bạn.</li>
+                <li>Ứng dụng không chứa quảng cáo và không dùng công cụ theo dõi quảng cáo.</li>
               </ul>
             </article>
 

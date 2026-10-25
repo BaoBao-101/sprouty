@@ -38,6 +38,7 @@ const GROUPS: Array<{ title: string; links: Array<[string, string]> }> = [
   {
     title: 'Hỗ trợ',
     links: [
+      ['Tải app Sprouty', '/tai-app'],
       ['Trợ lý AI Sprouty', '/ai'],
       ['Câu hỏi thường gặp', '/faq'],
       ['Chính sách đổi trả', '/returns'],
