@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Modal } from '@/components/admin/ui';
+import { MoneyInput } from '@/components/admin/fields';
 import { AdminIcon } from '@/components/icons/AdminIcon';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
@@ -185,18 +186,12 @@ export function VipPlanEditor({
           <div className="field-grid">
             <label className="field">
               <span className="field-label">Giá bán</span>
-              <div className="vpe-money">
-                <input className="form-input" inputMode="numeric" value={price} placeholder="0" onChange={(e) => setPrice(digits(e.target.value))} />
-                <span>đ</span>
-              </div>
-              <span className="field-hint">{priceValue ? formatPrice(priceValue) : 'Số tiền khách trả cho cả gói'}</span>
+              <MoneyInput value={price} placeholder="0" onChange={setPrice} />
+              <span className="field-hint">Số tiền khách trả cho cả gói</span>
             </label>
             <label className="field">
               <span className="field-label">Giá gốc <em className="vpe-optional">(không bắt buộc)</em></span>
-              <div className="vpe-money">
-                <input className="form-input" inputMode="numeric" value={oldPrice} placeholder="0" onChange={(e) => setOldPrice(digits(e.target.value))} />
-                <span>đ</span>
-              </div>
+              <MoneyInput value={oldPrice} placeholder="0" onChange={setOldPrice} />
               <span className="field-hint">{discount ? `Hiện gạch ngang, giảm ${discount}%` : 'Hiện gạch ngang khi cao hơn giá bán'}</span>
             </label>
           </div>

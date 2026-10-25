@@ -758,9 +758,6 @@
 .vpe-length.is-on { border-color: #D9A520; background: #FFFBEB; box-shadow: 0 0 0 3px rgba(217, 165, 32, .14) }
 .vpe-days { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: .84rem; color: var(--ink-3) }
 .vpe-days .form-input { width: 110px; margin: 0 }
-.vpe-money { position: relative }
-.vpe-money .form-input { padding-right: 32px; font-variant-numeric: tabular-nums }
-.vpe-money span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-4); font-weight: 700 }
 .vpe-statuses { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px }
 .vpe-status {
   display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; text-align: left; cursor: pointer;
