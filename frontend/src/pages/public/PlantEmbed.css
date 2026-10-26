@@ -1,0 +1,8 @@
+/* The 3D viewer filling the whole page, with nothing around it (see PlantEmbed.tsx). */
+html:has(.plant-embed), body:has(.plant-embed) { margin: 0; height: 100%; overflow: hidden; background: #e5ebdd; overscroll-behavior: none; }
+.plant-embed { position: fixed; inset: 0; }
+.plant-embed .plant-viewer { height: 100%; }
+.plant-embed .plant-viewer-stage { width: 100%; height: 100%; aspect-ratio: auto; border-radius: 0; }
+.plant-embed .plant-viewer-toolbar,
+.plant-embed .plant-viewer-hint,
+.plant-embed .plant-viewer-root { display: none; }

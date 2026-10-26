@@ -15,7 +15,8 @@ let renderer: T.WebGLRenderer | undefined;
 let env: T.Texture | undefined;
 let release: ReturnType<typeof setTimeout> | undefined;
 
-function thumbnail({ scene: sceneKey = 'natural', ...options }: Props) {
+/** A still of the plant. The mobile app takes its cards from here too (src/embed-main.tsx), smaller and as JPEG. */
+export function thumbnail({ scene: sceneKey = 'natural', ...options }: Props, out: { width: number; height: number; type?: string; quality?: number } = { width: 600, height: 400 }) {
   clearTimeout(release);
   renderer ??= new T.WebGLRenderer({ antialias: true, powerPreference: 'low-power' });
   if (!env) {
@@ -43,12 +44,12 @@ function thumbnail({ scene: sceneKey = 'natural', ...options }: Props) {
   const ambience = buildAmbience(sceneKey);
   if (ambience) { ambience.update(3.2); scene.add(ambience.group); }
   try {
-    renderer.setSize(600, 400, false);
+    renderer.setSize(out.width, out.height, false);
     renderer.outputColorSpace = T.SRGBColorSpace;
     renderer.toneMapping = T.ACESFilmicToneMapping;
     renderer.toneMappingExposure = light.exposure;
     renderer.render(scene, camera);
-    return renderer.domElement.toDataURL('image/png');
+    return renderer.domElement.toDataURL(out.type ?? 'image/png', out.quality);
   } finally {
     disposePlantModel(model);
     ambience?.dispose();

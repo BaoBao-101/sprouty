@@ -26,6 +26,7 @@ const Privacy = lazy(() => import('@/pages/public/Privacy'));
 const Vip = lazy(() => import('@/pages/public/Vip'));
 const Auth = lazy(() => import('@/pages/public/Auth'));
 const GetApp = lazy(() => import('@/pages/public/GetApp'));
+const PlantEmbed = lazy(() => import('@/pages/public/PlantEmbed'));
 
 // Signed-in customer
 const Account = lazy(() => import('@/pages/public/Account'));
@@ -122,6 +123,7 @@ export function App() {
 
           <Route path="/login" element={<Auth mode="login" />} />
           <Route path="/register" element={<Auth mode="register" />} />
+          <Route path="/embed/plant" element={<PlantEmbed />} />
 
           <Route element={<PublicLayout />}>
             <Route index element={<Home />} />
