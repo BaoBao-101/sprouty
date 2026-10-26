@@ -110,6 +110,134 @@ function fromLocalInput(value: string) {
   return new Date(value).toISOString();
 }
 
+/* ── When: a day, a start time, a length ─────────────────────────────────
+   Two datetime pickers meant opening a calendar and a clock twice for one
+   morning session, and the end had to be worked out by hand. Sessions are
+   weekend mornings or afternoons of a couple of hours, so the common answers
+   are one tap each; the boxes stay for anything else. Values are still the
+   "YYYY-MM-DDTHH:mm" local strings the form saves. */
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+const localDate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const localValue = (d: Date) => `${localDate(d)}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+const WEEKDAY_SHORT = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+
+const START_TIMES = ['08:00', '09:00', '14:00', '15:00'];
+const DURATIONS = [60, 90, 120, 150, 180];
+const durationLabel = (m: number) => `${(m / 60).toLocaleString('vi-VN')} giờ`;
+
+/** The next three weekend days, the days sessions are held. */
+function nextWeekendDays() {
+  const out: Date[] = [];
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  while (out.length < 3) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() === 6 || d.getDay() === 0) out.push(new Date(d));
+  }
+  return out;
+}
+
+function WhenFields({ start, end, onChange, startsInPast }: {
+  start: string;
+  end: string;
+  onChange: (next: { dateTime: string; endTime: string }) => void;
+  startsInPast: boolean;
+}) {
+  const date = start.slice(0, 10);
+  const time = start.slice(11, 16);
+  const minutes = start && end ? Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60_000) : null;
+  const preset = minutes !== null && DURATIONS.includes(minutes);
+  const [customEnd, setCustomEnd] = useState(minutes !== null && !preset);
+  const weekend = useMemo(nextWeekendDays, []);
+
+  /** A new start keeps the session's length, so the end moves with it. */
+  function setStart(nextDate: string, nextTime: string) {
+    if (!nextDate) return onChange({ dateTime: '', endTime: end });
+    const dateTime = `${nextDate}T${nextTime || '09:00'}`;
+    const endTime = minutes !== null && minutes > 0
+      ? localValue(new Date(new Date(dateTime).getTime() + minutes * 60_000))
+      : end;
+    onChange({ dateTime, endTime });
+  }
+
+  function setLength(m: number | null) {
+    setCustomEnd(false);
+    if (m === null || !start) return onChange({ dateTime: start, endTime: '' });
+    onChange({ dateTime: start, endTime: localValue(new Date(new Date(start).getTime() + m * 60_000)) });
+  }
+
+  const summary = start
+    ? formatWorkshopWhen({ dateTime: fromLocalInput(start), endTime: end ? fromLocalInput(end) : null })
+    : '';
+
+  return (
+    <div className="ws-when">
+      <div className="field-grid">
+        <div className="field">
+          <span className="field-label">Ngày diễn ra <span className="req">*</span></span>
+          <input className="form-input" type="date" value={date} onChange={(e) => setStart(e.target.value, time)} />
+          <div className="preset-chips">
+            {weekend.map((d) => {
+              const value = localDate(d);
+              return (
+                <button key={value} type="button" className={`preset-chip${date === value ? ' active' : ''}`} onClick={() => setStart(value, time)}>
+                  {WEEKDAY_SHORT[d.getDay()]} {d.getDate()}/{d.getMonth() + 1}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="field">
+          <span className="field-label">Giờ bắt đầu <span className="req">*</span></span>
+          <input className="form-input" type="time" step={900} value={time} disabled={!date}
+            onChange={(e) => setStart(date, e.target.value)} />
+          <div className="preset-chips">
+            {START_TIMES.map((t) => (
+              <button key={t} type="button" disabled={!date} className={`preset-chip${time === t ? ' active' : ''}`} onClick={() => setStart(date, t)}>
+                {t.replace(/^0/, '')}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="field">
+        <span className="field-label">Thời lượng</span>
+        <div className="preset-chips">
+          {DURATIONS.map((m) => (
+            <button key={m} type="button" disabled={!start} className={`preset-chip${!customEnd && minutes === m ? ' active' : ''}`} onClick={() => setLength(m)}>
+              {durationLabel(m)}
+            </button>
+          ))}
+          <button type="button" disabled={!start} className={`preset-chip${customEnd ? ' active' : ''}`} onClick={() => setCustomEnd(true)}>
+            Giờ khác
+          </button>
+          <button type="button" disabled={!start} className={`preset-chip${!customEnd && !end ? ' active' : ''}`} onClick={() => setLength(null)}>
+            Chưa chốt
+          </button>
+        </div>
+        {customEnd && (
+          <label className="ws-when-end">
+            <span>Kết thúc lúc</span>
+            <input className="form-input" type="time" step={900} value={end.slice(11, 16)}
+              onChange={(e) => onChange({ dateTime: start, endTime: e.target.value ? `${date}T${e.target.value}` : '' })} />
+          </label>
+        )}
+      </div>
+
+      <p className={`ws-when-summary${startsInPast ? ' warn' : ''}`}>
+        <AdminIcon name="calendar" size={15} />
+        {startsInPast
+          ? 'Thời gian này đã qua — buổi sẽ không hiện cho khách.'
+          : summary || 'Chọn ngày và giờ bắt đầu'}
+        {!startsInPast && summary && !end ? ' · chưa chốt giờ tan' : ''}
+      </p>
+    </div>
+  );
+}
+
 const EMPTY_FORM = {
   title: '',
   description: '',
@@ -763,38 +891,17 @@ export default function Workshops() {
             <span className="field-hint">Hiện trên thẻ workshop ở trang công khai</span>
           </label>
 
-          <div className="field-grid">
-            <label className="field">
-              <span className="field-label">
-                Bắt đầu <span className="req">*</span>
-              </span>
-              <input
-                className="form-input"
-                type="datetime-local"
-                value={form.dateTime}
-                onChange={(e) => set('dateTime')(e.target.value)}
-              />
-              {/* Saving a time that has already passed is accepted, but the
-                  session then never appears on the public page. Say so while
-                  the admin can still change it. */}
-              <span className={`field-hint${startsInPast ? ' warn' : ''}`}>
-                {startsInPast
-                  ? 'Thời gian này đã qua — buổi sẽ không hiện cho khách.'
-                  : 'Theo giờ máy của bạn'}
-              </span>
-            </label>
-
-            <label className="field">
-              <span className="field-label">Kết thúc</span>
-              <input
-                className="form-input"
-                type="datetime-local"
-                value={form.endTime}
-                onChange={(e) => set('endTime')(e.target.value)}
-              />
-              <span className="field-hint">Để trống nếu chưa chốt giờ tan</span>
-            </label>
-          </div>
+          {/* Saving a time that has already passed is accepted, but the
+              session then never appears on the public page; WhenFields says
+              so while the admin can still change it. Keyed by session so the
+              "Giờ khác" choice starts from the session being edited. */}
+          <WhenFields
+            key={editingId ?? 'new'}
+            start={form.dateTime}
+            end={form.endTime}
+            startsInPast={startsInPast}
+            onChange={(next) => setForm((f) => ({ ...f, ...next }))}
+          />
 
           <div className="field-grid">
             <div className="field">

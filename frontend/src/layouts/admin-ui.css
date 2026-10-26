@@ -628,6 +628,20 @@
 }
 .ws-preview-tags .tag.green { background:var(--primary-100); color:var(--primary-600) }
 
+/* When: a day, a start, a length — chips for the usual answers. */
+.ws-when { display:flex; flex-direction:column; gap:14px; margin-bottom:16px }
+.ws-when .field { margin-bottom:0 }
+.ws-when .field-grid { margin-bottom:0 }
+.staff-root .ws-when .preset-chip { min-height:40px; padding:0 14px; font-size:.8rem }
+.staff-root .ws-when .preset-chip:disabled { opacity:.45; cursor:not-allowed; background:#fff; color:var(--ink-3); border-color:var(--border-c) }
+.ws-when-end { display:flex; align-items:center; gap:10px; margin-top:10px; font-size:.82rem; font-weight:600; color:var(--ink-3) }
+.ws-when-end .form-input { width:140px; flex:none }
+.ws-when-summary {
+  display:flex; align-items:center; gap:8px; margin:0; padding:10px 12px; border-radius:var(--r-md);
+  background:var(--cream-2); border:1px solid var(--parchment-2); font-size:.82rem; font-weight:600; color:var(--ink-2);
+}
+.ws-when-summary.warn { background:#FFF7E6; border-color:#F6DDB0; color:#B45309 }
+
 /* One registration in two dense lines. A labelled 2x2 grid plus a row of wide
    buttons made a single booking fill the dialog; a full session ran for pages. */
 .ws-reg-summary {
