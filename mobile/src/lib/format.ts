@@ -58,6 +58,31 @@ export function formatWorkshopWhen(w: Pick<PublicWorkshop, 'dateTime' | 'endTime
   return `${day} · ${from} – ${end.getHours()}:${pad(end.getMinutes())}`;
 }
 
+const WEEKDAY_SHORT = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+
+/**
+ * A session's date taken apart for a calendar badge and for grouping:
+ * "21", "Th 11", "Thứ Bảy" / "T7", "9:00 – 11:30", and its month as a key
+ * ("2026-11") and a heading ("Tháng 11", with the year when it is not this one).
+ */
+export function workshopDateParts(w: Pick<PublicWorkshop, 'dateTime' | 'endTime'>) {
+  const start = new Date(w.dateTime);
+  if (isNaN(start.getTime())) return null;
+  const time = (d: Date) => `${d.getHours()}:${pad(d.getMinutes())}`;
+  const end = w.endTime ? new Date(w.endTime) : null;
+  const month = start.getMonth() + 1;
+  const thisYear = start.getFullYear() === new Date().getFullYear();
+  return {
+    day: String(start.getDate()),
+    month: `Th ${month}`,
+    weekday: WEEKDAY[start.getDay()],
+    weekdayShort: WEEKDAY_SHORT[start.getDay()],
+    time: end && !isNaN(end.getTime()) ? `${time(start)} – ${time(end)}` : time(start),
+    monthKey: `${start.getFullYear()}-${pad(month)}`,
+    monthLabel: thisYear ? `Tháng ${month}` : `Tháng ${month}/${start.getFullYear()}`,
+  };
+}
+
 /** Whole days left, rounded up. */
 export function daysLeft(iso?: string | null) {
   if (!iso) return 0;

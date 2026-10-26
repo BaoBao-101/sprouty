@@ -27,15 +27,19 @@ export class ApiError extends Error {
   }
 }
 
-let authToken: string | null = null;
-let csrfToken: string | null = null;
-let mediaToken: string | null = null;
+// Kept on the global object rather than in module variables: when this file
+// (or one it imports) is edited during development, the app reloads the
+// module, and a token in a plain variable was lost — every request then went
+// out signed out until the app was restarted.
+const keys = ((globalThis as any).__sproutySession ??= { auth: null, csrf: null, media: null }) as {
+  auth: string | null; csrf: string | null; media: string | null;
+};
 
 export const session = {
-  setToken(token: string | null) { authToken = token; },
-  hasToken: () => Boolean(authToken),
-  setCsrf(token: string | null) { csrfToken = token; },
-  setMediaToken(token: string | null) { mediaToken = token; },
+  setToken(token: string | null) { keys.auth = token; },
+  hasToken: () => Boolean(keys.auth),
+  setCsrf(token: string | null) { keys.csrf = token; },
+  setMediaToken(token: string | null) { keys.media = token; },
 };
 
 /** Kinds anyone may fetch; the rest need the media pass. Mirrors middleware/assetGuard.js. */
@@ -51,8 +55,8 @@ export function mediaUrl(value: string): string {
   if (origin && origin !== API_ORIGIN && origin !== 'https://api.sprouty.id.vn') return value;
   const path = value.slice(at);
   const kind = path.slice('/uploads/'.length).split(/[/?]/)[0];
-  const pass = mediaToken && !PUBLIC_KINDS.has(kind) && !/[?&]mt=/.test(path)
-    ? `${path.includes('?') ? '&' : '?'}mt=${encodeURIComponent(mediaToken)}`
+  const pass = keys.media && !PUBLIC_KINDS.has(kind) && !/[?&]mt=/.test(path)
+    ? `${path.includes('?') ? '&' : '?'}mt=${encodeURIComponent(keys.media)}`
     : '';
   return API_ORIGIN + path + pass;
 }
@@ -84,8 +88,8 @@ type Body = Record<string, unknown> | FormData | undefined;
 async function request<T = any>(path: string, method = 'GET', body?: Body, retried = false): Promise<T> {
   const mutation = method !== 'GET';
   const headers: Record<string, string> = { Accept: 'application/json', 'X-Sprouty-Client': 'app' };
-  if (authToken) headers.Authorization = `Bearer ${authToken}`;
-  if (mutation && csrfToken) headers['X-CSRF-Token'] = csrfToken;
+  if (keys.auth) headers.Authorization = `Bearer ${keys.auth}`;
+  if (mutation && keys.csrf) headers['X-CSRF-Token'] = keys.csrf;
 
   let payload: string | FormData | undefined;
   if (body instanceof FormData) {
@@ -105,7 +109,25 @@ async function request<T = any>(path: string, method = 'GET', body?: Body, retri
   }
 
   let data: any = null;
-  try { data = await res.json(); } catch { data = null; }
+  let text: string;
+  try {
+    text = await res.text();
+  } catch {
+    // The answer was cut off (the app reloading mid-request, the network
+    // dropping). Read as "nothing" it emptied the garden; it is an error.
+    throw new ApiError('Không kết nối được tới Sprouty. Kiểm tra mạng rồi thử lại nhé.', 0);
+  }
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      // Something that is not the API answered (a web page from a proxy that
+      // was restarting, a captive Wi-Fi portal). Taken as "nothing", it showed
+      // an empty garden and broke the plant screen; it is an error instead.
+      if (__DEV__) console.warn(`API ${method} ${path}: ${res.status}, not JSON: ${text.slice(0, 80)}`);
+      if (res.ok) throw new ApiError('Sprouty trả lời không đúng lúc này, thử lại nhé.', res.status);
+    }
+  }
 
   if (!res.ok) {
     const message = data?.message || `Lỗi ${res.status}`;
@@ -114,7 +136,7 @@ async function request<T = any>(path: string, method = 'GET', body?: Body, retri
     if (res.status === 403 && mutation && !retried && /csrf/i.test(message)) {
       try {
         const fresh = await request<{ csrfToken: string }>('/auth/csrf');
-        csrfToken = fresh.csrfToken;
+        keys.csrf = fresh.csrfToken;
         return request<T>(path, method, body, true);
       } catch { /* fall through to the original error */ }
     }
@@ -192,7 +214,11 @@ export const API = {
     coach: (id: string, question?: string) => request(`/me/plants/${id}/coach`, 'POST', { question }),
     clearCoach: (id: string) => request(`/me/plants/${id}/coach`, 'DELETE'),
   },
-  garden: { benefits: () => request('/me/benefits') },
+  garden: {
+    benefits: () => request('/me/benefits'),
+    /** A VIP account's scene and pot, for every plant. */
+    save: (value: { scene: string; decoration: string }) => request('/me/garden', 'PUT', value),
+  },
   /** What the account's codes unlock (the AI assistant may need one). */
   entitlements: () => request('/me/entitlements'),
   rewards: { mine: () => request('/me/rewards') },

@@ -234,7 +234,20 @@ export interface CoachMessage {
   createdAt: string;
 }
 
+/** One hourly reading from the plant's sensors, for the 24-hour chart. */
+export interface SensorReading {
+  moisture: number;
+  temperature: number;
+  humidity: number;
+  light: number;
+  nutrient: number;
+  health: number;
+  recordedAt: string;
+}
+
 export interface PlantDetail extends PlantCard {
+  /** The last day of readings, oldest first. */
+  readings?: SensorReading[];
   harvestLabel: string;
   stageStory: string;
   idealMoisture: [number, number];

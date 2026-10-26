@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,7 +11,7 @@ import { useToast } from '@/components/Toast';
 import { Button, Card, Chip, cheer, Empty, ErrorNote, Field, H, Loading, Pill, Screen, Sheet, Stepper, T, tap } from '@/components/ui';
 import { API, imageSource } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { formatDateTime, formatPrice, formatWorkshopWhen } from '@/lib/format';
+import { formatDateTime, formatPrice, formatWorkshopWhen, workshopDateParts } from '@/lib/format';
 import { syncWorkshopReminders } from '@/lib/reminders';
 import type { MyWorkshopRegistration, OwnReview, PublicWorkshop, RewardSummary, ReviewOptions, Transfer } from '@/lib/types';
 import { useLoad } from '@/lib/use-load';
@@ -19,11 +19,12 @@ import { colors, fonts, radius } from '@/theme';
 
 const AGES = ['3–4 tuổi', '4–5 tuổi', '6–7 tuổi', '8–9 tuổi', '10–12 tuổi'];
 
-const STEPS: Array<{ icon: IconName; title: string; text: string }> = [
-  { icon: 'sparkle', title: 'Vẽ chậu', text: 'Bé tự trang trí chậu cây của riêng mình với màu vẽ an toàn.' },
-  { icon: 'seed', title: 'Gieo hạt thật', text: 'Cô hướng dẫn trộn đất, gieo hạt và tưới nước lần đầu.' },
-  { icon: 'sprout', title: 'Kích hoạt Plant Buddy', text: 'Cây được “sinh ra” trên Sprouty để bé chăm tiếp ở nhà.' },
-  { icon: 'pot', title: 'Mang cây về nhà', text: 'Bé mang chậu đã gieo về, kèm chứng nhận và ảnh kỷ niệm.' },
+/** What happens in a session, in order, left to right. */
+const STEPS: Array<{ icon: IconName; title: string }> = [
+  { icon: 'sparkle', title: 'Vẽ chậu' },
+  { icon: 'seed', title: 'Gieo hạt thật' },
+  { icon: 'sprout', title: 'Kích hoạt Plant Buddy' },
+  { icon: 'pot', title: 'Mang cây về nhà' },
 ];
 
 const sessionCancelled = (r: MyWorkshopRegistration) => r.workshop.status === 'cancelled';
@@ -192,31 +193,69 @@ function BookingSheet({ workshop, rewards, onClose, onBooked }: {
   );
 }
 
-function SessionCard({ w, onBook }: { w: PublicWorkshop; onBook: () => void }) {
-  const pct = w.capacity > 0 ? Math.round((w.seatsTaken / w.capacity) * 100) : 0;
+/** Seats left, in words and in the colour that says how urgent. */
+function seatState(w: PublicWorkshop) {
+  if (w.isFull) return { text: 'Kín chỗ', color: colors.bad, bg: colors.badSoft };
+  if (w.seatsLeft <= 3) return { text: `Còn ${w.seatsLeft} chỗ`, color: colors.warn, bg: colors.warnSoft };
+  return { text: `Còn ${w.seatsLeft} chỗ`, color: colors.greenDark, bg: colors.greenSoft };
+}
+
+/**
+ * One session in the schedule, a single line high: the day like a calendar
+ * page, then the title, the time and ages, the price and the seats. The photo
+ * and the full description wait in the detail sheet, so fifty sessions are a
+ * list to skim, not a wall to scroll.
+ */
+function SessionRow({ w, last, onPress }: { w: PublicWorkshop; last: boolean; onPress: () => void }) {
+  const date = workshopDateParts(w);
+  const seats = seatState(w);
   return (
-    <Card style={{ padding: 0, overflow: 'hidden', gap: 0 }}>
+    <Pressable onPress={() => { tap(); onPress(); }} accessibilityRole="button" accessibilityLabel={`${w.title}, ${formatWorkshopWhen(w)}`}
+      style={({ pressed }) => [s.srow, pressed && { backgroundColor: colors.cream2 }]}>
+      <View style={[s.cal, w.isFull && { opacity: 0.55 }]}>
+        <Text style={s.calWd}>{date?.weekdayShort}</Text>
+        <Text style={s.calDay}>{date?.day}</Text>
+      </View>
+      <View style={[s.srowBody, !last && s.divider]}>
+        <View style={{ flex: 1, gap: 3 }}>
+          <Text numberOfLines={2} style={[s.srowTitle, w.isFull && { color: colors.ink3 }]}>{w.title}</Text>
+          <Text numberOfLines={1} style={s.srowMeta}>{date?.time}{w.ageRange ? ` · ${w.ageRange}` : ''}</Text>
+          <View style={s.srowFoot}>
+            <Text style={s.srowPrice}>{w.price > 0 ? formatPrice(w.price) : 'Miễn phí'}</Text>
+            <View style={[s.seatPill, { backgroundColor: seats.bg }]}><Text style={[s.seatPillText, { color: seats.color }]}>{seats.text}</Text></View>
+          </View>
+        </View>
+        <Icon name="arrow-right" size={16} color={colors.ink5} />
+      </View>
+    </Pressable>
+  );
+}
+
+/** Everything about one session, in the sheet opened from its row. */
+function SessionDetail({ w }: { w: PublicWorkshop }) {
+  const date = workshopDateParts(w);
+  const seats = seatState(w);
+  return (
+    <>
       <View style={s.photo}>
         {imageSource(w.imageUrl) ? <Image source={imageSource(w.imageUrl)} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
           : <Icon name="ticket" size={34} color={colors.greenDark} />}
-        {!w.isFull && w.seatsLeft <= 3 && <View style={s.flag}><Text style={s.flagText}>Sắp hết chỗ</Text></View>}
+        {date && (
+          <View style={s.dateBadge}>
+            <Text style={s.dateMonth}>{date.month}</Text>
+            <Text style={s.dateDay}>{date.day}</Text>
+          </View>
+        )}
+        <View style={[s.seats, { backgroundColor: seats.bg }]}><Text style={[s.seatsText, { color: seats.color }]}>{seats.text}{w.isFull ? '' : ` / ${w.capacity}`}</Text></View>
       </View>
-      <View style={{ padding: 16, gap: 10 }}>
-        <H size={18}>{w.title}</H>
-        <View style={{ gap: 6 }}>
-          <View style={s.fact}><Icon name="clock" size={16} color={colors.green} /><T style={{ flex: 1 }}>{formatWorkshopWhen(w)}</T></View>
-          <View style={s.fact}><Icon name="pin" size={16} color={colors.green} /><T style={{ flex: 1 }}>{w.location}</T></View>
-          {w.ageRange ? <View style={s.fact}><Icon name="child" size={16} color={colors.green} /><T style={{ flex: 1 }}>{w.ageRange}</T></View> : null}
-        </View>
-        {w.description ? <T muted numberOfLines={3}>{w.description}</T> : null}
-        <View style={s.seatBar}><View style={[s.seatFill, { width: `${pct}%`, backgroundColor: pct > 80 ? colors.bad : colors.green }]} /></View>
-        <T muted style={{ fontSize: 13 }}>{w.isFull ? 'Đã kín chỗ' : `Còn ${w.seatsLeft} chỗ trên tổng ${w.capacity}`}</T>
-        <View style={s.rowBetween}>
-          <View><Text style={s.price}>{w.price > 0 ? formatPrice(w.price) : 'Miễn phí'}</Text><T muted style={{ fontSize: 12.5 }}>mỗi bé</T></View>
-          <Button title={w.isFull ? 'Hết chỗ' : 'Đăng ký cho bé'} disabled={w.isFull} onPress={onBook} />
-        </View>
+      <Text style={s.sessionTitle}>{w.title}</Text>
+      <View style={{ gap: 8 }}>
+        <View style={s.meta}><Icon name="clock" size={16} color={colors.green} /><Text style={[s.metaText, { flex: 1 }]}>{formatWorkshopWhen(w)}</Text></View>
+        <View style={s.meta}><Icon name="pin" size={16} color={colors.green} /><Text style={[s.metaText, { flex: 1 }]}>{w.location}</Text></View>
+        {w.ageRange ? <View style={s.meta}><Icon name="child" size={16} color={colors.green} /><Text style={[s.metaText, { flex: 1 }]}>Phù hợp {w.ageRange}</Text></View> : null}
       </View>
-    </Card>
+      {w.description ? <Text style={s.desc}>{w.description}</Text> : null}
+    </>
   );
 }
 
@@ -236,6 +275,10 @@ export default function Workshop() {
   const [busyId, setBusyId] = useState('');
   const [bigTicket, setBigTicket] = useState<MyWorkshopRegistration | null>(null);
   const [writing, setWriting] = useState<{ target: ReviewTarget; existing: OwnReview | null } | null>(null);
+  const [detail, setDetail] = useState<PublicWorkshop | null>(null);
+  const [month, setMonth] = useState<string | null>(null); // null: the nearest month; 'all': every session
+  const [openOnly, setOpenOnly] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   const schedule = useLoad(async () => {
     const [list, reviews] = await Promise.all([API.workshops.list(), API.workshopReviews.list({ limit: 1 }).catch(() => null)]);
@@ -258,19 +301,48 @@ export default function Workshop() {
     };
   }, [user?.id]);
 
-  const upcoming = (schedule.data?.workshops || []).filter((w) => w.upcoming && w.bookable !== false);
+  const upcoming = useMemo(() => (schedule.data?.workshops || [])
+    .filter((w) => w.upcoming && w.bookable !== false)
+    .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()), [schedule.data]);
+
+  // The schedule a month at a time: a chip per month that has sessions.
+  const months = useMemo(() => {
+    const out: Array<{ key: string; label: string; count: number }> = [];
+    for (const w of upcoming) {
+      const d = workshopDateParts(w);
+      if (!d) continue;
+      const m = out.find((x) => x.key === d.monthKey);
+      if (m) m.count += 1; else out.push({ key: d.monthKey, label: d.monthLabel, count: 1 });
+    }
+    return out;
+  }, [upcoming]);
+  const activeMonth = month ?? months[0]?.key ?? 'all';
+  const filtered = upcoming.filter((w) => (activeMonth === 'all' || workshopDateParts(w)?.monthKey === activeMonth) && (!openOnly || !w.isFull));
+  const SHOWN = 15;
+  const shown = activeMonth === 'all' && !showAll ? filtered.slice(0, SHOWN) : filtered;
+  // "Tất cả" keeps the month headings; one month is a single list.
+  const groups = useMemo(() => {
+    const out: Array<{ key: string; label: string; items: PublicWorkshop[] }> = [];
+    for (const w of shown) {
+      const d = workshopDateParts(w);
+      const key = activeMonth === 'all' ? d?.monthKey ?? '' : activeMonth;
+      const g = out.find((x) => x.key === key);
+      if (g) g.items.push(w); else out.push({ key, label: d?.monthLabel ?? '', items: [w] });
+    }
+    return out;
+  }, [shown, activeMonth]);
 
   function start(w: PublicWorkshop) {
     if (!user) return setAskLogin(true);
     setBooking(w);
   }
 
-  // /workshop?session=ID opens that session's booking straight away (from Home).
+  // /workshop?session=ID opens that session's details straight away (from Home).
   useEffect(() => {
     if (!params.session || !schedule.data) return;
     const w = schedule.data.workshops.find((x) => x.id === params.session);
     router.setParams({ session: undefined });
-    if (w && w.upcoming && !w.isFull) start(w);
+    if (w && w.upcoming) setDetail(w);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.session, schedule.data]);
 
@@ -375,32 +447,66 @@ export default function Workshop() {
 
       {tab === 'schedule' ? (
         <>
-          <Card tone="soft">
-            <H size={19}>Trồng cây cùng bé, cuối tuần này</H>
-            <T>Bé vẽ chậu, gieo hạt thật, kích hoạt Plant Buddy và mang cây về nhà chăm tiếp. Nhóm nhỏ 8–12 bé, ba mẹ ngồi cùng.</T>
-            {score && score.count > 0 ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Stars value={score.average} size={15} />
-                <T bold>{score.average.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}/5</T>
-                <T muted>· {score.count} đánh giá</T>
+          {upcoming.length > 0 && (
+            <View style={{ gap: 10 }}>
+              <View style={s.listHead}>
+                <View style={{ gap: 1 }}>
+                  <Text style={s.listTitle}>{upcoming.length} buổi sắp tới</Text>
+                  {score && score.count > 0 ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <Stars value={score.average} size={12} />
+                      <Text style={s.score}>{score.average.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} · {score.count} đánh giá</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Pressable onPress={() => { tap(); setOpenOnly((v) => !v); }} accessibilityRole="switch" accessibilityState={{ checked: openOnly }}
+                  style={[s.toggle, openOnly && s.toggleOn]}>
+                  <View style={[s.box, openOnly && s.boxOn]}>{openOnly && <Icon name="check" size={12} color={colors.white} />}</View>
+                  <Text style={[s.toggleText, openOnly && { color: colors.greenDark }]}>Còn chỗ</Text>
+                </Pressable>
               </View>
-            ) : null}
-          </Card>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipsOuter} contentContainerStyle={s.chips}>
+                {months.map((m) => (
+                  <Chip key={m.key} label={`${m.label} · ${m.count}`} on={activeMonth === m.key} onPress={() => { setMonth(m.key); setShowAll(false); }} />
+                ))}
+                {months.length > 1 && <Chip label={`Tất cả · ${upcoming.length}`} on={activeMonth === 'all'} onPress={() => { setMonth('all'); setShowAll(false); }} />}
+              </ScrollView>
+            </View>
+          )}
           {schedule.error ? <ErrorNote message={schedule.error} onRetry={schedule.reload} /> : null}
           {schedule.loading && !schedule.data && <Loading label="Đang tải lịch workshop…" />}
           {schedule.data && upcoming.length === 0 && (
             <Empty art={imageSource('/assets/images/sprouty-icons/Workshop.png') as number} title="Chưa có buổi nào mở đăng ký" text="Sprouty sẽ báo lịch mới sớm. Quay lại sau nhé!" />
           )}
-          {upcoming.map((w) => <SessionCard key={w.id} w={w} onBook={() => start(w)} />)}
-
-          <Card>
-            <H size={18}>Một buổi học gồm gì?</H>
-            {STEPS.map((st, i) => (
-              <View key={st.title} style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
-                <View style={s.stepIcon}><Icon name={st.icon} size={20} color={colors.greenDark} /></View>
-                <View style={{ flex: 1 }}><T bold>{i + 1}. {st.title}</T><T muted>{st.text}</T></View>
+          {upcoming.length > 0 && filtered.length === 0 && (
+            <Empty icon="calendar" title="Các buổi tháng này đã kín chỗ" text="Chọn tháng khác, hoặc bỏ lọc “Còn chỗ” để xem cả buổi đã kín." />
+          )}
+          {groups.map((g) => (
+            <View key={g.key} style={{ gap: 8 }}>
+              {activeMonth === 'all' && <Text style={s.monthTitle}>{g.label}</Text>}
+              <View style={s.list}>
+                {g.items.map((w, i) => <SessionRow key={w.id} w={w} last={i === g.items.length - 1} onPress={() => setDetail(w)} />)}
               </View>
-            ))}
+            </View>
+          ))}
+          {shown.length < filtered.length && (
+            <Button variant="ghost" title={`Xem thêm ${filtered.length - shown.length} buổi`} onPress={() => setShowAll(true)} />
+          )}
+
+          <Card tone="soft">
+            <View style={{ gap: 2 }}>
+              <H size={18}>Một buổi học gồm gì?</H>
+              <T muted>Nhóm nhỏ 8–12 bé, ba mẹ ngồi cùng suốt buổi.</T>
+            </View>
+            <View style={s.flow}>
+              <View style={s.flowLine} />
+              {STEPS.map((st) => (
+                <View key={st.title} style={s.flowStep}>
+                  <View style={s.flowIcon}><Icon name={st.icon} size={19} color={colors.greenDark} /></View>
+                  <Text style={s.flowText}>{st.title}</Text>
+                </View>
+              ))}
+            </View>
           </Card>
         </>
       ) : !user ? (
@@ -422,6 +528,20 @@ export default function Workshop() {
           {past.map((r) => <View key={r.id}>{ticket(r)}</View>)}
         </>
       )}
+
+      <Sheet open={Boolean(detail)} title="Chi tiết buổi học" onClose={() => setDetail(null)}
+        footer={detail ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.price}>{detail.price > 0 ? formatPrice(detail.price) : 'Miễn phí'}</Text>
+              {detail.price > 0 ? <Text style={s.perChild}>mỗi bé</Text> : null}
+            </View>
+            <Button grow title={detail.isFull ? 'Đã kín chỗ' : 'Đăng ký cho bé'} icon={detail.isFull ? undefined : 'arrow-right'} disabled={detail.isFull}
+              onPress={() => { const w = detail; setDetail(null); start(w); }} />
+          </View>
+        ) : undefined}>
+        {detail && <SessionDetail w={detail} />}
+      </Sheet>
 
       <BookingSheet workshop={booking} rewards={mine.data?.rewards ?? null} onClose={() => setBooking(null)} onBooked={() => { void schedule.reload(); void mine.reload(); }} />
 
@@ -464,12 +584,41 @@ const s = StyleSheet.create({
   segBtn: { flex: 1, minHeight: 44, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   segOn: { backgroundColor: colors.green },
   segText: { fontFamily: fonts.bold, fontSize: 14.5, color: colors.ink2 },
-  photo: { height: 168, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
-  flag: { position: 'absolute', top: 10, left: 10, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.warnSoft },
-  flagText: { fontFamily: fonts.bold, fontSize: 12, color: colors.warn },
-  fact: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
-  seatBar: { height: 7, borderRadius: 4, backgroundColor: '#E6ECE0', overflow: 'hidden' },
-  seatFill: { height: '100%', borderRadius: 4 },
+  listHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  toggle: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40, paddingHorizontal: 12, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.line, backgroundColor: colors.card },
+  toggleOn: { borderColor: colors.green, backgroundColor: colors.greenSoft },
+  box: { width: 18, height: 18, borderRadius: 5, borderWidth: 1.5, borderColor: colors.ink5, alignItems: 'center', justifyContent: 'center' },
+  boxOn: { borderColor: colors.green, backgroundColor: colors.green },
+  toggleText: { fontFamily: fonts.semi, fontSize: 13.5, color: colors.ink2 },
+  chipsOuter: { marginHorizontal: -16 },
+  chips: { gap: 8, paddingHorizontal: 16 },
+  monthTitle: { fontFamily: fonts.bold, fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.ink4, marginLeft: 4 },
+  list: { borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card, overflow: 'hidden' },
+  srow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingLeft: 12, paddingTop: 12 },
+  cal: { width: 50, borderRadius: 12, borderWidth: 1, borderColor: '#CFE9C9', backgroundColor: colors.greenSoft, alignItems: 'center', paddingVertical: 6 },
+  calWd: { fontFamily: fonts.bold, fontSize: 11.5, color: colors.green },
+  calDay: { fontFamily: fonts.display, fontSize: 22, lineHeight: 27, color: colors.ink },
+  srowBody: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 12, paddingBottom: 12 },
+  divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
+  srowTitle: { fontFamily: fonts.bold, fontSize: 15, lineHeight: 21, color: colors.ink },
+  srowMeta: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink3 },
+  srowFoot: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
+  srowPrice: { fontFamily: fonts.bold, fontSize: 14.5, color: colors.price },
+  seatPill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill },
+  seatPillText: { fontFamily: fonts.bold, fontSize: 11.5 },
+  listTitle: { fontFamily: fonts.display, fontSize: 19, color: colors.ink },
+  score: { fontFamily: fonts.semi, fontSize: 13, color: colors.ink3 },
+  photo: { width: '100%', aspectRatio: 2, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
+  dateBadge: { position: 'absolute', top: 12, left: 12, width: 54, borderRadius: 12, backgroundColor: colors.card, alignItems: 'center', overflow: 'hidden' },
+  dateMonth: { alignSelf: 'stretch', textAlign: 'center', paddingVertical: 2, backgroundColor: colors.green, color: colors.white, fontFamily: fonts.bold, fontSize: 11 },
+  dateDay: { fontFamily: fonts.display, fontSize: 24, lineHeight: 30, color: colors.ink, paddingBottom: 2 },
+  seats: { position: 'absolute', top: 12, right: 12, paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill, backgroundColor: colors.card },
+  seatsText: { fontFamily: fonts.bold, fontSize: 12, color: colors.greenDark },
+  sessionTitle: { fontFamily: fonts.display, fontSize: 19, lineHeight: 25, color: colors.ink },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  metaText: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink2 },
+  desc: { fontFamily: fonts.body, fontSize: 13.5, lineHeight: 20, color: colors.ink3 },
+  perChild: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink4 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   price: { fontFamily: fonts.bold, fontSize: 19, color: colors.price },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -479,7 +628,11 @@ const s = StyleSheet.create({
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.ink5, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
   radioOn: { borderColor: colors.green },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.green },
-  stepIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
+  flow: { flexDirection: 'row' },
+  flowLine: { position: 'absolute', top: 20, left: '12.5%', right: '12.5%', height: 1.5, backgroundColor: '#BFDDB6' },
+  flowStep: { flex: 1, alignItems: 'center', gap: 6, paddingHorizontal: 2 },
+  flowIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.card, borderWidth: 1.5, borderColor: '#BFDDB6', alignItems: 'center', justifyContent: 'center' },
+  flowText: { fontFamily: fonts.semi, fontSize: 12.5, lineHeight: 17, color: colors.ink2, textAlign: 'center' },
   ticketThumb: { width: 64, height: 64, borderRadius: 14, overflow: 'hidden', backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
   ticket: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: radius.md, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#CFE9C9', backgroundColor: colors.cream2 },
   ticketCode: { fontFamily: fonts.bold, fontSize: 16, letterSpacing: 1.5, color: colors.ink },

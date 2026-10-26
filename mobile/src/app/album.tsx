@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Icon, type IconName } from '@/components/Icon';
 import { VideoModal } from '@/components/media';
-import { PlantArt } from '@/components/PlantArt';
+import { PlantThumb } from '@/components/PlantThumb';
 import { useToast } from '@/components/Toast';
 import { ActionBar, Button, Card, Chip, cheer, Empty, ErrorNote, Field, H, Loading, Screen, Sheet, T } from '@/components/ui';
 import { API, imageSource } from '@/lib/api';
@@ -35,7 +35,7 @@ function PlantPicker() {
       {plants.data?.map((p) => (
         <Pressable key={p.id} onPress={() => router.push(`/album?productId=${p.productId}&plantId=${p.id}`)} style={({ pressed }) => [s.pick, pressed && { backgroundColor: colors.greenSoft }]}>
           <View style={[s.pickArt, { backgroundColor: p.bgColor || '#F0FDF4' }]}>
-            <PlantArt stage={p.stage} progress={p.stageProgress} health={p.health} form={p.form} fruitShape={p.fruitShape} fruitColor={p.fruitColor} flowerColor={p.flowerColor} size={64} />
+            <PlantThumb plant={p} size={64} />
           </View>
           <View style={{ flex: 1 }}>
             <T bold>{p.nickname}</T>

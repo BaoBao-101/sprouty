@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Redirect } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Redirect, router } from 'expo-router';
+import { Icon } from '@/components/Icon';
 import { useToast } from '@/components/Toast';
 import { Button, Card, CardTitle, Field, Screen, T } from '@/components/ui';
 import { API } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatDate } from '@/lib/format';
-import { colors } from '@/theme';
+import { colors, fonts, radius } from '@/theme';
 
 /** Thông tin tài khoản: the name Sprouty uses, and the password. */
 export default function Profile() {
@@ -76,6 +78,22 @@ export default function Profile() {
         <T muted style={{ fontSize: 13 }}>Đổi xong, các máy khác đang đăng nhập tài khoản này sẽ bị đăng xuất.</T>
         <Button variant="soft" title={savingPw ? 'Đang đổi…' : 'Đổi mật khẩu'} busy={savingPw} onPress={changePassword} />
       </Card>
+
+      {/* Out of the way of everyday settings, but one tap from the account — both stores require it in the app. */}
+      <Pressable onPress={() => router.push('/delete-account')} accessibilityRole="button"
+        style={({ pressed }) => [s.delete, pressed && { opacity: 0.7 }]}>
+        <Icon name="trash" size={18} color={colors.bad} />
+        <View style={{ flex: 1 }}>
+          <Text style={s.deleteText}>Xoá tài khoản</Text>
+          <T muted style={{ fontSize: 12.5 }}>Xoá vĩnh viễn tài khoản, khu vườn và album của bé</T>
+        </View>
+        <Icon name="arrow-right" size={16} color={colors.ink5} />
+      </Pressable>
     </Screen>
   );
 }
+
+const s = StyleSheet.create({
+  delete: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 16, paddingVertical: 10, borderRadius: radius.lg, borderWidth: 1, borderColor: '#F2D4D8', backgroundColor: colors.card },
+  deleteText: { fontFamily: fonts.semi, fontSize: 15, color: colors.bad },
+});

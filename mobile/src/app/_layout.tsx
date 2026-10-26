@@ -10,6 +10,8 @@ import {
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { CartProvider } from '@/lib/cart';
 import { ToastProvider } from '@/components/Toast';
+import { WarmUp3D } from '@/components/Plant3D';
+import { ThumbStudio } from '@/components/PlantThumb';
 import { ONBOARDED_KEY } from '@/lib/config';
 import { onReminderTap } from '@/lib/reminders';
 import { colors } from '@/theme';
@@ -47,6 +49,8 @@ function Gate() {
         <Stack.Screen name="login" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="register" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
       </Stack>
+      <WarmUp3D />
+      <ThumbStudio />
     </>
   );
 }

@@ -70,9 +70,11 @@ export function Header({ title, back, actions, large }: { title?: string; back?:
  * One screen: the header and a scrolling body, pull-to-refresh when given
  * `onRefresh`. `bar` leaves room at the bottom for an ActionBar.
  */
-export function Screen({ title, back, actions, large, children, onRefresh, bar, scroll = true, padded = true, header }: {
+export function Screen({ title, back, actions, large, children, onRefresh, bar, scroll = true, scrollEnabled = true, padded = true, header }: {
   title?: string; back?: boolean | string; actions?: ReactNode; large?: boolean; children: ReactNode;
   onRefresh?: () => Promise<unknown> | void; bar?: boolean; scroll?: boolean; padded?: boolean; header?: ReactNode;
+  /** False while something on the page is being dragged. */
+  scrollEnabled?: boolean;
 }) {
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
@@ -92,6 +94,7 @@ export function Screen({ title, back, actions, large, children, onRefresh, bar, 
       {header ?? <Header title={title} back={back} actions={actions} large={large} />}
       {scroll ? (
         <ScrollView
+          scrollEnabled={scrollEnabled}
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.scroll}

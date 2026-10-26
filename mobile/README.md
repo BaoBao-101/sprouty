@@ -37,14 +37,19 @@ npm start             # hiện mã QR — quét bằng Expo Go (điện thoại 
 npm run android       # mở luôn trên máy ảo Android đang chạy
 ```
 
-Mặc định app nói chuyện với server thật `https://api.sprouty.id.vn`. Để thử với
-backend Docker trên máy tính:
+Mặc định app nói chuyện với web và server thật (`www.sprouty.id.vn`,
+`api.sprouty.id.vn`). Cây 3D thì nằm sẵn trong app (`npm run embed`), không
+cần web. Để thử với dữ liệu trên máy tính trước khi đưa lên:
 
 ```bash
 # ở thư mục gốc: docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
-EXPO_PUBLIC_API_ORIGIN=http://10.0.2.2:3000 npx expo start --android      # máy ảo Android
-EXPO_PUBLIC_API_ORIGIN=http://192.168.1.10:3000 npx expo start           # điện thoại thật, thay bằng IP máy tính
+cd frontend && npm run dev          # web ở cổng 5173, chuyển /api sang backend Docker
+cd mobile && npm run start:local    # app dùng web + backend trên máy này
 ```
+
+`start:local` tự lấy địa chỉ máy tính mà Expo đang dùng (vd. `192.168.0.102`),
+nên máy ảo Android và điện thoại thật cùng Wi-Fi đều vào được. Lần đầu Windows
+có thể hỏi cho Node qua tường lửa — chọn cho phép mạng riêng (Private).
 
 Dùng các tài khoản demo có sẵn (mật khẩu `123456`), không tạo tài khoản thử mới.
 
@@ -56,6 +61,7 @@ Dùng các tài khoản demo có sẵn (mật khẩu `123456`), không tạo tà
 | `npm run images` | Thu nhỏ ảnh của web (`frontend/public/assets/images`) vào `assets/web/` |
 | `npm run icons` | Vẽ lại icon app, màn khởi động, ảnh store từ logo |
 | `npm run port-svg` | Chuyển icon SVG và hình cây từ web (`SproutyIcon.tsx`, `PlantArt.tsx`) sang React Native |
+| `npm run embed` | Đóng gói cây 3D của web (`frontend/src/embed-main.tsx`) thành một trang nằm sẵn trong app (`src/components/plant3d-page.ts`) — chạy lại sau khi sửa 3D trên web; `apk`/`aab` tự chạy |
 
 ## Build APK / AAB trên máy (không cần tài khoản Expo)
 
