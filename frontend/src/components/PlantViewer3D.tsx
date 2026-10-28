@@ -31,6 +31,15 @@ type Viewer = {
 /** Frames per second for the drifting particles: smooth enough, kind to a phone battery. */
 const AMBIENT_FPS = 30;
 
+declare global {
+  interface Window {
+    /** Native gesture surface: radians horizontally/vertically, distance multiplier. */
+    __sproutyOrbit?: (horizontal: number, vertical: number, zoom: number) => void;
+    __sproutySetView?: (position: number[]) => void;
+    __sproutyResetView?: () => void;
+  }
+}
+
 export default function PlantViewer3D(props:Props) {
   const host=useRef<HTMLDivElement>(null);
   const viewer=useRef<Viewer | null>(null);
@@ -74,6 +83,29 @@ export default function PlantViewer3D(props:Props) {
     canvas.setAttribute('aria-label','Mô hình cây 3D. Kéo để xoay, cuộn để phóng to. Dùng phím mũi tên để xoay, dấu cộng trừ để zoom, Home để đặt lại.');
     el.appendChild(canvas);
     controls.addEventListener('change',draw);
+    // The mobile embed receives gestures from a native surface, so its parent
+    // ScrollView cannot steal vertical drags from WKWebView on iOS.
+    const orbit = (horizontal: number, vertical: number, zoom: number) => {
+      if (![horizontal, vertical, zoom].every(Number.isFinite) || zoom <= 0) return;
+      const sphere = new T.Spherical().setFromVector3(camera.position.clone().sub(controls.target));
+      sphere.theta -= horizontal;
+      sphere.phi = T.MathUtils.clamp(sphere.phi - vertical, controls.minPolarAngle, controls.maxPolarAngle);
+      sphere.radius = T.MathUtils.clamp(sphere.radius * zoom, controls.minDistance, controls.maxDistance);
+      camera.position.copy(controls.target).add(new T.Vector3().setFromSpherical(sphere));
+      controls.update();
+    };
+    if (el.closest('.plant-embed')) window.__sproutyOrbit = orbit;
+    const reportView = () => window.ReactNativeWebView?.postMessage(JSON.stringify({ type: 'view', position: camera.position.toArray() }));
+    const setView = (position: number[]) => {
+      if (!Array.isArray(position) || position.length !== 3 || !position.every(Number.isFinite)) return;
+      camera.position.fromArray(position); controls.update(); draw();
+    };
+    const resetView = () => { controls.reset(); reportView(); };
+    if (el.closest('.plant-embed')) {
+      window.__sproutySetView = setView;
+      window.__sproutyResetView = resetView;
+      controls.addEventListener('change', reportView);
+    }
     const key=(event:KeyboardEvent)=>{
       const offset=camera.position.clone().sub(controls.target);
       const sphere=new T.Spherical().setFromVector3(offset);
@@ -127,6 +159,10 @@ export default function PlantViewer3D(props:Props) {
     seen.observe(el);
 
     return ()=>{
+      if (window.__sproutyOrbit === orbit) delete window.__sproutyOrbit;
+      if (window.__sproutySetView === setView) delete window.__sproutySetView;
+      if (window.__sproutyResetView === resetView) delete window.__sproutyResetView;
+      controls.removeEventListener('change', reportView);
       cancelAnimationFrame(frame);seen.disconnect();
       resize.disconnect();controls.removeEventListener('change',draw);controls.dispose();
       canvas.removeEventListener('keydown',key);canvas.removeEventListener('webglcontextlost',lost);

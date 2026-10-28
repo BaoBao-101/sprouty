@@ -1,5 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import { File } from 'expo-file-system';
 
 /*
  * Photos and clips from the phone: picked from the library or taken there and
@@ -29,12 +30,13 @@ export async function pickMedia(from: 'library' | 'camera', opts: { videos?: boo
 
 export const isVideoAsset = (asset: Picked) => asset.type === 'video' || (asset.mimeType || '').startsWith('video/');
 
-/** A picked file as a multipart part. React Native's FormData takes {uri, name, type}. */
+/** Expo's fetch accepts a File/Blob, not React Native's old {uri, name, type} descriptor. */
 export function filePart(asset: Picked) {
-  const video = isVideoAsset(asset);
-  const type = asset.mimeType || (video ? 'video/mp4' : 'image/jpeg');
-  const ext = type.split('/')[1]?.replace('quicktime', 'mov').replace('jpeg', 'jpg') || (video ? 'mp4' : 'jpg');
-  return { uri: asset.uri, name: asset.fileName || `sprouty-${Date.now()}.${ext}`, type } as never;
+  const file = new File(asset.uri);
+  if (!file.exists || file.size === 0) {
+    throw new Error('Không đọc được ảnh/video đã chọn. Bạn chọn lại từ thư viện nhé.');
+  }
+  return file;
 }
 
 /**

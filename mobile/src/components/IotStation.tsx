@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Svg, { Line, Path, Polyline } from 'react-native-svg';
+import Svg, { Line, Polyline } from 'react-native-svg';
 import type { PlantDevice, SensorReading } from '@/lib/types';
 import { colors, fonts, radius } from '@/theme';
 import { Icon } from './Icon';
@@ -10,12 +10,9 @@ import { useToast } from './Toast';
 import { Button, Sheet, T, tap } from './ui';
 
 /*
- * "Bàn lắp mạch" — the kit's devices as parts on a board, as on the website
- * (frontend/src/components/IotWorkbench.tsx). A part works only once it is
- * wired to the Sprouty Hub: a sensor shows its reading, an actuator can be
- * switched on. Taking an actuator off the board switches it off. What is
- * wired is the family's own arrangement, kept per plant on this phone; what
- * a part does (auto mode) is the server's.
+ * Devices attach to the pot in one tap. Sensors reveal readings; actuators
+ * have a separate automatic-mode control. Attachment is kept per plant on
+ * this phone, while automatic mode is stored on the server.
  */
 
 const key = (plantId: string) => `sprouty.iot.${plantId}`;
@@ -86,117 +83,101 @@ export function useIotBoard(plantId: string, devices: PlantDevice[], onToggle: (
   return { wired, isWired: (t) => wired.includes(t), wire, unwire, wireAll, clearAll };
 }
 
-/** Places around the hub, as fractions of the board; the order parts take them in. */
-const SLOTS = [
-  { x: 0.13, y: 0.2 }, { x: 0.37, y: 0.15 }, { x: 0.63, y: 0.15 }, { x: 0.87, y: 0.2 },
-  { x: 0.13, y: 0.8 }, { x: 0.37, y: 0.85 }, { x: 0.63, y: 0.85 }, { x: 0.87, y: 0.8 },
-  { x: 0.1, y: 0.5 }, { x: 0.9, y: 0.5 },
-];
-const HUB = { x: 0.5, y: 0.5 };
-const PART_W = 80;
-const PART_H = 70;
-
-/** The board: the hub in the middle, the wired parts around it, a wire to each. */
-export function IotWorkbench({ board, devices, busy, onToggle, plantName, width }: {
+/** Attach, read and control devices in one compact list. */
+export function IotWorkbench({ board, devices, busy, onToggle, plantName, width, preview, summaries = {} }: {
   board: IotBoard; devices: PlantDevice[]; busy: boolean; onToggle: (type: string, next: boolean) => Promise<void>;
-  plantName: string; width: number;
+  plantName: string; width: number; preview?: ReactNode; summaries?: Record<string, string>;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
-  const byType = new Map(devices.map((d) => [d.type, d]));
-  const W = width;
-  const H = Math.round(Math.max(240, W * 0.68));
-  const placed = board.wired.slice(0, SLOTS.length).map((type, i) => ({ type, d: byType.get(type)!, at: SLOTS[i] }));
-  const tray = devices.filter((d) => usable(d) && !board.isWired(d.type));
-  const vipParts = devices.filter((d) => d.unlocked && d.vipLocked);
-  const lockedCount = devices.filter((d) => !d.unlocked).length;
-  const usableCount = devices.filter(usable).length;
-  const sel = selected ? byType.get(selected) : null;
-  const selWired = selected ? board.isWired(selected) : false;
+  const [showLocked, setShowLocked] = useState(false);
+  const [showPlant, setShowPlant] = useState(true);
+  const available = devices.filter(usable);
+  const locked = devices.filter((d) => !usable(d));
+  const remaining = available.filter((d) => !board.isWired(d.type)).length;
+  const sel = devices.find((d) => d.type === selected);
+  const selWired = Boolean(sel && board.isWired(sel.type));
+  const rowWidth = width >= 600 ? (width - 8) / 2 : width;
 
   return (
-    <View style={{ gap: 10 }}>
+    <View style={{ gap: 12 }}>
       <View style={s.bar}>
-        <Text style={s.count}><Text style={s.countN}>{board.wired.length}</Text>/{usableCount} linh kiện đã nối</Text>
-        <View style={{ flexDirection: 'row', gap: 6 }}>
-          <Button small variant="soft" icon="bolt" title="Lắp tự động" disabled={board.wired.length >= usableCount} onPress={board.wireAll} />
-          <Button small variant="ghost" title="Gỡ hết" disabled={!board.wired.length || busy} onPress={() => void board.clearAll()} />
+        <View style={{ flex: 1, minWidth: 120 }}>
+          <Text style={s.chipLabel}>Thiết bị trên cây</Text>
+          <Text style={s.count}>{board.wired.length}/{available.length} đã gắn</Text>
         </View>
+        <Button small variant="soft" icon="add" title="Gắn tất cả" disabled={remaining === 0 || busy} onPress={board.wireAll} />
       </View>
-
-      {(tray.length > 0 || vipParts.length > 0 || lockedCount > 0) && (
-        <View style={s.tray}>
-          {tray.map((d) => (
-            <Pressable key={d.type} onPress={() => { tap(); board.wire(d.type); }} accessibilityRole="button" accessibilityLabel={`Lắp ${d.label}`}
-              style={({ pressed }) => [s.chip, pressed && { backgroundColor: colors.greenSoft }]}>
-              <View style={[s.chipIcon, d.kind === 'sensor' ? s.isSensor : s.isActuator]}><Icon name={d.icon} size={16} color={d.kind === 'sensor' ? colors.info : colors.greenDark} /></View>
-              <View>
-                <Text style={s.chipLabel}>{d.label}</Text>
-                <Text style={s.chipSub}>{d.kind === 'sensor' ? 'Cảm biến' : 'Thiết bị'} · chạm để lắp</Text>
-              </View>
-            </Pressable>
-          ))}
-          {vipParts.map((d) => (
-            <Pressable key={d.type} onPress={() => router.push('/vip')} accessibilityRole="button" style={[s.chip, s.vipChip]}>
-              <View style={[s.chipIcon, { backgroundColor: '#FCE9C4' }]}><Icon name={d.icon} size={16} color={colors.warn} /></View>
-              <View>
-                <Text style={s.chipLabel}>{d.label}</Text>
-                <Text style={[s.chipSub, { color: colors.warn }]}>Mở khoá với VIP</Text>
-              </View>
-            </Pressable>
-          ))}
-          {lockedCount > 0 && (
-            <View style={s.lockedNote}><Icon name="lock" size={13} color={colors.ink4} /><Text style={s.chipSub}>+{lockedCount} linh kiện mở khi cây lớn hơn</Text></View>
-          )}
-        </View>
-      )}
-
-      <View style={[s.board, { width: W, height: H }]}>
-        <Svg width={W} height={H} style={StyleSheet.absoluteFill}>
-          {placed.map(({ type, d, at }) => {
-            const x1 = at.x * W, y1 = at.y * H, x2 = HUB.x * W, y2 = HUB.y * H;
-            const mx = (x1 + x2) / 2;
-            const live = d.kind === 'sensor' || d.autoMode;
-            return (
-              <Path key={type} d={`M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`} fill="none"
-                stroke={d.kind === 'sensor' ? '#5BA3D9' : live ? colors.green : colors.ink5}
-                strokeWidth={2.5} strokeDasharray={live ? undefined : '6 5'} strokeLinecap="round" />
-            );
-          })}
-        </Svg>
-
-        <View style={[s.hub, { left: HUB.x * W - 62, top: HUB.y * H - 34 }]}>
-          <View style={[s.led, board.wired.length > 0 && { backgroundColor: colors.greenLight }]} />
-          <Text style={s.hubTitle}>SPROUTY HUB</Text>
-          <Text numberOfLines={1} style={s.hubSub}>{board.wired.length} kết nối · {plantName}</Text>
-        </View>
-
-        {placed.length === 0 && (
-          <View style={s.hint}><Icon name="arrow-down" size={14} color={colors.ink4} /><Text style={s.hintText}>Chạm linh kiện ở khay để nối vào Hub</Text></View>
-        )}
-
-        {placed.map(({ type, d, at }) => {
-          const on = d.kind === 'actuator' && d.autoMode;
-          return (
-            <Pressable key={type} onPress={() => { tap(); setSelected(type); }} accessibilityRole="button"
-              accessibilityLabel={`${d.label}${reading(d) ? `: ${reading(d)}` : ''}`}
-              style={[s.part, { left: at.x * W - PART_W / 2, top: at.y * H - PART_H / 2 }, d.kind === 'sensor' ? { borderColor: '#A9CDEB' } : on ? { borderColor: colors.green } : null, d.battery < 20 && { borderColor: colors.warn }]}>
-              <Icon name={d.icon} size={18} color={d.kind === 'sensor' ? colors.info : on ? colors.greenDark : colors.ink3} />
-              <Text numberOfLines={1} style={s.partLabel}>{d.label}</Text>
-              {d.kind === 'sensor'
-                ? <Text style={s.partValue}>{reading(d) ?? 'Đang đọc'}</Text>
-                : <View style={[s.power, on && s.powerOn]}><Text style={[s.powerText, on && { color: colors.white }]}>{on ? 'BẬT' : 'TẮT'}</Text></View>}
-            </Pressable>
-          );
-        })}
-      </View>
+      <Text style={s.help}>Chạm Gắn để lắp vào chậu. Thiết bị tự động có nút bật riêng.</Text>
+      {preview && <View style={s.preview}>
+        <Pressable onPress={() => setShowPlant((v) => !v)} accessibilityRole="button"
+          accessibilityState={{ expanded: showPlant }} style={s.previewHead}>
+          <Icon name="pot" size={18} color={colors.greenDark} />
+          <Text style={[s.chipLabel, { flex: 1 }]}>{plantName}</Text>
+          <Text style={s.actionText}>{showPlant ? 'Thu gọn' : 'Xem cây 3D'}</Text>
+          <Icon name={showPlant ? 'minus' : 'add'} size={16} color={colors.greenDark} />
+        </Pressable>
+        {showPlant && preview}
+      </View>}
+      {(['sensor', 'actuator'] as const).map((kind) => {
+        const group = available.filter((d) => d.kind === kind);
+        if (!group.length) return null;
+        return <View key={kind} style={{ gap: 6 }}>
+          <Text style={s.groupTitle}>{kind === 'sensor' ? 'Cảm biến · số đo trực tiếp' : 'Chăm cây tự động'}</Text>
+          <View style={s.tray}>
+            {group.map((d) => {
+              const attached = board.isWired(d.type);
+              const status = !attached ? 'Chưa gắn' : kind === 'sensor'
+                ? (reading(d) ?? 'Đang đọc') + (summaries[d.type] ? ' · ' + summaries[d.type] : '')
+                : d.autoMode ? 'Đã gắn · Tự động bật' : 'Đã gắn · Đang tắt';
+              return <View key={d.type} style={[s.deviceRow, { width: rowWidth }, attached && s.attached]}>
+                <Pressable style={s.deviceInfo} accessibilityRole="button" accessibilityLabel={d.label + '. ' + status + '. Xem chi tiết'}
+                  onPress={() => { tap(); setSelected(d.type); }}>
+                  <View style={[s.chipIcon, attached ? s.isActuator : { backgroundColor: colors.cream2 }]}>
+                    <Icon name={d.icon} size={18} color={attached ? colors.greenDark : colors.ink3} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                    <Text style={s.chipLabel}>{d.label.replace(/^Cảm biến /, '')}</Text>
+                    <Text style={[s.status, attached && { color: colors.greenDark }]}>{status}</Text>
+                    {attached && d.battery < 20 && <Text style={s.lowBattery}>Pin yếu · {Math.round(d.battery)}%</Text>}
+                  </View>
+                </Pressable>
+                {!attached ? <Pressable disabled={busy} onPress={() => { tap(); board.wire(d.type); }} accessibilityRole="button"
+                  accessibilityLabel={'Gắn ' + d.label + ' lên cây'} accessibilityState={{ disabled: busy }} style={[s.action, busy && { opacity: 0.5 }]}>
+                  <Icon name="add" size={16} color={colors.greenDark} /><Text style={s.actionText}>Gắn</Text>
+                </Pressable> : kind === 'actuator' ? <Pressable disabled={busy} onPress={() => { tap(); void onToggle(d.type, !d.autoMode); }}
+                  accessibilityRole="switch" accessibilityLabel={'Tự động ' + d.label} accessibilityState={{ checked: d.autoMode, disabled: busy }}
+                  style={[s.action, d.autoMode && { backgroundColor: colors.green }, busy && { opacity: 0.5 }]}>
+                  <Text style={[s.actionText, d.autoMode && { color: colors.white }]}>{d.autoMode ? 'Bật' : 'Tắt'}</Text>
+                </Pressable> : <Pressable onPress={() => setSelected(d.type)} accessibilityRole="button" accessibilityLabel={'Chi tiết ' + d.label} style={s.details}>
+                  <Icon name="check" size={18} color={colors.greenDark} /><Text style={s.status}>Đã gắn</Text>
+                </Pressable>}
+              </View>;
+            })}
+          </View>
+        </View>;
+      })}
+      {locked.length > 0 && <View>
+        <Pressable style={s.previewHead} onPress={() => setShowLocked((v) => !v)} accessibilityRole="button" accessibilityState={{ expanded: showLocked }}>
+          <Icon name="lock" size={16} color={colors.ink3} />
+          <Text style={[s.help, { flex: 1 }]}>Chưa mở khóa ({locked.length})</Text>
+          <Icon name={showLocked ? 'minus' : 'add'} size={16} color={colors.ink3} />
+        </Pressable>
+        {showLocked && locked.map((d) => <View key={d.type} style={s.lockedRow}>
+          <Icon name={d.icon} size={18} color={colors.ink3} />
+          <View style={{ flex: 1 }}><Text style={s.chipLabel}>{d.label}</Text><Text style={s.status}>
+            {!d.unlocked ? 'Mở ở chặng ' + d.unlockStageLabel : 'Cần gói VIP'}
+          </Text></View>
+          {d.unlocked && d.vipLocked && <Pressable style={s.action} accessibilityRole="button" onPress={() => router.push('/vip')}><Text style={s.actionText}>Xem VIP</Text></Pressable>}
+        </View>)}
+      </View>}
 
       <Sheet open={Boolean(sel)} title={sel?.label ?? ''} onClose={() => setSelected(null)}
         footer={sel ? (
-          <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
             {selWired ? (
-              <Button variant="ghost" title="Gỡ khỏi bảng" disabled={busy} onPress={() => { const t = sel.type; setSelected(null); void board.unwire(t); }} />
+              <Button variant="ghost" title="Gỡ khỏi cây" disabled={busy} onPress={() => { const t = sel.type; setSelected(null); void board.unwire(t); }} />
             ) : (
-              <Button title="Lắp vào bảng" onPress={() => board.wire(sel.type)} />
+              <Button title="Gắn lên cây" disabled={busy} onPress={() => { board.wire(sel.type); setSelected(null); }} />
             )}
             {sel.kind === 'actuator' && selWired && (
               <Button grow busy={busy} variant={sel.autoMode ? 'soft' : 'primary'} title={sel.autoMode ? 'Tắt tự động' : 'Bật tự động'}
@@ -208,12 +189,12 @@ export function IotWorkbench({ board, devices, busy, onToggle, plantName, width 
           <>
             <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
               <View style={[s.tag, sel.kind === 'sensor' ? s.isSensor : s.isActuator]}><Text style={[s.tagText, { color: sel.kind === 'sensor' ? colors.info : colors.greenDark }]}>{sel.kind === 'sensor' ? 'Cảm biến' : 'Thiết bị'}</Text></View>
-              {selWired && <View style={[s.tag, { backgroundColor: colors.greenSoft }]}><Text style={[s.tagText, { color: colors.greenDark }]}>Đã nối Hub</Text></View>}
+              {selWired && <View style={[s.tag, { backgroundColor: colors.greenSoft }]}><Text style={[s.tagText, { color: colors.greenDark }]}>Đã gắn lên cây</Text></View>}
               {sel.kind === 'actuator' && <View style={[s.tag, { backgroundColor: sel.autoMode ? colors.greenSoft : '#EEF1EA' }]}><Text style={[s.tagText, { color: sel.autoMode ? colors.greenDark : colors.ink3 }]}>{sel.autoMode ? 'Đang bật' : 'Đang tắt'}</Text></View>}
             </View>
             <T>{sel.about}</T>
             <View style={s.stats}>
-              {reading(sel) && (
+              {selWired && reading(sel) && (
                 <View style={s.stat}>
                   <Text style={s.statLabel}>Chỉ số</Text>
                   <Text style={s.statValue}>{reading(sel)}{sel.secondary ? ` · ${sel.secondary.label} ${Math.round(sel.secondary.value)}${sel.secondary.unit}` : ''}</Text>
@@ -241,7 +222,7 @@ export function SensorChart({ readings, wired, width }: { readings: SensorReadin
   ];
   const series = LINES.filter((l) => wired.includes(l.sensor));
   if (readings.length < 2) return <Text style={s.chartEmpty}>Biểu đồ sẽ hiện khi cảm biến ghi đủ dữ liệu — quay lại sau một lúc nhé.</Text>;
-  if (!series.length) return <Text style={s.chartEmpty}>Nối cảm biến vào bảng mạch để vẽ biểu đồ của nó.</Text>;
+  if (!series.length) return <Text style={s.chartEmpty}>Gắn cảm biến để xem lịch sử số đo ở đây.</Text>;
   const H = 130;
   const P = 6;
   const step = (width - P * 2) / (readings.length - 1);
@@ -270,27 +251,24 @@ const s = StyleSheet.create({
   count: { fontFamily: fonts.medium, fontSize: 13.5, color: colors.ink3 },
   countN: { fontFamily: fonts.bold, color: colors.greenDark },
   tray: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 48, paddingLeft: 6, paddingRight: 12, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card },
-  vipChip: { borderColor: '#F1DAB0', backgroundColor: '#FFF8EC' },
   chipIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   isSensor: { backgroundColor: colors.infoSoft },
   isActuator: { backgroundColor: colors.greenSoft },
   chipLabel: { fontFamily: fonts.bold, fontSize: 13, color: colors.ink },
-  chipSub: { fontFamily: fonts.medium, fontSize: 11.5, color: colors.ink4 },
-  lockedNote: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 48 },
-  board: { alignSelf: 'center', borderRadius: radius.lg, borderWidth: 1, borderColor: '#D6E4CF', backgroundColor: '#F3F8EE', overflow: 'hidden' },
-  hub: { position: 'absolute', width: 124, height: 68, borderRadius: 16, backgroundColor: colors.greenDark, alignItems: 'center', justifyContent: 'center', gap: 2, paddingHorizontal: 6 },
-  led: { position: 'absolute', top: 7, right: 9, width: 7, height: 7, borderRadius: 4, backgroundColor: colors.ink4 },
-  hubTitle: { fontFamily: fonts.bold, fontSize: 12, letterSpacing: 1, color: colors.white },
-  hubSub: { fontFamily: fonts.medium, fontSize: 10.5, color: '#CFE9C9' },
-  hint: { position: 'absolute', left: 0, right: 0, bottom: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
-  hintText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink4 },
-  part: { position: 'absolute', width: PART_W, height: PART_H, borderRadius: 12, borderWidth: 1.5, borderColor: colors.line, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', gap: 2, paddingHorizontal: 4 },
-  partLabel: { fontFamily: fonts.semi, fontSize: 10.5, color: colors.ink2, maxWidth: PART_W - 8 },
-  partValue: { fontFamily: fonts.bold, fontSize: 12, color: colors.info },
-  power: { paddingHorizontal: 8, paddingVertical: 1, borderRadius: radius.pill, backgroundColor: '#EEF1EA' },
-  powerOn: { backgroundColor: colors.green },
-  powerText: { fontFamily: fonts.bold, fontSize: 10, color: colors.ink3 },
+  chipSub: { fontFamily: fonts.medium, fontSize: 11.5, color: colors.ink3 },
+  help: { fontFamily: fonts.body, fontSize: 12, lineHeight: 18, color: colors.ink3 },
+  groupTitle: { fontFamily: fonts.bold, fontSize: 12, color: colors.ink3, marginTop: 2 },
+  preview: { borderWidth: 1, borderColor: colors.line, borderRadius: radius.md, overflow: 'hidden', paddingBottom: 4 },
+  previewHead: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 8, paddingVertical: 6 },
+  deviceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: colors.line, borderRadius: radius.sm, padding: 6, backgroundColor: colors.card },
+  attached: { borderColor: '#C7DCC2', backgroundColor: '#F7FBF4' },
+  deviceInfo: { flex: 1, minWidth: 0, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  status: { fontFamily: fonts.medium, fontSize: 11, lineHeight: 16, color: colors.ink3 },
+  lowBattery: { fontFamily: fonts.medium, fontSize: 11, color: colors.warn },
+  action: { minWidth: 58, minHeight: 44, paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, borderRadius: radius.sm, backgroundColor: colors.greenSoft },
+  actionText: { fontFamily: fonts.bold, fontSize: 12, color: colors.greenDark },
+  details: { minWidth: 58, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  lockedRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.line },
   tag: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: radius.pill },
   tagText: { fontFamily: fonts.bold, fontSize: 11.5 },
   stats: { flexDirection: 'row', gap: 8 },

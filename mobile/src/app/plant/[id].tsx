@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Alert, AppState, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +13,7 @@ import { Plant3D } from '@/components/Plant3D';
 import { useToast } from '@/components/Toast';
 import { Button, Card, Field, H, IconButton, Loading, Screen, Sheet, T, tap } from '@/components/ui';
 import { API, imageSource } from '@/lib/api';
+import { plantClock } from '@/lib/plant-clock';
 import { formatCountdown, formatDateTime, plainAiText } from '@/lib/format';
 import type { CareSlot, CoachMessage, PlantDetail, PlantDevice, PlantEvent } from '@/lib/types';
 import { colors, fonts, gutter, maxWidth, radius } from '@/theme';
@@ -26,13 +27,6 @@ const BAND: Record<Band, { fg: string; bg: string }> = {
   warn: { fg: colors.warn, bg: colors.warnSoft },
   bad: { fg: colors.bad, bg: colors.badSoft },
 };
-
-function metricBand(value: number, ideal?: [number, number]): Band {
-  if (!ideal) return value >= 60 ? 'good' : value >= 35 ? 'warn' : 'bad';
-  if (value < ideal[0] - 18 || value > ideal[1] + 18) return 'bad';
-  if (value < ideal[0] || value > ideal[1]) return 'warn';
-  return 'good';
-}
 
 /** What a reading means, in a child's words; the number follows, smaller. Same as the website. */
 function verdict(kind: string, value: number, ideal?: [number, number]): string {
@@ -77,8 +71,12 @@ function verdict(kind: string, value: number, ideal?: [number, number]): string 
 function useNow() {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
+    const update = () => setNow(Date.now());
+    const id = setInterval(update, 1000);
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') update();
+    });
+    return () => { clearInterval(id); subscription.remove(); };
   }, []);
   return now;
 }
@@ -105,49 +103,6 @@ function groupFeed(feed: PlantEvent[]) {
     else out.push({ ...event, count: 1 });
   }
   return out;
-}
-
-/** A sensor's reading: the plain-words verdict first, the measurement under it. */
-function SensorTile({ icon, label, value, unit = '%', kind, ideal, band, device, width, wired, onPlug }: {
-  icon: IconName; label: string; value: number; unit?: string; kind: string; ideal?: [number, number]; band: Band; device?: PlantDevice; width: number;
-  /** A reading is known only through the sensor that takes it, once wired. */
-  wired: boolean; onPlug: () => void;
-}) {
-  const locked = device && !device.unlocked;
-  const off = !locked && !wired;
-  const c = locked || off ? { fg: colors.ink4, bg: '#F1F4EE' } : BAND[band];
-  if (off) {
-    return (
-      <Pressable onPress={() => { tap(); onPlug(); }} accessibilityRole="button" accessibilityLabel={`Nối ${device?.label ?? label}`}
-        style={({ pressed }) => [s.sensor, { width, backgroundColor: c.bg, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.ink5 }, pressed && { opacity: 0.8 }]}>
-        <View style={s.sensorHead}>
-          <Icon name={icon} size={18} color={c.fg} />
-          <Text numberOfLines={1} style={s.sensorLabel}>{label}</Text>
-        </View>
-        <Text style={[s.sensorVerdict, { color: c.fg }]}>Chưa đo</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}><Icon name="add" size={12} color={colors.green} /><Text style={[s.sensorNum, { color: colors.green, fontFamily: fonts.bold }]}>Nối cảm biến</Text></View>
-      </Pressable>
-    );
-  }
-  return (
-    <View style={[s.sensor, { width, backgroundColor: c.bg }]}>
-      <View style={s.sensorHead}>
-        <Icon name={locked ? 'lock' : icon} size={18} color={c.fg} />
-        <Text numberOfLines={1} style={s.sensorLabel}>{label}</Text>
-      </View>
-      {locked ? (
-        <>
-          <Text style={[s.sensorVerdict, { color: c.fg }]}>Chưa đo</Text>
-          <Text style={s.sensorNum}>Mở ở chặng {device?.unlockStageLabel}</Text>
-        </>
-      ) : (
-        <>
-          <Text style={[s.sensorVerdict, { color: c.fg }]}>{verdict(kind, value, ideal)}</Text>
-          <Text style={s.sensorNum}>{Math.round(value)}{unit}</Text>
-        </>
-      )}
-    </View>
-  );
 }
 
 /** A section that folds: the journal and videos are looked up now and then, not every visit. */
@@ -201,6 +156,7 @@ export default function PlantScreen() {
   const [tab, setTab] = useState<'care' | 'sensors' | 'log'>('care');
   const [coachOpen, setCoachOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [rotating, setRotating] = useState(false);
   const [toolAtWork, setToolAtWork] = useState(false);
   // The scene and pot the plant wears: the saved look, or one being tried on (GardenStyle loads it).
   const [garden, setGarden] = useState<GardenBenefits | null>(null);
@@ -344,8 +300,7 @@ export default function PlantScreen() {
     };
   });
   const device = (type: string) => plant.devices.find((d) => d.type === type);
-  const hour = plant.environment.hour;
-  const clock = `${String(Math.floor(hour)).padStart(2, '0')}:${String(Math.round((hour % 1) * 60) % 60).padStart(2, '0')}`;
+  const { clock, isDay } = plantClock(now);
   const NEEDS: Partial<Record<string, [string, string]>> = {
     water: ['moisture_sensor', 'Lá có vẻ hơi rũ — nối cảm biến độ ẩm đất để biết cây khát đến đâu.'],
     fertilize: ['nutrient_sensor', 'Lá trông hơi nhạt màu — nối cảm biến dinh dưỡng để xem cây còn bao nhiêu thức ăn.'],
@@ -363,8 +318,6 @@ export default function PlantScreen() {
   const fan = plant.devices.find((d) => d.type === 'fan');
   // A VIP plant sways in a breeze, harder with the fan on; a regular one stands still.
   const wind = !plant.keeper?.vip || dead ? 'off' : fan?.unlocked && fan.autoMode ? 'fan' : 'breeze';
-  const sensorCols = inner >= 600 ? 5 : inner >= 420 ? 3 : 2;
-  const sensorWidth = Math.floor((inner - 8 * (sensorCols - 1)) / sensorCols);
 
   const TABS: Array<{ key: typeof tab; label: string; icon: IconName }> = [
     { key: 'care', label: 'Nhiệm vụ', icon: 'trophy' },
@@ -374,7 +327,7 @@ export default function PlantScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Screen title={plant.nickname} back="/garden" onRefresh={load} scrollEnabled={!dragging}
+      <Screen title={plant.nickname} back="/garden" onRefresh={load} scrollEnabled={!dragging && !rotating}
         actions={(
           <>
             <IconButton icon="pencil" label="Đổi tên cây" onPress={() => { setNameDraft(plant.nickname); setRenaming(true); }} />
@@ -385,13 +338,14 @@ export default function PlantScreen() {
         <CareGame tools={tools} disabled={dead || harvested} onCare={care} onDragChange={setDragging} onPlayingChange={setToolAtWork}
           fruitColor={plant.fruitColor} sun={SUN_AT[scene]} width={artSize} height={artHeight}>
           <View style={[s.art, { width: artSize, height: artHeight }]}>
-            <Plant3D plant={plant} width={artSize} height={artHeight} isNight={!plant.environment.isDay}
+            <Plant3D plant={plant} width={artSize} height={artHeight} isNight={!isDay}
               scene={scene} decoration={garden?.decoration} wind={wind} hint={!toolAtWork}
+              onInteractionChange={setRotating}
               gadgets={board.wired.map((t) => device(t)).filter(Boolean).map((d) => ({ type: d!.type, on: d!.kind === 'sensor' || d!.autoMode }))} />
-            {!toolAtWork && <View style={s.clock}>
-              <Icon name={scene === 'night' ? 'moon' : scene !== 'natural' ? 'sparkle' : plant.environment.isDay ? 'sun' : 'moon'} size={14} color={colors.ink2} />
+            {!toolAtWork && <View pointerEvents="none" style={s.clock}>
+              <Icon name={scene === 'night' ? 'moon' : scene !== 'natural' ? 'sparkle' : isDay ? 'sun' : 'moon'} size={14} color={colors.ink2} />
               {/* A VIP scene is the same place at any hour, so the pill names the scene instead of claiming it is daytime under a night sky. */}
-              <Text style={s.clockText}>{scene !== 'natural' ? sceneLook(scene).label : plant.environment.isDay ? 'Ban ngày' : 'Ban đêm'} · {clock}</Text>
+              <Text style={s.clockText}>{scene !== 'natural' ? sceneLook(scene).label : isDay ? 'Ban ngày' : 'Ban đêm'} · {clock}</Text>
             </View>}
             {dead && (
               <View style={s.dead}>
@@ -511,18 +465,19 @@ export default function PlantScreen() {
 
         {tab === 'sensors' && (
           <>
-            <Text style={s.note}>Mỗi chỉ số cần cảm biến của nó: nối vào Hub là đọc được ngay, và linh kiện cũng gắn vào chậu cây ở trên. Chặng này cây thích đất ẩm {plant.idealMoisture[0]}–{plant.idealMoisture[1]}% và {plant.idealTemp[0]}–{plant.idealTemp[1]}°C.</Text>
-            <View style={s.grid}>
-              <SensorTile width={sensorWidth} icon="moisture" kind="moisture" label="Nước trong đất" value={plant.moisture} ideal={plant.idealMoisture} band={metricBand(plant.moisture, plant.idealMoisture)} device={device('moisture_sensor')} wired={board.isWired('moisture_sensor')} onPlug={() => board.wire('moisture_sensor')} />
-              <SensorTile width={sensorWidth} icon="thermo" kind="temperature" label="Nhiệt độ" unit="°C" value={plant.environment.temperature} ideal={plant.idealTemp} band={metricBand(plant.environment.temperature, plant.idealTemp)} device={device('thermo_sensor')} wired={board.isWired('thermo_sensor')} onPlug={() => board.wire('thermo_sensor')} />
-              <SensorTile width={sensorWidth} icon="light" kind="light" label="Ánh sáng" value={plant.environment.light} band={plant.environment.light > 35 || !plant.environment.isDay ? 'good' : 'warn'} device={device('light_sensor')} wired={board.isWired('light_sensor')} onPlug={() => board.wire('light_sensor')} />
-              <SensorTile width={sensorWidth} icon="nutrient" kind="nutrient" label="Thức ăn của cây" value={plant.nutrient} band={plant.nutrient > 45 ? 'good' : plant.nutrient > 28 ? 'warn' : 'bad'} device={device('nutrient_sensor')} wired={board.isWired('nutrient_sensor')} onPlug={() => board.wire('nutrient_sensor')} />
-              <SensorTile width={sensorWidth} icon="pest" kind="pest" label="Sâu bệnh" value={plant.pestRisk} band={plant.pestRisk < 40 ? 'good' : plant.pestRisk < 58 ? 'warn' : 'bad'} device={device('camera')} wired={board.isWired('camera')} onPlug={() => board.wire('camera')} />
-            </View>
-
             <View style={s.panel}>
-              <Text style={s.panelTitle}>Bàn lắp mạch</Text>
-              <IotWorkbench board={board} devices={plant.devices} busy={Boolean(deviceBusy)} onToggle={toggleDevice} plantName={plant.nickname} width={inner - 30} />
+              <IotWorkbench board={board} devices={plant.devices} busy={Boolean(deviceBusy)} onToggle={toggleDevice} plantName={plant.nickname} width={inner - 30}
+                summaries={{
+                  moisture_sensor: verdict('moisture', plant.moisture, plant.idealMoisture),
+                  thermo_sensor: verdict('temperature', plant.environment.temperature, plant.idealTemp),
+                  light_sensor: verdict('light', plant.environment.light),
+                  nutrient_sensor: verdict('nutrient', plant.nutrient),
+                  camera: verdict('pest', plant.pestRisk),
+                }}
+                preview={<Plant3D plant={plant} width={Math.min(inner - 34, 420)} height={220} isNight={!isDay}
+                  scene={scene} decoration={garden?.decoration} wind={wind} onInteractionChange={setRotating}
+                  gadgets={board.wired.map((t) => device(t)).filter(Boolean).map((d) => ({ type: d!.type, on: d!.kind === 'sensor' || d!.autoMode }))} />} />
+              <Text style={s.note}>Cây thích đất ẩm {plant.idealMoisture[0]}–{plant.idealMoisture[1]}% · {plant.idealTemp[0]}–{plant.idealTemp[1]}°C</Text>
             </View>
 
             <View style={s.panel}>
@@ -689,11 +644,6 @@ const s = StyleSheet.create({
   journeyNow: { backgroundColor: colors.green },
   journeyLabel: { fontFamily: fonts.semi, fontSize: 10.5, color: colors.ink4, textAlign: 'center' },
 
-  sensor: { borderRadius: radius.md, padding: 12, gap: 4, minHeight: 92 },
-  sensorHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  sensorLabel: { flex: 1, fontFamily: fonts.semi, fontSize: 12, color: colors.ink3 },
-  sensorVerdict: { fontFamily: fonts.display, fontSize: 18, lineHeight: 24 },
-  sensorNum: { fontFamily: fonts.semi, fontSize: 12.5, color: colors.ink3 },
 
   list: { borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card, overflow: 'hidden' },
   listHead: { fontFamily: fonts.bold, fontSize: 15, color: colors.ink, paddingHorizontal: 14, paddingTop: 14, paddingBottom: 6 },

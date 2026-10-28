@@ -79,6 +79,7 @@ export function Screen({ title, back, actions, large, children, onRefresh, bar, 
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const refresh = onRefresh ? async () => {
+    if (!scrollEnabled) return;
     setRefreshing(true);
     try { await onRefresh(); } finally { setRefreshing(false); }
   } : undefined;
@@ -95,10 +96,11 @@ export function Screen({ title, back, actions, large, children, onRefresh, bar, 
       {scroll ? (
         <ScrollView
           scrollEnabled={scrollEnabled}
+          bounces={scrollEnabled}
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.scroll}
-          refreshControl={refresh ? <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.green} colors={[colors.green]} /> : undefined}
+          refreshControl={refresh ? <RefreshControl enabled={scrollEnabled} refreshing={refreshing} onRefresh={refresh} tintColor={colors.green} colors={[colors.green]} /> : undefined}
         >
           {body}
         </ScrollView>

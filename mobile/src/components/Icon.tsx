@@ -12,7 +12,7 @@ export type IconName =
   // interface
   | 'clock' | 'gift' | 'ticket' | 'check' | 'lock' | 'battery' | 'plus' | 'trophy'
   // bare strokes, for steppers and small round buttons
-  | 'add' | 'minus' | 'copy'
+  | 'add' | 'minus' | 'copy' | 'expand'
   | 'heart' | 'bolt' | 'info' | 'bell' | 'chat' | 'sparkle' | 'chart' | 'pot'
   | 'moon' | 'arrow-right' | 'arrow-down' | 'close' | 'pencil' | 'trash' | 'cart' | 'album'
   | 'warning' | 'microphone' | 'plant-chat'
@@ -41,6 +41,7 @@ function fillProps(opacity = 0.25) {
 
 
 const PATHS: Record<IconName, ReactNode> = {
+  expand: <Path {...S} d="M9 4H4v5M15 4h5v5M4 15v5h5M20 15v5h-5" />,
   'plant-chat': (
     <>
       <Path d="M7 3h10a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4H9l-5 3v-4a4 4 0 0 1-2-3V7a4 4 0 0 1 4-4Z" {...S} />

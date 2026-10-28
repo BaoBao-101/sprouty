@@ -3,7 +3,7 @@
     "name": "Sprouty",
     "slug": "sprouty",
     "scheme": "sprouty",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "vn.id.sprouty.app",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
         "CFBundleDevelopmentRegion": "vi",
         "ITSAppUsesNonExemptEncryption": false
@@ -19,7 +19,7 @@
     },
     "android": {
       "package": "vn.id.sprouty.app",
-      "versionCode": 3,
+      "versionCode": 4,
       "allowBackup": false,
       "adaptiveIcon": {
         "backgroundColor": "#FFFDF8",
