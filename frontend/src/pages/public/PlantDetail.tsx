@@ -22,6 +22,7 @@ import { showToast } from '@/services/toast';
 import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
 const PlantViewer3D = lazy(() => import('@/components/PlantViewer3D'));
 import { GardenStyle, type GardenBenefits } from '@/components/GardenStyle';
+import { SpeciesProfile } from '@/components/SpeciesProfile';
 import { sceneLook } from '@/components/garden-looks';
 import { IotWorkbench, type IotCommand } from '@/components/IotWorkbench';
 import { CareGame } from '@/components/CareGame';
@@ -340,6 +341,7 @@ export default function PlantDetail() {
   const [deviceBusy, setDeviceBusy] = useState(false);
   const [garden, setGarden] = useState<GardenBenefits | null>(null);
   const [gardenOpen, setGardenOpen] = useState(false);
+  const [speciesOpen, setSpeciesOpen] = useState(false);
   const [feed, setFeed] = useState<PlantEvent[]>([]);
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
@@ -978,6 +980,23 @@ export default function PlantDetail() {
               <GardenStyle onChange={setGarden} />
             </div>
           </div>
+
+          {/* ── Who the plant is: origin, story, what to look for ────── */}
+          {plant.speciesProfile && (
+            <div className={`pd-panel pd-log pd-garden pd-species${speciesOpen ? ' open' : ''}`}>
+              <button className="pd-log-toggle" aria-expanded={speciesOpen} onClick={() => setSpeciesOpen((v) => !v)}>
+                <SproutyIcon name="book" size={20} />
+                <span>
+                  <strong>Hồ sơ giống · {plant.speciesLabel}</strong>
+                  <em>Xuất xứ, câu chuyện và những điều bé có biết</em>
+                </span>
+                <SproutyIcon name="arrow-down" size={18} className="pd-log-chevron" />
+              </button>
+              <div className="pd-log-body" hidden={!speciesOpen}>
+                <SpeciesProfile label={plant.speciesLabel} profile={plant.speciesProfile} bare />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -220,3 +220,8 @@
 @media (max-width: 520px) {
   .myws-ticket { flex-direction: column; align-items: flex-start }
 }
+
+/* "Chỉ đường" beside the venue: Google Maps, in the app on a phone. */
+.myws-map { margin-left: 6px; font-weight: 700; color: var(--primary-600); text-decoration: underline; text-underline-offset: 3px }
+.myws-map { position: relative; white-space: nowrap }
+.myws-map::after { content: ''; position: absolute; inset: -11px -6px }

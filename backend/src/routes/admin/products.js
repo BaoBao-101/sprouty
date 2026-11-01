@@ -4,7 +4,7 @@ import { requireStaff, requireCsrf, requireAdmin } from '../../middleware/rbac.j
 import { isSpeciesKey, speciesCatalog } from '../../services/plant-sim.js';
 import { readPaging, paged, searchOr } from './paging.js';
 import { multipartFields } from '../../utils/validation.js';
-import { createAsset } from '../../services/storage/index.js';
+import { createAsset, maxProductImageBytes } from '../../services/storage/index.js';
 import { auditLog } from '../../services/audit.js';
 
 // Reject any string containing HTML angle brackets — defense-in-depth against stored XSS.
@@ -39,6 +39,14 @@ const productSchema = z.object({
     .int('Phụ phí Smart phải là số nguyên.')
     .positive('Phụ phí Smart phải lớn hơn 0.')
     .nullable().optional(),
+  // The real IoT devices the Smart variant ships with, one per line.
+  smartIncludes: z.array(
+    noHtml('Thiết bị IoT').and(
+      z.string()
+        .min(1, 'Tên thiết bị IoT không được để trống.')
+        .max(200, 'Mỗi thiết bị IoT tối đa 200 ký tự.'),
+    ),
+  ).max(20, 'Tối đa 20 thiết bị IoT.').optional(),
   // 'membership' is a VIP Garden plan. It was missing here, so the two plans
   // that exist could not be saved from the admin at all — any edit was
   // refused for a category the product already had.
@@ -109,6 +117,22 @@ const updateProductSchema = productSchema.partial();
  * This is a relationship between two fields, and PUT may send only one of them,
  * so it is checked against the merged record rather than inside the schema.
  */
+/**
+ * A Smart variant is the kit with real IoT devices in the box, so it has to say
+ * which: a parent paying the surcharge should see what arrives. Without a
+ * Smart variant there is nothing to list.
+ */
+function assertSmartContents({ smartPriceDelta, smartIncludes }) {
+  if (smartPriceDelta && !(smartIncludes || []).length) {
+    throw new AppError('Bản Smart · IoT cần liệt kê ít nhất 1 thiết bị IoT có trong hộp.', 400);
+  }
+}
+
+/** No Smart variant, no Smart devices — they would otherwise linger unseen. */
+function withSmartContents(data) {
+  return data.smartPriceDelta === null ? { ...data, smartIncludes: [] } : data;
+}
+
 function assertPriceOrder({ price, oldPrice }) {
   if (oldPrice === null || oldPrice === undefined) return;
   if (price === null || price === undefined) return;
@@ -240,6 +264,9 @@ export default async function adminProductRoutes(fastify) {
       kind: 'product_image',
       file,
       category: 'image',
+      // Picked from anywhere, up to 30 MB, in any format a browser shows.
+      maxBytesOverride: maxProductImageBytes(),
+      webImage: true,
     });
     await auditLog(fastify.prisma, req.user.id, 'product.image.upload', 'Asset', asset.id, {
       originalName: asset.originalName,
@@ -255,9 +282,10 @@ export default async function adminProductRoutes(fastify) {
     }
 
     assertPriceOrder(parsed.data);
+    assertSmartContents(parsed.data);
 
     const product = await fastify.prisma.product.create({
-      data: withSpeciesForCategory(parsed.data),
+      data: withSmartContents(withSpeciesForCategory(parsed.data)),
     });
     reply.code(201);
     return { product };
@@ -286,12 +314,16 @@ export default async function adminProductRoutes(fastify) {
     if ('price' in parsed.data || 'oldPrice' in parsed.data) {
       assertPriceOrder({ ...existing, ...parsed.data });
     }
+    // Likewise only when the Smart variant is being edited.
+    if ('smartPriceDelta' in parsed.data || 'smartIncludes' in parsed.data) {
+      assertSmartContents({ ...existing, ...parsed.data });
+    }
 
     const product = await fastify.prisma.product.update({
       where: { id },
       // The category may not be in this payload, so the existing one decides
       // whether a species still applies.
-      data: withSpeciesForCategory(parsed.data, parsed.data.category ?? existing.category),
+      data: withSmartContents(withSpeciesForCategory(parsed.data, parsed.data.category ?? existing.category)),
     });
     return { product };
   });

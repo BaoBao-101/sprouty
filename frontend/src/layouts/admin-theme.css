@@ -873,6 +873,38 @@
   max-width: 1000px;
 }
 
+/* The product editor is a whole form in five steps: as wide as the screen
+   allows, and one height for every step so the dialog does not jump about
+   between a short step and a long one. A phone gets the whole screen. */
+.adm-modal .adm-modal-box.editor-box.product-editor {
+  max-width: min(1240px, calc(100vw - 40px));
+  height: min(920px, calc(100vh - 40px));
+  max-height: none;
+}
+.adm-modal .product-editor .editor-rail { flex-basis: 236px }
+.adm-modal .product-editor .editor-body { padding: 24px 30px }
+/* An iPad held upright: a slimmer rail leaves the form most of the width. */
+@media (max-width: 900px) {
+  .adm-modal .product-editor .editor-rail { flex-basis: 200px }
+  .adm-modal .product-editor .editor-body { padding: 20px 22px }
+}
+@media (max-width: 720px) {
+  .adm-modal:has(.product-editor) { padding: 0 }
+  .adm-modal .adm-modal-box.editor-box.product-editor { max-width: 100vw; height: 100dvh; border-radius: 0; margin: 0 }
+  .adm-modal .product-editor .editor-body { padding: 18px 16px }
+  /* The rail turns into a strip across the top: as tall as one step. */
+  .adm-modal .product-editor .editor-rail { flex-basis: auto }
+  .adm-modal .product-editor .editor-step { min-height: 40px }
+  /* What is missing gets a line of its own, the buttons share the next.
+     The × in the header already closes, so Hủy makes way for the others. */
+  .adm-modal .product-editor .editor-foot { flex-wrap: wrap; gap: 10px; padding: 12px 16px calc(14px + env(safe-area-inset-bottom)) }
+  .adm-modal .product-editor .editor-foot-left,
+  .adm-modal .product-editor .editor-foot > .editor-missing { flex: 1 1 100%; margin-right: 0 }
+  .adm-modal .product-editor .editor-foot .editor-cancel { display: none }
+  .adm-modal .product-editor .editor-foot .btn { min-height: 44px; justify-content: center }
+  .adm-modal .product-editor .editor-foot .btn-primary { flex: 1 1 0; min-width: 0; white-space: normal }
+}
+
 /* Two columns stay two columns while there is room for them. */
 .adm-modal .field-grid {
   display: grid;
@@ -1107,6 +1139,49 @@
   border-radius: var(--r-md);
   border: 1px solid var(--border-c);
   background: var(--surface-2);
+}
+
+/* A kit's two variants, one card each: Tiêu chuẩn and Smart · IoT. */
+.adm-modal .vpr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px }
+.adm-modal .vpr-card {
+  display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 16px; border-radius: 16px;
+  border: 1.5px solid var(--border-c); background: var(--surface);
+}
+.adm-modal .vpr-card.is-smart { border-style: dashed; background: var(--surface-2) }
+.adm-modal .vpr-card.is-smart.is-on { border-style: solid; border-color: #F59E0B; background: #FFFBEB; box-shadow: 0 0 0 3px rgba(245, 158, 11, .1) }
+.adm-modal .vpr-head { display: flex; align-items: center; gap: 10px; min-width: 0 }
+.adm-modal .vpr-head img { flex: none; width: 44px; height: 44px; border-radius: 12px; object-fit: cover }
+.adm-modal .vpr-head > span { display: grid; gap: 2px; min-width: 0; flex: 1 }
+.adm-modal .vpr-head strong { font-family: var(--font-h); font-size: 1rem; color: var(--ink) }
+.adm-modal .vpr-head em { font-style: normal; font-size: .8rem; line-height: 1.4; color: var(--ink-3) }
+.adm-modal .vpr-card .field { margin: 0 }
+.adm-modal .vpr-switch {
+  flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; cursor: pointer;
+  font-size: .8rem; font-weight: 700; color: var(--ink-3); white-space: nowrap;
+}
+.adm-modal .vpr-switch input { position: absolute; opacity: 0; width: 1px; height: 1px }
+.adm-modal .vpr-switch-track { position: relative; width: 40px; height: 24px; border-radius: 99px; background: #CBD5E1; transition: background .15s }
+.adm-modal .vpr-switch-track::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .2); transition: transform .15s;
+}
+.adm-modal .vpr-switch input:checked + .vpr-switch-track { background: #D97706 }
+.adm-modal .vpr-switch input:checked + .vpr-switch-track::after { transform: translateX(16px) }
+.adm-modal .vpr-switch input:focus-visible + .vpr-switch-track { outline: 3px solid #FCD34D; outline-offset: 2px }
+.adm-modal .vpr-card.is-on .vpr-switch { color: #92400E }
+.adm-modal .vpr-total {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px;
+  background: #fff; border: 1px solid #FDE68A; font-size: .82rem; color: #92400E;
+}
+.adm-modal .vpr-total b { font-family: var(--font-h); font-size: 1.2rem; color: #B45309; font-variant-numeric: tabular-nums }
+.adm-modal .vpr-note { display: flex; align-items: flex-start; gap: 6px; margin: 0; font-size: .8rem; line-height: 1.45; color: #92400E }
+.adm-modal .vpr-note svg { flex: none; margin-top: 2px }
+.adm-modal .vpr-off { margin: auto 0; padding: 14px; border-radius: 12px; border: 1px dashed var(--border-c); font-size: .84rem; line-height: 1.5; color: var(--ink-4); text-align: center }
+.adm-modal .price-preview-variant { display: inline-flex; align-items: baseline; gap: 6px }
+.adm-modal .price-preview-variant em { font-style: normal; font-size: .78rem; font-weight: 700; color: var(--ink-3) }
+/* Side by side only while each card keeps room for its price and chips. */
+@media (max-width: 900px) {
+  .adm-modal .vpr { grid-template-columns: minmax(0, 1fr) }
 }
 
 .adm-modal .price-preview-label {
@@ -1390,6 +1465,11 @@
 /* ── "Gồm có": what the customer gets (IncludesEditor) ─────────────────── */
 
 .inc { display: flex; flex-direction: column; gap: 14px }
+/* The Smart variant's devices, under the box they are added to. */
+.inc-smart { margin-top: 22px; padding-top: 18px; border-top: 1.5px dashed var(--parchment-2, #DCE5D6) }
+.inc-smart .inc-explain { background: #FFFBEB; border-color: #FDE68A; color: #92400E }
+.inc-smart .inc-explain strong { color: #78350F }
+.inc-smart .inc-explain span { color: #92400E }
 .inc-explain {
   display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 12px;
   background: #EFF6FF; border: 1px solid #BFDBFE; color: #1E40AF;

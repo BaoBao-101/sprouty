@@ -10,6 +10,7 @@ import { normalizeProduct, productFallbackImage, productGalleryImages } from '@/
 import { Cart } from '@/services/cart';
 import { formatPrice, type Product } from '@/types/product';
 import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
+import { SpeciesProfile } from '@/components/SpeciesProfile';
 import './ProductDetail.css';
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -275,19 +276,20 @@ export default function ProductDetail() {
                     [
                       {
                         key: 'standard',
-                        name: 'Standard',
+                        name: 'Tiêu chuẩn',
                         price: product.price,
-                        note: 'Thiết bị IoT mở dần theo từng chặng cây lớn.',
+                        note: 'Bộ kit trồng cây, không kèm thiết bị IoT.',
                         img: '/assets/images/sprouty-icons/StandardVariant.png',
                       },
                       {
                         key: 'smart',
                         name: 'Smart · IoT',
                         price: product.price + (product.smartDelta || 0),
-                        // What Smart unlocks on the 3D plant — every IoT
-                        // device from day one (createPlantForProduct in
-                        // services/plants.js); the devices are virtual.
-                        note: 'Mở sẵn cả 7 thiết bị IoT từ ngày đầu tiên.',
+                        // The same kit with real IoT devices in the box,
+                        // listed under "Bộ kit gồm có" (smartInc).
+                        note: product.smartInc.length
+                          ? `Bộ kit kèm ${product.smartInc.length} thiết bị IoT thật.`
+                          : 'Bộ kit kèm thiết bị IoT thật.',
                         img: '/assets/images/sprouty-icons/SmartVariant.png',
                       },
                     ] as const
@@ -312,6 +314,14 @@ export default function ProductDetail() {
                     </button>
                   ))}
                 </div>
+              )}
+              {variantChoice && (
+                // The 3D plant is the same for both: its IoT devices arrive
+                // stage by stage, the way a child sets up the real ones.
+                <p className="pdp-variant-note">
+                  <SproutyIcon name="sprout" size={15} /> Cả hai bản đều có cây 3D trên web và app — thiết bị IoT trong trò chơi
+                  mở dần theo từng chặng cây lớn.
+                </p>
               )}
 
               <div className="pdp-buy">
@@ -407,6 +417,23 @@ export default function ProductDetail() {
                 ) : (
                   <p className="pdp-muted">Thông tin đang được cập nhật.</p>
                 )}
+                {product.smartInc.length > 0 && (
+                  // The real IoT devices the Smart variant adds to the box.
+                  <div className={`pdp-smart-inc${variant === 'smart' ? ' is-on' : ''}`}>
+                    <h4>
+                      <SproutyIcon name="bolt" size={16} /> Bản Smart · IoT có thêm
+                      {variant !== 'smart' && <em>chọn bản Smart để nhận kèm</em>}
+                    </h4>
+                    <ul className="pdp-includes">
+                      {product.smartInc.map((item) => (
+                        <li key={item}>
+                          <span className="pdp-check">+</span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
 
               <div className="pdp-panel">
@@ -429,7 +456,7 @@ export default function ProductDetail() {
                   {product.species && (
                     <>
                       <div>
-                        <dt>Giống cây mô phỏng</dt>
+                        <dt>Giống cây</dt>
                         <dd>{product.species.label}</dd>
                       </div>
                       <div>
@@ -448,6 +475,11 @@ export default function ProductDetail() {
                   </div>
                 </dl>
               </div>
+
+              {/* The plant the kit grows: where it comes from and what the child will see. */}
+              {product.species?.profile && (
+                <SpeciesProfile label={product.species.label} profile={product.species.profile} className="pdp-species" />
+              )}
             </div>
           )}
 
@@ -493,7 +525,7 @@ export default function ProductDetail() {
       <div className="pdp-mobile-bar">
         <span>
           <strong>{formatPrice(price)}</strong>
-          {variantChoice && <em>{variant === 'smart' ? 'Smart · IoT' : 'Standard'}</em>}
+          {variantChoice && <em>{variant === 'smart' ? 'Smart · IoT' : 'Tiêu chuẩn'}</em>}
         </span>
         <button className="btn btn-primary" onClick={addToCart}>
           <SproutyIcon name="cart" size={17} /> Thêm vào giỏ

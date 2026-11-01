@@ -18,6 +18,17 @@ export function maxImageBytes() {
   return Number(process.env.MAX_IMAGE_UPLOAD_MB || 10) * 1024 * 1024;
 }
 
+/**
+ * A product photo, picked from anywhere on the admin's computer: as large as
+ * the server's front door lets through (nginx.vps.conf, 30m).
+ */
+export function maxProductImageBytes() {
+  return Number(process.env.MAX_PRODUCT_IMAGE_UPLOAD_MB || 30) * 1024 * 1024;
+}
+
+/** Image formats every browser shows; a product photo has to be one of them. */
+export const WEB_IMAGE_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/bmp']);
+
 export function maxVideoBytes() {
   return Number(process.env.MAX_VIDEO_UPLOAD_MB || 500) * 1024 * 1024;
 }
@@ -90,7 +101,7 @@ export function validateUpload({ mimeType, filename, bytes, category, maxBytesOv
   return ext;
 }
 
-export async function multipartFileToBuffer(file, { category, maxBytesOverride, albumMedia = false }) {
+export async function multipartFileToBuffer(file, { category, maxBytesOverride, albumMedia = false, webImage = false }) {
   if (!file) throw new AppError('Thiếu tệp upload.', 400);
   const chunks = [];
   let total = 0;
@@ -105,20 +116,33 @@ export async function multipartFileToBuffer(file, { category, maxBytesOverride, 
   // Known media retain canonical types. Unrecognized media are kept as binary
   // originals, so the browser downloads them instead of executing active content.
   const format = albumFormat(file.filename, file.mimetype);
+  if (!buffer.length) throw new AppError('Tệp tải lên đang trống.', 400);
+  // A photo that has to show on a web page (a product's): any format a browser
+  // displays, judged by its bytes; anything else is refused with what to do,
+  // rather than kept as a picture that shows broken in the shop.
+  if (webImage) {
+    const [mimeType, extensions, check] = format || [];
+    if (format && check(buffer) && WEB_IMAGE_MIME.has(mimeType)) {
+      return { buffer, ext: '.' + extensions[0], mimeType, originalName: file.filename, sizeBytes: buffer.length };
+    }
+    if (format && check(buffer) && mimeType.startsWith('image/')) {
+      throw new AppError(`Ảnh ${extensions[0].toUpperCase()} không hiện được trên trình duyệt. Mở ảnh và lưu lại dạng JPG hoặc PNG rồi tải lên.`, 400);
+    }
+    throw new AppError(`"${file.filename}" không phải tệp ảnh. Ảnh sản phẩm cần là JPG, PNG, WEBP, GIF, AVIF hoặc BMP.`, 400);
+  }
   if (format) {
     const [mimeType, extensions, check] = format;
     if (check(buffer)) {
       if (!albumMedia && !mimeType.startsWith(category + '/')) {
-        throw new AppError('Please choose a file matching the media category.', 400);
+        throw new AppError(category === 'image' ? 'Hãy chọn một tệp ảnh.' : 'Hãy chọn một tệp video.', 400);
       }
       return { buffer, ext: '.' + extensions[0], mimeType, originalName: file.filename, sizeBytes: buffer.length };
     }
   }
-  if (!buffer.length) throw new AppError('The uploaded file is empty.', 400);
   if (albumMedia || /^(image|video)\//i.test(file.mimetype || '') || format) {
     return { buffer, ext: '.bin', mimeType: 'application/octet-stream', originalName: file.filename, sizeBytes: buffer.length };
   }
-  throw new AppError('Please choose an image or video file.', 400);
+  throw new AppError('Hãy chọn một tệp ảnh hoặc video.', 400);
 
 }
 
@@ -138,8 +162,9 @@ export async function createAsset(prisma, {
   metadata = null,
   maxBytesOverride,
   albumMedia = false,
+  webImage = false,
 }) {
-  const parsed = await multipartFileToBuffer(file, { category, maxBytesOverride, albumMedia });
+  const parsed = await multipartFileToBuffer(file, { category, maxBytesOverride, albumMedia, webImage });
   const checksum = createHash('sha256').update(parsed.buffer).digest('hex');
   const key = safeObjectKey({ kind, ownerUserId, productId, ext: parsed.ext });
   const storage = storageProvider();

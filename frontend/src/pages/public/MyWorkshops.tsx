@@ -11,12 +11,14 @@ import { refreshRewards } from '@/components/PromoBanner';
 import { Pager } from '@/components/Pager';
 import {
   formatWorkshopWhen,
+  formatWorkshopLocation,
   type MyWorkshopRegistration,
   type WorkshopPayment,
 } from '@/types/workshop';
 import { ReviewDialog } from '@/components/reviews/ReviewDialog';
 import { QuickStars, Stars } from '@/components/reviews/Stars';
 import type { EligibleWorkshop, MyWorkshopReview, ReviewOptions } from '@/types/review';
+import { mapsLink, placeOf } from '@/components/PlaceMap';
 import './MyWorkshops.css';
 
 /** The session a review form is open for. */
@@ -181,7 +183,12 @@ export default function MyWorkshops() {
 
           <div className="myws-meta">
             <span><SproutyIcon name="calendar" size={15} /> {formatWorkshopWhen(w)}</span>
-            <span><SproutyIcon name="pin" size={15} /> {w.location}</span>
+            <span>
+              <SproutyIcon name="pin" size={15} /> {formatWorkshopLocation(w)}
+              <a className="myws-map" href={mapsLink(placeOf(w))} target="_blank" rel="noopener noreferrer">
+                Chỉ đường
+              </a>
+            </span>
             <span><SproutyIcon name="child" size={15} /> {reg.childCount} bé{reg.childAge ? ` · ${reg.childAge}` : ''}</span>
           </div>
 

@@ -366,6 +366,16 @@ body{background:#F8F9FC}
   gap: 6px;
 }
 
+.species-profile { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--parchment-2) }
+.species-profile summary { display: grid; gap: 3px; cursor: pointer; list-style: none }
+.species-profile summary::-webkit-details-marker { display: none }
+.species-profile-title { font-size: .82rem; font-weight: 700; color: var(--ink-2) }
+.species-profile-title em { font-weight: 500; color: var(--ink-3) }
+.species-profile-origin { font-size: .8rem; color: var(--ink-3) }
+.species-profile-more { font-size: .8rem; font-weight: 700; color: var(--primary-600) }
+.species-profile[open] .species-profile-more { display: none }
+.species-profile .sp { margin-top: 10px }
+
 .species-preview-stages span {
   padding: 3px 10px;
   border-radius: var(--r-full);

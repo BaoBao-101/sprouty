@@ -7,9 +7,12 @@ import { AdminIcon } from '@/components/icons/AdminIcon';
  * Stored as the product's `includes` and shown on the product page under
  * "📦 Bộ kit gồm có" as a ticked list. It was labelled "Trong hộp" with a
  * single blank box, which said neither what it was for nor where it would
- * appear — and Sprouty kits are simulated plants now, so there is no box. The
- * editor says both, offers the lines most products need as one-click
- * suggestions, and shows the list exactly as the customer will read it.
+ * appear. The editor says both, offers the lines most products need as
+ * one-click suggestions, and shows the list exactly as the customer will read
+ * it.
+ *
+ * With kind "smart" it edits `smartIncludes` instead: the real IoT devices the
+ * Smart · IoT variant adds to the same box.
  */
 
 const MAX_ITEMS = 40;
@@ -36,37 +39,59 @@ function suggestionsFor(category: string, speciesLabel?: string): string[] {
     ];
   }
   // Species labels already read "Cây đậu"; others are a bare name like "Ớt".
-  const name = speciesLabel ? (/^cây\s/i.test(speciesLabel) ? speciesLabel : `Cây ${speciesLabel.toLowerCase()}`) : 'Cây';
-  const plant = `${name} mô phỏng 3D (8 giai đoạn)`;
+  // A real box. The Standard kit has no IoT hardware; that is the Smart list.
+  const seeds = speciesLabel ? `Gói hạt giống ${speciesLabel.toLowerCase()}` : 'Gói hạt giống';
   return [
-    plant,
-    'Mã kích hoạt — gieo hạt ngay trên web',
-    'Cảm biến độ ẩm đất & nhiệt độ',
-    'Mở dần 7 thiết bị IoT ảo',
+    seeds,
+    'Chậu gốm in hình nhân vật ngộ nghĩnh',
+    'Viên đất nén (nở ra khi ngâm nước)',
+    'Thẻ hướng dẫn & cột mốc chăm cây (ngày 1 · 7 · 14 · 21)',
+    'Thẻ bạn đồng hành Buddy của cây',
+    'Bộ màu nước & cọ để bé trang trí chậu',
+    'Cốc đong nước',
+    'Dây buộc cây',
+    'Mã kích hoạt cây 3D trên web và app',
     'Plant Buddy AI hướng dẫn từng bước',
-    'Video hướng dẫn chăm cây',
-    'Album Cây Kỷ Niệm',
-    'Chứng nhận khi thu hoạch',
   ];
 }
+
+/** The devices a Smart · IoT box usually carries; the admin picks what is really in it. */
+const SMART_SUGGESTIONS = [
+  'Cảm biến thông minh cắm chậu, màn hình hiện nhiệt độ & độ ẩm đất',
+  'Bộ điều khiển IoT (Hub) kết nối Wi-Fi',
+  'Cảm biến độ ẩm đất',
+  'Cảm biến nhiệt độ & độ ẩm không khí',
+  'Cảm biến ánh sáng',
+  'Cảm biến dinh dưỡng (EC)',
+  'Camera theo dõi cây',
+  'Đèn trồng cây LED',
+  'Quạt thông gió mini',
+  'Dây cáp & hướng dẫn lắp đặt',
+];
 
 export function IncludesEditor({
   items,
   onChange,
   category,
   speciesLabel,
+  kind = 'box',
 }: {
   items: string[];
   onChange: (next: string[]) => void;
   category: string;
   speciesLabel?: string;
+  /** "smart": the IoT devices the Smart variant adds, not the box itself. */
+  kind?: 'box' | 'smart';
 }) {
+  const smart = kind === 'smart';
   const inputs = useRef<Array<HTMLInputElement | null>>([]);
   const filled = items.map((i) => i.trim()).filter(Boolean);
   const lower = new Set(filled.map((i) => i.toLowerCase()));
-  const suggestions = suggestionsFor(category, speciesLabel);
+  const suggestions = smart ? SMART_SUGGESTIONS : suggestionsFor(category, speciesLabel);
   const missing = suggestions.filter((s) => !lower.has(s.toLowerCase()));
-  const heading = category === 'membership' ? 'Quyền lợi của gói' : category === 'book' ? 'Sách gồm có' : 'Bộ kit gồm có';
+  const heading = smart
+    ? 'Bản Smart · IoT có thêm'
+    : category === 'membership' ? 'Quyền lợi của gói' : category === 'book' ? 'Sách gồm có' : 'Bộ kit gồm có';
 
   const duplicates = new Set(
     filled.filter((item, i) => filled.findIndex((x) => x.toLowerCase() === item.toLowerCase()) !== i).map((i) => i.toLowerCase()),
@@ -136,10 +161,19 @@ export function IncludesEditor({
       <div className="inc-explain">
         <AdminIcon name="info" size={18} />
         <div>
-          <strong>Khách nhận được những gì khi mua sản phẩm này?</strong>
+          <strong>{smart ? 'Bản Smart · IoT kèm những thiết bị IoT nào?' : 'Khách nhận được những gì khi mua sản phẩm này?'}</strong>
           <span>
-            Mỗi dòng là một thứ khách nhận được. Danh sách hiện ở trang sản phẩm, mục <b>{heading}</b>, mỗi dòng
-            có dấu ✓ — như khung xem trước bên phải.
+            {smart ? (
+              <>
+                Mỗi dòng là một thiết bị IoT thật có trong hộp bản Smart, thêm vào bộ kit ở trên. Khách thấy danh sách
+                này ở trang sản phẩm, mục <b>{heading}</b>.
+              </>
+            ) : (
+              <>
+                Mỗi dòng là một thứ khách nhận được. Danh sách hiện ở trang sản phẩm, mục <b>{heading}</b>, mỗi dòng
+                có dấu ✓ — như khung xem trước bên phải.
+              </>
+            )}
           </span>
         </div>
       </div>
@@ -158,7 +192,11 @@ export function IncludesEditor({
                     }}
                     className="form-input"
                     maxLength={MAX_LEN}
-                    placeholder={i === 0 ? 'VD: Cây cà chua mô phỏng 3D (8 giai đoạn)' : 'Thêm một thứ khách nhận được…'}
+                    placeholder={
+                      smart
+                        ? i === 0 ? 'VD: Cảm biến độ ẩm đất' : 'Thêm một thiết bị IoT…'
+                        : i === 0 ? 'VD: Gói hạt giống cà chua' : 'Thêm một thứ khách nhận được…'
+                    }
                     value={item}
                     onChange={(e) => setAt(i, e.target.value)}
                     onKeyDown={(e) => onKey(e, i)}

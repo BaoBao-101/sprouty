@@ -263,6 +263,124 @@ function AddUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
  * two hours; until this existed nobody could actually do it. It also unsticks
  * an account locked out by repeated failed logins.
  */
+/** The lengths an admin usually gives; anything else is typed. */
+const VIP_LENGTHS: Array<{ days: number; label: string }> = [
+  { days: 7, label: '7 ngày' },
+  { days: 30, label: '1 tháng' },
+  { days: 90, label: '3 tháng' },
+  { days: 180, label: '6 tháng' },
+  { days: 365, label: '1 năm' },
+];
+const MAX_GIFT_DAYS = 1095;
+
+/** "45 ngày", "3 tháng", "1 năm" — how long a gift is, in the words of the presets. */
+function giftLength(days: number) {
+  return VIP_LENGTHS.find((l) => l.days === days)?.label ?? `${days} ngày`;
+}
+
+/**
+ * Tặng VIP: the admin picks how long. Days start where the customer's current
+ * VIP ends, so giving a VIP more never cuts what they have; the page shows the
+ * date it will run until before anything is saved.
+ */
+function GrantVipModal({ user, onClose, onDone }: { user: AdminUser; onClose: () => void; onDone: () => void }) {
+  const [days, setDays] = useState(30);
+  const [custom, setCustom] = useState(false);
+  const [amount, setAmount] = useState('45');
+  const [unit, setUnit] = useState<'day' | 'month'>('day');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const typed = Math.floor(Number(amount)) * (unit === 'month' ? 30 : 1);
+  const chosen = custom ? typed : days;
+  const valid = Number.isFinite(chosen) && chosen >= 1 && chosen <= MAX_GIFT_DAYS;
+  const extending = Boolean(user.isVip && user.vipUntil);
+  const start = extending ? new Date(user.vipUntil!) : new Date();
+  const until = valid ? new Date(start.getTime() + chosen * 86_400_000) : null;
+
+  async function submit() {
+    setError('');
+    if (!valid) return setError(`Chọn từ 1 đến ${MAX_GIFT_DAYS} ngày (3 năm).`);
+    setBusy(true);
+    try {
+      const { message } = await API.admin.users.grantVip(user.id, chosen);
+      showToast(message || 'Đã tặng VIP', 'success');
+      onDone();
+      onClose();
+    } catch (err: any) {
+      setError(err?.message || 'Không tặng được VIP.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal
+      title={extending ? 'Tặng thêm VIP' : 'Tặng VIP'}
+      subtitle={`${user.name} · ${user.email}`}
+      width={540}
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn btn-ghost" onClick={onClose}>Hủy</button>
+          <button className="btn btn-primary" disabled={busy || !valid} onClick={submit}>
+            {busy ? 'Đang tặng…' : `Tặng ${valid ? giftLength(chosen) : 'VIP'}`}
+          </button>
+        </>
+      }
+    >
+      <div className="field">
+        <span className="field-label">Thời gian tặng</span>
+        <div className="usr-lengths" role="radiogroup" aria-label="Thời gian tặng VIP">
+          {VIP_LENGTHS.map((l) => (
+            <button key={l.days} type="button" role="radio" aria-checked={!custom && days === l.days}
+              className={`usr-length${!custom && days === l.days ? ' is-on' : ''}`}
+              onClick={() => { setCustom(false); setDays(l.days); setError(''); }}>
+              {l.label}
+            </button>
+          ))}
+          <button type="button" role="radio" aria-checked={custom}
+            className={`usr-length${custom ? ' is-on' : ''}`} onClick={() => { setCustom(true); setError(''); }}>
+            Tuỳ chọn
+          </button>
+        </div>
+        {custom && (
+          <div className="usr-custom-length">
+            <input className="form-input" type="number" inputMode="numeric" min={1} max={unit === 'month' ? 36 : MAX_GIFT_DAYS}
+              value={amount} onChange={(e) => { setAmount(e.target.value); setError(''); }} aria-label="Số lượng" autoFocus />
+            <select className="form-input" value={unit} onChange={(e) => setUnit(e.target.value as 'day' | 'month')} aria-label="Đơn vị">
+              <option value="day">ngày</option>
+              <option value="month">tháng (30 ngày)</option>
+            </select>
+          </div>
+        )}
+      </div>
+
+      <div className={`usr-vip-preview${valid ? '' : ' is-invalid'}`}>
+        <AdminIcon name="star" size={18} />
+        <span>
+          {valid && until ? (
+            <>
+              <b>VIP đến {until.toLocaleDateString('vi-VN')}</b>
+              <em>
+                {extending
+                  ? `Cộng thêm ${chosen} ngày vào sau hạn hiện tại (${vipDate(user.vipUntil)}).`
+                  : `${chosen} ngày, tính từ hôm nay.`}
+              </em>
+            </>
+          ) : (
+            <b>Chọn từ 1 đến {MAX_GIFT_DAYS} ngày (3 năm)</b>
+          )}
+        </span>
+      </div>
+      {error && <div className="form-error" role="alert">{error}</div>}
+      <p className="usr-note">
+        <AdminIcon name="info" size={14} /> Không tính vào doanh thu. Có thể thu hồi phần tặng bất cứ lúc nào; thời gian khách tự mua vẫn giữ nguyên.
+      </p>
+    </Modal>
+  );
+}
+
 function ResetPasswordModal({ user, onClose }: { user: AdminUser; onClose: () => void }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -461,9 +579,14 @@ function ManageUserModal({
                     : 'Khách tự mua — thời gian đã mua không thu hồi được.'}
                 </em>
               </span>
-              {user.vipGifted && (
-                <button className="usr-btn is-danger" disabled={busy} onClick={onRevokeVip}>Thu hồi phần tặng</button>
-              )}
+              <div className="usr-row-actions">
+                <button className="usr-btn is-vip" disabled={busy || !active} onClick={onGrantVip}>
+                  <AdminIcon name="star" size={15} /> Tặng thêm
+                </button>
+                {user.vipGifted && (
+                  <button className="usr-btn is-danger" disabled={busy} onClick={onRevokeVip}>Thu hồi phần tặng</button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="usr-row">
@@ -471,7 +594,7 @@ function ManageUserModal({
                 <b>{user.vipExpired ? `VIP đã hết hạn ${vipDate(user.vipUntil)}` : 'Tài khoản Thường'}</b>
                 <em>
                   {active
-                    ? 'Tặng một gói VIP (gói rẻ nhất đang bán). Không tính vào doanh thu.'
+                    ? 'Tặng VIP với thời gian bạn chọn, từ 7 ngày tới 3 năm. Không tính vào doanh thu.'
                     : 'Kích hoạt lại tài khoản trước khi tặng VIP.'}
                 </em>
               </span>
@@ -539,6 +662,7 @@ export default function Users() {
   const [error, setError] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const [resetting, setResetting] = useState<AdminUser | null>(null);
+  const [gifting, setGifting] = useState<AdminUser | null>(null);
   const [managingId, setManagingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('');
   const [search, setSearch] = useState('');
@@ -622,19 +746,8 @@ export default function Users() {
     });
   }
 
-  async function grantVip(user: AdminUser) {
-    if (
-      user.status !== 'active' ||
-      !await confirmAction(`Tặng VIP cho ${user.name}?\n\nKhông ghi nhận doanh thu cho quyền lợi miễn phí này.`, {
-        title: 'Tặng VIP',
-        confirmLabel: 'Tặng VIP',
-      })
-    )
-      return;
-    run(user, async () => {
-      const { message } = await API.admin.users.grantVip(user.id);
-      showToast(message, 'success');
-    });
+  function grantVip(user: AdminUser) {
+    if (user.status === 'active') setGifting(user);
   }
 
   async function revokeVip(user: AdminUser) {
@@ -787,7 +900,7 @@ export default function Users() {
         onChange={setPage}
       />
 
-      {managing && !resetting && (
+      {managing && !resetting && !gifting && (
         <ManageUserModal
           user={managing}
           isSelf={isSelf(managing)}
@@ -802,6 +915,7 @@ export default function Users() {
       )}
       {addOpen && <AddUserModal onClose={() => setAddOpen(false)} onCreated={load} />}
       {resetting && <ResetPasswordModal user={resetting} onClose={() => setResetting(null)} />}
+      {gifting && <GrantVipModal user={gifting} onClose={() => setGifting(null)} onDone={load} />}
     </>
   );
 }

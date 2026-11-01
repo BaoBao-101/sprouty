@@ -6,11 +6,12 @@ import { FAQS, LB_IMAGES } from '@/data/workshop';
 import { API } from '@/services/api';
 import { formatPrice } from '@/types/product';
 import { SproutyIcon, type IconName as SproutyIconName } from '@/components/icons/SproutyIcon';
-import { formatWorkshopWhen, type PublicWorkshop } from '@/types/workshop';
+import { formatWorkshopLocation, formatWorkshopWhen, type PublicWorkshop } from '@/types/workshop';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoginRequiredDialog, type LoginGate } from '@/components/LoginRequiredDialog';
 import { WorkshopReviewsSection } from '@/components/reviews/WorkshopReviews';
 import { Stars } from '@/components/reviews/Stars';
+import { mapsLink, placeOf, PlaceMap } from '@/components/PlaceMap';
 import type { RatingSummary } from '@/types/review';
 import './Workshop.css';
 
@@ -95,6 +96,8 @@ export default function Workshop() {
   // absent from an older server, where `upcoming` was the whole answer.
   const upcoming = workshops.filter((w) => w.upcoming && w.bookable !== false);
   const next = upcoming.find((w) => !w.isFull) || upcoming[0] || null;
+  // Where the sessions happen, each place once: usually the one studio.
+  const places = [...new Map(upcoming.map((w) => [placeOf(w), w])).values()].slice(0, 4);
   const prices = upcoming.map((w) => w.price).filter((p) => p > 0);
   const fromPrice = prices.length ? Math.min(...prices) : null;
 
@@ -171,7 +174,10 @@ export default function Workshop() {
                   <SproutyIcon name="clock" size={16} /> {formatWorkshopWhen(next)}
                 </li>
                 <li>
-                  <SproutyIcon name="pot" size={16} /> {next.location}
+                  <SproutyIcon name="pot" size={16} />
+                  <a className="ws-map-link" href={mapsLink(placeOf(next))} target="_blank" rel="noopener noreferrer">
+                    {formatWorkshopLocation(next)}
+                  </a>
                 </li>
                 <li className={next.isFull ? 'is-full' : next.seatsLeft <= 3 ? 'is-low' : ''}>
                   <SproutyIcon name="heart" size={16} />{' '}
@@ -273,7 +279,12 @@ export default function Workshop() {
                         <dt>
                           <SproutyIcon name="pot" size={16} /> Địa điểm
                         </dt>
-                        <dd>{w.location}</dd>
+                        <dd>
+                          {formatWorkshopLocation(w)}
+                          <a className="ws-map-link is-small" href={mapsLink(placeOf(w))} target="_blank" rel="noopener noreferrer">
+                            <SproutyIcon name="pin" size={13} /> Xem bản đồ
+                          </a>
+                        </dd>
                       </div>
                       {w.ageRange && (
                         <div>
@@ -348,6 +359,28 @@ export default function Workshop() {
           )}
         </div>
       </section>
+
+      {/* ── Where ──────────────────────────────────────────────────────
+          The venue on a map, so a parent sees how far it is before booking;
+          a tap opens Google Maps with directions. */}
+      {places.length > 0 && (
+        <section className="section ws-section ws-place" id="dia-diem">
+          <div className="container">
+            <div className="ws-head">
+              <div>
+                <span className="label">Địa điểm</span>
+                <h2>Buổi học diễn ra ở đâu?</h2>
+              </div>
+              <span className="ws-head-note">Bấm vào bản đồ để mở Google Maps và chỉ đường.</span>
+            </div>
+            <div className={`ws-places${places.length > 1 ? ' is-many' : ''}`}>
+              {places.map((w) => (
+                <PlaceMap key={placeOf(w)} name={w.location} address={w.address} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── What a session is ─────────────────────────────────────────
           One section instead of three: the old "about", the emoji card that

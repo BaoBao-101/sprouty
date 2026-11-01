@@ -7,6 +7,8 @@ export interface PublicWorkshop {
   dateTime: string;
   endTime?: string | null;
   location: string;
+  /** The street address the map looks up; absent, the map searches `location`. */
+  address?: string | null;
   ageRange?: string | null;
   price: number;
   capacity: number;
@@ -16,6 +18,18 @@ export interface PublicWorkshop {
   upcoming: boolean;
   /** Still open for registration: it has not started. */
   bookable?: boolean;
+}
+
+/** One place label, including addresses saved by the older two-field form. */
+export function formatWorkshopLocation(workshop: { location: string; address?: string | null }) {
+  const location = workshop.location.trim();
+  const address = workshop.address?.trim();
+  if (!address) return location;
+  if (!location) return address;
+  const normalise = (value: string) => value.toLocaleLowerCase('vi-VN').replace(/\s+/g, ' ');
+  if (normalise(location).includes(normalise(address))) return location;
+  if (normalise(address).includes(normalise(location))) return address;
+  return `${location} – ${address}`;
 }
 
 /** Bank-transfer instructions for one booking. */

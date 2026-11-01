@@ -31,6 +31,7 @@
  * cooldown measured in hours is hours. 24 makes an hour pass in a minute.
  */
 import { SPECIES_CARE } from './species-care.js';
+import { speciesProfile } from './species-profile.js';
 
 export function timeScale() {
   const raw = Number(process.env.PLANT_TIME_SCALE || 1);
@@ -313,6 +314,8 @@ export function speciesCatalog() {
     fruitColor: s.fruitColor,
     flowerColor: s.flowerColor,
     blurb: s.blurb,
+    // What the kit's page will tell parents about the plant, attached on its own.
+    profile: speciesProfile(s.key),
     // So the admin can see how the journey reads before committing to it.
     stageLabels: STAGES.map((stage) => s.labels?.[stage.id] || stage.label),
   }));

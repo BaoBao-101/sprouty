@@ -63,6 +63,34 @@ test('staff and disabled accounts cannot receive VIP', async () => {
   }
 });
 
+test('a VIP gift lasts the days the admin chose, and a VIP can be given more', async () => {
+  const target = { id: 'target', name: 'Bé An', role: 'customer', status: 'active', vipUntil: new Date(Date.now() + 10 * 86400000) };
+  const db = database(target);
+  let created;
+  db.product = { async findFirst() { return { id: 9, name: 'VIP Garden Tháng', membershipDays: 30 }; } };
+  db.order = {
+    async create(args) { created = args.data; return { id: 'gift' }; },
+    async findUnique() { return { userId: 'target', items: [{ product: { category: 'membership' } }] }; },
+  };
+  const paidAt = new Date();
+  db.orderItem = { async findMany() { return [{ qty: 1, variant: created.items.create[0].variant, product: { membershipDays: 30 }, order: { id: 'gift', paidAt } }]; } };
+
+  const response = await request(db, 'POST', '/users/target/grant-vip', { days: 45 });
+  assert.equal(response.statusCode, 200);
+  assert.equal(created.items.create[0].variant, 'days:45');
+  assert.equal(db.events.find(e => e[0] === 'update')[1].data.vipUntil.getTime(), paidAt.getTime() + 45 * 86400000);
+  assert.match(response.json().message, /tặng thêm 45 ngày VIP/);
+  assert.equal(db.events.find(e => e[0] === 'audit')[1].data.metadata.days, 45);
+});
+
+test('a VIP gift outside 1 to 1095 days is refused', async () => {
+  for (const days of [0, 1096, 2.5, 'abc']) {
+    const db = database({ id: 'target', role: 'customer', status: 'active' });
+    assert.equal((await request(db, 'POST', '/users/target/grant-vip', { days })).statusCode, 400);
+    assert.equal(db.events.length, 0);
+  }
+});
+
 test('VIP revocation only cancels gifts and preserves paid purchases', async () => {
   const db = database({ id: 'target', role: 'customer', status: 'active' });
   db.order = { async updateMany(args) {

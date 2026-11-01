@@ -146,9 +146,12 @@ model Product {
   description String        @db.Text
   price       Int
   oldPrice    Int?
-  // Extra cost for the "Smart" (IoT) variant at checkout. Null means this
-  // product has no Smart variant — only Standard is offered.
+  // Extra cost for the "Smart · IoT" variant at checkout: the same real kit,
+  // shipped with real IoT devices (listed in smartIncludes). Null means this
+  // product has no Smart variant — only Standard (no IoT) is offered.
   smartPriceDelta Int?
+  // The IoT devices the Smart variant adds to the box. Empty without one.
+  smartIncludes String[] @default([])
   category    String
   // Which plant the simulated kit grows: a key from SPECIES in
   // services/plant-sim.js, chosen by the admin when the product is created.
@@ -256,6 +259,9 @@ model Workshop {
   endTime     DateTime?
   capacity    Int
   location    String
+  // The street address the map and "Chỉ đường" look up. Optional: without it
+  // the map searches the venue name in `location`.
+  address     String?
   ageRange    String?
   price       Int            @default(0)
   status      WorkshopStatus @default(published)

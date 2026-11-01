@@ -49,3 +49,13 @@ test('other media upload routes also accept extended formats', async () => {
   await assert.rejects(multipartFileToBuffer(upload('page.html', 'text/html', Buffer.from('<html>test</html>')), { category: 'image' }));
   await assert.rejects(multipartFileToBuffer(upload('empty.raw', '', Buffer.alloc(0)), { category: 'image', albumMedia: true }));
 });
+
+test('a product photo keeps any format a browser shows and says what to do with the rest', async () => {
+  const png = Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), Buffer.alloc(24)]);
+  const parsed = await multipartFileToBuffer(upload('anh.png', '', png), { category: 'image', webImage: true });
+  assert.equal(parsed.mimeType, 'image/png');
+  const heic = Buffer.alloc(32);
+  Buffer.from('ftypheic', 'ascii').copy(heic, 4);
+  await assert.rejects(multipartFileToBuffer(upload('iphone.HEIC', 'image/heic', heic), { category: 'image', webImage: true }), /HEIC .*JPG hoặc PNG/);
+  await assert.rejects(multipartFileToBuffer(upload('bao-gia.pdf', 'application/pdf', Buffer.from('%PDF-1.7 ......')), { category: 'image', webImage: true }), /không phải tệp ảnh/);
+});

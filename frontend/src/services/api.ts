@@ -323,7 +323,8 @@ export const API = {
       resetPassword(id, password) {
         return _fetch(`/admin/users/${id}/reset-password`, { method: 'POST', body: JSON.stringify({ password }) });
       },
-      grantVip(id)    { return _fetch(`/admin/users/${id}/grant-vip`, { method: 'POST' }); },
+      /** Complimentary VIP for `days` days, after any VIP the customer already has. */
+      grantVip(id, days = 30) { return _fetch(`/admin/users/${id}/grant-vip`, { method: 'POST', body: JSON.stringify({ days }) }); },
       revokeVip(id)   { return _fetch(`/admin/users/${id}/grant-vip`, { method: 'DELETE' }); },
     },
     products: {

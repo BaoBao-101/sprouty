@@ -1,3 +1,4 @@
+import type { SpeciesProfile } from './product';
 import type { IconName } from '@/components/icons/SproutyIcon';
 import type { FruitShape, PlantForm } from '@/components/PlantForms';
 
@@ -161,6 +162,8 @@ export interface PlantDetail extends PlantCard {
   needsPollination: boolean;
   stageStory: string;
   cultivation?: { name: string; sow: string; support: string; mature: string };
+  /** Where the species comes from and what to look for (see SpeciesProfile). */
+  speciesProfile?: SpeciesProfile | null;
   idealMoisture: [number, number];
   idealTemp: [number, number];
   environment: PlantEnvironment;
@@ -226,6 +229,8 @@ export interface SpeciesOption {
   flowerColor: string;
   blurb: string;
   stageLabels: string[];
+  /** What the kit's page will say about the plant; attached to every kit of this species. */
+  profile: SpeciesProfile | null;
 }
 
 /** "còn 2 giờ 15 phút" — the wording the cooldown pills use. */

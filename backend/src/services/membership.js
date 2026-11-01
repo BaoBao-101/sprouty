@@ -24,8 +24,14 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const MEMBERSHIP_CATEGORY = 'membership';
 
-/** One unit's length. The column wins; the name is the fallback for old rows. */
-export function membershipDaysFor(product) {
+/**
+ * One unit's length. A complimentary grant states its own on the order item
+ * (variant "days:N", set by admin/users.js), since an admin gives any length;
+ * otherwise the plan's column, and the name for old rows.
+ */
+export function membershipDaysFor(product, variant) {
+  const gift = /^days:(\d+)$/.exec(variant || '');
+  if (gift) return Number(gift[1]);
   if (product?.membershipDays && product.membershipDays > 0) return product.membershipDays;
   return /annual|năm/i.test(product?.name || '') ? 365 : 30;
 }
@@ -73,6 +79,7 @@ export async function recomputeVipUntil(prisma, userId) {
     },
     select: {
       qty: true,
+      variant: true,
       product: { select: { name: true, membershipDays: true } },
       order: { select: { id: true, paidAt: true } },
     },
@@ -81,7 +88,7 @@ export async function recomputeVipUntil(prisma, userId) {
   const byOrder = new Map();
   for (const item of items) {
     const entry = byOrder.get(item.order.id) || { paidAt: item.order.paidAt, days: 0 };
-    entry.days += membershipDaysFor(item.product) * item.qty;
+    entry.days += membershipDaysFor(item.product, item.variant) * item.qty;
     byOrder.set(item.order.id, entry);
   }
 

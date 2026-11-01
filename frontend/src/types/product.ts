@@ -4,6 +4,17 @@ export type ProductBadge = 'hot' | 'new' | 'sale' | null;
  * The plant a kit grows, resolved server-side so the shop never has to keep
  * its own copy of the species catalogue.
  */
+/** Who a species is, the same for every kit of it (backend/src/services/species-profile.js). */
+export interface SpeciesProfile {
+  scientificName: string;
+  family: string;
+  otherNames: string[];
+  origin: string;
+  story: string;
+  traits: string[];
+  funFacts: string[];
+}
+
 export interface ProductSpecies {
   key: string;
   label: string;
@@ -11,6 +22,8 @@ export interface ProductSpecies {
   harvest: string;
   form: string;
   pollinate: boolean;
+  /** Null for a kit with no particular species. */
+  profile?: SpeciesProfile | null;
 }
 
 /** Shape the UI works with. The API returns a wordier version; see normalizeProduct. */
@@ -29,11 +42,14 @@ export interface Product {
   age: string;
   price: number;
   old: number | null;
-  /** Extra cost of the Smart (IoT) variant; null means standard only. */
+  /** Extra cost of the Smart · IoT variant (the kit with real IoT devices); null means Standard only. */
   smartDelta: number | null;
   bg: string;
   desc: string;
+  /** What is in the box, either variant. */
   inc: string[];
+  /** The IoT devices the Smart variant adds to the box. */
+  smartInc: string[];
   badge: ProductBadge;
   images: string[];
   status: string;

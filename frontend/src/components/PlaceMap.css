@@ -1,0 +1,55 @@
+/* A place on a map, the whole card a link to Google Maps (PlaceMap.tsx). */
+.place-map {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-c);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color .15s;
+}
+.place-map:hover { border-color: var(--primary-300) }
+.place-map:focus-visible { outline: 3px solid var(--primary-300); outline-offset: 2px }
+
+.place-map-frame { position: relative; display: block; aspect-ratio: 16 / 7; background: var(--primary-100) }
+/* Only a picture: a tap belongs to the link around it. */
+.place-map-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; pointer-events: none }
+
+.place-map-bar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; min-height: 60px }
+.place-map-pin {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--primary-100);
+  color: var(--primary-600);
+}
+.place-map-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px }
+.place-map-text strong { font-size: .96rem; color: var(--ink); overflow-wrap: anywhere }
+.place-map-text small { font-size: .84rem; color: var(--ink-3); overflow-wrap: anywhere }
+.place-map-go {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .86rem;
+  font-weight: 700;
+  color: var(--primary-600);
+}
+
+@media (max-width: 560px) {
+  .place-map-frame { aspect-ratio: 4 / 3 }
+  .place-map-bar { flex-wrap: wrap }
+  .place-map-go {
+    width: 100%;
+    justify-content: center;
+    min-height: 42px;
+    border-radius: var(--r-md);
+    background: var(--primary-100);
+  }
+}

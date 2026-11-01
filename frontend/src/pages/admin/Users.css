@@ -86,12 +86,36 @@
 .usr-row > span { display: grid; gap: 2px; min-width: 0 }
 .usr-row b { font-size: .88rem; color: var(--ink) }
 .usr-row em { font-style: normal; font-size: .78rem; line-height: 1.45; color: var(--ink-4) }
+.usr-row-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end }
+
+/* ── "Tặng VIP": how long ──────────────────────────────────────────── */
+.usr-lengths { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px }
+.usr-length {
+  min-height: 44px; padding: 0 10px; border-radius: 12px; cursor: pointer; font: inherit; font-size: .86rem; font-weight: 700;
+  border: 1.5px solid var(--border-c); background: var(--surface); color: var(--ink-2);
+}
+.usr-length:hover { border-color: #FCD34D }
+.usr-length.is-on { border-color: #D97706; background: #FFFBEB; color: #92400E; box-shadow: 0 0 0 3px rgba(217, 119, 6, .12) }
+.usr-custom-length { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 8px; margin-top: 10px }
+.usr-custom-length .form-input { min-height: 44px }
+.usr-vip-preview {
+  display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; padding: 12px 14px; border-radius: 12px;
+  background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E;
+}
+.usr-vip-preview svg { flex: none; margin-top: 2px }
+.usr-vip-preview span { display: grid; gap: 2px }
+.usr-vip-preview b { font-size: .92rem; color: #78350F }
+.usr-vip-preview em { font-style: normal; font-size: .8rem; color: #92400E }
+.usr-vip-preview.is-invalid { background: #FFF1F2; border-color: #FECDD3; color: #BE123C }
+.usr-vip-preview.is-invalid b { color: #BE123C }
 
 @media (max-width: 640px) {
   .usr-summary { grid-template-columns: repeat(2, minmax(0, 1fr)) }
   .usr-roles { grid-template-columns: 1fr }
   .usr-row { flex-direction: column; align-items: stretch }
   .usr-row .usr-btn { width: 100% }
+  .usr-row-actions { flex-direction: column; align-items: stretch }
+  .usr-lengths { grid-template-columns: repeat(2, minmax(0, 1fr)) }
   .usr-email { max-width: 200px }
 }
 

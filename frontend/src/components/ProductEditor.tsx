@@ -7,6 +7,7 @@ import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { formatPrice } from '@/types/product';
 import { AdminIcon, type AdminIconName } from '@/components/icons/AdminIcon';
+import { SpeciesProfile } from '@/components/SpeciesProfile';
 import {
   AGE_PRESETS,
   ComboField,
@@ -36,6 +37,8 @@ export interface AdminProduct {
   bgColor?: string;
   images?: string[];
   includes?: string[];
+  /** The IoT devices the Smart variant adds to the box. */
+  smartIncludes?: string[];
   status: 'published' | 'draft' | 'archived';
 }
 
@@ -96,6 +99,7 @@ const EMPTY: FormState = {
   status: 'published',
   images: [''],
   includes: [''],
+  smartIncludes: [''],
 };
 
 interface FormState {
@@ -114,6 +118,7 @@ interface FormState {
   status: string;
   images: string[];
   includes: string[];
+  smartIncludes: string[];
 }
 
 function toForm(product: AdminProduct): FormState {
@@ -135,6 +140,7 @@ function toForm(product: AdminProduct): FormState {
     status: product.status,
     images: product.images?.length ? [...product.images] : [''],
     includes: product.includes?.length ? [...product.includes] : [''],
+    smartIncludes: product.smartIncludes?.length ? [...product.smartIncludes] : [''],
   };
 }
 
@@ -158,11 +164,8 @@ function ImageRow({
   // photo while filling in the form, so there is no product id to attach it
   // to yet. The server stores the file and hands back a URL, which is what
   // gets saved with the rest of the fields.
+  // Any file can be picked; the server says plainly if it cannot be a photo.
   async function upload(file: File) {
-    if (!file.type.startsWith('image/')) {
-      showToast('Chỉ nhận file ảnh.', 'error');
-      return;
-    }
     setBusy(true);
     try {
       const body = new FormData();
@@ -222,7 +225,6 @@ function ImageRow({
         <input
           ref={fileInput}
           type="file"
-          accept="image/*"
           style={{ display: 'none' }}
           onChange={(e) => {
             const file = e.target.files?.[0];
@@ -266,6 +268,8 @@ export function ProductEditor({
     editing ? toForm(editing) : { ...EMPTY, category: defaultCategory ?? EMPTY.category },
   );
   const [tab, setTab] = useState<TabKey>('basic');
+  /** Whether a kit is also sold as Smart · IoT (the box with real IoT devices). */
+  const [smartOn, setSmartOn] = useState(() => Boolean(editing?.smartPriceDelta));
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -307,6 +311,10 @@ export function ProductEditor({
 
   const imageCount = form.images.filter((u) => u.trim()).length;
   const includeCount = form.includes.filter((i) => i.trim()).length;
+  const smartCount = form.smartIncludes.filter((i) => i.trim()).length;
+  const isKit = form.category === 'kit';
+  /** A Smart · IoT variant is on sale: the kit plus real IoT devices. Only kits have one. */
+  const hasSmart = isKit && smartOn && smartDelta > 0;
 
   /** Every missing required field, with the tab it lives on, so we can jump there. */
   const problems = useMemo(() => {
@@ -318,8 +326,10 @@ export function ProductEditor({
     if (!price) list.push({ tab: 'pricing', message: 'Nhập giá bán lớn hơn 0.' });
     if (oldPrice && oldPrice <= price) list.push({ tab: 'pricing', message: 'Giá trước giảm phải lớn hơn giá bán.' });
     if (isPlan && planDays < 1) list.push({ tab: 'pricing', message: 'Nhập thời hạn gói VIP (số ngày).' });
+    if (isKit && smartOn && !smartDelta) list.push({ tab: 'pricing', message: 'Nhập phụ phí bản Smart · IoT, hoặc tắt bản Smart.' });
+    if (hasSmart && !smartCount) list.push({ tab: 'includes', message: 'Liệt kê ít nhất 1 thiết bị IoT có trong hộp bản Smart · IoT.' });
     return list;
-  }, [form, price, oldPrice, isPlan, planDays]);
+  }, [form, price, oldPrice, isPlan, planDays, isKit, smartOn, smartDelta, hasSmart, smartCount]);
   const problem = problems[0] ?? null;
 
   /* ── Creating: five steps, in order ─────────────────────────────────────
@@ -337,7 +347,7 @@ export function ProductEditor({
   /** What still blocks leaving this step, in that step's own words. */
   function stepProblem(key: TabKey): string | null {
     if (key === 'images') return imageCount ? null : 'Thêm ít nhất 1 ảnh sản phẩm.';
-    if (key === 'includes') return includeCount ? null : 'Thêm ít nhất 1 thứ khách nhận được.';
+    if (key === 'includes' && !includeCount) return 'Thêm ít nhất 1 thứ khách nhận được.';
     if (key === 'videos') return videoCount ? null : 'Thêm ít nhất 1 video hướng dẫn để hoàn tất.';
     return problems.find((p) => p.tab === key)?.message ?? null;
   }
@@ -364,7 +374,14 @@ export function ProductEditor({
     if (busy) return;
     setError('');
 
-    if (wizard) {
+    if (wizard && product && tab !== 'videos') {
+      // Back on an earlier step after creating: save it, then on to the next.
+      const issue = stepProblem(tab);
+      if (issue) {
+        setError(issue);
+        return;
+      }
+    } else if (wizard) {
       // Created already: the last step finishes, once a video is on it.
       if (product) {
         if (!videoCount) {
@@ -405,13 +422,15 @@ export function ProductEditor({
       description: form.description.trim(),
       price,
       oldPrice: oldPrice || null,
-      // A plan has no Smart variant, and only a plan has a length.
-      smartPriceDelta: isPlan ? null : smartDelta || null,
+      // Only a kit has a Smart variant, and only a plan has a length.
+      smartPriceDelta: hasSmart ? smartDelta : null,
       membershipDays: isPlan ? planDays : null,
       emoji: form.emoji.trim() || '🎨',
       badge: form.badge || null,
       images: form.images.map((u) => u.trim()).filter(Boolean),
       includes: form.includes.map((i) => i.trim()).filter(Boolean),
+      // Only a Smart variant has devices to list.
+      smartIncludes: hasSmart ? form.smartIncludes.map((i) => i.trim()).filter(Boolean) : [],
       status: form.status,
     };
 
@@ -419,9 +438,16 @@ export function ProductEditor({
       if (product) {
         const { product: updated } = await API.admin.products.update(product.id, payload);
         setProduct(updated);
-        showToast('Đã cập nhật sản phẩm', 'success');
         onSaved();
-        onClose();
+        if (wizard) {
+          // Still creating: saved, and on to the step after this one.
+          showToast('Đã lưu thay đổi', 'success');
+          const following = TABS[stepIndex + 1];
+          if (following) goTo(following.key);
+        } else {
+          showToast('Đã cập nhật sản phẩm', 'success');
+          onClose();
+        }
       } else {
         const { product: created } = await API.admin.products.create(payload);
         setProduct(created);
@@ -457,7 +483,7 @@ export function ProductEditor({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="adm-modal-box editor-box">
+      <div className="adm-modal-box editor-box product-editor">
         <div className="editor-head">
           <div>
             <h2 className="adm-modal-title" style={{ margin: 0 }}>
@@ -484,9 +510,9 @@ export function ProductEditor({
             <nav className={`editor-rail${wizard ? ' is-wizard' : ''}`} aria-label="Phần thông tin sản phẩm">
               {wizard && TABS.map((t, i) => {
                 const created = Boolean(product);
-                // Before creating: only steps already opened. After: only the
-                // video step — the rest are saved, and edited from the list.
-                const locked = created ? t.key !== 'videos' : i > reached || t.key === 'videos';
+                // Before creating: only steps already opened. After: every
+                // step, to go back and change something before finishing.
+                const locked = created ? false : i > reached || t.key === 'videos';
                 const done = created ? i < TABS.length - 1 || videoCount > 0 : i < reached && !stepProblem(t.key);
                 const current = tab === t.key;
                 return (
@@ -496,13 +522,7 @@ export function ProductEditor({
                     className={`editor-step${current ? ' active' : ''}${locked ? ' locked' : ''}${done && !current ? ' done' : ''}`}
                     disabled={locked}
                     aria-current={current ? 'step' : undefined}
-                    title={
-                      locked
-                        ? created
-                          ? 'Đã lưu — sửa lại từ danh sách sản phẩm'
-                          : 'Hoàn thành bước trước để mở bước này'
-                        : undefined
-                    }
+                    title={locked ? 'Hoàn thành bước trước để mở bước này' : undefined}
                     onClick={() => goTo(t.key)}
                   >
                     <span className="editor-step-num">{done && !current ? '✓' : i + 1}</span>
@@ -645,6 +665,20 @@ export function ProductEditor({
                             <span key={i}>{label}</span>
                           ))}
                         </div>
+                        {/* The species profile comes with the pick: nothing to write, and
+                            the admin sees what parents and children will read. */}
+                        {chosenSpecies.profile && (
+                          <details className="species-profile">
+                            <summary>
+                              <span className="species-profile-title">
+                                Hồ sơ giống tự gắn vào sản phẩm · <em>{chosenSpecies.profile.scientificName}</em>
+                              </span>
+                              <span className="species-profile-origin">Xuất xứ: {chosenSpecies.profile.origin}</span>
+                              <span className="species-profile-more">Xem câu chuyện, đặc điểm và {chosenSpecies.profile.funFacts.length} điều Bé có biết</span>
+                            </summary>
+                            <SpeciesProfile label={chosenSpecies.label} profile={chosenSpecies.profile} bare />
+                          </details>
+                        )}
                       </div>
                     )}
                   </div>
@@ -690,47 +724,125 @@ export function ProductEditor({
 
             {tab === 'pricing' && (
               <>
-                <div className="field-grid">
-                  {/* "Giá gốc" read as a cost/wholesale price, and "giá gạch ngang" reads as
-                      the discounted one. "Giá trước giảm" cannot be taken for either. */}
-                  <div className="field">
-                    <span className="field-label">
-                      Giá bán <span className="req">*</span>
-                    </span>
-                    <MoneyInput
-                      value={form.price}
-                      onChange={set('price')}
-                      placeholder="0"
-                      suggestions={PRODUCT_PRICE_PRESETS}
-                    />
-                    <span className="field-hint">Số tiền khách thực trả</span>
-                  </div>
+                {isKit ? (
+                  // Two ways to buy the same kit, side by side: what each one
+                  // is, and what the customer pays for it. A single surcharge
+                  // box under the price said neither.
+                  <div className="vpr">
+                    <section className="vpr-card">
+                      <header className="vpr-head">
+                        <img src="/assets/images/sprouty-icons/StandardVariant.png" alt="" />
+                        <span>
+                          <strong>Bản Tiêu chuẩn</strong>
+                          <em>Bộ kit trồng cây, không kèm thiết bị IoT</em>
+                        </span>
+                      </header>
+                      <div className="field">
+                        <span className="field-label">
+                          Giá bán <span className="req">*</span>
+                        </span>
+                        <MoneyInput value={form.price} onChange={set('price')} placeholder="0" suggestions={PRODUCT_PRICE_PRESETS} />
+                        <span className="field-hint">Số tiền khách thực trả cho bản Tiêu chuẩn</span>
+                      </div>
+                      {/* "Giá gốc" read as a cost/wholesale price, and "giá gạch ngang" reads as
+                          the discounted one. "Giá trước giảm" cannot be taken for either. */}
+                      <div className="field">
+                        <span className="field-label">Giá trước giảm</span>
+                        <MoneyInput value={form.oldPrice} onChange={set('oldPrice')} placeholder="0" suggestions={roundUpSuggestions} />
+                        <span className="field-hint">
+                          {discount ? `Giảm ${discount}% so với giá này` : 'Để trống nếu sản phẩm không giảm giá'}
+                        </span>
+                      </div>
+                    </section>
 
-                  <div className="field">
-                    <span className="field-label">Giá trước giảm</span>
-                    <MoneyInput
-                      value={form.oldPrice}
-                      onChange={set('oldPrice')}
-                      placeholder="0"
-                      suggestions={roundUpSuggestions}
-                    />
-                    <span className="field-hint">
-                      {discount
-                        ? `Giảm ${discount}% so với giá này`
-                        : 'Để trống nếu sản phẩm không giảm giá'}
-                    </span>
+                    <section className={`vpr-card is-smart${smartOn ? ' is-on' : ''}`}>
+                      <header className="vpr-head">
+                        <img src="/assets/images/sprouty-icons/SmartVariant.png" alt="" />
+                        <span>
+                          <strong>Bản Smart · IoT</strong>
+                          <em>Cùng bộ kit, kèm thiết bị IoT thật</em>
+                        </span>
+                        <label className="vpr-switch">
+                          <input
+                            type="checkbox"
+                            checked={smartOn}
+                            onChange={(e) => {
+                              setSmartOn(e.target.checked);
+                              if (!e.target.checked) set('smartPriceDelta')('');
+                            }}
+                          />
+                          <span className="vpr-switch-track" aria-hidden="true" />
+                          {smartOn ? 'Có bán' : 'Không bán'}
+                        </label>
+                      </header>
+                      {smartOn ? (
+                        <>
+                          <div className="field">
+                            <span className="field-label">
+                              Phụ phí so với bản Tiêu chuẩn <span className="req">*</span>
+                            </span>
+                            <MoneyInput value={form.smartPriceDelta} onChange={set('smartPriceDelta')} placeholder="0" suggestions={SMART_DELTA_PRESETS} />
+                            <span className="field-hint">Tiền thêm cho thiết bị IoT trong hộp</span>
+                          </div>
+                          <div className="vpr-total">
+                            <span>Khách trả cho bản Smart</span>
+                            <b>{price > 0 && smartDelta > 0 ? formatPrice(price + smartDelta) : '—'}</b>
+                          </div>
+                          <p className="vpr-note">
+                            <AdminIcon name="info" size={14} />
+                            <span>Liệt kê các thiết bị IoT có trong hộp ở bước <b>Gồm có</b>.</span>
+                          </p>
+                        </>
+                      ) : (
+                        <p className="vpr-off">Chỉ bán bản Tiêu chuẩn. Bật lên nếu sản phẩm có bán kèm thiết bị IoT.</p>
+                      )}
+                    </section>
                   </div>
-                </div>
+                ) : (
+                  <div className="field-grid">
+                    {/* "Giá gốc" read as a cost/wholesale price, and "giá gạch ngang" reads as
+                        the discounted one. "Giá trước giảm" cannot be taken for either. */}
+                    <div className="field">
+                      <span className="field-label">
+                        Giá bán <span className="req">*</span>
+                      </span>
+                      <MoneyInput value={form.price} onChange={set('price')} placeholder="0" suggestions={PRODUCT_PRICE_PRESETS} />
+                      <span className="field-hint">Số tiền khách thực trả</span>
+                    </div>
 
-                {/* Both numbers side by side, exactly as the shop renders them —
-                    cheaper to read than re-deriving it from two input boxes. */}
+                    <div className="field">
+                      <span className="field-label">Giá trước giảm</span>
+                      <MoneyInput value={form.oldPrice} onChange={set('oldPrice')} placeholder="0" suggestions={roundUpSuggestions} />
+                      <span className="field-hint">
+                        {discount ? `Giảm ${discount}% so với giá này` : 'Để trống nếu sản phẩm không giảm giá'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* The numbers exactly as the shop renders them — cheaper to
+                    read than re-deriving them from the input boxes. */}
                 {price > 0 && (
                   <div className="price-preview">
                     <span className="price-preview-label">Khách sẽ thấy</span>
-                    <span className="price-preview-now">{formatPrice(price)}</span>
+                    {hasSmart ? (
+                      <>
+                        <span className="price-preview-variant">
+                          <em>Tiêu chuẩn</em>
+                          <span className="price-preview-now">{formatPrice(price)}</span>
+                          {oldPrice > price && <span className="price-preview-old">{formatPrice(oldPrice)}</span>}
+                        </span>
+                        <span className="price-preview-variant">
+                          <em>Smart · IoT</em>
+                          <span className="price-preview-now">{formatPrice(price + smartDelta)}</span>
+                        </span>
+                      </>
+                    ) : (
+                      <span className="price-preview-now">{formatPrice(price)}</span>
+                    )}
                     {oldPrice > price && (
                       <>
-                        <span className="price-preview-old">{formatPrice(oldPrice)}</span>
+                        {!hasSmart && <span className="price-preview-old">{formatPrice(oldPrice)}</span>}
                         <span className="price-preview-tag">−{discount}%</span>
                       </>
                     )}
@@ -763,22 +875,7 @@ export function ProductEditor({
                         : 'Số ngày VIP khách nhận được mỗi lần thanh toán gói này.'}
                     </span>
                   </div>
-                ) : (
-                  <label className="field">
-                    <span className="field-label">Phụ phí bản Smart / IoT</span>
-                    <MoneyInput
-                      value={form.smartPriceDelta}
-                      onChange={set('smartPriceDelta')}
-                      placeholder="0"
-                      suggestions={SMART_DELTA_PRESETS}
-                    />
-                    <span className="field-hint">
-                      {smartDelta
-                        ? `Bản Smart sẽ có giá ${formatPrice(price + smartDelta)}`
-                        : 'Để trống nếu sản phẩm không có bản Smart'}
-                    </span>
-                  </label>
-                )}
+                ) : null}
 
                 <div className="field-grid">
                   <label className="field">
@@ -875,6 +972,18 @@ export function ProductEditor({
                 speciesLabel={chosenSpecies?.label}
               />
             )}
+            {tab === 'includes' && hasSmart && (
+              // The Smart variant is the same box plus real IoT devices: listed
+              // here so the parent paying for it sees what arrives.
+              <div className="inc-smart">
+                <IncludesEditor
+                  kind="smart"
+                  items={form.smartIncludes}
+                  onChange={set('smartIncludes')}
+                  category={form.category}
+                />
+              </div>
+            )}
 
             {tab === 'videos' &&
               (product ? (
@@ -905,30 +1014,37 @@ export function ProductEditor({
                   <span className="editor-step-ok">
                     {tab === 'includes' && !product
                       ? 'Đủ 4 bước — tạo sản phẩm để thêm video.'
-                      : product
+                      : product && tab === 'videos'
                         ? 'Đã có video — bấm Hoàn tất.'
-                        : 'Bước này đã đủ.'}
+                        : product
+                          ? 'Sản phẩm đã tạo — sửa xong bấm Lưu & tiếp tục.'
+                          : 'Bước này đã đủ.'}
                   </span>
                 )}
               </div>
 
               {!product && (
-                <button type="button" className="btn btn-ghost" onClick={onClose}>
+                <button type="button" className="btn btn-ghost editor-cancel" onClick={onClose}>
                   Hủy
                 </button>
               )}
-              {!product && stepIndex > 0 && (
+              {stepIndex > 0 && (
                 <button type="button" className="btn btn-ghost" onClick={() => goTo(TABS[stepIndex - 1].key)}>
                   ← Quay lại
                 </button>
               )}
               <button type="submit" className="btn btn-primary" disabled={busy || Boolean(stepProblem(tab))}>
                 {busy ? (
-                  'Đang tạo…'
-                ) : product ? (
+                  product ? 'Đang lưu…' : 'Đang tạo…'
+                ) : product && tab === 'videos' ? (
                   <>
                     <AdminIcon name="check" size={17} />
                     Hoàn tất
+                  </>
+                ) : product ? (
+                  <>
+                    Lưu & tiếp tục
+                    <AdminIcon name="arrow-right" size={16} />
                   </>
                 ) : tab === 'includes' ? (
                   <>

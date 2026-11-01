@@ -4,7 +4,7 @@ import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { formatPrice } from '@/types/product';
 import type { PublicWorkshop, WorkshopPayment } from '@/types/workshop';
-import { formatWorkshopWhen } from '@/types/workshop';
+import { formatWorkshopLocation, formatWorkshopWhen } from '@/types/workshop';
 import { refreshRewards, useRewards } from '@/components/PromoBanner';
 import { SproutyIcon } from '@/components/icons/SproutyIcon';
 
@@ -228,7 +228,7 @@ export function WorkshopRegisterModal({
               </div>
               <div>
                 <span>Địa điểm</span>
-                <strong>{workshop.location}</strong>
+                <strong>{formatWorkshopLocation(workshop)}</strong>
               </div>
               <div>
                 <span>Liên hệ</span>
@@ -262,7 +262,7 @@ export function WorkshopRegisterModal({
                 <div className="ws-modal-meta">
                   <SproutyIcon name="calendar" size={15} /> {formatWorkshopWhen(workshop)}
                   <br />
-                  <SproutyIcon name="pin" size={15} /> {workshop.location}
+                  <SproutyIcon name="pin" size={15} /> {formatWorkshopLocation(workshop)}
                   {workshop.ageRange && <> · <SproutyIcon name="child" size={15} /> {workshop.ageRange}</>}
                 </div>
                 <div className="ws-modal-seats">

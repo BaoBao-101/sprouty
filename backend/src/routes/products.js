@@ -1,4 +1,5 @@
 import { speciesCatalog, speciesFor } from '../services/plant-sim.js';
+import { speciesProfile } from '../services/species-profile.js';
 
 /**
  * Attaches the species a kit grows, resolved the same way the simulation
@@ -24,6 +25,9 @@ function withSpecies(product) {
       harvest: species.harvest,
       form: species.form,
       pollinate: species.pollinate,
+      // Who the plant is — origin, story, things to look for — for the parent
+      // choosing a kit. It comes with the species, so no kit needs its own.
+      profile: speciesProfile(species.key),
     },
   };
 }

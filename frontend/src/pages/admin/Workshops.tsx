@@ -19,7 +19,7 @@ import {
   type LoadState,
 } from '@/components/admin/ui';
 import { API } from '@/services/api';
-import { formatWorkshopWhen } from '@/types/workshop';
+import { formatWorkshopLocation, formatWorkshopWhen } from '@/types/workshop';
 import { showToast } from '@/services/toast';
 import { AdminIcon } from '@/components/icons/AdminIcon';
 import { usePagedList } from '@/components/admin/usePagedList';
@@ -33,6 +33,7 @@ import {
 } from '@/components/admin/fields';
 import { WorkshopStaffPicker, type StaffOption, type StaffRef } from './WorkshopStaffPicker';
 import { Stars } from '@/components/reviews/Stars';
+import { mapsLink } from '@/components/PlaceMap';
 
 interface WorkshopRow {
   id: string;
@@ -42,6 +43,7 @@ interface WorkshopRow {
   dateTime: string;
   endTime?: string | null;
   location: string;
+  address?: string | null;
   ageRange?: string | null;
   price: number;
   status: string;
@@ -393,7 +395,7 @@ export default function Workshops() {
         dateTime: toLocalInput(workshop.dateTime),
         endTime: workshop.endTime ? toLocalInput(workshop.endTime) : '',
         capacity: String(workshop.capacity),
-        location: workshop.location,
+        location: formatWorkshopLocation(workshop),
         ageRange: workshop.ageRange ?? '',
         price: String(workshop.price ?? 0),
         status: workshop.status ?? 'published',
@@ -404,7 +406,7 @@ export default function Workshops() {
       const last = stats?.workshops.at(-1);
       setForm({
         ...EMPTY_FORM,
-        location: last?.location ?? '',
+        location: last ? formatWorkshopLocation(last) : '',
         price: String(last?.price ?? 0),
       });
     }
@@ -454,6 +456,7 @@ export default function Workshops() {
     if (form.title.trim().length < 3) return setFormError('Tên workshop phải có ít nhất 3 ký tự.');
     if (!form.dateTime) return setFormError('Chọn thời gian diễn ra.');
     if (form.location.trim().length < 3) return setFormError('Địa điểm phải có ít nhất 3 ký tự.');
+    if (form.location.trim().length > 503) return setFormError('Địa điểm tối đa 503 ký tự.');
     const capacity = parseInt(form.capacity, 10);
     if (!capacity || capacity < 1) return setFormError('Sức chứa phải lớn hơn 0.');
     const price = parseInt(form.price, 10);
@@ -471,6 +474,8 @@ export default function Workshops() {
       endTime: form.endTime ? fromLocalInput(form.endTime) : null,
       capacity,
       location: form.location.trim(),
+      // The single location field now contains the complete place.
+      address: null,
       ageRange: form.ageRange.trim(),
       price,
       status: form.status,
@@ -483,6 +488,9 @@ export default function Workshops() {
         showToast('Đã cập nhật workshop', 'success');
       } else {
         await API.admin.workshops.create(payload);
+        setFilter('');
+        setSearch('');
+        setPage(1);
         showToast('Đã tạo workshop mới', 'success');
       }
       setEditorOpen(false);
@@ -576,9 +584,12 @@ export default function Workshops() {
 
   // The studios already in use, offered to the editor so a session joins one
   // rather than spawning a near-duplicate spelling of it.
-  const locationOptions = (stats?.byLocation || [])
-    .filter((row) => row.location)
-    .map((row) => ({ value: row.location, count: row.workshopCount }));
+  const locationCounts = new Map<string, number>();
+  for (const workshop of stats?.workshops || []) {
+    const location = formatWorkshopLocation(workshop);
+    if (location) locationCounts.set(location, (locationCounts.get(location) || 0) + 1);
+  }
+  const locationOptions = [...locationCounts].map(([value, count]) => ({ value, count }));
 
   const totals = stats?.totals;
   const loading = state === 'loading';
@@ -742,7 +753,7 @@ export default function Workshops() {
                       minute: '2-digit',
                     })}
                   </td>
-                  <td className="ws-location">{w.location}</td>
+                  <td className="ws-location">{formatWorkshopLocation(w)}</td>
                   <td>
                     <div className="ws-fill">
                       <span className="ws-fill-count">
@@ -950,9 +961,20 @@ export default function Workshops() {
               value={form.location}
               onChange={set('location')}
               options={locationOptions}
-              placeholder="VD: Sprouty Studio – TP.HCM"
+              placeholder="VD: Sprouty Studio – 12 Nguyễn Huệ, Quận 1, TP.HCM"
               emptyHint="Chưa có địa điểm nào — gõ để thêm địa điểm đầu tiên."
             />
+            <span className="field-hint">
+              Nhập tên nơi tổ chức và địa chỉ trong cùng một ô. Thông tin này hiển thị cho khách và dùng để chỉ đường.
+              {form.location.trim() && (
+                <>
+                  {' '}
+                  <a href={mapsLink(form.location.trim())} target="_blank" rel="noopener noreferrer">
+                    Xem thử trên Google Maps
+                  </a>
+                </>
+              )}
+            </span>
           </div>
 
           <div className="field">

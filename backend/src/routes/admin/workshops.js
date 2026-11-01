@@ -18,6 +18,7 @@ function enrichWorkshop(w, now) {
     endTime: w.endTime,
     capacity: w.capacity,
     location: w.location,
+    address: w.address,
     ageRange: w.ageRange,
     price: w.price,
     status: w.status,
@@ -106,8 +107,11 @@ const workshopSchema = z.object({
   location: noHtml('Địa điểm').and(
     z.string()
       .min(3, 'Địa điểm phải có ít nhất 3 ký tự.')
-      .max(200, 'Địa điểm tối đa 200 ký tự.'),
+      .max(503, 'Địa điểm tối đa 503 ký tự.'),
   ),
+  address: noHtml('Địa chỉ').and(
+    z.string().max(300, 'Địa chỉ tối đa 300 ký tự.'),
+  ).optional().nullable().or(z.literal('')),
   // Everything below is what the public workshop card shows. It used to come
   // from a hardcoded array in the frontend, so a session created here could
   // never look like the ones customers see.
@@ -145,7 +149,7 @@ const updateWorkshopSchema = workshopSchema.partial();
 /** Turns the optional text fields' "" into null so the column stays empty. */
 function normalise(data) {
   const out = { ...data };
-  for (const key of ['description', 'imageUrl', 'ageRange']) {
+  for (const key of ['description', 'imageUrl', 'ageRange', 'address']) {
     if (out[key] === '') out[key] = null;
   }
   return out;
@@ -225,7 +229,7 @@ export default async function adminWorkshopRoutes(fastify) {
     const paging = readPaging(req.query);
 
     const where = {};
-    const or = searchOr(req.query.search, ['title', 'location', 'description']);
+    const or = searchOr(req.query.search, ['title', 'location', 'address', 'description']);
     if (or) where.OR = or;
 
     const now = new Date();
@@ -243,9 +247,8 @@ export default async function adminWorkshopRoutes(fastify) {
           },
           staff: STAFF_INCLUDE,
         },
-        // Newest first: a session next week is what staff came here for, and
-        // one from two years ago is not.
-        orderBy: { dateTime: 'desc' },
+        // Creation order is independent of the date the session takes place.
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: paging.skip,
         take: paging.take,
       }),

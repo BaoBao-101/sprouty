@@ -1,4 +1,5 @@
 import { SPECIES_CARE } from './species-care.js';
+import { speciesProfile } from './species-profile.js';
 /**
  * Everything the virtual plant needs from the database.
  *
@@ -132,21 +133,12 @@ export async function createPlantForProduct(prisma, userId, productId, { nicknam
     throw new AppError('Mã này không dành cho một bộ kit trồng cây.', 400);
   }
 
-  // The Smart variant used to mean physical IoT hardware in the box. Nothing
-  // ships now, so what the customer paid the upgrade for is the full sensor set
-  // from the first day instead of unlocking it stage by stage. Read from the
-  // paid order rather than from anything the caller passed: the activation code
-  // is per product, not per variant.
-  const smart = await prisma.orderItem.findFirst({
-    where: {
-      productId,
-      variant: 'smart',
-      order: { userId, paidAt: { not: null }, status: { not: 'cancelled' } },
-    },
-    select: { id: true },
-  });
-
-  const unlocked = new Set(smart ? DEVICES.map((d) => d.type) : devicesUnlockedAt('seed'));
+  // Every plant starts with the seed stage's devices and gains the rest as it
+  // grows, whichever variant was bought. The Smart variant is real IoT
+  // hardware in the box; on the 3D plant the devices still arrive stage by
+  // stage, the way a child sets them up around a real one, so the game and the
+  // kit on the windowsill tell the same story.
+  const unlocked = new Set(devicesUnlockedAt('seed'));
   try {
     const plant = await prisma.virtualPlant.create({
       data: {
@@ -739,6 +731,8 @@ export async function plantDetailDto(prisma, plant, { now = new Date() } = {}) {
     needsPollination: species.pollinate,
     stageStory: stage.story,
     cultivation: SPECIES_CARE[species.key] || null,
+    // Where the plant comes from and what to look for, for the child caring for it.
+    speciesProfile: speciesProfile(species.key),
     idealMoisture: stage.idealMoisture,
     idealTemp: stage.idealTemp,
     environment: env,

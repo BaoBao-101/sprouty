@@ -122,7 +122,7 @@ export default function Returns() {
                 </li>
                 <li>Quá <strong>7 ngày</strong> kể từ khi thanh toán, với mã chưa dùng và không có lỗi hệ thống</li>
                 <li>Cây phát triển chậm hoặc héo <strong>do không chăm sóc</strong> — đây là cơ chế của trò chơi, không phải lỗi sản phẩm</li>
-                <li>Không hài lòng vì <strong>chưa đọc kỹ mô tả</strong> giống cây hoặc bản Standard/Smart trước khi mua</li>
+                <li>Không hài lòng vì <strong>chưa đọc kỹ mô tả</strong> giống cây hoặc bản Tiêu chuẩn/Smart · IoT trước khi mua</li>
                 <li>Tài khoản bị <strong>khoá do vi phạm</strong> điều khoản sử dụng</li>
                 <li>Mã nhận được từ <strong>bên thứ ba</strong> hoặc tặng lại, không mua trực tiếp từ sprouty.id.vn</li>
                 <li>Mã đã dùng để nhận <strong>ưu đãi workshop miễn phí</strong> và suất đó đã diễn ra</li>

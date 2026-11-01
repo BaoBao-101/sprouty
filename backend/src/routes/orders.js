@@ -429,7 +429,7 @@ export default async function orderRoutes(fastify) {
       });
       const days = order.items
         .filter((i) => i.product?.category === 'membership')
-        .reduce((sum, i) => sum + membershipDaysFor(i.product) * i.qty, 0);
+        .reduce((sum, i) => sum + membershipDaysFor(i.product, i.variant) * i.qty, 0);
       membership = { days, ...tierOf(user) };
     }
 

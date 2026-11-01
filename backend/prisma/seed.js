@@ -8,38 +8,44 @@ const prisma = new PrismaClient();
 // maps this exact name to a species profile (harvest type, stage labels, fruit
 // colour) in backend/src/services/plant-sim.js.
 //
-// Nothing here is shipped. A kit is a simulated plant: buying one issues an
-// activation code, and entering it on "Cây của tôi" sows a seed the child then
-// raises with simulated IoT sensors. So `includes` lists what the customer
-// actually receives — the plant, the devices, the AI coach — and not a clay pot.
+// A kit is a real box posted to the door — seeds, a pot, soil — with an
+// activation code for the same plant in 3D on the website and the app, where
+// its IoT devices arrive stage by stage. `includes` lists what is in the box.
+// The Standard variant has no IoT hardware; the Smart · IoT one
+// (smartPriceDelta) also ships the devices in `smartIncludes`.
 //
-// The Standard / Smart choice at checkout (smartPriceDelta) is what unlocks the
-// whole sensor set from day one instead of stage by stage; see
-// createPlantForProduct in backend/src/services/plants.js.
+// Demo content for a new database only: an existing product is never
+// overwritten (see the upsert below), so what an admin edits stays edited.
 const PRODUCTS = [
   { id: 1, name: "Đậu Leo Xanh", emoji: "🫘", collection: "Bộ khởi đầu", category: "kit", ageRange: "4–10 tuổi", price: 150000, oldPrice: 230000, smartPriceDelta: 230000, badge: "hot", bgColor: "#F0FDF4",
     description: "Gieo hạt đậu mô phỏng rồi nuôi cây từ mầm tới ngày ra quả, đọc cảm biến độ ẩm và nhiệt độ ngay trên web.",
-    includes: ["Cây đậu mô phỏng (8 giai đoạn)","Cảm biến độ ẩm đất & nhiệt độ","Mở dần 7 thiết bị IoT ảo","Plant Buddy AI hướng dẫn từng bước","Album Cây Kỷ Niệm","Chứng nhận khi thu hoạch"],
+    includes: ["Gói hạt giống đậu","Chậu gốm in hình nhân vật ngộ nghĩnh","Viên đất nén (nở ra khi ngâm nước)","Thẻ hướng dẫn & cột mốc chăm cây (ngày 1 · 7 · 14 · 21)","Thẻ bạn đồng hành Buddy của cây","Bộ màu nước & cọ để bé trang trí chậu","Cốc đong nước","Dây buộc cây","Mã kích hoạt cây 3D trên web và app","Plant Buddy AI hướng dẫn từng bước"],
+    smartIncludes: ["Cảm biến thông minh cắm chậu, màn hình hiện nhiệt độ & độ ẩm đất"],
     images: ["/assets/images/products/bean/bean-standard.png", "/assets/images/products/bean/bean-smart.png"], status: "published" },
   { id: 2, name: "Cà Rốt Cam", emoji: "🥕", collection: "Bộ khởi đầu", category: "kit", ageRange: "4–10 tuổi", price: 150000, oldPrice: 220000, smartPriceDelta: 230000, badge: null, bgColor: "#FFF7ED",
     description: "Nuôi cây cà rốt mô phỏng, theo dõi củ phình lớn qua từng chặng và học cách đọc chỉ số đất mỗi ngày.",
-    includes: ["Cây cà rốt mô phỏng (8 giai đoạn)","Cảm biến độ ẩm đất & nhiệt độ","Mở dần 7 thiết bị IoT ảo","Plant Buddy AI hướng dẫn từng bước","Album Cây Kỷ Niệm","Chứng nhận khi thu hoạch"],
+    includes: ["Gói hạt giống cà rốt","Chậu gốm in hình nhân vật ngộ nghĩnh","Viên đất nén (nở ra khi ngâm nước)","Thẻ hướng dẫn & cột mốc chăm cây (ngày 1 · 7 · 14 · 21)","Thẻ bạn đồng hành Buddy của cây","Bộ màu nước & cọ để bé trang trí chậu","Cốc đong nước","Dây buộc cây","Mã kích hoạt cây 3D trên web và app","Plant Buddy AI hướng dẫn từng bước"],
+    smartIncludes: ["Cảm biến thông minh cắm chậu, màn hình hiện nhiệt độ & độ ẩm đất"],
     images: ["/assets/images/products/carrot/carrot-standard.png", "/assets/images/products/carrot/carrot-smart.png"], status: "published" },
   { id: 7, name: "Bắp Ngô Vàng", emoji: "🌽", collection: "Bộ khởi đầu", category: "kit", ageRange: "4–10 tuổi", price: 160000, oldPrice: null, smartPriceDelta: 230000, badge: null, bgColor: "#FEFCE8",
     description: "Trồng bắp mô phỏng, quan sát cây vươn cao mỗi ngày và học đọc cảm biến cùng Plant Buddy AI.",
-    includes: ["Cây bắp mô phỏng (8 giai đoạn)","Cảm biến độ ẩm đất & nhiệt độ","Mở dần 7 thiết bị IoT ảo","Plant Buddy AI hướng dẫn từng bước","Album Cây Kỷ Niệm","Chứng nhận khi thu hoạch"],
+    includes: ["Gói hạt giống bắp ngô","Chậu gốm in hình nhân vật ngộ nghĩnh","Viên đất nén (nở ra khi ngâm nước)","Thẻ hướng dẫn & cột mốc chăm cây (ngày 1 · 7 · 14 · 21)","Thẻ bạn đồng hành Buddy của cây","Bộ màu nước & cọ để bé trang trí chậu","Cốc đong nước","Dây buộc cây","Mã kích hoạt cây 3D trên web và app","Plant Buddy AI hướng dẫn từng bước"],
+    smartIncludes: ["Cảm biến thông minh cắm chậu, màn hình hiện nhiệt độ & độ ẩm đất"],
     images: ["/assets/images/products/corn/corn-standard.png", "/assets/images/products/corn/corn-smart.png"], status: "published" },
   { id: 8, name: "Ớt Lửa", emoji: "🌶️", collection: "Bộ khởi đầu", category: "kit", ageRange: "4–10 tuổi", price: 160000, oldPrice: null, smartPriceDelta: 230000, badge: null, bgColor: "#FEF2F2",
     description: "Nuôi cây ớt mô phỏng từ hạt tới trái chín, tự tay thụ phấn và canh sâu bệnh qua cảm biến.",
-    includes: ["Cây ớt mô phỏng (8 giai đoạn)","Cảm biến độ ẩm đất & nhiệt độ","Mở dần 7 thiết bị IoT ảo","Plant Buddy AI hướng dẫn từng bước","Album Cây Kỷ Niệm","Chứng nhận khi thu hoạch"],
+    includes: ["Gói hạt giống ớt","Chậu gốm in hình nhân vật ngộ nghĩnh","Viên đất nén (nở ra khi ngâm nước)","Thẻ hướng dẫn & cột mốc chăm cây (ngày 1 · 7 · 14 · 21)","Thẻ bạn đồng hành Buddy của cây","Bộ màu nước & cọ để bé trang trí chậu","Cốc đong nước","Dây buộc cây","Mã kích hoạt cây 3D trên web và app","Plant Buddy AI hướng dẫn từng bước"],
+    smartIncludes: ["Cảm biến thông minh cắm chậu, màn hình hiện nhiệt độ & độ ẩm đất"],
     images: ["/assets/images/products/firepepper/firepepper-standard.png", "/assets/images/products/firepepper/firepepper-smart.png"], status: "published" },
   { id: 9, name: "Hướng Dương", emoji: "🌻", collection: "Bộ khởi đầu", category: "kit", ageRange: "4–10 tuổi", price: 170000, oldPrice: 210000, smartPriceDelta: 230000, badge: "new", bgColor: "#FFFBEB",
     description: "Gieo hạt hướng dương mô phỏng, dõi theo cây đón nắng và nở hoa rực rỡ trên trang của bé.",
-    includes: ["Cây hướng dương mô phỏng (8 giai đoạn)","Cảm biến độ ẩm đất & nhiệt độ","Mở dần 7 thiết bị IoT ảo","Plant Buddy AI hướng dẫn từng bước","Album Cây Kỷ Niệm","Chứng nhận khi thu hoạch"],
+    includes: ["Gói hạt giống hướng dương","Chậu gốm in hình nhân vật ngộ nghĩnh","Viên đất nén (nở ra khi ngâm nước)","Thẻ hướng dẫn & cột mốc chăm cây (ngày 1 · 7 · 14 · 21)","Thẻ bạn đồng hành Buddy của cây","Bộ màu nước & cọ để bé trang trí chậu","Cốc đong nước","Dây buộc cây","Mã kích hoạt cây 3D trên web và app","Plant Buddy AI hướng dẫn từng bước"],
+    smartIncludes: ["Cảm biến thông minh cắm chậu, màn hình hiện nhiệt độ & độ ẩm đất"],
     images: ["/assets/images/products/sunflower/sunflower-standard.png", "/assets/images/products/sunflower/sunflower-smart.png"], status: "published" },
   { id: 10, name: "Cà Chua Đỏ", emoji: "🍅", collection: "Bộ khởi đầu", category: "kit", ageRange: "4–10 tuổi", price: 170000, oldPrice: null, smartPriceDelta: 230000, badge: null, bgColor: "#FEF2F2",
     description: "Chăm cây cà chua mô phỏng từ hạt đến quả chín đỏ, với đầy đủ cảm biến và nhật ký từng chặng.",
-    includes: ["Cây cà chua mô phỏng (8 giai đoạn)","Cảm biến độ ẩm đất & nhiệt độ","Mở dần 7 thiết bị IoT ảo","Plant Buddy AI hướng dẫn từng bước","Album Cây Kỷ Niệm","Chứng nhận khi thu hoạch"],
+    includes: ["Gói hạt giống cà chua","Chậu gốm in hình nhân vật ngộ nghĩnh","Viên đất nén (nở ra khi ngâm nước)","Thẻ hướng dẫn & cột mốc chăm cây (ngày 1 · 7 · 14 · 21)","Thẻ bạn đồng hành Buddy của cây","Bộ màu nước & cọ để bé trang trí chậu","Cốc đong nước","Dây buộc cây","Mã kích hoạt cây 3D trên web và app","Plant Buddy AI hướng dẫn từng bước"],
+    smartIncludes: ["Cảm biến thông minh cắm chậu, màn hình hiện nhiệt độ & độ ẩm đất"],
     images: ["/assets/images/products/tomato/tomato-standard.png", "/assets/images/products/tomato/tomato-smart.png"], status: "published" },
   { id: 5, name: "Gói VIP 1 tháng", emoji: "🌙", collection: "Vườn Vàng", category: "membership", membershipDays: 30, ageRange: "Gia đình", price: 20000, oldPrice: null, smartPriceDelta: null, badge: null, bgColor: "#FEFCE8",
     description: "Mở khóa chế độ ban đêm, hiệu ứng theo mùa, Plant Buddies hiếm và AI recap hàng tháng cho Cây Kỷ Niệm.",
@@ -155,9 +161,11 @@ async function main() {
 
   // Seed products
   for (const product of PRODUCTS) {
+    // Create-only. This runs on every start, and overwriting here undid every
+    // edit an admin made to these products at the next deploy.
     await prisma.product.upsert({
       where: { id: product.id },
-      update: product,
+      update: {},
       create: product,
     });
   }

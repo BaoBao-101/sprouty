@@ -31,6 +31,7 @@ export function normalizeProduct(p: any): Product {
     bg: p.bg || p.bgColor || '#FEF5EA',
     desc: p.desc || p.description || '',
     inc: p.inc || p.includes || [],
+    smartInc: p.smartInc || p.smartIncludes || [],
     badge: p.badge || null,
     images: p.images || [],
     status: p.status || 'published',

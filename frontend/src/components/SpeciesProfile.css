@@ -1,0 +1,30 @@
+/* Hồ sơ giống: who the plant is (see SpeciesProfile.tsx). */
+
+.sp {
+  display: grid; gap: 14px; padding: 22px; border-radius: 22px;
+  background: var(--surface, #fff); border: 1.5px solid var(--parchment-2, #DCE5D6); color: var(--ink-2);
+}
+.sp.is-bare { padding: 0; border: none; background: none }
+.sp-head { display: flex; align-items: center; gap: 12px; min-width: 0 }
+.sp-icon {
+  flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px;
+  background: var(--primary-100, #ECF9E8); color: var(--primary-600, #2E8447);
+}
+.sp-head h3 { margin: 0; font-size: 1.1rem; color: var(--ink) }
+.sp-head p { margin: 2px 0 0; font-size: .86rem; line-height: 1.5; color: var(--ink-3) }
+.sp-head em { color: var(--ink-2) }
+
+/* Origin and story side by side, then what to look for and the fun facts. */
+.sp-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px }
+.sp-block { padding: 14px 16px; border-radius: 16px; background: #F6F9F2; border: 1px solid #E3ECDB; min-width: 0 }
+.sp-block h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font-size: .92rem; color: var(--primary-600, #2E8447) }
+.sp-block p, .sp-block li { margin: 0; font-size: .9rem; line-height: 1.6; color: var(--ink-2) }
+.sp-block ul { display: grid; gap: 4px; margin: 0; padding-left: 18px }
+.sp-fun { background: #FFF7E8; border-color: #F3DEB4 }
+.sp-fun h4 { color: #9A5B12 }
+
+@media (max-width: 760px) {
+  .sp { padding: 16px; border-radius: 18px }
+  .sp.is-bare { padding: 0 }
+  .sp-grid { grid-template-columns: minmax(0, 1fr) }
+}

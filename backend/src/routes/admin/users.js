@@ -19,6 +19,15 @@ const resetPasswordSchema = z.object({
   password: passwordSchema,
 });
 
+// How long a complimentary VIP lasts; the admin picks it. Up to three years.
+const grantVipSchema = z.object({
+  days: z.coerce.number({ invalid_type_error: 'Số ngày VIP phải là một số.' })
+    .int('Số ngày VIP phải là số nguyên.')
+    .min(1, 'Tặng ít nhất 1 ngày VIP.')
+    .max(1095, 'Tặng tối đa 1095 ngày (3 năm) mỗi lần.')
+    .default(30),
+});
+
 const updateUserSchema = z.object({
   role: z.enum(['customer', 'employee', 'admin']).optional(),
   status: z.enum(['active', 'disabled']).optional(),
@@ -156,7 +165,18 @@ export default async function adminUserRoutes(fastify) {
   });
 
   // A complimentary membership uses a zero-value order for the same entitlement replay.
+  //
+  // The admin chooses the length (`days`). The grant is the cheapest plan with
+  // the length written on the item (variant "days:N", read by
+  // membershipDaysFor), so a gift of 7 days or of a year replays, stacks and is
+  // revoked exactly like any other membership order. A VIP can be given more:
+  // the days start where their current VIP ends.
   fastify.post('/users/:id/grant-vip', { preHandler: auth }, async (req, reply) => {
+    const parsed = grantVipSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      throw new AppError(parsed.error.errors[0]?.message || 'Dữ liệu không hợp lệ.', 400);
+    }
+    const { days } = parsed.data;
     try {
       return await fastify.prisma.$transaction(async (tx) => {
         const target = await tx.user.findUnique({ where: { id: req.params.id } });
@@ -164,9 +184,7 @@ export default async function adminUserRoutes(fastify) {
 
         if (target.role !== 'customer' || target.status !== 'active') throw new AppError('Chỉ cấp VIP cho khách hàng đang hoạt động.', 400);
 
-        if (await isVipUser(tx, target.id)) {
-          return { message: `${target.name} đã là VIP rồi.`, alreadyVip: true };
-        }
+        const wasVip = await isVipUser(tx, target.id);
 
         const membership = await tx.product.findFirst({
           where: { category: 'membership', status: 'published' },
@@ -182,9 +200,9 @@ export default async function adminUserRoutes(fastify) {
             paidAt: new Date(),
             shippingName: target.name,
             shippingPhone: '',
-            shippingAddress: 'Cấp bởi admin — gói thành viên, không giao hàng.',
+            shippingAddress: `Cấp bởi admin — ${days} ngày VIP, không giao hàng.`,
             note: 'admin.grant_vip',
-            items: { create: [{ productId: membership.id, qty: 1, unitPrice: 0 }] },
+            items: { create: [{ productId: membership.id, qty: 1, unitPrice: 0, variant: `days:${days}` }] },
           },
         });
         const vipUntil = await syncMembership(tx, order.id);
@@ -193,10 +211,17 @@ export default async function adminUserRoutes(fastify) {
           orderId: order.id,
           productId: membership.id,
           productName: membership.name,
+          days,
+          extended: wasVip,
         });
 
         const until = vipUntil ? ` — đến ${vipUntil.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}` : '';
-        return { message: `Đã cấp VIP cho ${target.name} (${membership.name})${until}.`, orderId: order.id, vipUntil };
+        return {
+          message: `${wasVip ? 'Đã tặng thêm' : 'Đã tặng'} ${days} ngày VIP cho ${target.name}${until}.`,
+          orderId: order.id,
+          vipUntil,
+          days,
+        };
       }, { isolationLevel: 'Serializable' });
     } catch (err) {
       if (err.code === 'P2034') throw new AppError('Quyền VIP vừa thay đổi. Vui lòng tải lại và thử lại.', 409);

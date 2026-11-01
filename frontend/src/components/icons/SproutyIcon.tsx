@@ -28,7 +28,7 @@ export type IconName =
   | 'add' | 'minus' | 'copy' | 'expand'
   | 'heart' | 'bolt' | 'info' | 'bell' | 'chat' | 'sparkle' | 'chart' | 'pot'
   | 'moon' | 'arrow-right' | 'arrow-down' | 'close' | 'pencil' | 'trash' | 'cart' | 'album'
-  | 'warning' | 'microphone' | 'plant-chat'
+  | 'warning' | 'microphone' | 'plant-chat' | 'play'
   // site-wide
   | 'search' | 'mail' | 'phone' | 'pin' | 'calendar' | 'user' | 'child' | 'settings'
   | 'logout' | 'card' | 'return' | 'book' | 'shield' | 'star' | 'home' | 'filter'
@@ -433,6 +433,7 @@ const PATHS: Record<IconName, React.ReactNode> = {
     </>
   ),
   'arrow-right': <path d="M4.4 12h15M13.4 6.2 19.4 12l-6 5.8" {...S} strokeWidth={2.2} />,
+  play: <path d="M8 5.6v12.8a.8.8 0 0 0 1.2.7l10.2-6.4a.8.8 0 0 0 0-1.4L9.2 4.9a.8.8 0 0 0-1.2.7Z" {...S} />,
   share: (
     <>
       <circle cx="17.6" cy="5.8" r="2.6" {...fillProps(0.3)} />
