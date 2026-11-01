@@ -1,101 +1,88 @@
-import type { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Icon, type IconName } from '@/components/Icon';
 import { PlantThumb } from '@/components/PlantThumb';
 import { ProductTile } from '@/components/shop';
-import { Button, IconButton, Screen, SectionHead, tap } from '@/components/ui';
+import { Button, Group, IconButton, IconTile, Label, ListRow, Meter, Press, Screen, SectionHead } from '@/components/ui';
 import { API, imageSource } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useCart } from '@/lib/cart';
-import { callName, formatDate, formatPrice, greeting, isVipOrder, shortOrderId, workshopDateParts } from '@/lib/format';
+import { alertBrief, callName, formatDate, formatPrice, greeting, isVipOrder, shortOrderId, workshopDateParts } from '@/lib/format';
 import { fetchProducts } from '@/lib/products';
 import type { BlogPost, MyWorkshopRegistration, Order, PlantAlert, PlantCard, PublicWorkshop, RewardSummary } from '@/lib/types';
 import { useLoad } from '@/lib/use-load';
-import { colors, fonts, gutter, maxWidth, radius } from '@/theme';
+import { colors, fonts, gutter, maxWidth, radius, surface } from '@/theme';
 
-const art = (name: string) => imageSource(`/assets/images/sprouty-icons/${name}.png`) as number;
-const go = (href: string) => () => { tap(); router.push(href as never); };
+const go = (href: string) => () => router.push(href as never);
 
-/** The four ways in, each saying what it is for; a tint of its own so the eye finds it again. */
-const QUICK: Array<{ href: string; art: string; label: string; sub: string; tint: string; ink: string }> = [
-  { href: '/garden?activate=1', art: 'RedeemCode', label: 'Kích hoạt cây', sub: 'Nhập mã trong bộ kit', tint: '#E8F5E3', ink: colors.greenDark },
-  { href: '/ai', art: 'Tree', label: 'Plant Buddy', sub: 'Hỏi gì về cây cũng được', tint: '#E6F2F4', ink: '#2F6F78' },
-  { href: '/workshop', art: 'Workshop', label: 'Workshop', sub: 'Lớp trồng cây cho bé', tint: '#F8EDE2', ink: colors.earth },
-  { href: '/vip', art: 'VIP', label: 'VIP Garden', sub: 'Cảnh đẹp, AI không giới hạn', tint: '#FBF1D6', ink: '#8A6410' },
+/** Kits on Home: a few to tempt, not the whole shop. */
+const KITS_SHOWN = 4;
+
+/** The four ways in: an icon and two words each; the colour tells them apart at a glance. */
+const QUICK: Array<{ href: string; icon: IconName; label: string; tint: string; ink: string }> = [
+  { href: '/garden?activate=1', icon: 'seed', label: 'Kích hoạt', tint: colors.mint, ink: colors.greenDark },
+  { href: '/ai', icon: 'chat', label: 'Plant Buddy', tint: '#DCEFF1', ink: '#2F6F78' },
+  { href: '/workshop', icon: 'ticket', label: 'Workshop', tint: '#F6E6D6', ink: colors.earth },
+  { href: '/vip', icon: 'star', label: 'VIP Garden', tint: '#FBEBC4', ink: colors.gold },
 ];
 
-/** A bordered list; its rows carry their own dividers. */
-function List({ children }: { children: ReactNode }) {
-  return <View style={s.list}>{children}</View>;
+/** How a plant is doing, as a colour pair. */
+function healthTone(plant: PlantCard) {
+  const state = plant.healthState.id;
+  if (plant.diedAt || state === 'critical' || state === 'wilting') return { bg: colors.badSoft, fg: colors.bad };
+  if (state === 'stressed') return { bg: colors.warnSoft, fg: colors.warn };
+  return { bg: colors.mint, fg: colors.greenDark };
 }
 
-/** A row in a List: something to look at on the left, the words, then a chevron. */
-function Row({ lead, title, sub, extra, onPress, last, tone }: {
-  lead: ReactNode; title: string; sub?: string; extra?: ReactNode; onPress: () => void; last?: boolean; tone?: 'warn';
-}) {
+/** A plant at a glance: the picture, its name, how it is, and what it needs — as a tag, not a sentence. */
+function PlantPeek({ plant, alert, width }: { plant: PlantCard; alert?: PlantAlert; width: number }) {
+  const dead = Boolean(plant.diedAt);
+  const tone = healthTone(plant);
+  const need = dead ? { icon: 'seed' as const, label: 'Gieo lại' } : alert ? alertBrief(alert.text) : null;
   return (
-    <Pressable onPress={() => { tap(); onPress(); }} accessibilityRole="button"
-      style={({ pressed }) => [s.row, tone === 'warn' && { backgroundColor: colors.warnSoft }, pressed && { opacity: 0.85 }]}>
-      {lead}
-      <View style={[s.rowBody, !last && s.divider]}>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text numberOfLines={2} style={s.rowTitle}>{title}</Text>
-          {sub ? <Text numberOfLines={2} style={s.rowSub}>{sub}</Text> : null}
-          {extra}
+    <Press onPress={go(`/plant/${plant.id}`)} accessibilityLabel={`${plant.nickname}, ${plant.healthState.label}${need ? `, ${need.label}` : ''}`}
+      style={[s.peek, { width }]}>
+      <View style={[s.peekArt, { backgroundColor: plant.bgColor || '#F0FDF4' }]}>
+        <PlantThumb plant={plant} size={width - 12} />
+        <View style={[s.health, { backgroundColor: tone.bg }]}>
+          <Icon name="heart" size={11} color={tone.fg} />
+          <Text style={[s.healthText, { color: tone.fg }]}>{dead ? 'Đã héo' : plant.healthState.label}</Text>
         </View>
-        <Icon name="arrow-right" size={16} color={colors.ink5} />
       </View>
-    </Pressable>
+      <View style={s.peekBody}>
+        <Text numberOfLines={1} style={s.peekName}>{plant.nickname}</Text>
+        <Text numberOfLines={1} style={s.peekStage}>{plant.stageLabel} · {Math.round(plant.stageProgress)}%</Text>
+        {need ? (
+          <View style={[s.need, dead && { backgroundColor: colors.badSoft }]}>
+            <Icon name={need.icon} size={13} color={dead ? colors.bad : colors.warn} />
+            <Text numberOfLines={1} style={[s.needText, dead && { color: colors.bad }]}>{need.label}</Text>
+          </View>
+        ) : (
+          <View style={s.water}>
+            <Icon name="water" size={13} color={colors.sky} />
+            <Meter value={plant.moisture} color={colors.sky} height={5} style={{ flex: 1 }} />
+          </View>
+        )}
+      </View>
+    </Press>
   );
 }
 
-const RowIcon = ({ icon, color = colors.greenDark, bg = colors.greenSoft }: { icon: IconName; color?: string; bg?: string }) => (
-  <View style={[s.rowIcon, { backgroundColor: bg }]}><Icon name={icon} size={20} color={color} /></View>
-);
-
-/** A plant at a glance: how it looks, its stage, its water, and what it needs. */
-function PlantPeek({ plant, alert, width }: { plant: PlantCard; alert?: PlantAlert; width: number }) {
-  const dead = Boolean(plant.diedAt);
-  const state = plant.healthState.id;
-  const health = dead || state === 'critical' || state === 'wilting' ? { bg: colors.badSoft, fg: colors.bad }
-    : state === 'stressed' ? { bg: colors.warnSoft, fg: colors.warn }
-    : { bg: colors.greenSoft, fg: colors.greenDark };
+/** A day of the month, like a page torn off a calendar. */
+function CalDay({ weekday, day }: { weekday?: string; day?: string | number }) {
   return (
-    <Pressable onPress={go(`/plant/${plant.id}`)} accessibilityRole="button"
-      style={({ pressed }) => [s.peek, { width }, alert && !dead && { borderColor: '#F2C27A' }, pressed && { opacity: 0.9 }]}>
-      <View style={[s.peekArt, { backgroundColor: plant.bgColor || '#F0FDF4' }]}>
-        <PlantThumb plant={plant} size={96} />
-      </View>
-      <View style={{ flex: 1, gap: 6 }}>
-        <View style={{ gap: 1 }}>
-          <Text numberOfLines={1} style={s.peekName}>{plant.nickname}</Text>
-          <Text numberOfLines={1} style={s.peekStage}>{plant.speciesLabel} · {plant.stageLabel}</Text>
-        </View>
-        <View style={[s.pill, { backgroundColor: health.bg }]}>
-          <Icon name="heart" size={12} color={health.fg} />
-          <Text style={[s.pillText, { color: health.fg }]}>{plant.healthState.label}</Text>
-        </View>
-        {dead ? (
-          <Text numberOfLines={2} style={[s.peekNote, { color: colors.bad }]}>Gieo lại miễn phí trong vườn</Text>
-        ) : (
-          <View style={s.meter}>
-            <Icon name="water" size={13} color={colors.info} />
-            <View style={s.meterTrack}><View style={[s.meterFill, { width: `${Math.round(plant.moisture)}%` }]} /></View>
-            <Text style={s.meterValue}>{Math.round(plant.moisture)}%</Text>
-          </View>
-        )}
-        {alert && !dead ? <Text numberOfLines={2} style={s.peekNote}>{alert.text}</Text> : null}
-      </View>
-    </Pressable>
+    <View style={s.cal}>
+      <Text style={s.calWd}>{weekday}</Text>
+      <Text style={s.calDay}>{day}</Text>
+    </View>
   );
 }
 
 /**
  * Trang chủ. For a family already growing something, the first thing on the
- * screen is their garden; then what is waiting on them (an unpaid order, a
- * workshop ticket, the free seat they are close to); then kits, sessions and
+ * screen is their garden in a green panel with the day's numbers, then the
+ * plants themselves; then what is waiting on them, then kits, sessions and
  * reading. A visitor sees what Sprouty is and two ways in.
  */
 export default function Home() {
@@ -107,7 +94,7 @@ export default function Home() {
     const [products, workshops, blog] = await Promise.all([
       fetchProducts(),
       API.workshops.list().catch(() => ({ workshops: [] })),
-      API.blog.list({ limit: 3 }).catch(() => ({ posts: [] })),
+      API.blog.list({ limit: 4 }).catch(() => ({ posts: [] })),
     ]);
     return {
       kits: products.filter((p) => p.cat === 'kit').sort((a, b) => Number(b.badge === 'hot') - Number(a.badge === 'hot')),
@@ -141,107 +128,113 @@ export default function Home() {
 
   const name = callName(user?.name);
   const inner = Math.min(width, maxWidth) - gutter * 2;
-  const quickCols = inner >= 600 ? 4 : 2;
-  // Floored, so rounding never wraps a row.
-  const quickW = Math.floor((inner - 10 * (quickCols - 1)) / quickCols);
   const plants = mine.data?.plants || [];
+  const alerts = mine.data?.alerts || [];
+  // Plants with something to do come first.
+  const ordered = [...plants].sort((a, b) => Number(Boolean(b.diedAt) || alerts.some((x) => x.plantId === b.id)) - Number(Boolean(a.diedAt) || alerts.some((x) => x.plantId === a.id)));
+  const needCare = plants.filter((p) => p.diedAt || alerts.some((a) => a.plantId === p.id)).length;
+  const streak = Math.max(0, ...plants.map((p) => p.careStreak));
   const rewards = mine.data?.rewards && mine.data.rewards.threshold > 0 ? mine.data.rewards : null;
   const todo = [mine.data?.pending, mine.data?.ticket, rewards].filter(Boolean).length;
+  const kits = shop.data?.kits || [];
+  const peekW = inner >= 600 ? 180 : 152;
+  const quickW = Math.floor((inner - 8 * 3) / 4);
 
   // A slim bar stays on top; the greeting scrolls away with the page.
   const header = (
     <View style={s.head}>
       <View style={s.brand}>
-        <Image source={imageSource('/assets/images/sprouty-mark.png') as number} style={{ width: 28, height: 28 }} contentFit="contain" />
+        <Image source={imageSource('/assets/images/sprouty-mark.png') as number} style={{ width: 30, height: 30 }} contentFit="contain" />
         <Text style={s.brandText}>Sprouty</Text>
       </View>
-      <IconButton icon="cart" label="Giỏ hàng" badge={count} onPress={() => router.push('/cart')} />
+      <IconButton icon="cart" label="Giỏ hàng" boxed badge={count} onPress={() => router.push('/cart')} />
     </View>
   );
 
   return (
     <Screen header={header} onRefresh={() => Promise.all([shop.reload(), mine.reload()])}>
-      <View style={{ gap: 2 }}>
+      {/* The day, in a green panel: hello, and the garden in three numbers */}
+      <View style={s.hero}>
+        <View pointerEvents="none" style={s.heroLeaf}><Icon name="sprout" size={150} color="rgba(255,255,255,0.07)" /></View>
         <Text style={s.hello}>{greeting()}{name ? `, ${name}` : ''}</Text>
-        <Text style={s.headline}>{user ? 'Hôm nay vườn nhà mình thế nào?' : 'Gieo một hạt nhỏ, nuôi cả tuổi thơ'}</Text>
+        <Text style={s.headline}>{user ? 'Vườn của bé hôm nay' : 'Gieo một hạt nhỏ,\nnuôi cả tuổi thơ'}</Text>
+        {user && plants.length > 0 && (
+          <View style={s.heroStats}>
+            <View style={s.heroStat}>
+              <Text style={s.heroNum}>{plants.length}</Text>
+              <Text style={s.heroLabel}>cây đang lớn</Text>
+            </View>
+            <View style={s.heroRule} />
+            <View style={s.heroStat}>
+              <Text style={[s.heroNum, needCare > 0 && { color: '#FFC266' }]}>{needCare}</Text>
+              <Text style={s.heroLabel}>cần chăm</Text>
+            </View>
+            <View style={s.heroRule} />
+            <View style={s.heroStat}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                <Icon name="bolt" size={16} color="#FFC266" />
+                <Text style={s.heroNum}>{streak}</Text>
+              </View>
+              <Text style={s.heroLabel}>ngày liên tục</Text>
+            </View>
+          </View>
+        )}
+        {user && mine.data && plants.length === 0 && (
+          <Button small variant="light" icon="seed" title="Gieo cây đầu tiên" style={{ alignSelf: 'flex-start', marginTop: 6 }} onPress={go('/garden?activate=1')} />
+        )}
+        {!user && (
+          <>
+            <Text style={s.heroText}>Hạt giống thật trong hộp, cây 3D lớn lên cùng bé trong app.</Text>
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+              <Button small grow variant="light" title="Tạo tài khoản" onPress={go('/register')} />
+              <Button small grow title="Đăng nhập" style={s.heroGhost} onPress={go('/login')} />
+            </View>
+          </>
+        )}
       </View>
 
-      {!user && (
-        <View style={s.hero}>
-          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-            <View style={{ flex: 1, gap: 6 }}>
-              <Text style={s.heroTitle}>Bé tự tay gieo hạt thật, chăm cây mỗi ngày</Text>
-              <Text style={s.heroText}>Mỗi bộ kit có hạt giống, đất, chậu để trồng ở nhà và một cây lớn lên cùng bé trên Sprouty.</Text>
-            </View>
-            <Image source={art('Bean')} style={{ width: 76, height: 76 }} contentFit="contain" />
-          </View>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Button small grow title="Tạo tài khoản" onPress={() => router.push('/register')} />
-            <Button small grow variant="ghost" title="Đăng nhập" onPress={() => router.push('/login')} />
-          </View>
-        </View>
-      )}
-
-      {user && mine.data && (
-        <View style={s.section}>
-          <SectionHead title="Vườn của bé" more="Vào vườn" onMore={() => router.push('/garden')} />
-          {plants.length === 0 ? (
-            <List>
-              <Row lead={<RowIcon icon="seed" />} title="Gieo cây đầu tiên của bé" sub="Có bộ kit rồi? Nhập mã kích hoạt để hạt nảy mầm ngay." onPress={() => router.push('/garden?activate=1')} last />
-            </List>
-          ) : plants.length === 1 ? (
-            <PlantPeek plant={plants[0]} alert={mine.data.alerts.find((a) => a.plantId === plants[0].id)} width={inner} />
-          ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.hscroll} style={s.hscrollOuter}>
-              {plants.map((p) => <PlantPeek key={p.id} plant={p} alert={mine.data!.alerts.find((a) => a.plantId === p.id)} width={Math.min(300, inner - 40)} />)}
-            </ScrollView>
-          )}
-        </View>
-      )}
-
-      {/* Two by two on a phone, one row on a tablet; each card says what it opens. */}
+      {/* Two words and an icon each */}
       <View style={s.quick}>
         {QUICK.map((q) => (
-          <Pressable key={q.href} onPress={go(q.href)} accessibilityRole="button" accessibilityLabel={`${q.label}: ${q.sub}`}
-            style={({ pressed }) => [s.quickItem, { width: quickW }, pressed && { backgroundColor: q.tint, transform: [{ scale: 0.98 }] }]}>
-            <View style={s.quickTop}>
-              <View style={[s.quickArt, { backgroundColor: q.tint }]}>
-                <Image source={art(q.art)} style={{ width: 32, height: 32 }} contentFit="contain" />
-              </View>
-              <Icon name="arrow-right" size={16} color={colors.ink5} />
-            </View>
-            <View style={{ gap: 2 }}>
-              <Text numberOfLines={1} style={[s.quickLabel, { color: q.ink }]}>{q.label}</Text>
-              <Text numberOfLines={2} style={s.quickSub}>{q.sub}</Text>
-            </View>
-          </Pressable>
+          <Press key={q.href} onPress={go(q.href)} accessibilityLabel={q.label} scaleTo={0.92} style={[s.quickItem, { width: quickW }]}>
+            <IconTile icon={q.icon} size={54} tint={q.tint} color={q.ink} />
+            <Text numberOfLines={1} style={s.quickLabel}>{q.label}</Text>
+          </Press>
         ))}
       </View>
 
+      {user && plants.length > 0 && (
+        <View style={s.section}>
+          <SectionHead title="Cây của bé" more="Vào vườn" onMore={go('/garden')} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.hscroll} style={s.hscrollOuter}>
+            {ordered.map((p) => <PlantPeek key={p.id} plant={p} alert={alerts.find((a) => a.plantId === p.id)} width={peekW} />)}
+          </ScrollView>
+        </View>
+      )}
+
       {todo > 0 && (
         <View style={s.section}>
-          <Text style={s.label}>Đang chờ bạn</Text>
-          <List>
+          <Label>Đang chờ bạn</Label>
+          <Group>
             {mine.data?.pending && (
-              <Row tone="warn" lead={<RowIcon icon="clock" color={colors.warn} bg="#FDEBC8" />}
+              <ListRow tone="warn" icon="clock" tint="#FDE5BC" iconColor={colors.warn}
                 title={`Đơn #${shortOrderId(mine.data.pending.id)} chưa thanh toán`}
-                sub={`${formatPrice(mine.data.pending.total)} · thanh toán xong là có mã gieo cây`}
-                onPress={() => router.push(`/payment?orderId=${mine.data!.pending!.id}`)}
+                sub={formatPrice(mine.data.pending.total)}
+                onPress={go(`/payment?orderId=${mine.data.pending.id}`)}
                 last={!mine.data.ticket && !rewards} />
             )}
             {mine.data?.ticket && (() => {
               const t = mine.data!.ticket!;
               const d = workshopDateParts(t.workshop);
               return (
-                <Row lead={<View style={s.cal}><Text style={s.calWd}>{d?.weekdayShort}</Text><Text style={s.calDay}>{d?.day}</Text></View>}
+                <ListRow lead={<CalDay weekday={d?.weekdayShort} day={d?.day} />}
                   title={t.workshop.title} sub={`Vé của bé · ${d?.time ?? ''}`}
-                  onPress={() => router.push('/workshop?tab=tickets')} last={!rewards} />
+                  onPress={go('/workshop?tab=tickets')} last={!rewards} />
               );
             })()}
             {rewards && (
-              <Row lead={<RowIcon icon="gift" color={colors.earth} bg={colors.earthSoft} />}
-                title={rewards.availableCount > 0 ? `Bạn có ${rewards.availableCount} suất workshop miễn phí` : `Mua thêm ${rewards.unitsToNext} bộ kit, tặng 1 suất workshop`}
-                sub={rewards.availableCount > 0 ? 'Dùng khi đăng ký một buổi cho bé' : `Ưu đãi mua ${rewards.threshold} tặng 1`}
+              <ListRow icon="gift" tint={colors.earthSoft} iconColor={colors.earth}
+                title={rewards.availableCount > 0 ? `${rewards.availableCount} suất workshop miễn phí` : `Mua thêm ${rewards.unitsToNext} kit, tặng 1 suất`}
                 extra={(
                   <View style={s.dots}>
                     {Array.from({ length: rewards.threshold }, (_, i) => (
@@ -249,134 +242,144 @@ export default function Home() {
                     ))}
                   </View>
                 )}
-                onPress={() => router.push(rewards.availableCount > 0 ? '/workshop' : '/shop')} last />
+                onPress={go(rewards.availableCount > 0 ? '/workshop' : '/shop')} last />
             )}
-          </List>
+          </Group>
         </View>
       )}
 
       <View style={s.section}>
-        <SectionHead title="Bộ kit cho bé" onMore={() => router.push('/shop')} />
+        <SectionHead title="Bộ kit cho bé" onMore={go('/shop')} />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.hscroll} style={s.hscrollOuter}>
-          {(shop.data?.kits || []).slice(0, 8).map((p) => <ProductTile key={p.id} product={p} width={164} />)}
+          {/* A taste of the shop, best sellers first; the rest is one tap away. */}
+          {kits.slice(0, KITS_SHOWN).map((p) => <ProductTile key={p.id} product={p} width={164} />)}
+          {kits.length > KITS_SHOWN && (
+            <Press onPress={go('/shop')} accessibilityLabel={`Xem thêm ${kits.length - KITS_SHOWN} bộ kit trong cửa hàng`} style={s.moreKits}>
+              <View style={s.moreKitsIcon}><Icon name="arrow-right" size={22} color={colors.white} /></View>
+              <Text style={s.moreKitsText}>Xem thêm{'\n'}{kits.length - KITS_SHOWN} bộ kit</Text>
+            </Press>
+          )}
         </ScrollView>
-        {shop.error ? <Text style={s.rowSub}>{shop.error}</Text> : null}
+        {shop.error ? <Text style={s.error}>{shop.error}</Text> : null}
       </View>
 
       {!!shop.data?.sessions.length && (
         <View style={s.section}>
-          <SectionHead title="Workshop sắp tới" onMore={() => router.push('/workshop')} />
-          <List>
+          <SectionHead title="Workshop sắp tới" onMore={go('/workshop')} />
+          <Group>
             {shop.data.sessions.map((w, i, all) => {
               const d = workshopDateParts(w);
-              const seats = w.isFull ? { t: 'Kín chỗ', c: colors.bad } : { t: `Còn ${w.seatsLeft} chỗ`, c: w.seatsLeft <= 3 ? colors.warn : colors.greenDark };
+              const full = w.isFull;
               return (
-                <Row key={w.id} last={i === all.length - 1}
-                  lead={<View style={s.cal}><Text style={s.calWd}>{d?.weekdayShort}</Text><Text style={s.calDay}>{d?.day}</Text></View>}
+                <ListRow key={w.id} last={i === all.length - 1}
+                  lead={<CalDay weekday={d?.weekdayShort} day={d?.day} />}
                   title={w.title}
-                  sub={`${d?.time ?? ''}${w.ageRange ? ` · ${w.ageRange}` : ''}`}
                   extra={(
-                    <Text style={s.sessionFoot}>
-                      <Text style={{ color: colors.price }}>{w.price > 0 ? formatPrice(w.price) : 'Miễn phí'}</Text>
-                      <Text style={{ color: colors.ink5 }}>{'  ·  '}</Text>
-                      <Text style={{ color: seats.c }}>{seats.t}</Text>
-                    </Text>
+                    <View style={s.sessionFoot}>
+                      <Text style={s.sessionTime}>{d?.time}</Text>
+                      <Text style={s.sessionPrice}>{w.price > 0 ? formatPrice(w.price) : 'Miễn phí'}</Text>
+                      <Text style={[s.sessionSeats, full ? { color: colors.bad } : w.seatsLeft <= 3 && { color: colors.warn }]}>
+                        {full ? 'Kín chỗ' : `${w.seatsLeft} chỗ`}
+                      </Text>
+                    </View>
                   )}
-                  onPress={() => router.push(`/workshop?session=${w.id}`)} />
+                  onPress={go(`/workshop?session=${w.id}`)} />
               );
             })}
-          </List>
+          </Group>
         </View>
       )}
 
       {!!shop.data?.posts.length && (
         <View style={s.section}>
-          <SectionHead title="Góc ba mẹ" onMore={() => router.push('/blog')} />
-          <List>
-            {shop.data.posts.map((post, i, all) => (
-              <Row key={post.id} last={i === all.length - 1}
-                lead={(
-                  <View style={s.thumb}>
-                    {imageSource(post.coverUrl)
-                      ? <Image source={imageSource(post.coverUrl)} style={StyleSheet.absoluteFill} contentFit="cover" />
-                      : <Icon name="book" size={20} color={colors.green} />}
-                  </View>
-                )}
-                title={post.title}
-                sub={formatDate(post.publishedAt || post.createdAt)}
-                onPress={() => router.push(`/blog/${encodeURIComponent(post.slug)}`)} />
+          <SectionHead title="Góc ba mẹ" onMore={go('/blog')} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.hscroll} style={s.hscrollOuter}>
+            {shop.data.posts.map((post) => (
+              <Press key={post.id} onPress={go(`/blog/${encodeURIComponent(post.slug)}`)} accessibilityLabel={post.title} style={s.post}>
+                <View style={s.postCover}>
+                  {imageSource(post.coverUrl)
+                    ? <Image source={imageSource(post.coverUrl)} style={StyleSheet.absoluteFill} contentFit="cover" />
+                    : <Icon name="book" size={28} color={colors.green} />}
+                </View>
+                <View style={{ padding: 12, gap: 4 }}>
+                  <Text numberOfLines={2} style={s.postTitle}>{post.title}</Text>
+                  <Text style={s.postDate}>{formatDate(post.publishedAt || post.createdAt)}</Text>
+                </View>
+              </Press>
             ))}
-          </List>
+          </ScrollView>
         </View>
       )}
 
       <View style={s.signoff}>
         <View style={s.signoffMark}>
           <View style={s.signoffLine} />
-          <View style={s.signoffLeaf}><Icon name="leaf" size={16} color={colors.green} /></View>
+          <Icon name="leaf" size={18} color={colors.green} />
           <View style={s.signoffLine} />
         </View>
         <Text style={s.signoffTitle}>Mỗi ngày một chút xanh</Text>
-        <Text style={s.signoffText}>Cùng bé lớn lên với Sprouty</Text>
       </View>
     </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  head: { height: 56, flexDirection: 'row', alignItems: 'center', paddingLeft: gutter, paddingRight: 8, width: '100%', maxWidth: maxWidth + 32, alignSelf: 'center' },
+  head: { height: 60, flexDirection: 'row', alignItems: 'center', paddingLeft: gutter, paddingRight: 12, width: '100%', maxWidth: maxWidth + 32, alignSelf: 'center' },
   brand: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  brandText: { fontFamily: fonts.display, fontSize: 21, lineHeight: 27, color: colors.greenDark },
-  hello: { fontFamily: fonts.semi, fontSize: 14, color: colors.earth },
-  headline: { fontFamily: fonts.display, fontSize: 23, lineHeight: 29, color: colors.ink },
+  brandText: { fontFamily: fonts.display, fontSize: 23, lineHeight: 30, color: colors.greenDark },
   section: { gap: 10 },
-  label: { fontFamily: fonts.bold, fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.ink4, marginLeft: 4 },
+  error: { fontFamily: fonts.body, fontSize: 13, color: colors.ink3 },
 
-  hero: { gap: 14, padding: 16, borderRadius: radius.lg, borderWidth: 1, borderColor: '#D5EDCF', backgroundColor: colors.greenSoft },
-  heroTitle: { fontFamily: fonts.display, fontSize: 19, lineHeight: 25, color: colors.ink },
-  heroText: { fontFamily: fonts.body, fontSize: 13.5, lineHeight: 20, color: colors.ink3 },
+  hero: { gap: 2, padding: 20, borderRadius: radius.xl, backgroundColor: colors.forest, overflow: 'hidden' },
+  heroLeaf: { position: 'absolute', right: -24, bottom: -30 },
+  hello: { fontFamily: fonts.semi, fontSize: 14, color: '#B9DDB0' },
+  headline: { fontFamily: fonts.display, fontSize: 25, lineHeight: 32, color: colors.white },
+  heroText: { fontFamily: fonts.body, fontSize: 14, lineHeight: 21, color: '#D5E9CF', marginTop: 4 },
+  heroGhost: { backgroundColor: 'rgba(255,255,255,0.14)', shadowOpacity: 0, elevation: 0 },
+  heroStats: { flexDirection: 'row', alignItems: 'center', marginTop: 14, paddingVertical: 12, paddingHorizontal: 6, borderRadius: radius.md, backgroundColor: 'rgba(255,255,255,0.09)' },
+  heroStat: { flex: 1, alignItems: 'center', gap: 1 },
+  heroNum: { fontFamily: fonts.display, fontSize: 24, lineHeight: 30, color: colors.white },
+  heroLabel: { fontFamily: fonts.medium, fontSize: 12, color: '#C6E2BF' },
+  heroRule: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.14)' },
+
+  quick: { flexDirection: 'row', justifyContent: 'space-between' },
+  quickItem: { alignItems: 'center', gap: 7 },
+  quickLabel: { fontFamily: fonts.semi, fontSize: 12.5, color: colors.ink2, textAlign: 'center' },
 
   hscrollOuter: { marginHorizontal: -gutter },
-  hscroll: { gap: 12, paddingHorizontal: gutter, paddingBottom: 4 },
+  hscroll: { gap: 12, paddingHorizontal: gutter, paddingTop: 2, paddingBottom: 10 },
 
-  peek: { flexDirection: 'row', gap: 14, padding: 12, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card },
-  peekArt: { width: 96, height: 104, borderRadius: 14, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' },
-  peekName: { fontFamily: fonts.display, fontSize: 18, lineHeight: 23, color: colors.ink },
-  peekStage: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink3 },
-  peekNote: { fontFamily: fonts.medium, fontSize: 12.5, lineHeight: 17, color: colors.warn },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill },
-  pillText: { fontFamily: fonts.bold, fontSize: 11.5 },
-  meter: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  meterTrack: { flex: 1, height: 6, borderRadius: 3, backgroundColor: '#E6EDF2', overflow: 'hidden' },
-  meterFill: { height: '100%', backgroundColor: '#5BA3D9', borderRadius: 3 },
-  meterValue: { fontFamily: fonts.semi, fontSize: 12, color: colors.ink3, minWidth: 32, textAlign: 'right' },
+  peek: { ...surface, padding: 6 },
+  peekArt: { aspectRatio: 1, borderRadius: radius.md, overflow: 'hidden' },
+  health: { position: 'absolute', top: 7, left: 7, flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 3, borderRadius: radius.pill },
+  healthText: { fontFamily: fonts.bold, fontSize: 11 },
+  peekBody: { paddingHorizontal: 6, paddingTop: 9, paddingBottom: 6, gap: 3 },
+  peekName: { fontFamily: fonts.bold, fontSize: 15, color: colors.ink },
+  peekStage: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink3 },
+  need: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', maxWidth: '100%', marginTop: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, backgroundColor: colors.warnSoft },
+  needText: { flexShrink: 1, fontFamily: fonts.bold, fontSize: 11.5, color: colors.warn },
+  water: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 7, minHeight: 18 },
 
-  quick: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  quickItem: { gap: 10, padding: 12, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card },
-  quickTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  quickArt: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  quickLabel: { fontFamily: fonts.bold, fontSize: 14.5, lineHeight: 19 },
-  quickSub: { fontFamily: fonts.body, fontSize: 12, lineHeight: 16, color: colors.ink3 },
+  dots: { flexDirection: 'row', gap: 5, marginTop: 5 },
+  dot: { width: 22, height: 6, borderRadius: 3, backgroundColor: '#EADFD0' },
+  cal: { width: 44, borderRadius: 12, backgroundColor: colors.mint, alignItems: 'center', paddingVertical: 5 },
+  calWd: { fontFamily: fonts.bold, fontSize: 10.5, color: colors.green },
+  calDay: { fontFamily: fonts.display, fontSize: 19, lineHeight: 23, color: colors.ink },
+  sessionFoot: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 2 },
+  sessionTime: { fontFamily: fonts.medium, fontSize: 12.5, color: colors.ink3 },
+  sessionPrice: { fontFamily: fonts.bold, fontSize: 12.5, color: colors.price },
+  sessionSeats: { fontFamily: fonts.bold, fontSize: 12.5, color: colors.greenDark },
 
-  list: { borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card, overflow: 'hidden' },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingLeft: 12, paddingTop: 12 },
-  rowBody: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 12, paddingBottom: 12, minHeight: 56 },
-  divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
-  rowTitle: { fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: colors.ink },
-  rowSub: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.ink3 },
-  rowIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  dots: { flexDirection: 'row', gap: 5, marginTop: 4 },
-  dot: { width: 20, height: 6, borderRadius: 3, backgroundColor: '#E9DCCB' },
-  cal: { width: 46, borderRadius: 12, borderWidth: 1, borderColor: '#CFE9C9', backgroundColor: colors.greenSoft, alignItems: 'center', paddingVertical: 5 },
-  calWd: { fontFamily: fonts.bold, fontSize: 11, color: colors.green },
-  calDay: { fontFamily: fonts.display, fontSize: 20, lineHeight: 25, color: colors.ink },
-  sessionFoot: { fontFamily: fonts.bold, fontSize: 13, marginTop: 2 },
-  thumb: { width: 56, height: 56, borderRadius: 12, overflow: 'hidden', backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
+  moreKits: { width: 120, alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: radius.lg, backgroundColor: colors.mint },
+  moreKitsIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
+  moreKitsText: { fontFamily: fonts.bold, fontSize: 13.5, lineHeight: 19, color: colors.greenDark, textAlign: 'center' },
+  post: { ...surface, width: 220 },
+  postCover: { height: 120, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
+  postTitle: { fontFamily: fonts.bold, fontSize: 14, lineHeight: 19, color: colors.ink, minHeight: 38 },
+  postDate: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink4 },
 
-  signoff: { alignItems: 'center', gap: 2, paddingTop: 8, paddingBottom: 12 },
-  signoffMark: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
+  signoff: { alignItems: 'center', gap: 4, paddingTop: 6, paddingBottom: 18 },
+  signoffMark: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   signoffLine: { width: 44, height: 1, backgroundColor: colors.line },
-  signoffLeaf: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
-  signoffTitle: { fontFamily: fonts.display, fontSize: 17, lineHeight: 23, color: colors.greenDark },
-  signoffText: { fontFamily: fonts.body, fontSize: 13, color: colors.ink4 },
+  signoffTitle: { fontFamily: fonts.displaySemi, fontSize: 15, lineHeight: 21, color: colors.ink4 },
 });

@@ -172,6 +172,7 @@ export const API = {
     summary: (productId: number | string) => request(`/products/${productId}/videos/summary`),
     forProduct: (productId: number | string) => request(`/products/${productId}/videos`),
     get: (videoId: string) => request(`/videos/${videoId}`),
+    progress: (videoId: string, data: { progressSec: number; completed?: boolean }) => request(`/videos/${videoId}/progress`, 'POST', data),
   },
   reviews: {
     mine: () => request('/me/reviews'),

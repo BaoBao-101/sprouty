@@ -10,7 +10,7 @@ import { useAuth } from '@/lib/auth';
 import { STORE_BUILD } from '@/lib/config';
 import { daysLeft, formatDate, formatPrice, planLength, shortOrderId } from '@/lib/format';
 import { useLoad } from '@/lib/use-load';
-import { colors, fonts, radius } from '@/theme';
+import { colors, fonts, radius, surface } from '@/theme';
 
 interface Plan { id: number; name: string; description: string; price: number; oldPrice: number | null; images: string[]; badge: string | null; days: number }
 interface Mine { isVip: boolean; vipUntil: string | null; vipExpired: boolean; pendingOrder: { id: string; total: number; planName: string | null } | null }
@@ -18,15 +18,16 @@ interface Mine { isVip: boolean; vipUntil: string | null; vipExpired: boolean; p
 /** VIP's own warm tones, kept to this screen. */
 const gold = { ink: '#9A5F0E', soft: '#FFF6E6', line: '#F1DAB0', deep: '#C98A1B' };
 
+/** What VIP adds, a few words each, as a grid of tiles. */
 const PERKS: Array<{ icon: IconName; label: string }> = [
-  { icon: 'shield', label: 'Bộ chăm tự động giữ cây không héo khô' },
-  { icon: 'chat', label: 'Hỏi Plant Buddy AI không giới hạn' },
-  { icon: 'album', label: 'Ảnh, video kỷ niệm không giới hạn' },
-  { icon: 'pot', label: 'Chậu trang trí và khung cảnh vườn đặc biệt' },
+  { icon: 'shield', label: 'Cây không bao giờ héo' },
+  { icon: 'chat', label: 'Hỏi AI không giới hạn' },
+  { icon: 'album', label: 'Ảnh, video không giới hạn' },
+  { icon: 'pot', label: 'Cảnh vườn & chậu đẹp' },
   { icon: 'star', label: 'Huy hiệu VIP trên tài khoản' },
 ];
 
-const STEPS = ['Chọn gói', 'Quét QR chuyển khoản', 'Tự lên VIP, không cần mã'];
+const STEPS = ['Chọn gói', 'Quét QR', 'Tự lên VIP'];
 
 function perMonth(price: number, days: number) {
   if (days < 60 || !price) return null;
@@ -97,7 +98,7 @@ export default function Vip() {
             <View style={{ flex: 1, gap: 6 }}>
               <Text style={s.kicker}>VIP GARDEN</Text>
               <Text style={s.heroTitle}>Thêm không gian cho cây kỷ niệm của bé</Text>
-              <Text style={s.heroText}>Cây được trông khi bé bận, kỷ niệm lưu không giới hạn, hỏi Plant Buddy thoải mái.</Text>
+              <Text style={s.heroText}>Cây được trông khi bé bận, kỷ niệm lưu thoải mái.</Text>
             </View>
             <Image source={imageSource('/assets/images/sprouty-icons/VIP.png') as number} style={s.crown} contentFit="contain" />
           </View>
@@ -151,11 +152,11 @@ export default function Vip() {
 
         <View style={{ gap: 8 }}>
           <Text style={s.sectionTitle}>Gói nào cũng có</Text>
-          <View style={s.list}>
-            {PERKS.map((perk, i) => (
+          <View style={s.perks}>
+            {PERKS.map((perk) => (
               <View key={perk.label} style={s.perk}>
-                <View style={s.perkIcon}><Icon name={perk.icon} size={17} color={gold.ink} /></View>
-                <Text style={[s.perkText, i < PERKS.length - 1 && s.perkDivider]}>{perk.label}</Text>
+                <View style={s.perkIcon}><Icon name={perk.icon} size={18} color={gold.ink} /></View>
+                <Text numberOfLines={2} style={s.perkText}>{perk.label}</Text>
               </View>
             ))}
           </View>
@@ -190,21 +191,21 @@ export default function Vip() {
 }
 
 const s = StyleSheet.create({
-  hero: { borderRadius: radius.lg, borderWidth: 1, borderColor: gold.line, backgroundColor: gold.soft, overflow: 'hidden' },
-  heroTop: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
+  hero: { borderRadius: radius.xl, backgroundColor: gold.soft, overflow: 'hidden' },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 18 },
   kicker: { fontFamily: fonts.bold, fontSize: 11.5, letterSpacing: 1.2, color: gold.ink },
-  heroTitle: { fontFamily: fonts.display, fontSize: 21, lineHeight: 27, color: colors.ink },
+  heroTitle: { fontFamily: fonts.display, fontSize: 22, lineHeight: 28, color: colors.ink },
   heroText: { fontFamily: fonts.body, fontSize: 13.5, lineHeight: 20, color: colors.ink3 },
-  crown: { width: 84, height: 84 },
-  status: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingHorizontal: 16, backgroundColor: 'rgba(255,255,255,0.7)', borderTopWidth: 1, borderTopColor: gold.line },
+  crown: { width: 88, height: 88 },
+  status: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 46, marginHorizontal: 10, marginBottom: 10, paddingHorizontal: 14, borderRadius: radius.md, backgroundColor: 'rgba(255,255,255,0.75)' },
   statusText: { flex: 1, fontFamily: fonts.semi, fontSize: 13.5, color: colors.greenDark },
   statusSide: { fontFamily: fonts.medium, fontSize: 12.5, color: colors.ink3 },
-  pending: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: radius.md, borderWidth: 1, borderColor: '#F6DDB0', backgroundColor: colors.warnSoft },
+  pending: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: radius.lg, backgroundColor: colors.warnSoft },
   pendingTitle: { fontFamily: fonts.bold, fontSize: 14.5, color: colors.ink },
   pendingText: { fontFamily: fonts.body, fontSize: 13, color: colors.warn },
-  sectionTitle: { fontFamily: fonts.bold, fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.ink4, marginLeft: 4 },
+  sectionTitle: { fontFamily: fonts.bold, fontSize: 12, letterSpacing: 0.9, textTransform: 'uppercase', color: colors.ink4, marginLeft: 4 },
   plans: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  plan: { flexGrow: 1, flexBasis: '40%', minHeight: 132, padding: 14, gap: 2, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.line, backgroundColor: colors.card },
+  plan: { ...surface, flexGrow: 1, flexBasis: '40%', minHeight: 128, padding: 14, gap: 2, borderWidth: 2, borderColor: 'transparent' },
   planOn: { borderColor: gold.deep, backgroundColor: gold.soft },
   planHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   planLen: { fontFamily: fonts.bold, fontSize: 15, color: colors.ink2 },
@@ -216,17 +217,16 @@ const s = StyleSheet.create({
   planNote: { fontFamily: fonts.medium, fontSize: 12.5, color: colors.ink3, marginTop: 2 },
   bestTag: { alignSelf: 'flex-start', marginTop: 8, paddingHorizontal: 9, paddingVertical: 3, borderRadius: radius.pill, backgroundColor: colors.green },
   bestText: { fontFamily: fonts.bold, fontSize: 11, color: colors.white },
-  list: { borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card, overflow: 'hidden' },
-  perk: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingLeft: 14 },
-  perkIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: gold.soft, alignItems: 'center', justifyContent: 'center' },
-  perkText: { flex: 1, paddingVertical: 14, paddingRight: 14, fontFamily: fonts.medium, fontSize: 14.5, lineHeight: 20, color: colors.ink },
-  perkDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
+  perks: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  perk: { ...surface, flexBasis: '46%', flexGrow: 1, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
+  perkIcon: { width: 38, height: 38, borderRadius: 13, backgroundColor: gold.soft, alignItems: 'center', justifyContent: 'center' },
+  perkText: { flex: 1, fontFamily: fonts.semi, fontSize: 13.5, lineHeight: 18, color: colors.ink },
   steps: { flexDirection: 'row', gap: 8 },
-  step: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: 12, paddingHorizontal: 6, borderRadius: radius.md, backgroundColor: colors.cream2, borderWidth: 1, borderColor: colors.line },
+  step: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: 12, paddingHorizontal: 6, borderRadius: radius.md, backgroundColor: colors.card },
   stepNum: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   stepNumText: { fontFamily: fonts.bold, fontSize: 13, color: colors.white },
   stepText: { fontFamily: fonts.semi, fontSize: 12.5, lineHeight: 17, color: colors.ink2, textAlign: 'center' },
   foot: { fontFamily: fonts.body, fontSize: 13.5, lineHeight: 20, color: colors.ink3, textAlign: 'center' },
   barLabel: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink3 },
-  barPrice: { fontFamily: fonts.bold, fontSize: 19, color: colors.price },
+  barPrice: { fontFamily: fonts.bold, fontSize: 20, color: colors.price },
 });

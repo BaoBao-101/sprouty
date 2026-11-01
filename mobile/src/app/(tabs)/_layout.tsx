@@ -14,6 +14,15 @@ const TABS: Array<{ name: string; title: string; icon: IconName }> = [
   { name: 'me', title: 'Của tôi', icon: 'user' },
 ];
 
+/** The tab's icon; the open tab sits on a soft green pill, so where you are is seen, not read. */
+function TabIcon({ icon, color, focused }: { icon: IconName; color: string; focused: boolean }) {
+  return (
+    <View style={{ width: 56, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: focused ? colors.mint : 'transparent' }}>
+      <Icon name={icon} size={22} color={color} />
+    </View>
+  );
+}
+
 /**
  * Five places, always in reach of a thumb. Labels stay under the icons: a
  * parent glancing at the phone with a child on their lap should not have to
@@ -21,7 +30,7 @@ const TABS: Array<{ name: string; title: string; icon: IconName }> = [
  */
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-  const barHeight = 62 + insets.bottom;
+  const barHeight = 66 + insets.bottom;
   return (
     <View style={{ flex: 1 }}>
       <Tabs
@@ -30,16 +39,19 @@ export default function TabsLayout() {
           headerShown: false,
           tabBarActiveTintColor: colors.greenDark,
           tabBarInactiveTintColor: colors.ink4,
-          tabBarLabelStyle: { fontFamily: fonts.semi, fontSize: 11.5 },
-          tabBarStyle: { height: barHeight, paddingTop: 6, paddingBottom: 6 + insets.bottom, borderTopColor: colors.line, backgroundColor: colors.card },
-          sceneStyle: { backgroundColor: colors.cream },
+          tabBarLabelStyle: { fontFamily: fonts.semi, fontSize: 11.5, marginTop: 2 },
+          tabBarStyle: {
+            height: barHeight, paddingTop: 8, paddingBottom: 6 + insets.bottom, borderTopWidth: 0, backgroundColor: colors.card,
+            elevation: 12, shadowColor: '#2B3A2E', shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: -2 },
+          },
+          sceneStyle: { backgroundColor: colors.canvas },
         }}
       >
         {TABS.map((tab) => (
           <Tabs.Screen
             key={tab.name}
             name={tab.name}
-            options={{ title: tab.title, tabBarIcon: ({ color }) => <Icon name={tab.icon} size={24} color={color as string} /> }}
+            options={{ title: tab.title, tabBarIcon: ({ color, focused }) => <TabIcon icon={tab.icon} color={color as string} focused={focused} /> }}
           />
         ))}
       </Tabs>

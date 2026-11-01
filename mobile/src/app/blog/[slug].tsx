@@ -9,7 +9,7 @@ import { API_ORIGIN, WEB_ORIGIN } from '@/lib/config';
 import { formatDate, formatPrice } from '@/lib/format';
 import { openUrl } from '@/lib/help';
 import { useLoad } from '@/lib/use-load';
-import { colors, fonts, radius } from '@/theme';
+import { colors, fonts, radius, shadow } from '@/theme';
 
 interface Recommended { id: number; name: string; images?: string[]; price: number }
 interface Post { title: string; slug?: string; coverUrl?: string; contentHtml: string; publishedAt?: string | null; createdAt?: string; author?: { name: string } | null; recommendedProducts?: Recommended[] }
@@ -23,7 +23,7 @@ function articleDocument(html: string) {
   html,body{margin:0;padding:0;background:${colors.cream};color:${colors.ink2};font:16px/1.65 -apple-system,Roboto,"Segoe UI",sans-serif;overflow-wrap:anywhere}
   h1,h2,h3{color:${colors.ink};line-height:1.3;margin:1.2em 0 .5em} h2{font-size:1.25em} h3{font-size:1.1em}
   p,ul,ol{margin:0 0 1em} img,video,iframe{max-width:100%;height:auto;border-radius:14px} a{color:${colors.green};font-weight:600}
-  blockquote{margin:1em 0;padding:.6em 1em;border-left:4px solid ${colors.greenLight};background:${colors.greenSoft};border-radius:8px}
+  blockquote{margin:1em 0;padding:.6em 1em;border-left:4px solid ${colors.greenLight};background:${colors.mint};border-radius:8px}
   table{display:block;overflow-x:auto;border-collapse:collapse} td,th{border:1px solid ${colors.line};padding:6px 8px}
 </style></head><body>${body}
 <script>
@@ -88,8 +88,8 @@ export default function BlogPostScreen() {
 
 const s = StyleSheet.create({
   cover: { width: '100%', aspectRatio: 16 / 9, borderRadius: radius.lg },
-  kit: { width: 160, padding: 8, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card, gap: 4 },
-  kitImage: { height: 110, borderRadius: 10, overflow: 'hidden', backgroundColor: colors.greenSoft },
+  kit: { width: 160, padding: 8, borderRadius: radius.md, backgroundColor: colors.card, ...shadow.sm, gap: 4 },
+  kitImage: { height: 110, borderRadius: 10, overflow: 'hidden', backgroundColor: colors.mint },
   kitName: { fontFamily: fonts.semi, fontSize: 13.5, color: colors.ink },
   kitPrice: { fontFamily: fonts.bold, fontSize: 14, color: colors.price },
 });

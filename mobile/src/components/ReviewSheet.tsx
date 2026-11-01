@@ -5,7 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { API, imageSource } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { OwnReview, ReviewOptions } from '@/lib/types';
-import { colors, fonts, radius } from '@/theme';
+import { colors, fonts, radius, shadow } from '@/theme';
 import { Icon } from './Icon';
 import { useToast } from './Toast';
 import { Button, Field, Sheet, T, tap } from './ui';
@@ -255,16 +255,16 @@ export function ReviewSheet({ target, existing, options, onClose, onSaved }: {
 
 const s = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  thumb: { width: 52, height: 52, borderRadius: 12, overflow: 'hidden', backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
+  thumb: { width: 52, height: 52, borderRadius: 12, overflow: 'hidden', backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
   star: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tag: { minHeight: 40, paddingHorizontal: 12, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.line, backgroundColor: colors.card, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  tagOn: { borderColor: colors.green, backgroundColor: colors.greenSoft },
+  tag: { minHeight: 40, paddingHorizontal: 12, borderRadius: radius.pill, borderWidth: 1, borderColor: 'rgba(32,52,36,0.06)', backgroundColor: colors.card, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  tagOn: { borderColor: colors.green, backgroundColor: colors.mint },
   tagText: { fontFamily: fonts.semi, fontSize: 13.5, color: colors.ink2 },
   photos: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  photo: { width: 76, height: 76, borderRadius: 12, overflow: 'hidden', backgroundColor: colors.greenSoft },
-  photoAdd: { alignItems: 'center', justifyContent: 'center', gap: 2, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#CFE9C9', backgroundColor: colors.card },
+  photo: { width: 76, height: 76, borderRadius: 12, overflow: 'hidden', backgroundColor: colors.mint },
+  photoAdd: { alignItems: 'center', justifyContent: 'center', gap: 2, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.ink5, backgroundColor: colors.card },
   photoX: { position: 'absolute', top: 4, right: 4, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(32,52,36,0.7)', alignItems: 'center', justifyContent: 'center' },
   addText: { fontFamily: fonts.semi, fontSize: 12, color: colors.green },
-  anon: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card },
+  anon: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: radius.sm, backgroundColor: colors.card, ...shadow.sm },
 });

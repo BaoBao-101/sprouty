@@ -8,17 +8,20 @@ import { ProductVideos } from '@/components/media';
 import { BuddyBubble } from '@/components/BuddyBubble';
 import { CareGame, type CareTool } from '@/components/CareGame';
 import { GardenStyle, sceneLook, type GardenBenefits } from '@/components/GardenStyle';
+import { SpeciesProfile } from '@/components/SpeciesProfile';
 import { IotWorkbench, SensorChart, useIotBoard } from '@/components/IotStation';
 import { Plant3D } from '@/components/Plant3D';
 import { useToast } from '@/components/Toast';
-import { Button, Card, Field, H, IconButton, Loading, Screen, Sheet, T, tap } from '@/components/ui';
+import { Button, Card, Field, H, IconButton, IconTile, Loading, Meter, Press, Ring, Screen, Segmented, Sheet, T, tap } from '@/components/ui';
 import { API, imageSource } from '@/lib/api';
 import { plantClock } from '@/lib/plant-clock';
 import { formatCountdown, formatDateTime, plainAiText } from '@/lib/format';
 import type { CareSlot, CoachMessage, PlantDetail, PlantDevice, PlantEvent } from '@/lib/types';
-import { colors, fonts, gutter, maxWidth, radius } from '@/theme';
+import { colors, fonts, gutter, maxWidth, radius, surface } from '@/theme';
 
 const aiMark = imageSource('/assets/images/sprouty-mark.png') as number;
+/** Care log entries shown at first, and how many more each "Xem thêm" adds (10). */
+const LOG_PAGE = 8;
 const QUICK_ASKS = ['Tại sao lá bị vàng?', 'Bao lâu nữa cây lớn?', 'Nên bật thiết bị nào?'];
 
 type Band = 'good' | 'warn' | 'bad';
@@ -112,13 +115,13 @@ function Fold({ icon, title, sub, open, onToggle, dot, children }: {
   return (
     <Card style={{ padding: 0, gap: 0 }}>
       <Pressable onPress={() => { tap(); onToggle(); }} style={s.foldHead} accessibilityRole="button" accessibilityState={{ expanded: open }}>
-        <Icon name={icon} size={20} color={colors.green} />
+        <IconTile icon={icon} size={40} />
         <View style={{ flex: 1 }}>
-          <T bold>{title}</T>
-          <T muted style={{ fontSize: 13 }}>{sub}</T>
+          <Text style={s.foldTitle}>{title}</Text>
+          <Text numberOfLines={1} style={s.deviceAbout}>{sub}</Text>
         </View>
         {dot && !open ? <View style={s.dot} /> : null}
-        <View style={open ? { transform: [{ rotate: '180deg' }] } : undefined}><Icon name="arrow-down" size={18} color={colors.ink3} /></View>
+        <View style={[s.chev, open && { transform: [{ rotate: '180deg' }] }]}><Icon name="arrow-down" size={16} color={colors.ink3} /></View>
       </Pressable>
       {open && <View style={{ paddingHorizontal: 16, paddingBottom: 16, gap: 10 }}>{children}</View>}
     </Card>
@@ -146,6 +149,12 @@ export default function PlantScreen() {
   const [deviceBusy, setDeviceBusy] = useState('');
   const [feed, setFeed] = useState<PlantEvent[]>([]);
   const [videosOpen, setVideosOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
+  /** Which real-world growing step is read in full ('' for none). */
+  const [growOpen, setGrowOpen] = useState('');
+  /** How much of the care log shows; it grows every day, so it starts short. */
+  const [historyShown, setHistoryShown] = useState(LOG_PAGE);
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [replanting, setReplanting] = useState(false);
@@ -287,6 +296,9 @@ export default function PlantScreen() {
   const critical = !dead && plant.wilt.critical;
   const hoursLeft = plant.wilt.hoursLeft === null ? '' : plant.wilt.hoursLeft >= 48 ? `${Math.round(plant.wilt.hoursLeft / 24)} ngày` : `${plant.wilt.hoursLeft} giờ`;
   const recommended = plant.nextStep.action;
+  // A different fun fact each day.
+  const facts = plant.speciesProfile?.funFacts ?? [];
+  const funFact = facts.length ? facts[Math.floor(Date.now() / 86_400_000) % facts.length] : null;
   // The belt: what can be done in this stage, and a count of what opens later (harvest is no surprise to keep).
   const tools: CareTool[] = dead || harvested ? [] : plant.care.filter((c) => c.allowedInStage || c.action !== 'harvest').map((c) => {
     const left = secondsLeft(c, fetchedAt, now);
@@ -361,12 +373,12 @@ export default function PlantScreen() {
         {/* The garden's look, folded, right under the plant: a pick shows on the 3D model above. Kept mounted while folded — it loads the look the model wears. */}
         <Card style={{ padding: 0, gap: 0 }}>
           <Pressable onPress={() => { tap(); setGardenOpen((v) => !v); }} style={s.foldHead} accessibilityRole="button" accessibilityState={{ expanded: gardenOpen }}>
-            <Icon name="pot" size={20} color={colors.green} />
+            <IconTile icon="pot" size={40} tint="#F6E6D6" color={colors.earth} />
             <View style={{ flex: 1 }}>
-              <T bold>Trang trí vườn</T>
-              <T muted style={{ fontSize: 13 }}>Khung cảnh và chậu cho cây 3D</T>
+              <Text style={s.foldTitle}>Trang trí vườn</Text>
+              <Text style={s.deviceAbout}>Khung cảnh và chậu</Text>
             </View>
-            <View style={gardenOpen ? { transform: [{ rotate: '180deg' }] } : undefined}><Icon name="arrow-down" size={18} color={colors.ink3} /></View>
+            <View style={[s.chev, gardenOpen && { transform: [{ rotate: '180deg' }] }]}><Icon name="arrow-down" size={16} color={colors.ink3} /></View>
           </Pressable>
           <View style={gardenOpen ? { paddingHorizontal: 12, paddingBottom: 12 } : undefined}>
             <GardenStyle hidden={!gardenOpen} onChange={setGarden} width={inner - 26} />
@@ -376,14 +388,13 @@ export default function PlantScreen() {
         {/* The one thing to do now; its tool is flagged "Nên làm" on the belt */}
         {!dead && (
           <View style={[s.todo, critical && s.todoBad, harvested && s.todoDone]}>
-            <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
-              <View style={[s.todoIcon, critical && { backgroundColor: '#F9D9DE' }]}>
-                <Icon name={harvested ? 'trophy' : critical ? 'warning' : plant.nextStep.icon} size={20} color={critical ? colors.bad : colors.greenDark} />
-              </View>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={[s.kicker, critical && { color: colors.bad }]}>{harvested ? 'ĐÃ HOÀN THÀNH' : critical ? `CỨU CÂY NGAY · CÒN KHOẢNG ${hoursLeft.toUpperCase()}` : 'VIỆC NÊN LÀM'}</Text>
+            <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+              <IconTile icon={harvested ? 'trophy' : critical ? 'warning' : plant.nextStep.icon} size={46}
+                tint={critical ? '#F9D9DE' : colors.white} color={critical ? colors.bad : colors.greenDark} />
+              <View style={{ flex: 1, gap: 1 }}>
+                <Text style={[s.kicker, critical && { color: colors.bad }]}>{harvested ? 'ĐÃ HOÀN THÀNH' : critical ? `CỨU CÂY · CÒN ${hoursLeft.toUpperCase()}` : 'VIỆC NÊN LÀM'}</Text>
                 <Text style={s.todoTitle}>{harvested ? `Bé đã thu hoạch ${plant.harvestLabel}!` : plant.nextStep.label || 'Chờ dụng cụ hồi lại'}</Text>
-                <Text numberOfLines={3} style={s.todoWhy}>{harvested ? 'Mở một bộ kit mới để trồng cây khác nhé.' : why}</Text>
+                <Text numberOfLines={2} style={s.todoWhy}>{harvested ? 'Mở một bộ kit mới để trồng cây khác nhé.' : why}</Text>
               </View>
             </View>
             {critical && plant.keeper && !plant.keeper.vip && (
@@ -392,60 +403,79 @@ export default function PlantScreen() {
           </View>
         )}
 
-        {/* Where it stands */}
-        <View style={{ gap: 10 }}>
-          <View style={s.badges}>
-            <View style={[s.badge, { backgroundColor: BAND[healthTone].bg }]}>
-              <Icon name="heart" size={13} color={BAND[healthTone].fg} />
-              <Text style={[s.badgeText, { color: BAND[healthTone].fg }]}>{plant.healthState.label}{dead ? '' : ` · ${Math.round(plant.health)}%`}</Text>
+        {/* Where it stands: the stage as a ring, how it is as tags */}
+        <View style={s.status}>
+          <Ring value={plant.stageProgress} size={66} stroke={6}>
+            <Text style={s.ringNum}>{Math.round(plant.stageProgress)}%</Text>
+          </Ring>
+          <View style={{ flex: 1, gap: 6 }}>
+            <View>
+              <Text style={s.stageLabel}>{plant.stageLabel}</Text>
+              <Text style={s.stageMeta}>Chặng {plant.stageIndex + 1}/{plant.stageCount} · {plant.speciesLabel}</Text>
             </View>
-            {plant.careStreak > 0 && <View style={[s.badge, { backgroundColor: '#FFF1DE' }]}><Icon name="bolt" size={13} color={colors.price} /><Text style={[s.badgeText, { color: colors.warn }]}>{plant.careStreak} ngày liên tục</Text></View>}
-            {plant.keeper?.on && !dead && <View style={[s.badge, { backgroundColor: colors.infoSoft }]}><Icon name="shield" size={13} color={colors.info} /><Text style={[s.badgeText, { color: colors.info }]}>Chăm tự động</Text></View>}
-            {plant.attempt > 1 && <View style={[s.badge, { backgroundColor: colors.earthSoft }]}><Icon name="seed" size={13} color={colors.earth} /><Text style={[s.badgeText, { color: colors.earth }]}>Lần thứ {plant.attempt}</Text></View>}
+            <View style={s.badges}>
+              <View style={[s.badge, { backgroundColor: BAND[healthTone].bg }]}>
+                <Icon name="heart" size={12} color={BAND[healthTone].fg} />
+                <Text style={[s.badgeText, { color: BAND[healthTone].fg }]}>{plant.healthState.label}{dead ? '' : ` ${Math.round(plant.health)}%`}</Text>
+              </View>
+              {plant.careStreak > 0 && <View style={[s.badge, { backgroundColor: '#FFEBD0' }]}><Icon name="bolt" size={12} color={colors.price} /><Text style={[s.badgeText, { color: colors.warn }]}>{plant.careStreak} ngày</Text></View>}
+              {plant.keeper?.on && !dead && <View style={[s.badge, { backgroundColor: colors.infoSoft }]}><Icon name="shield" size={12} color={colors.info} /><Text style={[s.badgeText, { color: colors.info }]}>Tự chăm</Text></View>}
+              {plant.attempt > 1 && <View style={[s.badge, { backgroundColor: colors.earthSoft }]}><Icon name="seed" size={12} color={colors.earth} /><Text style={[s.badgeText, { color: colors.earth }]}>Lần {plant.attempt}</Text></View>}
+            </View>
           </View>
-          <View style={s.stageRow}>
-            <Text style={s.stageLabel}>{plant.stageLabel}</Text>
-            <Text style={s.stageMeta}>chặng {plant.stageIndex + 1}/{plant.stageCount} · {plant.speciesLabel}</Text>
-            <Text style={s.percent}>{Math.round(plant.stageProgress)}%</Text>
-          </View>
-          <View style={s.bar}><View style={[s.barFill, { width: `${Math.round(plant.stageProgress)}%` }]} /></View>
         </View>
 
         {/* Tabs, so the page stays one screen of what matters */}
-        <View style={s.tabs} accessibilityRole="tablist">
-          {TABS.map((t) => (
-            <Pressable key={t.key} onPress={() => { tap(); setTab(t.key); }} accessibilityRole="tab" accessibilityState={{ selected: tab === t.key }}
-              style={[s.tab, tab === t.key && s.tabOn]}>
-              <Icon name={t.icon} size={16} color={tab === t.key ? colors.white : colors.ink3} />
-              <Text numberOfLines={1} style={[s.tabText, tab === t.key && { color: colors.white }]}>{t.label}</Text>
-              {t.key === 'log' && feed.length > 0 && tab !== 'log' ? <View style={s.tabDot} /> : null}
-            </Pressable>
-          ))}
-        </View>
+        <Segmented
+          items={TABS.map((t) => ({ key: t.key, label: t.label, icon: t.icon, dot: t.key === 'log' && feed.length > 0 }))}
+          value={tab}
+          onChange={setTab}
+        />
 
         {tab === 'care' && (
           <>
-            <Pressable onPress={() => { tap(); setGuideOpen(true); }} accessibilityRole="button" style={s.help}>
-              <Icon name="info" size={16} color={colors.green} /><Text style={s.helpText}>Cây cần gì? Cách chăm từng việc</Text>
-            </Pressable>
             {plant.tasks.length > 0 && !dead && (
               <View style={s.panel}>
-                <Text style={[s.panelTitle, plant.tasksDone && { color: colors.greenDark }]}>
-                  {plant.tasksDone ? 'Xong nhiệm vụ chặng này' : plant.pointsFull ? 'Đủ điểm — làm nốt nhiệm vụ để lên chặng' : 'Nhiệm vụ để lên chặng'}
-                </Text>
-                {plant.tasks.map((t) => (
-                  <View key={t.action} style={s.task}>
-                    <Icon name={t.done >= t.need ? 'check' : t.icon} size={16} color={t.done >= t.need ? colors.green : colors.ink3} />
-                    <Text style={[s.taskText, t.done >= t.need && { color: colors.ink4 }]}>{t.label}</Text>
-                    <Text style={s.taskCount}>{t.done}/{t.need}</Text>
-                  </View>
-                ))}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={[s.panelTitle, { flex: 1 }, plant.tasksDone && { color: colors.greenDark }]}>
+                    {plant.tasksDone ? 'Xong nhiệm vụ chặng này' : plant.pointsFull ? 'Làm nốt để lên chặng' : 'Nhiệm vụ lên chặng'}
+                  </Text>
+                  <Press onPress={() => setGuideOpen(true)} accessibilityLabel="Cách chăm từng việc" scaleTo={0.9} style={s.help}>
+                    <Icon name="info" size={14} color={colors.greenDark} /><Text style={s.helpText}>Cách chăm</Text>
+                  </Press>
+                </View>
+                <View style={s.tasks}>
+                  {plant.tasks.map((t) => {
+                    const ok = t.done >= t.need;
+                    return (
+                      <View key={t.action} style={[s.task, ok && s.taskOk]}>
+                        <View style={[s.taskIcon, ok && { backgroundColor: colors.green }]}>
+                          <Icon name={ok ? 'check' : t.icon} size={16} color={ok ? colors.white : colors.greenDark} />
+                        </View>
+                        <Text numberOfLines={2} style={[s.taskText, ok && { color: colors.ink3 }]}>{t.label}</Text>
+                        <Text style={[s.taskCount, ok && { color: colors.greenDark }]}>{t.done}/{t.need}</Text>
+                        <Meter value={(Math.min(t.done, t.need) / Math.max(1, t.need)) * 100} height={4} color={ok ? colors.green : colors.greenLight} style={{ alignSelf: 'stretch' }} />
+                      </View>
+                    );
+                  })}
+                </View>
               </View>
+            )}
+
+            {/* One thing about the plant a day, from its species profile; the whole profile is in the journal. */}
+            {funFact && (
+              <Press onPress={() => { setTab('log'); setProfileOpen(true); }} scaleTo={0.98} style={s.fact}>
+                <IconTile icon="star" size={36} tint="#F7DFAE" color={colors.gold} round />
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={s.factTitle}>Bé có biết?</Text>
+                  <Text numberOfLines={3} style={s.factText}>{funFact}</Text>
+                </View>
+                <Icon name="arrow-right" size={16} color={colors.gold} />
+              </Press>
             )}
 
             <View style={s.panel}>
               <Text style={s.panelTitle}>Hành trình của cây</Text>
-              <Text style={s.panelText}>{plant.stageStory}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 4, paddingVertical: 4 }}>
                 {plant.stages.map((st, i) => (
                   <View key={st.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -459,6 +489,7 @@ export default function PlantScreen() {
                   </View>
                 ))}
               </ScrollView>
+              {plant.stageStory ? <Text numberOfLines={2} style={s.panelText}>{plant.stageStory}</Text> : null}
             </View>
           </>
         )}
@@ -477,11 +508,15 @@ export default function PlantScreen() {
                 preview={<Plant3D plant={plant} width={Math.min(inner - 34, 420)} height={220} isNight={!isDay}
                   scene={scene} decoration={garden?.decoration} wind={wind} onInteractionChange={setRotating}
                   gadgets={board.wired.map((t) => device(t)).filter(Boolean).map((d) => ({ type: d!.type, on: d!.kind === 'sensor' || d!.autoMode }))} />} />
-              <Text style={s.note}>Cây thích đất ẩm {plant.idealMoisture[0]}–{plant.idealMoisture[1]}% · {plant.idealTemp[0]}–{plant.idealTemp[1]}°C</Text>
             </View>
 
             <View style={s.panel}>
-              <Text style={s.panelTitle}>Biểu đồ cảm biến 24 giờ</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                <Text style={[s.panelTitle, { flex: 1, minWidth: 120 }]}>24 giờ qua</Text>
+                {/* What the plant likes, so a reading can be judged at a glance */}
+                <View style={[s.badge, { backgroundColor: colors.infoSoft }]}><Icon name="water" size={12} color={colors.info} /><Text style={[s.badgeText, { color: colors.info }]}>{plant.idealMoisture[0]}–{plant.idealMoisture[1]}%</Text></View>
+                <View style={[s.badge, { backgroundColor: '#FBE6DF' }]}><Icon name="thermo" size={12} color="#B5543B" /><Text style={[s.badgeText, { color: '#B5543B' }]}>{plant.idealTemp[0]}–{plant.idealTemp[1]}°C</Text></View>
+              </View>
               <SensorChart readings={plant.readings || []} wired={board.wired} width={inner - 30} />
             </View>
           </>
@@ -489,6 +524,44 @@ export default function PlantScreen() {
 
         {tab === 'log' && (
           <>
+            {/* What is looked up again and again comes first, folded: the care log below
+                grows every day and used to push these further down each time. */}
+            <Fold icon="camera" title="Video hướng dẫn" sub="Cách gieo, tưới và chăm bộ kit" open={videosOpen} onToggle={() => setVideosOpen((v) => !v)}>
+              <ProductVideos productId={plant.productId} signedIn />
+            </Fold>
+            {(plant.speciesProfile || plant.cultivation) && (
+              <Fold icon="book" title={`Hồ sơ giống · ${plant.speciesLabel}`} sub="Câu chuyện và điều thú vị"
+                open={profileOpen} onToggle={() => setProfileOpen((v) => !v)}>
+                {plant.speciesProfile && <SpeciesProfile label={plant.speciesLabel} profile={plant.speciesProfile} title={false} />}
+                {plant.cultivation && (
+                  <View style={s.realGrow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Icon name="pot" size={16} color={colors.greenDark} />
+                      <Text style={s.panelTitle}>Trồng ngoài đời thật</Text>
+                    </View>
+                    {/* Three steps, one line each; the sentence behind each is a tap away. */}
+                    {([
+                      ['seed', 'Gieo', plant.cultivation.sow],
+                      ['sprout', 'Chăm', plant.cultivation.support],
+                      ['harvest', 'Thu hoạch', plant.cultivation.mature],
+                    ] as Array<[IconName, string, string]>).map(([icon, step, text], i, all) => (
+                      <Pressable key={step} onPress={() => { tap(); setGrowOpen((v) => (v === step ? '' : step)); }} accessibilityRole="button"
+                        accessibilityState={{ expanded: growOpen === step }} style={s.growStep}>
+                        <View style={{ alignItems: 'center' }}>
+                          <View style={s.growIcon}><Icon name={icon} size={16} color={colors.greenDark} /></View>
+                          {i < all.length - 1 && <View style={s.growLine} />}
+                        </View>
+                        <View style={{ flex: 1, paddingBottom: 10 }}>
+                          <Text style={s.growLabel}>{step}</Text>
+                          <Text numberOfLines={growOpen === step ? undefined : 1} style={s.panelText}>{text}</Text>
+                        </View>
+                      </Pressable>
+                    ))}
+                    <Text style={s.deviceAbout}>Trong app, thời gian được rút ngắn cho bé dễ theo dõi.</Text>
+                  </View>
+                )}
+              </Fold>
+            )}
             {feed.length > 0 && (
               <View style={s.panel}>
                 <Text style={s.panelTitle}>Vừa xảy ra</Text>
@@ -500,10 +573,13 @@ export default function PlantScreen() {
                 ))}
               </View>
             )}
-            <View style={s.list}>
-              <Text style={s.listHead}>{plant.history.length ? `${plant.history.length} việc bé đã làm cho cây` : 'Nhật ký chăm cây'}</Text>
-              {plant.history.length === 0 && <Text style={[s.deviceAbout, { padding: 14, paddingTop: 0 }]}>Chưa có lần chăm cây nào — kéo một dụng cụ lên cây để bắt đầu.</Text>}
-              {plant.history.slice(0, 30).map((h, i, all) => (
+            {/* The care log grows every day: one line until it is opened. */}
+            <Fold icon="clock" title={plant.history.length ? `${plant.history.length} việc bé đã làm` : 'Nhật ký chăm cây'}
+              sub={plant.history[0] ? `Gần nhất: ${plant.history[0].auto ? 'tự động ' : ''}${plant.history[0].label.toLowerCase()} · ${formatDateTime(plant.history[0].createdAt)}` : 'Kéo một dụng cụ lên cây để bắt đầu'}
+              open={logOpen} onToggle={() => setLogOpen((v) => !v)}>
+              {plant.history.length === 0 && <Text style={s.deviceAbout}>Chưa có lần chăm cây nào.</Text>}
+              <View style={{ marginHorizontal: -16 }}>
+              {plant.history.slice(0, historyShown).map((h, i, all) => (
                 <View key={h.id} style={[s.history, i < all.length - 1 && s.divider]}>
                   <View style={s.historyIcon}><Icon name={h.auto ? 'shield' : h.icon} size={15} color={h.warned ? colors.warn : colors.greenDark} /></View>
                   <View style={{ flex: 1 }}>
@@ -513,20 +589,19 @@ export default function PlantScreen() {
                   {h.growth > 0 && <Text style={s.growth}>+{h.growth.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}</Text>}
                 </View>
               ))}
-            </View>
-            <Fold icon="camera" title="Video hướng dẫn" sub="Cách gieo, tưới và chăm bộ kit" open={videosOpen} onToggle={() => setVideosOpen((v) => !v)}>
-              <ProductVideos productId={plant.productId} signedIn />
-            </Fold>
-            {plant.cultivation && (
-              <View style={s.panel}>
-                <Text style={s.panelTitle}>Hồ sơ giống · {plant.speciesLabel}</Text>
-                <Text style={[s.panelText, { fontStyle: 'italic' }]}>{plant.cultivation.name}</Text>
-                <Text style={s.panelText}>{plant.cultivation.sow}</Text>
-                <Text style={s.panelText}>{plant.cultivation.support}</Text>
-                <Text style={s.panelText}>{plant.cultivation.mature}</Text>
-                <Text style={s.deviceAbout}>Mô phỏng giáo dục: thời gian và thang độ ẩm được giản lược.</Text>
+              {plant.history.length > LOG_PAGE && (
+                <Pressable onPress={() => { tap(); setHistoryShown((n) => (n >= plant.history.length ? LOG_PAGE : n + 10)); }}
+                  accessibilityRole="button" style={s.more}>
+                  <Text style={s.moreText}>
+                    {historyShown >= plant.history.length ? 'Thu gọn' : `Xem thêm ${Math.min(10, plant.history.length - historyShown)} việc`}
+                  </Text>
+                  <View style={historyShown >= plant.history.length ? { transform: [{ rotate: '180deg' }] } : undefined}>
+                    <Icon name="arrow-down" size={16} color={colors.green} />
+                  </View>
+                </Pressable>
+              )}
               </View>
-            )}
+            </Fold>
           </>
         )}
         {/* Room for Sprouty AI's bubble, so it never sits on the last line */}
@@ -579,98 +654,108 @@ export default function PlantScreen() {
       </Sheet>
 
       <Sheet open={guideOpen} title="Cây cần gì?" onClose={() => setGuideOpen(false)}>
-        {[
-          ['arrow-right', 'Kéo dụng cụ lên cây và giữ yên đến khi vòng tròn đầy. Chạm vào dụng cụ cũng được.'],
-          ['water', 'Tưới nước khi đất khô. Tưới khi đất còn ướt sẽ làm úng rễ.'],
-          ['fertilize', 'Bón phân khi cây đói (thức ăn dưới 45%). Bón quá nhiều cũng không tốt.'],
-          ['pest', 'Bắt sâu khi camera báo có sâu. Lá sạch thì cây lớn nhanh hơn.'],
-          ['sun', 'Đưa ra nắng vào ban ngày. Ban đêm cây nghỉ ngơi.'],
-          ['clock', 'Mỗi việc cần chờ một lúc mới làm lại được — con số trên dụng cụ là thời gian còn lại.'],
-          ['star', 'Dụng cụ có nhãn "Nên làm" là việc Sprouty AI khuyên làm ngay lúc này.'],
-        ].map(([icon, text]) => (
-          <View key={icon} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
-            <View style={s.historyIcon}><Icon name={icon as IconName} size={15} color={colors.greenDark} /></View>
-            <T style={{ flex: 1 }}>{text}</T>
-          </View>
-        ))}
+        <View style={s.guide}>
+          {([
+            ['arrow-right', 'Kéo dụng cụ lên cây', 'Giữ yên tới khi vòng tròn đầy'],
+            ['water', 'Tưới khi đất khô', 'Đất còn ướt thì chờ thêm'],
+            ['fertilize', 'Bón khi cây đói', 'Thức ăn dưới 45%'],
+            ['pest', 'Bắt sâu khi có sâu', 'Camera sẽ báo'],
+            ['sun', 'Ra nắng ban ngày', 'Ban đêm cây nghỉ'],
+            ['clock', 'Số trên dụng cụ', 'Thời gian chờ còn lại'],
+            ['star', 'Nhãn “Nên làm”', 'Việc nên làm ngay'],
+          ] as Array<[IconName, string, string]>).map(([icon, title, text], i, all) => (
+            <View key={icon} style={[s.guideRow, i < all.length - 1 && s.divider]}>
+              <IconTile icon={icon} size={38} />
+              <View style={{ flex: 1 }}>
+                <Text style={s.historyTitle}>{title}</Text>
+                <Text style={s.deviceAbout}>{text}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
       </Sheet>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  art: { alignSelf: 'center', borderRadius: 22, overflow: 'hidden' },
+  art: { alignSelf: 'center', borderRadius: radius.xl, overflow: 'hidden' },
   clock: { position: 'absolute', top: 10, left: 10, flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.9)' },
   clockText: { fontFamily: fonts.semi, fontSize: 12, color: colors.ink2 },
   dead: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255,253,248,0.94)', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 20 },
-  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  badge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 4, borderRadius: radius.pill },
-  badgeText: { fontFamily: fonts.bold, fontSize: 12, color: colors.greenDark },
-  stageRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  stageLabel: { fontFamily: fonts.display, fontSize: 19, lineHeight: 24, color: colors.ink },
-  stageMeta: { flex: 1, fontFamily: fonts.medium, fontSize: 13, color: colors.ink3 },
-  percent: { fontFamily: fonts.display, fontSize: 18, color: colors.greenDark },
-  bar: { height: 8, borderRadius: 4, backgroundColor: '#E6ECE0', overflow: 'hidden' },
-  barFill: { height: '100%', borderRadius: 4, backgroundColor: colors.green },
+  status: { ...surface, flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14 },
+  ringNum: { fontFamily: fonts.display, fontSize: 16, lineHeight: 20, color: colors.greenDark },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill },
+  badgeText: { fontFamily: fonts.bold, fontSize: 11.5, color: colors.greenDark },
+  stageLabel: { fontFamily: fonts.display, fontSize: 20, lineHeight: 25, color: colors.ink },
+  stageMeta: { fontFamily: fonts.medium, fontSize: 12.5, color: colors.ink3 },
 
-  todo: { gap: 10, padding: 12, borderRadius: radius.lg, borderWidth: 1, borderColor: '#CFE9C9', backgroundColor: colors.cream2 },
-  todoBad: { borderColor: '#F5C9CF', backgroundColor: colors.badSoft },
-  todoDone: { borderColor: '#D5EDCF', backgroundColor: colors.greenSoft },
-  todoIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
+  todo: { gap: 10, padding: 14, borderRadius: radius.lg, backgroundColor: colors.mint },
+  todoBad: { backgroundColor: colors.badSoft },
+  todoDone: { backgroundColor: colors.goldSoft },
   kicker: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.8, color: colors.green },
-  todoTitle: { fontFamily: fonts.bold, fontSize: 16, lineHeight: 22, color: colors.ink },
-  todoWhy: { fontFamily: fonts.body, fontSize: 13.5, lineHeight: 20, color: colors.ink3 },
+  todoTitle: { fontFamily: fonts.bold, fontSize: 16.5, lineHeight: 22, color: colors.ink },
+  todoWhy: { fontFamily: fonts.body, fontSize: 13.5, lineHeight: 19, color: colors.ink2 },
 
-  tabs: { flexDirection: 'row', padding: 4, gap: 4, borderRadius: radius.pill, backgroundColor: '#EEF2E8' },
-  tab: { flex: 1, minHeight: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderRadius: radius.pill, paddingHorizontal: 4 },
-  tabOn: { backgroundColor: colors.green },
-  tabText: { fontFamily: fonts.bold, fontSize: 12.5, color: colors.ink2 },
-  tabDot: { position: 'absolute', top: 8, right: 10, width: 7, height: 7, borderRadius: 4, backgroundColor: colors.orange },
-
-  help: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40, alignSelf: 'flex-start' },
-  helpText: { fontFamily: fonts.bold, fontSize: 13.5, color: colors.green },
+  help: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 34, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: colors.mint },
+  helpText: { fontFamily: fonts.bold, fontSize: 12.5, color: colors.greenDark },
+  fact: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: radius.lg, backgroundColor: colors.goldSoft },
+  factTitle: { fontFamily: fonts.bold, fontSize: 13.5, color: colors.gold },
+  factText: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20, color: colors.ink2 },
   note: { fontFamily: fonts.body, fontSize: 13.5, lineHeight: 20, color: colors.ink3 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 
-  panel: { gap: 10, padding: 14, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card },
-  panelTitle: { fontFamily: fonts.bold, fontSize: 15, color: colors.ink },
+  panel: { ...surface, gap: 12, padding: 14 },
+  panelTitle: { fontFamily: fonts.bold, fontSize: 15.5, color: colors.ink },
   panelText: { fontFamily: fonts.body, fontSize: 13.5, lineHeight: 20, color: colors.ink3 },
-  task: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 28 },
-  taskText: { flex: 1, fontFamily: fonts.medium, fontSize: 14, color: colors.ink2 },
-  taskCount: { fontFamily: fonts.bold, fontSize: 13.5, color: colors.ink },
-  journeyLine: { width: 12, height: 2, backgroundColor: '#E6ECE0', marginBottom: 22 },
-  journeyDot: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF2E8' },
-  journeyReached: { backgroundColor: colors.greenSoft },
+  tasks: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  task: { flexBasis: '30%', flexGrow: 1, alignItems: 'center', gap: 5, padding: 10, borderRadius: radius.md, backgroundColor: colors.canvas },
+  taskOk: { backgroundColor: '#EEF8EA' },
+  taskIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
+  taskText: { fontFamily: fonts.semi, fontSize: 12.5, lineHeight: 16, color: colors.ink2, textAlign: 'center', minHeight: 32 },
+  taskCount: { fontFamily: fonts.display, fontSize: 16, lineHeight: 20, color: colors.ink },
+  journeyLine: { width: 12, height: 2, backgroundColor: colors.sand, marginBottom: 22 },
+  journeyDot: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.sand },
+  journeyReached: { backgroundColor: colors.mint },
   journeyNow: { backgroundColor: colors.green },
   journeyLabel: { fontFamily: fonts.semi, fontSize: 10.5, color: colors.ink4, textAlign: 'center' },
 
-
-  list: { borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card, overflow: 'hidden' },
-  listHead: { fontFamily: fonts.bold, fontSize: 15, color: colors.ink, paddingHorizontal: 14, paddingTop: 14, paddingBottom: 6 },
+  list: { ...surface },
+  listHead: { fontFamily: fonts.bold, fontSize: 15.5, color: colors.ink, paddingHorizontal: 14, paddingTop: 14, paddingBottom: 6 },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
-  device: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, paddingHorizontal: 14, paddingVertical: 8 },
-  deviceIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
   deviceName: { fontFamily: fonts.bold, fontSize: 14.5, color: colors.ink },
   deviceAbout: { fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18, color: colors.ink3 },
 
-  aiAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
-  bubble: { maxWidth: '88%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18 },
+  aiAvatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
+  bubble: { maxWidth: '88%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20 },
   bubbleMe: { alignSelf: 'flex-end', backgroundColor: colors.green, borderBottomRightRadius: 6 },
-  bubbleAi: { alignSelf: 'flex-start', backgroundColor: colors.cream2, borderWidth: 1, borderColor: colors.line, borderBottomLeftRadius: 6 },
+  bubbleAi: { alignSelf: 'flex-start', backgroundColor: colors.card, borderBottomLeftRadius: 6 },
   bubbleText: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.ink },
-  quick: { minHeight: 40, paddingHorizontal: 14, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.line, backgroundColor: colors.card, justifyContent: 'center' },
-  quickLead: { backgroundColor: colors.green, borderColor: colors.green },
-  quickText: { fontFamily: fonts.semi, fontSize: 13.5, color: colors.ink2 },
+  quick: { minHeight: 40, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: colors.mint, justifyContent: 'center' },
+  quickLead: { backgroundColor: colors.green },
+  quickText: { fontFamily: fonts.semi, fontSize: 13.5, color: colors.greenDark },
   composer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  composerInput: { flex: 1, minHeight: 46, borderWidth: 1.5, borderColor: '#CFE9C9', borderRadius: radius.pill, paddingHorizontal: 16, fontFamily: fonts.body, fontSize: 15, color: colors.ink, backgroundColor: colors.card },
-  send: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
+  composerInput: { flex: 1, minHeight: 48, borderRadius: radius.pill, paddingHorizontal: 18, fontFamily: fonts.body, fontSize: 15, color: colors.ink, backgroundColor: colors.canvas },
+  send: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
 
-  foldHead: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, minHeight: 64 },
+  foldHead: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, minHeight: 68 },
+  foldTitle: { fontFamily: fonts.bold, fontSize: 15, color: colors.ink },
+  chev: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.canvas, alignItems: 'center', justifyContent: 'center' },
   dot: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.orange },
   feed: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
   feedText: { flex: 1, fontFamily: fonts.body, fontSize: 13.5, lineHeight: 19, color: colors.ink2 },
-  history: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52, paddingHorizontal: 14, paddingVertical: 8 },
-  historyIcon: { width: 30, height: 30, borderRadius: 15, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
+  realGrow: { gap: 10, marginTop: 4, paddingTop: 14, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
+  growStep: { flexDirection: 'row', gap: 10 },
+  growIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
+  growLine: { flex: 1, width: 2, minHeight: 10, marginTop: 2, borderRadius: 1, backgroundColor: colors.mint },
+  growLabel: { fontFamily: fonts.bold, fontSize: 13.5, color: colors.ink },
+  more: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 48, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
+  moreText: { fontFamily: fonts.bold, fontSize: 14, color: colors.green },
+  history: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 54, paddingHorizontal: 14, paddingVertical: 8 },
+  historyIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
   historyTitle: { fontFamily: fonts.semi, fontSize: 14, color: colors.ink },
-  growth: { fontFamily: fonts.bold, fontSize: 13, color: colors.green },
+  growth: { fontFamily: fonts.bold, fontSize: 13, color: colors.green, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill, backgroundColor: colors.mint, overflow: 'hidden' },
+  guide: { borderRadius: radius.lg, backgroundColor: colors.card },
+  guideRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 10 },
 });

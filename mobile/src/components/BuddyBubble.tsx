@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Keyboard, Pressable, StyleSheet } from 'react-native';
+import { Keyboard, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { imageSource } from '@/lib/api';
-import { colors } from '@/theme';
-import { tap } from './ui';
+import { colors, shadow } from '@/theme';
+import { Press } from './ui';
 
 const mark = imageSource('/assets/images/sprouty-mark.png') as number;
 
@@ -21,19 +21,17 @@ export function BuddyBubble({ bottom, onPress, label = 'Hỏi Plant Buddy' }: { 
   }, []);
   if (keyboard) return null;
   return (
-    <Pressable onPress={() => { tap(); onPress(); }} accessibilityRole="button" accessibilityLabel={label}
-      style={({ pressed }) => [s.bubble, { bottom }, pressed && { transform: [{ scale: 0.94 }] }]}>
-      <Image source={mark} style={{ width: 30, height: 30 }} contentFit="contain" />
-    </Pressable>
+    <Press onPress={onPress} accessibilityLabel={label} scaleTo={0.9} style={[s.bubble, { bottom }]}>
+      <Image source={mark} style={{ width: 28, height: 28 }} contentFit="contain" />
+    </Press>
   );
 }
 
 const s = StyleSheet.create({
   bubble: {
-    position: 'absolute', right: 16, width: 58, height: 58, borderRadius: 29,
-    backgroundColor: colors.card, borderWidth: 2, borderColor: colors.green,
+    position: 'absolute', right: 16, width: 54, height: 54, borderRadius: 27,
+    backgroundColor: colors.card, borderWidth: 3, borderColor: colors.mint,
     alignItems: 'center', justifyContent: 'center',
-    // Lifted just enough to read as floating over the page.
-    elevation: 4, shadowColor: '#203424', shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 3 },
+    ...shadow.md,
   },
 });

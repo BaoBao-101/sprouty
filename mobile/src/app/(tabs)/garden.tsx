@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Icon } from '@/components/Icon';
 import { PlantArt } from '@/components/PlantArt';
 import { PlantThumb } from '@/components/PlantThumb';
 import { useToast } from '@/components/Toast';
-import { Button, Chip, cheer, Empty, ErrorNote, Field, IconButton, Loading, Screen, Sheet, T, tap } from '@/components/ui';
+import { Button, Chip, ChipRow, cheer, Empty, ErrorNote, Field, IconButton, Loading, Meter, Press, Screen, Sheet, Stat, T } from '@/components/ui';
 import { API } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { callName } from '@/lib/format';
+import { alertBrief } from '@/lib/format';
 import type { PlantAlert, PlantCard } from '@/lib/types';
 import { useLoad } from '@/lib/use-load';
-import { colors, fonts, radius } from '@/theme';
+import { colors, fonts, gutter, maxWidth, radius, shadow, surface } from '@/theme';
 
 /** Sowing a kit's code. Opened from the garden, from Home, or with the code already filled in from an order. */
 function ActivateSheet({ open, initialCode, onClose }: { open: boolean; initialCode: string; onClose: () => void }) {
@@ -46,14 +46,16 @@ function ActivateSheet({ open, initialCode, onClose }: { open: boolean; initialC
   return (
     <Sheet open={open} title="Kích hoạt cây mới" onClose={onClose}
       footer={<Button title={busy ? 'Đang gieo hạt…' : 'Gieo hạt'} icon="seed" busy={busy} onPress={submit} />}>
-      <T muted>Nhập mã trong đơn hàng của bạn — hạt sẽ được gieo ngay.</T>
+      <View style={s.sow}>
+        <View style={s.sowArt}><PlantArt stage="seed" progress={30} health={95} size={64} /></View>
+        <T style={{ flex: 1 }}>Nhập mã trong đơn hàng — hạt được gieo ngay.</T>
+      </View>
       <Field label="Mã kích hoạt" value={code} onChangeText={setCode} placeholder="SPR-XXXX-XXXX-XXXX-XXXX" autoCapitalize="characters"
         autoCorrect={false} maxLength={128} error={error} style={{ fontFamily: fonts.bold, letterSpacing: 1 }} />
-      <Field label="Đặt tên cho cây (tuỳ chọn)" value={nickname} onChangeText={setNickname} placeholder="Bé Đậu, Cà Chua Nhỏ…" maxLength={40} />
-      <T muted style={{ fontSize: 13 }}>Chưa có mã? Mã hiện ngay sau khi thanh toán một bộ kit, trong Đơn hàng của tôi.</T>
+      <Field label="Tên cho cây (tuỳ chọn)" value={nickname} onChangeText={setNickname} placeholder="Bé Đậu, Cà Chua Nhỏ…" maxLength={40} />
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        <Button small variant="ghost" title="Đơn hàng của tôi" onPress={() => { onClose(); router.push('/orders'); }} />
-        <Button small variant="soft" title="Xem bộ kit" onPress={() => { onClose(); router.push('/shop'); }} />
+        <Button small grow variant="ghost" icon="cart" title="Lấy mã ở đơn hàng" onPress={() => { onClose(); router.push('/orders'); }} />
+        <Button small variant="soft" title="Mua kit" onPress={() => { onClose(); router.push('/shop'); }} />
       </View>
     </Sheet>
   );
@@ -71,59 +73,73 @@ function urgency(p: PlantCard, alerts: number) {
 
 const strip = (v: string) => v.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
 
-/** One plant, one line high: how it looks, how it is doing, and what it needs now. */
-function PlantRow({ plant, alerts, last }: { plant: PlantCard; alerts: PlantAlert[]; last: boolean }) {
+/**
+ * One plant as a card: its picture, its name, how far along it is (a bar per
+ * stage), and what it needs now as a tag. Water and food show as two short
+ * bars when nothing is wrong.
+ */
+function PlantTile({ plant, alerts, width }: { plant: PlantCard; alerts: PlantAlert[]; width: number }) {
   const dead = Boolean(plant.diedAt);
   const done = Boolean(plant.harvestedAt);
   const state = plant.healthState.id;
-  const health = dead || state === 'critical' || state === 'wilting' ? { bg: colors.badSoft, fg: colors.bad }
-    : done ? { bg: '#FFF1DE', fg: colors.warn }
+  const tone = dead || state === 'critical' || state === 'wilting' ? { bg: colors.badSoft, fg: colors.bad }
+    : done ? { bg: colors.goldSoft, fg: colors.gold }
     : state === 'stressed' ? { bg: colors.warnSoft, fg: colors.warn }
-    : { bg: colors.greenSoft, fg: colors.greenDark };
-  const note = dead ? 'Gieo lại miễn phí' : alerts[0]?.text;
+    : { bg: colors.mint, fg: colors.greenDark };
+  const need = dead ? { icon: 'seed' as const, label: 'Gieo lại' } : alerts[0] ? alertBrief(alerts[0].text) : null;
   return (
-    <Pressable onPress={() => { tap(); router.push(`/plant/${plant.id}`); }} accessibilityRole="button" accessibilityLabel={`${plant.nickname}, ${plant.stageLabel}`}
-      style={({ pressed }) => [s.row, pressed && { backgroundColor: colors.cream2 }]}>
+    <Press onPress={() => router.push(`/plant/${plant.id}`)} accessibilityLabel={`${plant.nickname}, ${plant.stageLabel}${need ? `, ${need.label}` : ''}`}
+      style={[s.tile, { width }]}>
       <View style={[s.thumb, { backgroundColor: plant.bgColor || '#F0FDF4' }]}>
-        <PlantThumb plant={plant} size={64} />
-      </View>
-      <View style={[s.rowBody, !last && s.divider]}>
-        <View style={{ flex: 1, gap: 3 }}>
-          <View style={s.nameRow}>
-            <Text numberOfLines={1} style={s.name}>{plant.nickname}</Text>
-            <View style={[s.pill, { backgroundColor: health.bg }]}>
-              <Text style={[s.pillText, { color: health.fg }]}>{done ? 'Đã thu hoạch' : plant.healthState.label}</Text>
-            </View>
-          </View>
-          <Text numberOfLines={1} style={s.sub}>{plant.speciesLabel} · {plant.stageLabel} · chặng {plant.stageIndex + 1}/{plant.stageCount}</Text>
-          {!dead && !done && (
-            <View style={s.meters}>
-              <View style={s.meter}><Icon name="moisture" size={12} color={colors.info} /><View style={s.track}><View style={[s.fill, { width: `${Math.round(plant.moisture)}%`, backgroundColor: '#5BA3D9' }]} /></View></View>
-              <View style={s.meter}><Icon name="nutrient" size={12} color={colors.green} /><View style={s.track}><View style={[s.fill, { width: `${Math.round(plant.nutrient)}%`, backgroundColor: colors.greenLight }]} /></View></View>
-              {plant.careStreak > 0 && <View style={s.streak}><Icon name="bolt" size={12} color={colors.price} /><Text style={s.streakText}>{plant.careStreak}</Text></View>}
-            </View>
-          )}
-          {note ? (
-            <View style={s.note}>
-              <Icon name={dead ? 'seed' : 'bell'} size={12} color={dead ? colors.bad : colors.warn} />
-              <Text numberOfLines={1} style={[s.noteText, dead && { color: colors.bad }]}>{note}{alerts.length > 1 ? ` (+${alerts.length - 1})` : ''}</Text>
-            </View>
-          ) : null}
+        <PlantThumb plant={plant} size={width - 12} />
+        <View style={[s.health, { backgroundColor: tone.bg }]}>
+          <Icon name={done ? 'trophy' : 'heart'} size={11} color={tone.fg} />
+          <Text style={[s.healthText, { color: tone.fg }]}>{done ? 'Thu hoạch' : dead ? 'Đã héo' : plant.healthState.label}</Text>
         </View>
-        <Icon name="arrow-right" size={16} color={colors.ink5} />
+        {plant.careStreak > 0 && !dead && !done && (
+          <View style={s.streak}><Icon name="bolt" size={11} color={colors.price} /><Text style={s.streakText}>{plant.careStreak}</Text></View>
+        )}
       </View>
-    </Pressable>
+      <View style={s.body}>
+        <Text numberOfLines={1} style={s.name}>{plant.nickname}</Text>
+        <Text numberOfLines={1} style={s.sub}>{plant.speciesLabel} · {plant.stageLabel}</Text>
+        <View style={s.stages} accessibilityLabel={`Chặng ${plant.stageIndex + 1} trên ${plant.stageCount}`}>
+          {Array.from({ length: plant.stageCount }, (_, i) => (
+            <View key={i} style={[s.stage, i < plant.stageIndex && { backgroundColor: colors.green }, i === plant.stageIndex && { backgroundColor: done ? colors.green : colors.greenLight }]} />
+          ))}
+        </View>
+        {need ? (
+          <View style={[s.need, dead && { backgroundColor: colors.badSoft }]}>
+            <Icon name={need.icon} size={13} color={dead ? colors.bad : colors.warn} />
+            <Text numberOfLines={1} style={[s.needText, dead && { color: colors.bad }]}>{need.label}{alerts.length > 1 ? ` +${alerts.length - 1}` : ''}</Text>
+          </View>
+        ) : !done ? (
+          <View style={s.meters}>
+            <Icon name="water" size={12} color={colors.sky} />
+            <Meter value={plant.moisture} color={colors.sky} height={5} style={{ flex: 1 }} />
+            <Icon name="nutrient" size={12} color={colors.green} />
+            <Meter value={plant.nutrient} color={colors.greenLight} height={5} style={{ flex: 1 }} />
+          </View>
+        ) : (
+          <View style={[s.need, { backgroundColor: colors.goldSoft }]}>
+            <Icon name="harvest" size={13} color={colors.gold} />
+            <Text style={[s.needText, { color: colors.gold }]}>Hoàn thành</Text>
+          </View>
+        )}
+      </View>
+    </Press>
   );
 }
 
 /**
- * Khu vườn: every plant the family is growing, one line each, so thirty
- * plants are a list to skim. Chips narrow it to the ones that need care now
- * (the default when any do), the ones growing, or the harvest; a search box
- * finds a plant by name once the garden is big enough to need one.
+ * Khu vườn: every plant the family is growing, as a grid of cards to skim by
+ * picture. Chips narrow it to the ones that need care now (the default when
+ * any do), the ones growing, or the harvest; a search box finds a plant by
+ * name once the garden is big enough to need one.
  */
 export default function Garden() {
   const { user } = useAuth();
+  const { width } = useWindowDimensions();
   const params = useLocalSearchParams<{ activate?: string }>();
   const [activating, setActivating] = useState(false);
   const [initialCode, setInitialCode] = useState('');
@@ -166,10 +182,12 @@ export default function Garden() {
     .filter((p) => !q || strip(`${p.nickname} ${p.speciesLabel}`).includes(q))
     .sort((a, b) => urgency(a, alertsOf.get(a.id)?.length ?? 0) - urgency(b, alertsOf.get(b.id)?.length ?? 0));
 
+  const openActivate = () => { setInitialCode(''); setActivating(true); };
+
   if (!user) {
     return (
       <Screen title="Khu vườn" large>
-        <Empty art={<PlantArt stage="sprout" progress={60} health={95} size={150} />} title="Khu vườn của bé" text="Đăng nhập để xem cây của bé, nhận nhắc tưới và trò chuyện với Plant Buddy.">
+        <Empty art={<PlantArt stage="sprout" progress={60} health={95} size={150} />} title="Khu vườn của bé" text="Đăng nhập để xem cây, nhận nhắc tưới và hỏi Plant Buddy.">
           <Button title="Đăng nhập" onPress={() => router.push('/login?next=/garden')} />
           <Button title="Tạo tài khoản" variant="ghost" onPress={() => router.push('/register?next=/garden')} />
         </Empty>
@@ -178,34 +196,32 @@ export default function Garden() {
   }
 
   const streak = Math.max(0, ...plants.map((p) => p.careStreak));
-  const CHIPS: Array<{ key: Filter; label: string }> = [
-    ...(counts.care ? [{ key: 'care' as Filter, label: `Cần chăm · ${counts.care}` }] : []),
-    { key: 'growing', label: `Đang lớn · ${counts.growing}` },
-    ...(counts.done ? [{ key: 'done' as Filter, label: `Đã thu hoạch · ${counts.done}` }] : []),
-    { key: 'all', label: `Tất cả · ${counts.all}` },
+  const CHIPS: Array<{ key: Filter; label: string; n: number }> = [
+    ...(counts.care ? [{ key: 'care' as Filter, label: 'Cần chăm', n: counts.care }] : []),
+    { key: 'growing', label: 'Đang lớn', n: counts.growing },
+    ...(counts.done ? [{ key: 'done' as Filter, label: 'Đã thu hoạch', n: counts.done }] : []),
+    { key: 'all', label: 'Tất cả', n: counts.all },
   ];
+  const inner = Math.min(width, maxWidth) - gutter * 2;
+  const columns = inner >= 640 ? 4 : inner >= 480 ? 3 : 2;
+  const tileW = Math.floor((inner - 12 * (columns - 1)) / columns);
 
   return (
     <Screen title="Khu vườn" large onRefresh={data.reload}
       actions={(
         <>
-          <IconButton icon="album" label="Album ảnh" onPress={() => router.push('/album')} />
-          <Pressable onPress={() => { tap(); setInitialCode(''); setActivating(true); }} accessibilityRole="button" accessibilityLabel="Kích hoạt cây mới"
-            style={({ pressed }) => [s.add, pressed && { opacity: 0.85 }]}>
+          <IconButton icon="album" label="Album ảnh" boxed onPress={() => router.push('/album')} />
+          <Press onPress={openActivate} accessibilityLabel="Kích hoạt cây mới" scaleTo={0.94} style={s.add}>
             <Icon name="add" size={18} color={colors.white} />
             <Text style={s.addText}>Kích hoạt</Text>
-          </Pressable>
+          </Press>
         </>
       )}>
       {plants.length > 0 && (
         <View style={s.summary}>
-          <Text style={s.summaryTitle}>Vườn của {callName(user.name) || 'bé'}</Text>
-          <View style={s.stats}>
-            <Text style={s.stat}><Text style={s.statN}>{counts.growing}</Text> đang lớn</Text>
-            <Text style={s.dot}>·</Text>
-            <Text style={s.stat}><Text style={s.statN}>{counts.done}</Text> đã thu hoạch</Text>
-            {streak > 0 && <><Text style={s.dot}>·</Text><Text style={s.stat}><Text style={[s.statN, { color: colors.price }]}>{streak}</Text> ngày liên tục</Text></>}
-          </View>
+          <Stat icon="sprout" value={counts.growing} label="đang lớn" style={{ flex: 1 }} />
+          <Stat icon="harvest" value={counts.done} label="thu hoạch" color={colors.gold} tint={colors.goldSoft} style={{ flex: 1 }} />
+          <Stat icon="bolt" value={streak} label="ngày liền" color={colors.price} tint="#FFEBD0" style={{ flex: 1 }} />
         </View>
       )}
 
@@ -213,9 +229,9 @@ export default function Garden() {
       {data.loading && !data.data && <Loading label="Đang tải vườn của bé…" />}
 
       {!data.loading && data.data && plants.length === 0 && (
-        <Empty art={<PlantArt stage="seed" progress={20} health={95} size={150} />} title="Vườn của bé đang trống" text="Mua một bộ kit, nhập mã kích hoạt, và bé sẽ có cây đầu tiên cùng cảm biến độ ẩm, nhiệt độ và Plant Buddy đi kèm.">
-          <Button title="Kích hoạt cây" icon="seed" onPress={() => { setInitialCode(''); setActivating(true); }} />
-          <Button title="Khám phá các bộ kit" variant="ghost" onPress={() => router.push('/shop')} />
+        <Empty art={<PlantArt stage="seed" progress={20} health={95} size={150} />} title="Vườn của bé đang trống" text="Mua một bộ kit, nhập mã kích hoạt — cây đầu tiên nảy mầm ngay.">
+          <Button title="Kích hoạt cây" icon="seed" onPress={openActivate} />
+          <Button title="Xem các bộ kit" variant="ghost" onPress={() => router.push('/shop')} />
         </Empty>
       )}
 
@@ -223,15 +239,15 @@ export default function Garden() {
         <View style={{ gap: 10 }}>
           {plants.length > 6 && (
             <View style={s.search}>
-              <Icon name="search" size={17} color={colors.ink4} />
-              <TextInput value={query} onChangeText={setQuery} placeholder="Tìm cây theo tên…" placeholderTextColor={colors.ink5}
+              <Icon name="search" size={18} color={colors.ink4} />
+              <TextInput value={query} onChangeText={setQuery} placeholder="Tìm cây theo tên…" placeholderTextColor={colors.ink4}
                 style={s.searchInput} returnKeyType="search" accessibilityLabel="Tìm cây" />
-              {query ? <IconButton icon="close" label="Xoá tìm kiếm" onPress={() => setQuery('')} /> : null}
+              {query ? <IconButton icon="close" label="Xoá tìm kiếm" size={18} onPress={() => setQuery('')} /> : null}
             </View>
           )}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipsOuter} contentContainerStyle={s.chips}>
-            {CHIPS.map((c) => <Chip key={c.key} label={c.label} on={active === c.key} onPress={() => setFilter(c.key)} />)}
-          </ScrollView>
+          <ChipRow>
+            {CHIPS.map((c) => <Chip key={c.key} label={c.label} count={c.n} icon={c.key === 'care' ? 'bell' : undefined} on={active === c.key} onPress={() => setFilter(c.key)} />)}
+          </ChipRow>
         </View>
       )}
 
@@ -241,8 +257,8 @@ export default function Garden() {
       )}
 
       {shown.length > 0 && (
-        <View style={s.list}>
-          {shown.map((p, i) => <PlantRow key={p.id} plant={p} alerts={alertsOf.get(p.id) || []} last={i === shown.length - 1} />)}
+        <View style={s.grid}>
+          {shown.map((p) => <PlantTile key={p.id} plant={p} alerts={alertsOf.get(p.id) || []} width={tileW} />)}
         </View>
       )}
 
@@ -252,34 +268,26 @@ export default function Garden() {
 }
 
 const s = StyleSheet.create({
-  add: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 40, paddingLeft: 10, paddingRight: 14, marginLeft: 4, borderRadius: radius.pill, backgroundColor: colors.green },
-  addText: { fontFamily: fonts.bold, fontSize: 13.5, color: colors.white },
-  summary: { gap: 2 },
-  summaryTitle: { fontFamily: fonts.display, fontSize: 20, lineHeight: 26, color: colors.ink },
-  stats: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
-  stat: { fontFamily: fonts.medium, fontSize: 13.5, color: colors.ink3 },
-  statN: { fontFamily: fonts.bold, color: colors.greenDark },
-  dot: { color: colors.ink5 },
-  search: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 46, paddingLeft: 14, paddingRight: 4, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card },
+  add: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 42, paddingLeft: 12, paddingRight: 16, borderRadius: radius.pill, backgroundColor: colors.green, ...shadow.sm },
+  addText: { fontFamily: fonts.bold, fontSize: 14, color: colors.white },
+  summary: { ...surface, flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 14, paddingHorizontal: 12 },
+  search: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 50, paddingLeft: 16, paddingRight: 4, borderRadius: radius.pill, backgroundColor: colors.card, ...shadow.sm },
   searchInput: { flex: 1, fontFamily: fonts.body, fontSize: 15, color: colors.ink, paddingVertical: 8 },
-  chipsOuter: { marginHorizontal: -16 },
-  chips: { gap: 8, paddingHorizontal: 16 },
-  list: { borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card, overflow: 'hidden' },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingLeft: 12, paddingTop: 12 },
-  thumb: { width: 64, height: 64, borderRadius: 14, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' },
-  rowBody: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 12, paddingBottom: 12, minHeight: 76 },
-  divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { flexShrink: 1, fontFamily: fonts.bold, fontSize: 15.5, color: colors.ink },
-  pill: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill },
-  pillText: { fontFamily: fonts.bold, fontSize: 11 },
-  sub: { fontFamily: fonts.medium, fontSize: 12.5, color: colors.ink3 },
-  meters: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  meter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  track: { flex: 1, height: 5, borderRadius: 3, backgroundColor: '#E8EEE6', overflow: 'hidden' },
-  fill: { height: '100%', borderRadius: 3 },
-  streak: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  streakText: { fontFamily: fonts.bold, fontSize: 12, color: colors.price },
-  note: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  noteText: { flex: 1, fontFamily: fonts.medium, fontSize: 12.5, color: colors.warn },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  tile: { ...surface, padding: 6 },
+  thumb: { aspectRatio: 1.1, borderRadius: radius.md, overflow: 'hidden' },
+  health: { position: 'absolute', top: 7, left: 7, flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 3, borderRadius: radius.pill },
+  healthText: { fontFamily: fonts.bold, fontSize: 11 },
+  streak: { position: 'absolute', top: 7, right: 7, flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 7, paddingVertical: 3, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.92)' },
+  streakText: { fontFamily: fonts.bold, fontSize: 11, color: colors.warn },
+  body: { paddingHorizontal: 6, paddingTop: 9, paddingBottom: 6, gap: 4 },
+  name: { fontFamily: fonts.bold, fontSize: 15, color: colors.ink },
+  sub: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink3 },
+  stages: { flexDirection: 'row', gap: 3, marginTop: 2 },
+  stage: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.sand },
+  need: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', maxWidth: '100%', marginTop: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, backgroundColor: colors.warnSoft },
+  needText: { flexShrink: 1, fontFamily: fonts.bold, fontSize: 11.5, color: colors.warn },
+  meters: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6, minHeight: 18 },
+  sow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: radius.lg, backgroundColor: colors.card },
+  sowArt: { width: 64, height: 64, borderRadius: 18, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
 });

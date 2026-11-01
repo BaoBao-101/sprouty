@@ -43,7 +43,7 @@ function Gate() {
   return (
     <>
       <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.cream }, animation: checkedWelcome ? 'slide_from_right' : 'none' }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.canvas }, animation: checkedWelcome ? 'slide_from_right' : 'none' }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="welcome" options={{ animation: 'fade' }} />
         <Stack.Screen name="login" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />

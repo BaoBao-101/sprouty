@@ -10,10 +10,10 @@ import { Icon } from './Icon';
 import { useToast } from './Toast';
 import { Button, Sheet, T } from './ui';
 
-function Line({ label, value, copy, strong }: { label: string; value?: string; copy?: string; strong?: boolean }) {
+function Line({ label, value, copy, strong, last }: { label: string; value?: string; copy?: string; strong?: boolean; last?: boolean }) {
   const toast = useToast();
   return (
-    <View style={[s.line, strong && { backgroundColor: colors.warnSoft }]}>
+    <View style={[s.line, !last && s.divider, strong && { backgroundColor: colors.warnSoft }]}>
       <Text style={s.lineLabel}>{label}</Text>
       <Text selectable style={s.lineValue}>{value || '—'}</Text>
       {copy && value ? (
@@ -66,60 +66,73 @@ export function PayPanel({ transfer, returnPath }: { transfer: Transfer; returnP
   }
 
   return (
-    <View style={{ gap: 12 }}>
-      <View style={{ alignItems: 'center' }}>
-        <T muted>Số tiền cần chuyển</T>
+    <View style={{ gap: 14 }}>
+      <View style={{ alignItems: 'center', gap: 2 }}>
+        <Text style={s.amountLabel}>Số tiền cần chuyển</Text>
         <Text style={s.amount}>{formatPrice(transfer.amount)}</Text>
       </View>
-      <Button title="Mở app ngân hàng để chuyển" icon="card" onPress={() => setPicking(true)} />
-      <View style={{ alignItems: 'center', gap: 6 }}>
+      <Button title="Mở app ngân hàng" icon="card" onPress={() => setPicking(true)} />
+      <View style={s.qrWrap}>
         <Image source={{ uri: transfer.qrUrl }} style={s.qr} contentFit="contain" />
-        <T muted style={{ fontSize: 13 }}>Hoặc quét mã này bằng điện thoại khác</T>
+        <Text style={s.qrHint}>Hoặc quét bằng điện thoại khác</Text>
+        <Button small variant="soft" title={sharing ? 'Đang chuẩn bị ảnh…' : 'Lưu ảnh QR'} icon="album" busy={sharing} onPress={share} />
       </View>
-      <Button title={sharing ? 'Đang chuẩn bị ảnh…' : 'Lưu / gửi ảnh mã QR'} icon="album" variant="soft" busy={sharing} onPress={share} />
       <View style={s.lines}>
         <Line label="Ngân hàng" value={transfer.bankCode} />
         <Line label="Số tài khoản" value={transfer.accountNumber} copy="Đã sao chép số tài khoản" />
         <Line label="Chủ tài khoản" value={transfer.accountName} />
         <Line label="Số tiền" value={String(transfer.amount)} copy="Đã sao chép số tiền" />
-        <Line label="Nội dung" value={transfer.memo} copy="Đã sao chép nội dung" strong />
+        <Line label="Nội dung" value={transfer.memo} copy="Đã sao chép nội dung" strong last />
       </View>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
+      <View style={s.warn}>
         <Icon name="warning" size={16} color={colors.warn} />
-        <T style={{ flex: 1, color: colors.warn, fontSize: 13 }}>Giữ nguyên nội dung chuyển khoản — sửa hay viết thêm thì hệ thống không nhận ra khoản thanh toán của bạn.</T>
+        <Text style={s.warnText}>Giữ nguyên nội dung chuyển khoản để được xác nhận tự động</Text>
       </View>
 
       <Sheet open={picking} title="Chọn app ngân hàng" onClose={() => setPicking(false)}>
-        <T muted>Số tiền và nội dung được điền sẵn ở các app có dấu “Tự điền”. Với app khác, nội dung đã được sao chép để bạn dán vào.</T>
+        <View style={s.autoNote}><View style={s.auto}><Text style={s.autoText}>Tự điền</Text></View><Text style={s.autoNoteText}>điền sẵn số tiền và nội dung</Text></View>
         {!apps && <T muted>Đang tải danh sách ngân hàng…</T>}
-        {apps && apps.length === 0 && <T muted>Chưa tải được danh sách. Hãy mở app ngân hàng và dùng các thông tin bên dưới mã QR.</T>}
-        {apps?.map((app) => (
-          <Pressable key={app.appId} onPress={() => open(app)} style={({ pressed }) => [s.bank, pressed && { backgroundColor: colors.greenSoft }]}>
-            <Image source={{ uri: app.appLogo }} style={s.bankLogo} contentFit="contain" />
-            <View style={{ flex: 1 }}>
-              <Text style={s.bankName}>{app.appName}</Text>
-              <Text numberOfLines={1} style={s.bankSub}>{app.bankName}</Text>
-            </View>
-            {app.autofill ? <View style={s.auto}><Text style={s.autoText}>Tự điền</Text></View> : null}
-          </Pressable>
-        ))}
+        {apps && apps.length === 0 && <T muted>Chưa tải được danh sách. Hãy mở app ngân hàng và dùng thông tin bên dưới mã QR.</T>}
+        {apps && apps.length > 0 && (
+          <View style={s.banks}>
+            {apps.map((app, i) => (
+              <Pressable key={app.appId} onPress={() => open(app)} style={({ pressed }) => [s.bank, i < apps.length - 1 && s.divider, pressed && { backgroundColor: colors.canvas }]}>
+                <Image source={{ uri: app.appLogo }} style={s.bankLogo} contentFit="contain" />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.bankName}>{app.appName}</Text>
+                  <Text numberOfLines={1} style={s.bankSub}>{app.bankName}</Text>
+                </View>
+                {app.autofill ? <View style={s.auto}><Text style={s.autoText}>Tự điền</Text></View> : null}
+              </Pressable>
+            ))}
+          </View>
+        )}
       </Sheet>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  amount: { fontFamily: fonts.bold, fontSize: 30, color: colors.price },
-  qr: { width: 240, height: 240, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.white },
-  lines: { borderWidth: 1, borderColor: colors.line, borderRadius: radius.sm, overflow: 'hidden' },
-  line: { flexDirection: 'row', alignItems: 'center', minHeight: 50, paddingLeft: 12, paddingRight: 4, borderBottomWidth: 1, borderBottomColor: colors.line, gap: 8 },
-  lineLabel: { width: 100, fontFamily: fonts.body, fontSize: 13, color: colors.ink4 },
+  amountLabel: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink3 },
+  amount: { fontFamily: fonts.display, fontSize: 34, lineHeight: 42, color: colors.price },
+  qrWrap: { alignItems: 'center', gap: 8, padding: 14, borderRadius: radius.lg, backgroundColor: colors.canvas },
+  qr: { width: 220, height: 220, borderRadius: radius.md, backgroundColor: colors.white },
+  qrHint: { fontFamily: fonts.medium, fontSize: 12.5, color: colors.ink3 },
+  lines: { borderRadius: radius.md, backgroundColor: colors.canvas, overflow: 'hidden' },
+  line: { flexDirection: 'row', alignItems: 'center', minHeight: 50, paddingLeft: 14, paddingRight: 4, gap: 8 },
+  divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
+  lineLabel: { width: 96, fontFamily: fonts.body, fontSize: 13, color: colors.ink4 },
   lineValue: { flex: 1, fontFamily: fonts.bold, fontSize: 15, color: colors.ink },
-  copy: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  bank: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, padding: 10, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card },
+  copy: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  warn: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: radius.md, backgroundColor: colors.warnSoft },
+  warnText: { flex: 1, fontFamily: fonts.semi, fontSize: 12.5, lineHeight: 17, color: colors.warn },
+  autoNote: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  autoNoteText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink3 },
+  banks: { borderRadius: radius.lg, backgroundColor: colors.card, overflow: 'hidden' },
+  bank: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 62, paddingHorizontal: 14, paddingVertical: 8 },
   bankLogo: { width: 40, height: 40, borderRadius: 10 },
   bankName: { fontFamily: fonts.bold, fontSize: 15, color: colors.ink },
   bankSub: { fontFamily: fonts.body, fontSize: 12, color: colors.ink4 },
-  auto: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, backgroundColor: colors.greenSoft },
+  auto: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, backgroundColor: colors.mint },
   autoText: { fontFamily: fonts.bold, fontSize: 11, color: colors.greenDark },
 });

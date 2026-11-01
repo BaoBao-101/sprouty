@@ -15,7 +15,7 @@ import { albumCaptionSuggestions } from '@/lib/album-caption';
 import { filePart, isVideoAsset, pickMedia, type Picked } from '@/lib/photos';
 import type { Album, AlbumLeaf, PlantCard } from '@/lib/types';
 import { useLoad } from '@/lib/use-load';
-import { colors, fonts, gutter, maxWidth, radius } from '@/theme';
+import { colors, fonts, gutter, maxWidth, radius, shadow } from '@/theme';
 
 type AlbumData = Album & { plants?: Array<{ id: string; nickname: string }>; status?: string };
 type Leaf = AlbumLeaf & { status?: 'active' | 'hidden' };
@@ -55,7 +55,7 @@ function PlantPicker() {
       )}
       {!plants.loading && Boolean(plants.data?.length) && !visible.length && <Card><T bold>Không tìm thấy album</T><T muted>Thử tên khác hoặc xóa bộ lọc nhé.</T><Button small variant="soft" title="Xóa bộ lọc" onPress={reset} /></Card>}
       {visible.map((p) => (
-        <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={`Album ${p.nickname}`} onPress={() => router.push(`/album?productId=${p.productId}&plantId=${p.id}`)} style={({ pressed }) => [s.pick, pressed && { backgroundColor: colors.greenSoft }]}>
+        <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={`Album ${p.nickname}`} onPress={() => router.push(`/album?productId=${p.productId}&plantId=${p.id}`)} style={({ pressed }) => [s.pick, pressed && { backgroundColor: colors.mint }]}>
           <View style={[s.pickArt, { backgroundColor: p.bgColor || '#F0FDF4' }]}>
             <PlantThumb plant={p} size={64} />
           </View>
@@ -156,7 +156,7 @@ function ComposeSheet({ asset, album, counts, onClose, onUploaded, productId, pl
         </View>
       )}
       <View style={{ gap: 8 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: radius.md, backgroundColor: colors.greenSoft }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: radius.md, backgroundColor: colors.mint }}>
           <Icon name={album.stages.find((st) => st.id === stage)?.icon || 'sprout'} size={24} color={colors.greenDark} />
           <View style={{ flex: 1, gap: 3 }}><T muted style={{ fontSize: 12 }}>Lưu vào chặng</T><T bold>{album.stages.find((st) => st.id === stage)?.label || 'Chọn chặng'}</T></View>
           <Pressable disabled={busy} onPress={() => setChangingStage((value) => !value)} accessibilityRole="button" accessibilityState={{ expanded: changingStage, disabled: busy }} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }}><T bold style={{ fontSize: 13, color: colors.greenDark }}>{changingStage ? 'Thu gọn' : 'Đổi chặng'}</T></Pressable>
@@ -182,7 +182,7 @@ function ComposeSheet({ asset, album, counts, onClose, onUploaded, productId, pl
       <Button small variant="soft" icon="pencil" title={suggestionInfo ? 'Gợi ý tên khác' : 'Gợi ý tên'} disabled={busy} onPress={suggest} />
       {suggestionInfo ? <View style={{ gap: 6 }}>{suggestions.map((name) => <Pressable key={name} disabled={busy} onPress={() => setTitle(name)}
         accessibilityRole="radio" accessibilityState={{ checked: title === name, disabled: busy }}
-        style={{ minHeight: 44, padding: 10, borderRadius: radius.sm, borderWidth: 1, borderColor: title === name ? colors.green : colors.line, backgroundColor: title === name ? colors.greenSoft : colors.card, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        style={{ minHeight: 44, padding: 10, borderRadius: radius.sm, borderWidth: 1, borderColor: title === name ? colors.green : colors.line, backgroundColor: title === name ? colors.mint : colors.card, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Text style={{ flex: 1, fontFamily: fonts.medium, fontSize: 13, color: colors.ink }}>{name}</Text>
         {title === name && <Icon name="check" size={16} color={colors.greenDark} />}
       </Pressable>)}</View> : null}
@@ -488,9 +488,9 @@ const s = StyleSheet.create({
   addBar: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
   addButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 46, paddingHorizontal: 16, borderRadius: 14, backgroundColor: '#304D3D' },
   addButtonText: { fontFamily: fonts.semi, fontSize: 14, color: '#FFFFFF' },
-  searchBox: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, gap: 8, borderWidth: 1, borderColor: colors.line, borderRadius: 14, backgroundColor: colors.card },
+  searchBox: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, gap: 8, borderRadius: 14, backgroundColor: colors.card },
   searchInput: { flex: 1, minWidth: 0, minHeight: 48, paddingVertical: 10, fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
-  filterButton: { width: 48, minHeight: 48, borderRadius: 14, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
+  filterButton: { width: 48, minHeight: 48, borderRadius: 14, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
   filterBar: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
   uploadTarget: { fontFamily: fonts.medium, fontSize: 11, color: colors.ink3, textAlign: 'center' },
   memoryTree: { gap: 16 },
@@ -500,7 +500,7 @@ const s = StyleSheet.create({
   treeSummary: { fontFamily: fonts.medium, fontSize: 12, lineHeight: 18, color: colors.ink3 },
   journeyIntro: { gap: 3 },
   branches: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
-  branch: { minHeight: 106, padding: 10, borderRadius: radius.md, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, gap: 7 },
+  branch: { minHeight: 106, padding: 10, borderRadius: radius.md, backgroundColor: colors.card, gap: 7 },
   branchCurrent: { borderColor: '#A9C89C', backgroundColor: '#F5F9F0' },
   branchSelected: { borderColor: colors.green, backgroundColor: '#ECF9E8' },
   branchTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 18 },
@@ -514,9 +514,9 @@ const s = StyleSheet.create({
   branchCount: { fontFamily: fonts.medium, fontSize: 11, color: colors.ink3 },
   treeFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 4 },
   treeRoot: { fontFamily: fonts.semi, fontSize: 12, color: colors.earth, textAlign: 'center' },
-  treeLink: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.cream2 },
+  treeLink: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderRadius: radius.md, backgroundColor: colors.canvas },
   pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingBottom: 8 },
-  pick: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card },
+  pick: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, borderRadius: radius.lg, backgroundColor: colors.card, ...shadow.sm },
   pickArt: { width: 72, height: 72, borderRadius: 14, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 4, rowGap: 14 },
   tile: { borderRadius: 4, overflow: 'hidden' },
@@ -525,12 +525,12 @@ const s = StyleSheet.create({
   captionText: { fontFamily: fonts.semi, fontSize: 12, lineHeight: 18, color: colors.ink },
   photoStage: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   photoStageText: { flex: 1, fontFamily: fonts.medium, fontSize: 10, lineHeight: 15, color: colors.greenDark },
-  preview: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.greenSoft },
+  preview: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.mint },
   videoPreview: { alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.ink2 },
   videoText: { fontFamily: fonts.semi, fontSize: 14, color: colors.white },
   play: { width: 60, height: 60, borderRadius: 30, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   stageWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  stage: { minHeight: 40, paddingHorizontal: 12, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.line, backgroundColor: colors.card, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  stage: { minHeight: 40, paddingHorizontal: 12, borderRadius: radius.pill, borderWidth: 1, borderColor: 'rgba(32,52,36,0.06)', backgroundColor: colors.card, flexDirection: 'row', alignItems: 'center', gap: 6 },
   stageOn: { backgroundColor: colors.green, borderColor: colors.green },
   stageText: { fontFamily: fonts.semi, fontSize: 13.5, color: colors.ink2 },
   stageCount: { fontFamily: fonts.bold, fontSize: 12, color: colors.ink4 },

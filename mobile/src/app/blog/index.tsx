@@ -7,7 +7,7 @@ import { Button, Empty, ErrorNote, IconButton, Loading, Screen } from '@/compone
 import { API, imageSource } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 import type { BlogPost } from '@/lib/types';
-import { colors, fonts, radius } from '@/theme';
+import { colors, fonts, radius, shadow } from '@/theme';
 
 const PER_PAGE = 8;
 
@@ -46,7 +46,7 @@ function Featured({ post }: { post: BlogPost }) {
 /** Every other post: a small picture and two lines, in one list. */
 function PostRow({ post, last }: { post: BlogPost; last: boolean }) {
   return (
-    <Pressable onPress={open(post)} accessibilityRole="button" style={({ pressed }) => [s.row, pressed && { backgroundColor: colors.cream2 }]}>
+    <Pressable onPress={open(post)} accessibilityRole="button" style={({ pressed }) => [s.row, pressed && { backgroundColor: colors.canvas }]}>
       <Cover post={post} style={s.thumb} />
       <View style={[s.rowBody, !last && s.rowDivider]}>
         <Text numberOfLines={2} style={s.rowTitle}>{post.title}</Text>
@@ -121,11 +121,11 @@ export default function Blog() {
 }
 
 const s = StyleSheet.create({
-  search: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 46, paddingLeft: 14, paddingRight: 4, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card },
+  search: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 46, paddingLeft: 14, paddingRight: 4, borderRadius: radius.pill, backgroundColor: colors.card, ...shadow.sm },
   searchInput: { flex: 1, fontFamily: fonts.body, fontSize: 15, color: colors.ink, paddingVertical: 8 },
   resultNote: { fontFamily: fonts.medium, fontSize: 13.5, color: colors.ink3 },
-  cover: { backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  featured: { borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card, overflow: 'hidden' },
+  cover: { backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  featured: { borderRadius: radius.lg, backgroundColor: colors.card, ...shadow.sm, overflow: 'hidden' },
   featuredCover: { width: '100%', aspectRatio: 16 / 9 },
   featuredBody: { padding: 16, gap: 6 },
   kicker: { fontFamily: fonts.bold, fontSize: 11.5, letterSpacing: 1, color: colors.green },
@@ -136,7 +136,7 @@ const s = StyleSheet.create({
   readMore: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   readMoreText: { fontFamily: fonts.bold, fontSize: 13.5, color: colors.green },
   sectionTitle: { fontFamily: fonts.bold, fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.ink4, marginLeft: 4 },
-  list: { borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card, overflow: 'hidden' },
+  list: { borderRadius: radius.lg, backgroundColor: colors.card, ...shadow.sm, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingLeft: 12, paddingTop: 12 },
   thumb: { width: 84, height: 84, borderRadius: 12 },
   rowBody: { flex: 1, gap: 3, paddingRight: 12, paddingBottom: 12, minHeight: 96 },

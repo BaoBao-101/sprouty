@@ -7,6 +7,17 @@ import type { FruitShape, PlantForm } from '@/components/PlantForms';
 
 export type ProductBadge = 'hot' | 'new' | 'sale' | null;
 
+/** Who a species is, the same for every kit of it (backend/src/services/species-profile.js). */
+export interface SpeciesProfile {
+  scientificName: string;
+  family: string;
+  otherNames: string[];
+  origin: string;
+  story: string;
+  traits: string[];
+  funFacts: string[];
+}
+
 export interface ProductSpecies {
   key: string;
   label: string;
@@ -14,6 +25,7 @@ export interface ProductSpecies {
   harvest: string;
   form: string;
   pollinate: boolean;
+  profile?: SpeciesProfile | null;
 }
 
 export interface Product {
@@ -29,6 +41,8 @@ export interface Product {
   bg: string;
   desc: string;
   inc: string[];
+  /** The real IoT devices the Smart · IoT variant adds to the box. */
+  smartInc: string[];
   badge: ProductBadge;
   images: string[];
   rating: number;
@@ -102,6 +116,8 @@ export interface PublicWorkshop {
   dateTime: string;
   endTime?: string | null;
   location: string;
+  /** The street address the map looks up; absent, the map searches `location`. */
+  address?: string | null;
   ageRange?: string | null;
   price: number;
   capacity: number;
@@ -267,6 +283,8 @@ export interface PlantDetail extends PlantCard {
   /** VIP's care kit: whether the account may use it, and whether it is on. */
   keeper?: { vip: boolean; on: boolean; until: string | null };
   cultivation?: { name: string; sow: string; support: string; mature: string };
+  /** Where the species comes from and what to look for. */
+  speciesProfile?: SpeciesProfile | null;
 }
 
 export interface RewardSummary {

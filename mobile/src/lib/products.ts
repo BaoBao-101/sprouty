@@ -19,6 +19,7 @@ export function normalizeProduct(p: any): Product {
     bg: p.bg || p.bgColor || '#FEF5EA',
     desc: p.desc || p.description || '',
     inc: p.inc || p.includes || [],
+    smartInc: p.smartInc || p.smartIncludes || [],
     badge: p.badge || null,
     images: Array.isArray(p.images) ? p.images.filter((x: unknown) => typeof x === 'string' && x) : [],
     rating: Number(p.ratingAvg ?? p.rating) || 0,

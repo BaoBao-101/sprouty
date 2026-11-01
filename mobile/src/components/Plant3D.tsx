@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, Modal, PanResponder, Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { AppState, Modal, PanResponder, Platform, Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { WEB_ORIGIN } from '@/lib/config';
 import type { PlantCard } from '@/lib/types';
@@ -205,27 +205,51 @@ export function Plant3D({ plant, width, height, isNight, scene = 'natural', deco
         <Text style={s.badgeText}>Toàn màn hình</Text>
       </Pressable>}
     </View>
-    {fullscreen && <Modal visible animationType="fade" presentationStyle="fullScreen" hardwareAccelerated
+    {fullscreen && <Modal visible animationType="fade" presentationStyle="fullScreen" hardwareAccelerated statusBarTranslucent
       supportedOrientations={['portrait', 'landscape-left', 'landscape-right']} onRequestClose={closeFullscreen}>
-      <SafeAreaView style={s.fullscreen}>
-        <View style={s.fullHeader}>
-          <Text style={s.fullTitle}>Ngắm cây 3D</Text>
-          <Pressable style={s.fullButton} onPress={() => setReset((value) => value + 1)} accessibilityRole="button" accessibilityLabel="Đặt lại góc nhìn">
-            <Icon name="return" size={18} color={colors.greenDark} /><Text style={s.badgeText}>Đặt lại</Text>
-          </Pressable>
-          <Pressable style={s.fullButton} onPress={closeFullscreen} accessibilityRole="button" accessibilityLabel="Đóng toàn màn hình">
-            <Icon name="close" size={20} color={colors.ink} />
-          </Pressable>
-        </View>
-        <View style={{ flex: 1 }} onLayout={({ nativeEvent: { layout } }) => setFullSize({ width: layout.width, height: layout.height })}>
-          {fullSize.width > 0 && fullSize.height > 0 && <Plant3D plant={plant} width={fullSize.width} height={fullSize.height}
-            isNight={isNight} scene={scene} decoration={decoration} wind={wind} gadgets={gadgets} hint={false} allowFullscreen={false}
-            initialView={initialFullView.current} onViewChange={(position) => { fullCamera.current = position; }} resetVersion={reset} />}
-        </View>
-        <Text style={s.fullHint}>Kéo để xoay · Chụm hai ngón để phóng to</Text>
-      </SafeAreaView>
+      {/* A Modal is its own native window: on iOS the app's safe-area provider does not reach into it, so it
+          needs one of its own, or the header slides under the notch and the close button cannot be tapped. */}
+      <SafeAreaProvider>
+        <FullFrame>
+          <View style={s.fullHeader}>
+            <Text style={s.fullTitle}>Ngắm cây 3D</Text>
+            <Pressable style={s.fullButton} onPress={() => setReset((value) => value + 1)} accessibilityRole="button" accessibilityLabel="Đặt lại góc nhìn">
+              <Icon name="return" size={18} color={colors.greenDark} /><Text style={s.badgeText}>Đặt lại</Text>
+            </Pressable>
+            <Pressable style={s.fullButton} onPress={closeFullscreen} hitSlop={8} accessibilityRole="button" accessibilityLabel="Đóng toàn màn hình">
+              <Icon name="close" size={20} color={colors.ink} />
+            </Pressable>
+          </View>
+          <View style={{ flex: 1 }} onLayout={({ nativeEvent: { layout } }) => setFullSize({ width: layout.width, height: layout.height })}>
+            {fullSize.width > 0 && fullSize.height > 0 && <Plant3D plant={plant} width={fullSize.width} height={fullSize.height}
+              isNight={isNight} scene={scene} decoration={decoration} wind={wind} gadgets={gadgets} hint={false} allowFullscreen={false}
+              initialView={initialFullView.current} onViewChange={(position) => { fullCamera.current = position; }} resetVersion={reset} />}
+          </View>
+          {/* The way out again at the bottom, in reach of a thumb, whatever happens at the top. */}
+          <View style={s.fullFoot}>
+            <Text style={s.fullHint}>Kéo để xoay · Chụm 2 ngón để phóng to</Text>
+            <Pressable style={s.done} onPress={closeFullscreen} accessibilityRole="button" accessibilityLabel="Xong, đóng toàn màn hình">
+              <Text style={s.doneText}>Xong</Text>
+            </Pressable>
+          </View>
+        </FullFrame>
+      </SafeAreaProvider>
     </Modal>}
     </>
+  );
+}
+
+/** The full-screen page, kept clear of the notch, the home indicator and, turned sideways, the camera. */
+function FullFrame({ children }: { children: ReactNode }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={[s.fullscreen, {
+      // Never flush with the top edge, even before the insets have been measured.
+      paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 20 : 0) + 4,
+      paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right,
+    }]}>
+      {children}
+    </View>
   );
 }
 
@@ -249,7 +273,10 @@ const s = StyleSheet.create({
   fullHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, gap: 6 },
   fullTitle: { flex: 1, fontFamily: fonts.display, fontSize: 19, color: colors.ink },
   fullButton: { minWidth: 44, minHeight: 44, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: colors.greenSoft, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
-  fullHint: { padding: 10, textAlign: 'center', fontFamily: fonts.medium, fontSize: 12, color: colors.ink3 },
+  fullFoot: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10 },
+  fullHint: { flex: 1, fontFamily: fonts.medium, fontSize: 12.5, color: colors.ink3 },
+  done: { minHeight: 46, minWidth: 96, paddingHorizontal: 22, borderRadius: radius.pill, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
+  doneText: { fontFamily: fonts.bold, fontSize: 15, color: colors.white },
   warm: { position: 'absolute', left: -10, top: -10, width: 1, height: 1, opacity: 0 },
   frame: { alignSelf: 'center', borderRadius: radius.xl, overflow: 'hidden', backgroundColor: '#E5EBDD' },
   drawing: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },

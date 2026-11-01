@@ -5,22 +5,24 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, type IconName } from '@/components/Icon';
 import { useToast } from '@/components/Toast';
-import { Button, Empty, Header, IconButton, T, tap } from '@/components/ui';
+import { Button, Empty, Header, IconButton, IconTile, Press, T } from '@/components/ui';
 import { API, imageSource } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { callName, formatPrice, plainAiText } from '@/lib/format';
 import { pickMedia, toDataUrl } from '@/lib/photos';
-import { colors, fonts, gutter, maxWidth, radius } from '@/theme';
+import { colors, fonts, gutter, maxWidth, radius, shadow, surface } from '@/theme';
 
 const aiMark = imageSource('/assets/images/sprouty-mark.png') as number;
 const CONTEXT_TURNS = 6;
 
-const PROMPTS: Array<{ icon: IconName; label: string; text: string }> = [
-  { icon: 'gift', label: 'Chọn kit cho bé', text: 'Kit nào phù hợp cho bé 6 tuổi?' },
-  { icon: 'water', label: 'Chăm cây mỗi ngày', text: 'Cách gieo hạt và tưới cây đúng cách' },
-  { icon: 'camera', label: 'Viết một kỷ niệm', text: 'Gợi ý một caption cho ngày đầu bé gieo hạt' },
-  { icon: 'bulb', label: 'Khám phá STEM', text: 'Giải thích cảm biến độ ẩm đất cho bé dễ hiểu' },
-  { icon: 'ticket', label: 'Hẹn một workshop', text: 'Lịch workshop sắp tới' },
+/** Ready questions: two words on a tile; the full question is what gets sent. */
+const PROMPTS: Array<{ icon: IconName; label: string; text: string; tint: string; ink: string }> = [
+  { icon: 'gift', label: 'Chọn kit cho bé', text: 'Kit nào phù hợp cho bé 6 tuổi?', tint: '#F6E6D6', ink: colors.earth },
+  { icon: 'water', label: 'Chăm cây mỗi ngày', text: 'Cách gieo hạt và tưới cây đúng cách', tint: '#DCEFF1', ink: '#2F6F78' },
+  { icon: 'camera', label: 'Viết kỷ niệm', text: 'Gợi ý một caption cho ngày đầu bé gieo hạt', tint: '#FBEBC4', ink: colors.gold },
+  { icon: 'bulb', label: 'Khám phá STEM', text: 'Giải thích cảm biến độ ẩm đất cho bé dễ hiểu', tint: colors.mint, ink: colors.greenDark },
+  { icon: 'ticket', label: 'Lịch workshop', text: 'Lịch workshop sắp tới', tint: '#EDE4F4', ink: '#6B4C8A' },
+  { icon: 'leaf', label: 'Lá bị vàng?', text: 'Vì sao lá cây bị vàng và cách xử lý?', tint: colors.goldSoft, ink: colors.warn },
 ];
 
 interface Suggested { id: number; name: string; price: number; ageRange?: string | null; image: string | null }
@@ -111,19 +113,20 @@ export default function Assistant() {
           <ScrollView ref={scroller} keyboardShouldPersistTaps="handled" contentContainerStyle={s.thread}>
             <View style={s.inner}>
               {messages.length === 0 && (
-                <View style={{ gap: 14 }}>
+                <View style={{ gap: 18 }}>
                   <View style={s.hello}>
-                    <View style={s.avatarBig}><Image source={aiMark} style={{ width: 40, height: 40 }} contentFit="contain" /></View>
-                    <T bold style={{ fontSize: 17, textAlign: 'center' }}>Chào {callName(user.name) || 'bạn'}! Mình là Plant Buddy.</T>
-                    <T muted style={{ textAlign: 'center' }}>Chuyện chăm cây, chọn kit hay lưu kỷ niệm — cứ hỏi mình nhé. Gửi kèm ảnh cây nếu bạn muốn mình xem giúp.</T>
+                    <View style={s.avatarBig}><Image source={aiMark} style={{ width: 44, height: 44 }} contentFit="contain" /></View>
+                    <Text style={s.helloTitle}>Chào {callName(user.name) || 'bạn'}!</Text>
+                    <Text style={s.helloText}>Hỏi mình về cây, kit hay gửi ảnh cây nhé.</Text>
                   </View>
-                  {PROMPTS.map((p) => (
-                    <Pressable key={p.label} onPress={() => { tap(); void send(p.text); }} style={({ pressed }) => [s.prompt, pressed && { backgroundColor: colors.greenSoft }]}>
-                      <View style={s.promptIcon}><Icon name={p.icon} size={19} color={colors.greenDark} /></View>
-                      <View style={{ flex: 1 }}><T bold>{p.label}</T><T muted style={{ fontSize: 13 }}>{p.text}</T></View>
-                      <Icon name="arrow-right" size={16} color={colors.ink4} />
-                    </Pressable>
-                  ))}
+                  <View style={s.prompts}>
+                    {PROMPTS.map((p) => (
+                      <Press key={p.label} onPress={() => { void send(p.text); }} accessibilityLabel={p.text} scaleTo={0.95} style={s.prompt}>
+                        <IconTile icon={p.icon} size={40} tint={p.tint} color={p.ink} />
+                        <Text numberOfLines={2} style={s.promptLabel}>{p.label}</Text>
+                      </Press>
+                    ))}
+                  </View>
                 </View>
               )}
               {messages.map((m) => (
@@ -192,25 +195,28 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.cream },
   thread: { flexGrow: 1, paddingHorizontal: gutter, paddingVertical: 16 },
   inner: { width: '100%', maxWidth, alignSelf: 'center', gap: 12 },
-  hello: { alignItems: 'center', gap: 8, paddingVertical: 8 },
-  avatarBig: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
-  prompt: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, padding: 12, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card },
-  promptIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
+  hello: { alignItems: 'center', gap: 4, paddingTop: 12 },
+  avatarBig: { width: 88, height: 88, borderRadius: 44, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', borderWidth: 4, borderColor: colors.mint, marginBottom: 8, ...shadow.sm },
+  helloTitle: { fontFamily: fonts.display, fontSize: 24, lineHeight: 31, color: colors.ink, textAlign: 'center' },
+  helloText: { fontFamily: fonts.body, fontSize: 14.5, lineHeight: 21, color: colors.ink3, textAlign: 'center' },
+  prompts: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  prompt: { ...surface, flexBasis: '46%', flexGrow: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 64, padding: 12 },
+  promptLabel: { flex: 1, fontFamily: fonts.semi, fontSize: 13.5, lineHeight: 18, color: colors.ink },
   msgRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
-  avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
-  bubble: { maxWidth: '82%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18, gap: 8 },
+  avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', ...shadow.sm },
+  bubble: { maxWidth: '82%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, gap: 8 },
   me: { backgroundColor: colors.green, borderBottomRightRadius: 6 },
-  ai: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, borderBottomLeftRadius: 6 },
+  ai: { backgroundColor: colors.card, borderBottomLeftRadius: 6 },
   bubbleText: { fontFamily: fonts.body, fontSize: 15.5, lineHeight: 23, color: colors.ink },
-  bubbleImage: { width: 200, height: 150, borderRadius: 12 },
-  kit: { width: 150, padding: 8, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card, gap: 4 },
-  kitImage: { height: 100, borderRadius: 10, overflow: 'hidden', backgroundColor: colors.greenSoft },
-  kitName: { fontFamily: fonts.semi, fontSize: 13, color: colors.ink },
-  kitPrice: { fontFamily: fonts.bold, fontSize: 13.5, color: colors.price },
-  composerWrap: { paddingTop: 8, paddingHorizontal: gutter - 4, borderTopWidth: 1, borderTopColor: colors.line, backgroundColor: colors.card },
+  bubbleImage: { width: 200, height: 150, borderRadius: 14 },
+  kit: { ...surface, width: 150, padding: 6, gap: 4 },
+  kitImage: { height: 100, borderRadius: 14, overflow: 'hidden', backgroundColor: colors.mint },
+  kitName: { fontFamily: fonts.semi, fontSize: 13, color: colors.ink, paddingHorizontal: 4 },
+  kitPrice: { fontFamily: fonts.bold, fontSize: 13.5, color: colors.price, paddingHorizontal: 4, paddingBottom: 4 },
+  composerWrap: { paddingTop: 10, paddingHorizontal: gutter - 4, borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: colors.card, ...shadow.md },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
-  input: { flex: 1, minHeight: 46, maxHeight: 120, borderWidth: 1.5, borderColor: '#CFE9C9', borderRadius: 23, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10, fontFamily: fonts.body, fontSize: 15.5, color: colors.ink, backgroundColor: colors.cream, marginHorizontal: 4 },
+  input: { flex: 1, minHeight: 46, maxHeight: 120, borderRadius: 23, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10, fontFamily: fonts.body, fontSize: 15.5, color: colors.ink, backgroundColor: colors.canvas, marginHorizontal: 4 },
   send: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
-  attached: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 6, borderRadius: radius.sm, backgroundColor: colors.greenSoft },
+  attached: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 6, borderRadius: radius.md, backgroundColor: colors.mint },
   attachedImage: { width: 48, height: 48, borderRadius: 8 },
 });

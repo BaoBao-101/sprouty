@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Redirect, router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
@@ -8,19 +8,19 @@ import { Icon, type IconName } from '@/components/Icon';
 import { ReviewSheet, type ReviewTarget } from '@/components/ReviewSheet';
 import { Stars } from '@/components/shop';
 import { useToast } from '@/components/Toast';
-import { Button, Card, Chip, Empty, ErrorNote, Field, Loading, Pill, Screen, Sheet, T } from '@/components/ui';
+import { Button, Card, Chip, ChipRow, Empty, ErrorNote, Field, IconTile, Loading, Pill, Screen, Sheet, T, type Tone } from '@/components/ui';
 import { API, imageSource } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { DELIVERED_BY_VN, formatDate, formatPrice, isVipOrder, ORDER_STATUS_VN, realAddress, shortOrderId } from '@/lib/format';
 import type { Order, OrderStatus, OwnReview, ReviewOptions } from '@/lib/types';
-import { colors, fonts, radius } from '@/theme';
+import { colors, fonts, radius, surface } from '@/theme';
 
 type Step = { key: string; label: string; icon: IconName };
 const TRACK: Step[] = [{ key: 'placed', label: 'Đặt hàng', icon: 'cart' }, { key: 'paid', label: 'Thanh toán', icon: 'ticket' }, { key: 'activate', label: 'Kích hoạt', icon: 'sprout' }];
 const VIP_TRACK: Step[] = [{ key: 'placed', label: 'Đặt gói', icon: 'cart' }, { key: 'paid', label: 'Thanh toán', icon: 'ticket' }, { key: 'vip', label: 'Lên VIP', icon: 'star' }];
 const PARCEL: Step[] = [
-  { key: 'placed', label: 'Đặt hàng', icon: 'cart' }, { key: 'paid', label: 'Thanh toán', icon: 'ticket' },
-  { key: 'packing', label: 'Chuẩn bị', icon: 'gift' }, { key: 'shipping', label: 'Đang giao', icon: 'arrow-right' },
+  { key: 'placed', label: 'Đặt', icon: 'cart' }, { key: 'paid', label: 'Trả tiền', icon: 'ticket' },
+  { key: 'packing', label: 'Đóng gói', icon: 'gift' }, { key: 'shipping', label: 'Đang giao', icon: 'arrow-right' },
   { key: 'received', label: 'Đã nhận', icon: 'home' },
 ];
 
@@ -29,7 +29,7 @@ const FILTERS: Array<{ value: '' | OrderStatus; label: string }> = [
   { value: 'shipped', label: 'Đang giao' }, { value: 'delivered', label: 'Hoàn tất' }, { value: 'cancelled', label: 'Đã huỷ' },
 ];
 
-const STATUS_TONE: Record<OrderStatus, 'warn' | 'info' | 'good' | 'bad' | 'neutral'> = {
+const STATUS_TONE: Record<OrderStatus, Tone> = {
   pending: 'warn', processing: 'info', shipped: 'info', delivered: 'good', cancelled: 'neutral',
 };
 
@@ -41,6 +41,7 @@ interface ReviewData {
   options: ReviewOptions;
 }
 
+/** Where the order is, as icons on a line: done ones ticked, the current one ringed. */
 function Track({ order }: { order: Order }) {
   if (order.status === 'cancelled') return null;
   const parcel = Boolean(order.needsShipping);
@@ -56,8 +57,9 @@ function Track({ order }: { order: Order }) {
         const now = i === reached;
         return (
           <View key={step.key} style={s.trackStep}>
+            {i > 0 && <View style={[s.trackLine, (done || now) && { backgroundColor: colors.green }]} />}
             <View style={[s.trackDot, done && s.trackDone, now && s.trackNow]}>
-              <Icon name={done ? 'check' : step.icon} size={14} color={done ? colors.white : now ? colors.greenDark : colors.ink4} />
+              <Icon name={done ? 'check' : step.icon} size={13} color={done ? colors.white : now ? colors.greenDark : colors.ink4} />
             </View>
             <Text numberOfLines={1} style={[s.trackLabel, (done || now) && { color: colors.ink2 }]}>{step.label}</Text>
           </View>
@@ -125,8 +127,6 @@ function OrderCard({ order, reviews, onChanged, onReview, onAddress, onReceived 
   const codes = order.redeemCodes || [];
   const address = realAddress(order);
   const addressEditable = parcel && (order.status === 'pending' || order.status === 'processing');
-  const first = order.items[0]?.product?.name || 'Sản phẩm';
-  const title = order.items.length > 1 ? `${first} và ${order.items.length - 1} sản phẩm khác` : first;
 
   const copy = async (value: string, what: string) => { await Clipboard.setStringAsync(value); toast(what, 'success'); };
 
@@ -160,56 +160,59 @@ function OrderCard({ order, reviews, onChanged, onReview, onAddress, onReceived 
   }
 
   return (
-    <Card style={[pending && { borderColor: '#F6DDB0' }, order.status === 'cancelled' && { opacity: 0.75 }]}>
-      <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
-        <View style={{ flex: 1, gap: 2 }}>
-          <T bold numberOfLines={2}>{title}</T>
-          <T muted>#{shortOrderId(order.id)} · {formatDate(order.createdAt)}</T>
+    <View style={[s.order, pending && s.orderPending, order.status === 'cancelled' && { opacity: 0.72 }]}>
+      <View style={s.orderHead}>
+        <View style={{ flex: 1, gap: 1 }}>
+          <Text style={s.orderId}>#{shortOrderId(order.id)}</Text>
+          <Text style={s.small}>{formatDate(order.createdAt)}</Text>
         </View>
         <Pill tone={STATUS_TONE[order.status]}>{ORDER_STATUS_VN[order.status]}</Pill>
       </View>
 
       <Track order={order} />
 
-      {order.items.map((item, i) => {
-        const productId = item.productId ?? item.product?.id;
-        const mine = productId ? reviews?.reviews.find((r) => r.productId === productId) || null : null;
-        const canReview = order.status === 'delivered' && !vip && productId && (mine || reviews?.eligible.some((e) => e.productId === productId));
-        const image = item.product?.images?.[0] || null;
-        return (
-          <View key={i} style={s.item}>
-            <View style={s.thumb}>
-              {vip ? <Image source={imageSource('/assets/images/sprouty-icons/VIP.png')} style={{ width: 34, height: 34 }} contentFit="contain" />
-                : imageSource(image) ? <Image source={imageSource(image)} style={StyleSheet.absoluteFill} contentFit="cover" /> : <Icon name="pot" size={20} color={colors.greenDark} />}
+      <View style={{ gap: 10 }}>
+        {order.items.map((item, i) => {
+          const productId = item.productId ?? item.product?.id;
+          const mine = productId ? reviews?.reviews.find((r) => r.productId === productId) || null : null;
+          const canReview = order.status === 'delivered' && !vip && productId && (mine || reviews?.eligible.some((e) => e.productId === productId));
+          const image = item.product?.images?.[0] || null;
+          return (
+            <View key={i} style={s.item}>
+              <View style={s.thumb}>
+                {vip ? <Image source={imageSource('/assets/images/sprouty-icons/VIP.png')} style={{ width: 34, height: 34 }} contentFit="contain" />
+                  : imageSource(image) ? <Image source={imageSource(image)} style={StyleSheet.absoluteFill} contentFit="cover" /> : <Icon name="pot" size={20} color={colors.greenDark} />}
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text numberOfLines={2} style={s.itemName}>{item.product?.name || 'Sản phẩm'}{item.variant === 'smart' ? ' · Smart' : ''}</Text>
+                <Text style={s.small}>× {item.qty} · {formatPrice(item.unitPrice * item.qty)}</Text>
+                {canReview ? (
+                  <Pressable hitSlop={6} style={s.reviewBtn} onPress={() => onReview({ id: productId as number, name: item.product?.name || 'Sản phẩm', image }, mine)}>
+                    {mine ? <Stars value={mine.rating} size={13} /> : <Icon name="star" size={15} color={colors.green} />}
+                    <Text style={s.reviewText}>{mine ? 'Sửa đánh giá' : 'Đánh giá'}</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
-            <View style={{ flex: 1, gap: 2 }}>
-              <T numberOfLines={2} style={{ color: colors.ink }}>{item.product?.name || 'Sản phẩm'}{item.variant === 'smart' ? ' · Smart' : ''}</T>
-              <T muted>× {item.qty} · {formatPrice(item.unitPrice * item.qty)}</T>
-              {canReview ? (
-                <Pressable hitSlop={6} style={s.reviewBtn} onPress={() => onReview({ id: productId as number, name: item.product?.name || 'Sản phẩm', image }, mine)}>
-                  {mine ? <Stars value={mine.rating} size={13} /> : <Icon name="star" size={15} color={colors.green} />}
-                  <Text style={s.reviewText}>{mine ? 'Sửa đánh giá' : 'Đánh giá'}</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          </View>
-        );
-      })}
+          );
+        })}
+      </View>
 
       {codes.length > 0 && (
         <View style={s.codes}>
           <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
             <Icon name="seed" size={16} color={colors.greenDark} />
-            <T bold style={{ color: colors.greenDark }}>
-              {codes.every((c) => c.redeemed) ? `${codes.length} mã · đã kích hoạt hết` : codes.length === 1 ? 'Mã kích hoạt' : `${codes.length} mã · còn ${codes.filter((c) => !c.redeemed).length} chưa dùng`}
-            </T>
+            <Text style={s.codesTitle}>
+              {codes.every((c) => c.redeemed) ? `${codes.length} mã · đã gieo hết` : codes.length === 1 ? 'Mã kích hoạt' : `${codes.length} mã · còn ${codes.filter((c) => !c.redeemed).length} chưa dùng`}
+            </Text>
           </View>
           {codes.map((code) => (
             <View key={code.code} style={s.code}>
               <View style={{ flex: 1 }}>
-                <T muted numberOfLines={1}>{code.productName || `Sản phẩm #${code.productId}`}</T>
-                <Text selectable style={[s.codeText, code.redeemed && { color: colors.ink4 }]}>{code.code}</Text>
-                {code.redeemed && <T muted style={{ fontSize: 12.5 }}>Đã kích hoạt{code.plantNickname ? ` thành “${code.plantNickname}”` : ''}{code.activatedAt ? ` · ${formatDate(code.activatedAt)}` : ''}</T>}
+                <Text selectable numberOfLines={1} style={[s.codeText, code.redeemed && { color: colors.ink4 }]}>{code.code}</Text>
+                <Text numberOfLines={1} style={s.small}>
+                  {code.redeemed ? `Đã gieo${code.plantNickname ? ` · ${code.plantNickname}` : ''}` : code.productName || `Sản phẩm #${code.productId}`}
+                </Text>
               </View>
               {code.redeemed && code.kind === 'membership' ? (
                 <Button small variant="ghost" title="Quyền lợi" onPress={() => router.push('/vip')} />
@@ -217,8 +220,8 @@ function OrderCard({ order, reviews, onChanged, onReview, onAddress, onReceived 
                 <Button small variant="soft" title="Xem cây" onPress={() => router.push(code.plantId ? `/plant/${code.plantId}` : '/garden')} />
               ) : (
                 <>
-                  <Pressable hitSlop={4} style={s.iconBox} onPress={() => copy(code.code, 'Đã sao chép mã')} accessibilityLabel="Sao chép mã"><Icon name="copy" size={18} color={colors.greenDark} /></Pressable>
-                  <Button small title="Gieo hạt" onPress={() => router.push(`/garden?activate=${encodeURIComponent(code.code)}`)} />
+                  <Pressable hitSlop={4} style={s.iconBox} onPress={() => copy(code.code, 'Đã sao chép mã')} accessibilityLabel="Sao chép mã"><Icon name="copy" size={17} color={colors.greenDark} /></Pressable>
+                  <Button small title="Gieo" icon="seed" onPress={() => router.push(`/garden?activate=${encodeURIComponent(code.code)}`)} />
                 </>
               )}
             </View>
@@ -227,47 +230,44 @@ function OrderCard({ order, reviews, onChanged, onReview, onAddress, onReceived 
       )}
 
       {parcel && order.status === 'processing' && (
-        <View style={s.parcel}><Icon name="gift" size={16} color={colors.greenDark} /><T style={{ flex: 1 }}>Hộp kit đang được đóng gói. Mã kích hoạt đã có — bé có thể gieo cây 3D ngay trong lúc chờ.</T></View>
+        <View style={s.parcel}><Icon name="gift" size={16} color={colors.greenDark} /><Text style={s.parcelText}>Đang đóng gói · bé gieo cây 3D được ngay</Text></View>
       )}
       {parcel && (order.status === 'shipped' || order.status === 'delivered') && (
         <View style={s.parcel}>
           <Icon name={order.status === 'delivered' ? 'check' : 'arrow-right'} size={16} color={colors.greenDark} />
-          <View style={{ flex: 1 }}>
-            <T>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={s.parcelText}>
               {order.status === 'delivered'
-                ? `Đã nhận hàng${order.deliveredAt ? ` · ${formatDate(order.deliveredAt)}` : ''}${order.deliveredBy && order.deliveredBy !== 'customer' ? ` · ${DELIVERED_BY_VN[order.deliveredBy]}` : ''}`
-                : `Đang giao${order.carrier ? ` qua ${order.carrier}` : ''}${order.shippedAt ? ` · gửi ngày ${formatDate(order.shippedAt)}` : ''}`}
-            </T>
+                ? `Đã nhận${order.deliveredAt ? ` · ${formatDate(order.deliveredAt)}` : ''}${order.deliveredBy && order.deliveredBy !== 'customer' ? ` · ${DELIVERED_BY_VN[order.deliveredBy]}` : ''}`
+                : `Đang giao${order.carrier ? ` · ${order.carrier}` : ''}${order.shippedAt ? ` · ${formatDate(order.shippedAt)}` : ''}`}
+            </Text>
             {order.trackingCode ? (
-              <Pressable onPress={() => copy(order.trackingCode as string, 'Đã sao chép mã vận đơn')} style={{ flexDirection: 'row', gap: 6, alignItems: 'center', minHeight: 36 }}>
-                <T muted>Mã vận đơn </T><Text selectable style={s.codeSmall}>{order.trackingCode}</Text><Icon name="copy" size={15} color={colors.greenDark} />
+              <Pressable onPress={() => copy(order.trackingCode as string, 'Đã sao chép mã vận đơn')} style={{ flexDirection: 'row', gap: 6, alignItems: 'center', minHeight: 32 }}>
+                <Text selectable style={s.codeSmall}>{order.trackingCode}</Text><Icon name="copy" size={14} color={colors.greenDark} />
               </Pressable>
             ) : null}
           </View>
         </View>
       )}
 
-      <View style={{ gap: 4 }}>
-        {vip ? (
-          <T muted>{order.paidAt ? 'Đã tự động nâng cấp VIP' : 'Tự lên VIP khi thanh toán xong'}</T>
-        ) : (
-          <T muted>{[order.shippingName, order.shippingPhone].filter(Boolean).join(' · ')}</T>
-        )}
-        {parcel && order.status !== 'cancelled' && (address
-          ? <T muted>{address}</T>
-          : <T style={{ color: colors.warn }}>Chưa có địa chỉ giao — thêm để Sprouty gửi hộp kit</T>)}
-        {order.note && !vip ? <T muted>Ghi chú: {order.note}</T> : null}
-      </View>
+      {!vip && parcel && order.status !== 'cancelled' && (
+        <View style={s.addr}>
+          <Icon name="pin" size={15} color={address ? colors.ink4 : colors.warn} />
+          <Text numberOfLines={2} style={[s.small, { flex: 1 }, !address && { color: colors.warn, fontFamily: fonts.semi }]}>
+            {address ? `${order.shippingName || ''}${order.shippingPhone ? ` · ${order.shippingPhone}` : ''}\n${address}` : 'Chưa có địa chỉ giao'}
+          </Text>
+        </View>
+      )}
 
       <View style={s.foot}>
-        <T muted>Tổng</T>
+        <Text style={s.small}>{vip ? (order.paidAt ? 'Đã lên VIP' : 'Lên VIP khi trả xong') : 'Tổng'}</Text>
         <Text style={s.total}>{formatPrice(order.total)}</Text>
       </View>
 
       {pending && (
         <View style={s.actions}>
-          <Button small variant="ghost" title="Huỷ đơn" busy={busy === 'cancel'} onPress={cancel} />
-          {addressEditable && <Button small variant="ghost" icon="pin" title={address ? 'Sửa địa chỉ' : 'Thêm địa chỉ'} onPress={() => onAddress(order)} />}
+          <Button small variant="ghost" title="Huỷ" busy={busy === 'cancel'} onPress={cancel} />
+          {addressEditable && <Button small variant="ghost" icon="pin" title={address ? 'Địa chỉ' : 'Thêm địa chỉ'} onPress={() => onAddress(order)} />}
           <Button small grow title="Thanh toán" icon="arrow-right" onPress={() => router.push(`/payment?orderId=${order.id}`)} />
         </View>
       )}
@@ -277,7 +277,7 @@ function OrderCard({ order, reviews, onChanged, onReview, onAddress, onReceived 
       {order.status === 'shipped' && (
         <Button icon="check" title={busy === 'received' ? 'Đang lưu…' : 'Đã nhận được hàng'} busy={busy === 'received'} onPress={received} />
       )}
-    </Card>
+    </View>
   );
 }
 
@@ -332,45 +332,40 @@ export default function Orders() {
   const toReview = reviews ? reviews.eligible.filter((e) => !reviews.reviews.some((r) => r.productId === e.productId)) : [];
 
   return (
-    <Screen title="Đơn hàng của tôi" back="/me" onRefresh={() => Promise.all([load(1), loadReviews()])}>
+    <Screen title="Đơn hàng" back="/me" onRefresh={() => Promise.all([load(1), loadReviews()])}>
       {(counts.pending || 0) > 0 && filter !== 'pending' && (
         <Card tone="warn" style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Icon name="clock" size={20} color={colors.warn} />
-          <T style={{ flex: 1 }}><T bold>{counts.pending} đơn chưa thanh toán.</T> Thanh toán xong là có mã gieo hạt.</T>
+          <IconTile icon="clock" size={38} tint="#FDE5BC" color={colors.warn} />
+          <Text style={[s.bannerText, { color: colors.warn }]}>{counts.pending} đơn chờ thanh toán</Text>
           <Button small variant="ghost" title="Xem" onPress={() => setFilter('pending')} />
         </Card>
       )}
 
       {toReview.length > 0 && (
         <Card tone="soft" style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Icon name="star" size={22} color={colors.greenDark} />
-          <View style={{ flex: 1 }}>
-            <T bold>{toReview.length === 1 ? `Bé thấy ${toReview[0].product.name} thế nào?` : `${toReview.length} sản phẩm chờ bạn đánh giá`}</T>
-            <T muted>Vài dòng của bạn giúp phụ huynh khác chọn đúng bộ kit.</T>
-          </View>
+          <IconTile icon="star" size={38} tint={colors.white} color="#E9A21B" />
+          <Text numberOfLines={2} style={s.bannerText}>{toReview.length === 1 ? `Bé thấy ${toReview[0].product.name} thế nào?` : `${toReview.length} sản phẩm chờ đánh giá`}</Text>
           <Button small title="Đánh giá" onPress={() => setWriting({ target: { id: toReview[0].product.id, name: toReview[0].product.name, image: toReview[0].product.image }, existing: null })} />
         </Card>
       )}
 
       {total > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} style={{ marginHorizontal: -16 }}>
-          <View style={{ width: 8 }} />
+        <ChipRow>
           {FILTERS.map((f) => {
             const n = f.value ? counts[f.value] || 0 : total;
             if (f.value && !n && filter !== f.value) return null;
-            return <Chip key={f.value} label={`${f.label} · ${n}`} on={filter === f.value} onPress={() => setFilter(f.value)} />;
+            return <Chip key={f.value} label={f.label} count={n} on={filter === f.value} onPress={() => setFilter(f.value)} />;
           })}
-          <View style={{ width: 8 }} />
-        </ScrollView>
+        </ChipRow>
       )}
 
       {error ? <ErrorNote message={error} onRetry={() => load(1)} /> : null}
       {loading && !orders.length && <Loading />}
 
       {!loading && !error && orders.length === 0 && (
-        <Empty icon="cart" title={filter ? 'Không có đơn nào ở mục này' : 'Bạn chưa có đơn hàng nào'}
-          text={filter ? 'Chọn “Tất cả” để xem lại toàn bộ đơn hàng.' : 'Chọn một bộ kit, thanh toán xong là có mã kích hoạt để gieo hạt ngay.'}>
-          {filter ? <Button variant="ghost" title="Xem tất cả đơn" onPress={() => setFilter('')} /> : <Button title="Xem bộ kit" onPress={() => router.push('/shop')} />}
+        <Empty icon="cart" title={filter ? 'Không có đơn ở mục này' : 'Chưa có đơn hàng nào'}
+          text={filter ? 'Chọn “Tất cả” để xem lại toàn bộ.' : 'Thanh toán một bộ kit là có mã gieo hạt ngay.'}>
+          {filter ? <Button variant="ghost" title="Xem tất cả đơn" onPress={() => setFilter('')} /> : <Button title="Xem bộ kit" icon="arrow-right" onPress={() => router.push('/shop')} />}
         </Empty>
       )}
 
@@ -379,7 +374,7 @@ export default function Orders() {
           onReview={(target, existing) => setWriting({ target, existing })} onAddress={setAddressFor} onReceived={askForReview} />
       ))}
 
-      {page < pages && <Button variant="ghost" title={more ? 'Đang tải…' : 'Xem thêm đơn cũ hơn'} busy={more} onPress={() => load(page + 1)} />}
+      {page < pages && <Button variant="ghost" title={more ? 'Đang tải…' : 'Xem đơn cũ hơn'} busy={more} onPress={() => load(page + 1)} />}
 
       <AddressSheet order={addressFor} onClose={() => setAddressFor(null)} onSaved={() => load(1)} />
       <ReviewSheet target={writing?.target ?? null} existing={writing?.existing} options={reviews?.options}
@@ -389,23 +384,34 @@ export default function Orders() {
 }
 
 const s = StyleSheet.create({
-  track: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
-  trackStep: { flex: 1, alignItems: 'center', gap: 4 },
-  trackDot: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF2E8' },
+  small: { fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18, color: colors.ink3 },
+  bannerText: { flex: 1, fontFamily: fonts.bold, fontSize: 14.5, lineHeight: 20, color: colors.ink },
+  order: { ...surface, gap: 14, padding: 16 },
+  orderPending: { borderWidth: 1.5, borderColor: '#F3D49A' },
+  orderHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  orderId: { fontFamily: fonts.display, fontSize: 18, lineHeight: 23, letterSpacing: 0.5, color: colors.ink },
+  track: { flexDirection: 'row' },
+  trackStep: { flex: 1, alignItems: 'center', gap: 5 },
+  trackLine: { position: 'absolute', top: 13, right: '50%', width: '100%', height: 2, borderRadius: 1, backgroundColor: colors.sand },
+  trackDot: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.sand, borderWidth: 2, borderColor: colors.card },
   trackDone: { backgroundColor: colors.green },
-  trackNow: { backgroundColor: colors.greenSoft, borderWidth: 1.5, borderColor: colors.green },
+  trackNow: { backgroundColor: colors.mint, borderColor: colors.green },
   trackLabel: { fontFamily: fonts.semi, fontSize: 11, color: colors.ink4 },
-  item: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  thumb: { width: 52, height: 52, borderRadius: 12, overflow: 'hidden', backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
-  reviewBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36, alignSelf: 'flex-start' },
+  item: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  thumb: { width: 54, height: 54, borderRadius: 14, overflow: 'hidden', backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
+  itemName: { fontFamily: fonts.bold, fontSize: 14.5, lineHeight: 19, color: colors.ink },
+  reviewBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 34, alignSelf: 'flex-start' },
   reviewText: { fontFamily: fonts.bold, fontSize: 13.5, color: colors.green },
-  codes: { gap: 8, padding: 12, borderRadius: radius.sm, backgroundColor: colors.greenSoft },
-  code: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: radius.sm, backgroundColor: colors.card },
-  codeText: { fontFamily: fonts.bold, fontSize: 16, letterSpacing: 1.4, color: colors.ink },
-  codeSmall: { fontFamily: fonts.bold, fontSize: 14, letterSpacing: 0.8, color: colors.ink },
-  iconBox: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.line },
-  parcel: { flexDirection: 'row', gap: 8, padding: 12, borderRadius: radius.sm, backgroundColor: colors.cream2, borderWidth: 1, borderColor: colors.line },
-  foot: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 10 },
-  total: { fontFamily: fonts.bold, fontSize: 18, color: colors.price },
+  codes: { gap: 8, padding: 12, borderRadius: radius.md, backgroundColor: colors.mint },
+  codesTitle: { fontFamily: fonts.bold, fontSize: 13.5, color: colors.greenDark },
+  code: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: radius.md, backgroundColor: colors.card },
+  codeText: { fontFamily: fonts.bold, fontSize: 15, letterSpacing: 1.2, color: colors.ink },
+  codeSmall: { fontFamily: fonts.bold, fontSize: 13.5, letterSpacing: 0.8, color: colors.ink },
+  iconBox: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.mint },
+  parcel: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: radius.md, backgroundColor: colors.canvas },
+  parcelText: { flex: 1, fontFamily: fonts.semi, fontSize: 13, lineHeight: 18, color: colors.ink2 },
+  addr: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  foot: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line, paddingTop: 12 },
+  total: { fontFamily: fonts.bold, fontSize: 19, color: colors.price },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 });

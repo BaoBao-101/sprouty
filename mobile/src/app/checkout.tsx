@@ -5,12 +5,13 @@ import { Redirect, router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AddressFields, EMPTY_ADDRESS, joinAddress, missingAddressField, splitAddress, type AddressParts } from '@/components/AddressFields';
 import { useToast } from '@/components/Toast';
-import { ActionBar, Button, Card, CardTitle, Empty, Field, Screen, T } from '@/components/ui';
+import { Icon } from '@/components/Icon';
+import { ActionBar, Button, Card, CardTitle, Empty, Field, Screen, Steps, T } from '@/components/ui';
 import { API, imageSource } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useCart } from '@/lib/cart';
 import { formatPrice } from '@/lib/format';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, radius } from '@/theme';
 
 type Errors = Partial<Record<'name' | 'phone' | 'address', string>>;
 
@@ -83,12 +84,12 @@ export default function Checkout() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Screen title="Thông tin nhận hàng" back="/cart" bar>
-        <View style={s.steps}>
-          <Text style={[s.step, s.stepDone]}>✓ Giỏ hàng</Text>
-          <Text style={[s.step, s.stepNow]}>Nhận hàng</Text>
-          <Text style={s.step}>Thanh toán</Text>
-        </View>
+      <Screen title="Nhận hàng" back="/cart" bar>
+        <Steps steps={['Giỏ hàng', 'Nhận hàng', 'Thanh toán']} current={1} />
+
+        {remembered && (
+          <View style={s.remembered}><Icon name="check" size={14} color={colors.greenDark} /><Text style={s.rememberedText}>Đã điền sẵn thông tin lần trước</Text></View>
+        )}
 
         <Card>
           <CardTitle icon="user">Người nhận</CardTitle>
@@ -98,46 +99,47 @@ export default function Checkout() {
         </Card>
 
         <Card>
-          <CardTitle icon="pin">Địa chỉ giao hộp kit</CardTitle>
-          <T muted>Phường/xã và tỉnh/thành theo địa giới mới (không còn quận/huyện).</T>
+          <CardTitle icon="pin" right={<View style={s.newTag}><Text style={s.newTagText}>Địa giới mới</Text></View>}>Địa chỉ giao</CardTitle>
           <AddressFields value={address} onChange={(next) => { setAddress(next); setErrors((e) => ({ ...e, address: undefined })); }} error={errors.address} />
+          <Field label="Ghi chú cho shipper" value={note} onChangeText={setNote} multiline maxLength={300} placeholder="Gọi trước khi giao…" />
         </Card>
 
         <Card>
-          <CardTitle icon="pencil">Ghi chú (không bắt buộc)</CardTitle>
-          <Field label="Lời nhắn cho người giao hàng" value={note} onChangeText={setNote} multiline maxLength={300} placeholder="Giao giờ hành chính, gọi trước khi giao…" />
-        </Card>
-
-        <Card>
-          <CardTitle icon="cart">Đơn hàng ({cart.count})</CardTitle>
+          <CardTitle icon="cart" right={<Text style={s.count}>{cart.count} món</Text>}>Đơn hàng</CardTitle>
           {cart.lines.map((l) => (
             <View key={`${l.id}:${l.variant}`} style={s.mini}>
               <View style={[s.thumb, { backgroundColor: l.bg }]}>{imageSource(l.images[0]) && <Image source={imageSource(l.images[0])} style={StyleSheet.absoluteFill} contentFit="cover" />}</View>
-              <View style={{ flex: 1 }}><T bold numberOfLines={1}>{l.name}</T><T muted>{l.variant === 'smart' ? 'Bản Smart · ' : ''}{formatPrice(l.price)} × {l.qty}</T></View>
-              <T bold>{formatPrice(l.price * l.qty)}</T>
+              <View style={{ flex: 1 }}>
+                <Text numberOfLines={1} style={s.miniName}>{l.name}</Text>
+                <Text style={s.miniSub}>{l.variant === 'smart' ? 'Smart · ' : ''}× {l.qty}</Text>
+              </View>
+              <Text style={s.miniPrice}>{formatPrice(l.price * l.qty)}</Text>
             </View>
           ))}
-          <View style={s.sum}><T muted>Phí giao hàng</T><T>Miễn phí</T></View>
-          <View style={[s.sum, { borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 10 }]}><T bold>Tổng thanh toán</T><Text style={s.total}>{formatPrice(cart.total)}</Text></View>
+          <View style={s.sum}><T muted>Giao hàng</T><T style={{ color: colors.greenDark, fontFamily: fonts.bold }}>Miễn phí</T></View>
         </Card>
-        {remembered && <T muted style={{ textAlign: 'center' }}>Đã điền sẵn thông tin bạn dùng lần trước.</T>}
       </Screen>
 
       <ActionBar>
-        <View style={{ flex: 1 }}><T muted>Tổng thanh toán</T><Text style={s.total}>{formatPrice(cart.total)}</Text></View>
-        <Button title={busy ? 'Đang tạo đơn…' : 'Tới thanh toán'} icon="arrow-right" grow busy={busy} onPress={submit} />
+        <View style={{ flex: 1 }}><Text style={s.barLabel}>Tổng thanh toán</Text><Text style={s.total}>{formatPrice(cart.total)}</Text></View>
+        <Button title={busy ? 'Đang tạo đơn…' : 'Thanh toán'} icon="arrow-right" grow busy={busy} onPress={submit} />
       </ActionBar>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  steps: { flexDirection: 'row', gap: 6 },
-  step: { flex: 1, textAlign: 'center', paddingVertical: 8, borderRadius: 999, backgroundColor: '#EEF2E8', fontFamily: fonts.bold, fontSize: 12.5, color: colors.ink4, overflow: 'hidden' },
-  stepDone: { backgroundColor: colors.greenSoft, color: colors.greenDark },
-  stepNow: { backgroundColor: colors.green, color: colors.white },
-  mini: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  thumb: { width: 48, height: 48, borderRadius: 10, overflow: 'hidden' },
-  sum: { flexDirection: 'row', justifyContent: 'space-between' },
-  total: { fontFamily: fonts.bold, fontSize: 19, color: colors.price },
+  remembered: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.mint },
+  rememberedText: { fontFamily: fonts.semi, fontSize: 12.5, color: colors.greenDark },
+  newTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, backgroundColor: colors.sand },
+  newTagText: { fontFamily: fonts.semi, fontSize: 11.5, color: colors.ink3 },
+  count: { fontFamily: fonts.semi, fontSize: 13, color: colors.ink3 },
+  mini: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  thumb: { width: 52, height: 52, borderRadius: 14, overflow: 'hidden' },
+  miniName: { fontFamily: fonts.bold, fontSize: 14.5, color: colors.ink },
+  miniSub: { fontFamily: fonts.medium, fontSize: 12.5, color: colors.ink3 },
+  miniPrice: { fontFamily: fonts.bold, fontSize: 14.5, color: colors.ink },
+  sum: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line, paddingTop: 12 },
+  barLabel: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink3 },
+  total: { fontFamily: fonts.bold, fontSize: 20, color: colors.price },
 });

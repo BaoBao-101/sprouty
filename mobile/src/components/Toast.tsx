@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, fonts, radius } from '@/theme';
+import { colors, fonts, radius, shadow } from '@/theme';
+import { Icon } from './Icon';
 
 type Tone = 'info' | 'success' | 'error';
 const ToastContext = createContext<(message: string, tone?: Tone) => void>(() => {});
@@ -31,6 +32,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {toast && (
         <View pointerEvents="none" style={[styles.wrap, { bottom: insets.bottom + 84 }]}>
           <Animated.View style={[styles.toast, toast.tone === 'success' && styles.success, toast.tone === 'error' && styles.error, { opacity }]}>
+            <View style={styles.dot}><Icon name={toast.tone === 'error' ? 'warning' : toast.tone === 'success' ? 'check' : 'info'} size={14} color={colors.white} /></View>
             <Text style={styles.text}>{toast.message}</Text>
           </Animated.View>
         </View>
@@ -43,8 +45,9 @@ export const useToast = () => useContext(ToastContext);
 
 const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 16, right: 16, alignItems: 'center' },
-  toast: { maxWidth: 520, paddingHorizontal: 18, paddingVertical: 12, borderRadius: radius.md, backgroundColor: colors.ink },
-  success: { backgroundColor: colors.greenDark },
+  toast: { maxWidth: 520, flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 10, paddingRight: 18, paddingVertical: 10, borderRadius: radius.lg, backgroundColor: colors.ink, ...shadow.md },
+  success: { backgroundColor: colors.forest },
   error: { backgroundColor: colors.bad },
-  text: { color: colors.white, fontFamily: fonts.semi, fontSize: 14.5, textAlign: 'center', lineHeight: 20 },
+  dot: { width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
+  text: { flexShrink: 1, color: colors.white, fontFamily: fonts.semi, fontSize: 14.5, lineHeight: 20 },
 });

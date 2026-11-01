@@ -65,7 +65,7 @@ export default function Profile() {
       <Card>
         <CardTitle icon="user">Hồ sơ</CardTitle>
         <Field label="Họ và tên" value={name} onChangeText={(t) => { setName(t); setNameError(''); }} autoComplete="name" error={nameError} maxLength={80} />
-        <Field label="Email" value={user.email} editable={false} style={{ color: colors.ink3, backgroundColor: colors.cream2 }} hint="Email đăng nhập không đổi được." />
+        <Field label="Email" value={user.email} editable={false} style={{ color: colors.ink3, backgroundColor: colors.canvas }} hint="Email đăng nhập không đổi được." />
         {user.createdAt ? <T muted style={{ fontSize: 13 }}>Thành viên từ {formatDate(user.createdAt)}</T> : null}
         <Button title={savingName ? 'Đang lưu…' : 'Lưu họ tên'} busy={savingName} disabled={name.trim() === user.name} onPress={saveName} />
       </Card>

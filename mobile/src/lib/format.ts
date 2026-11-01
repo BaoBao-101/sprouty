@@ -138,3 +138,22 @@ export function realAddress(order: Pick<Order, 'shippingAddress'>) {
 export function plainAiText(text: string) {
   return text.replace(/\*\*(.+?)\*\*/g, '$1').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/^#+\s*/gm, '');
 }
+
+/**
+ * A plant alert in two or three words and an icon, for a card too small for
+ * the server's sentence (plant-sim.js says "Đất đã khô — cây đang khát
+ * nước."). An alert it does not know keeps its own words.
+ */
+export function alertBrief(text: string): { icon: 'water' | 'fertilize' | 'pest' | 'warning' | 'seed' | 'bell'; label: string } {
+  const t = text.toLowerCase();
+  if (t.includes('héo nặng')) {
+    const hours = t.match(/(\d+)\s*giờ/);
+    return { icon: 'warning', label: hours ? `Cứu cây · ${hours[1]} giờ` : 'Cứu cây ngay' };
+  }
+  if (t.includes('héo khô')) return { icon: 'seed', label: 'Gieo lại' };
+  if (t.includes('úng')) return { icon: 'water', label: 'Úng nước' };
+  if (t.includes('khô') || t.includes('khát')) return { icon: 'water', label: 'Khát nước' };
+  if (t.includes('dinh dưỡng') || t.includes('bón phân')) return { icon: 'fertilize', label: 'Cần bón phân' };
+  if (t.includes('sâu')) return { icon: 'pest', label: 'Có sâu' };
+  return { icon: 'bell', label: text.replace(/[.!]+$/, '') };
+}

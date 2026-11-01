@@ -58,14 +58,14 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
 
   const other = mode === 'login' ? '/register' : '/login';
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: colors.cream }}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: colors.canvas }}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[s.scroll, { paddingTop: insets.top + 4, paddingBottom: insets.bottom + 24 }]}>
-        <View style={s.top}><IconButton icon="close" label="Đóng" onPress={() => goBack('/')} /></View>
+        <View style={s.top}><IconButton icon="close" label="Đóng" boxed size={18} onPress={() => goBack('/')} /></View>
         <View style={s.body}>
           <View style={{ alignItems: 'center', gap: 6 }}>
-            <Image source={logo} style={{ width: 96, height: 96 }} contentFit="contain" />
+            <View style={s.logo}><Image source={logo} style={{ width: 76, height: 76 }} contentFit="contain" /></View>
             <H size={26} style={{ textAlign: 'center' }}>{mode === 'login' ? 'Chào mừng trở lại' : 'Tạo tài khoản Sprouty'}</H>
-            <T muted style={{ textAlign: 'center' }}>{mode === 'login' ? 'Đăng nhập để chăm cây cùng bé.' : 'Miễn phí — để mua kit, nuôi cây và giữ vé workshop của bé.'}</T>
+            <T muted style={{ textAlign: 'center' }}>{mode === 'login' ? 'Đăng nhập để chăm cây cùng bé.' : 'Miễn phí, chỉ mất một phút.'}</T>
           </View>
           {mode === 'register' && <Field label="Họ và tên" value={name} onChangeText={setName} autoComplete="name" placeholder="Nguyễn Văn A" textContentType="name" />}
           <Field label="Email" value={email} onChangeText={setEmail} autoComplete="email" keyboardType="email-address" autoCapitalize="none" autoCorrect={false} placeholder="email@example.com" textContentType="emailAddress" />
@@ -103,6 +103,7 @@ const s = StyleSheet.create({
   scroll: { flexGrow: 1, paddingHorizontal: gutter },
   top: { flexDirection: 'row', justifyContent: 'flex-end' },
   body: { width: '100%', maxWidth: 440, alignSelf: 'center', gap: 16, flexGrow: 1, justifyContent: 'center' },
+  logo: { width: 112, height: 112, borderRadius: 56, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center', borderWidth: 6, borderColor: colors.card, marginBottom: 6 },
   show: { position: 'absolute', right: 6, bottom: 4, height: 42, minWidth: 52, alignItems: 'center', justifyContent: 'center' },
   showText: { fontFamily: fonts.bold, fontSize: 14, color: colors.green },
   switch: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 },
