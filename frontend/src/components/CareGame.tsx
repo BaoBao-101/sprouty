@@ -274,7 +274,8 @@ export function CareGame({
           count of tools still to come; the tools sit in a single row. Each
           used to be a big card saying "Sẵn sàng", in two rows, with a line
           of text above and another below. */}
-      <div className="cg-tray">
+      {/* No tray for a plant with nothing left to do (harvested). */}
+      {tools.length > 0 && <div className="cg-tray">
         {(nudge || children || lockedCount > 0) && (
           <div className="cg-tray-head">
             {nudge ? (
@@ -331,7 +332,7 @@ export function CareGame({
             </button>
           ))}
         </div>
-      </div>
+      </div>}
 
       {/* The tool, following the pointer. */}
       {dragTool && drag?.moved && (

@@ -16,7 +16,7 @@ import { confirmAction } from '@/services/dialog';
 
 import { ProductVideos } from '@/components/ProductVideos';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
@@ -33,11 +33,15 @@ import {
   metricBand,
   type CareSlot,
   type CoachMessage,
+  type HarvestCollection,
+  type HarvestRecord,
   type PlantDetail as PlantDetailType,
   type PlantDevice,
   type PlantEvent,
   type SensorReading,
 } from '@/types/plant';
+import { HarvestCelebration, type Celebration } from '@/components/HarvestCelebration';
+import { Stars } from '@/components/HarvestCertificate';
 import './PlantDetail.css';
 
 /** Local countdown, so the cooldown pills move every second. */
@@ -466,8 +470,9 @@ export default function PlantDetail() {
         headline?.text || (gained ? `+${data.growth} điểm phát triển` : 'Đã chăm cây'),
         headline?.level === 'warn' ? 'error' : 'success',
       );
-      if (data.harvested) {
-        showToast('Hành trình hoàn thành! Chúc mừng bạn.', 'success');
+      // A picking opens its celebration: the certificate, the dish, the collection.
+      if (data.harvest) {
+        setCelebration({ harvest: data.harvest, collection: data.collection ?? null, seatsWon: data.seatsWon || 0, fresh: true });
       }
       for (const type of data.newlyUnlocked || []) {
         const unlocked = data.plant.devices.find((d: PlantDevice) => d.type === type);
@@ -481,6 +486,47 @@ export default function PlantDetail() {
       return null;
     } finally {
       setCareBusy(null);
+    }
+  }
+
+  // After the harvest: a picking's certificate, open; the seeds being sown.
+  const [celebration, setCelebration] = useState<Celebration | null>(null);
+  const [sowing, setSowing] = useState(false);
+  const [harvestsOpen, setHarvestsOpen] = useState(false);
+  const closeCelebration = useCallback(() => setCelebration(null), []);
+
+  /** Looks back at one picking's certificate; the collection is fetched on the way. */
+  function openCertificate(harvest: HarvestRecord) {
+    setCelebration({ harvest, collection: null, seatsWon: 0, fresh: false });
+    API.plants.collection()
+      .then((collection: HarvestCollection) => setCelebration((cur) => (cur && cur.harvest.id === harvest.id ? { ...cur, collection } : cur)))
+      .catch(() => undefined);
+  }
+
+  // /plant/:id?certificate=<picking>, from the album's "Chứng nhận": that
+  // picking's certificate opens once the plant is in.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const certificateParam = searchParams.get('certificate');
+  useEffect(() => {
+    if (!certificateParam || !plant) return;
+    const picking = plant.harvests.find((h) => h.id === certificateParam);
+    if (picking) openCertificate(picking);
+    setSearchParams((params) => { params.delete('certificate'); return params; }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [certificateParam, plant]);
+
+  /** Sows the seeds this finished plant kept: the next season, a plant of its own. */
+  async function sowSeeds() {
+    setSowing(true);
+    try {
+      const data = await API.plants.sowSeeds(plantId);
+      showToast(data.message || 'Đã gieo vụ mới.', 'success');
+      setCelebration(null);
+      navigate(`/plant/${data.plant.id}`);
+    } catch (err: any) {
+      showToast(err?.message || 'Chưa gieo được hạt, thử lại nhé.', 'error');
+    } finally {
+      setSowing(false);
     }
   }
 
@@ -590,7 +636,9 @@ export default function PlantDetail() {
       : `${plant.wilt.hoursLeft} giờ`;
   const sensors = plant.devices.filter((d) => d.kind === 'sensor');
   const actuators = plant.devices.filter((d) => d.kind === 'actuator');
-  const careSlots = plant.care.filter((c) => c.allowedInStage || c.action !== 'harvest');
+  // A finished plant has no tools left to use.
+  const careSlots = harvested ? [] : plant.care.filter((c) => c.allowedInStage || c.action !== 'harvest');
+  const lastHarvest = plant.harvests[plant.harvests.length - 1] ?? null;
   const recommended = plant.nextStep.action;
 
   // The parts wired on the board, as they show on the plant.
@@ -660,6 +708,7 @@ export default function PlantDetail() {
   return (
     <>
       <PlantGuide open={guideOpen} onClose={closeGuide} />
+      <HarvestCelebration celebration={celebration} plant={plant} sowing={sowing} onSow={sowSeeds} onClose={closeCelebration} />
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
       <div className="pd-hero" style={{ ['--plant-bg' as string]: plant.bgColor || '#F0FDF4' }}>
@@ -828,6 +877,18 @@ export default function PlantDetail() {
                     Lần trồng thứ {plant.attempt}
                   </span>
                 )}
+                {plant.season > 1 && (
+                  <span className="pd-badge pd-badge-attempt">
+                    <SproutyIcon name="seed" size={17} />
+                    Vụ {plant.season}
+                  </span>
+                )}
+                {plant.harvestCount > 0 && (
+                  <span className="pd-badge pd-badge-harvest">
+                    <SproutyIcon name="harvest" size={17} />
+                    {harvested ? `Đã hái ${plant.harvestCount} đợt` : `Đã hái ${plant.harvestCount}/${plant.harvestsMax} đợt`}
+                  </span>
+                )}
                 {plant.careStreak > 0 && (
                   <span className="pd-badge pd-badge-streak">
                     <SproutyIcon name="bolt" size={17} />
@@ -894,12 +955,14 @@ export default function PlantDetail() {
                     </span>
                     <strong>
                       {harvested
-                        ? `Bạn đã thu hoạch ${plant.harvestLabel}!`
+                        ? `Bé đã thu hoạch ${plant.harvestLabel}${plant.harvestCount > 1 ? ` · ${plant.harvestCount} đợt` : ''}!`
                         : plant.nextStep.label || 'Chờ dụng cụ hồi lại'}
                     </strong>
                     <p>
                       {harvested
-                        ? 'Mở một bộ kit mới để trồng cây khác nhé.'
+                        ? plant.seedsReady
+                          ? 'Giữ hạt lại để gieo vụ mới, hoặc chọn một bộ kit khác.'
+                          : 'Hạt của cây đã gieo thành vụ mới — xem ở Cây của tôi.'
                         : critical
                           ? `Cây đang héo nặng, để lâu nữa sẽ héo khô. ${todoWhy}`
                           : todoWhy}
@@ -918,6 +981,21 @@ export default function PlantDetail() {
                         <SproutyIcon name="arrow-right" size={14} />
                       </button>
                     )}
+                    {/* Finished: its certificate, and its seeds for a new season. */}
+                    {harvested && lastHarvest && (
+                      <div className="pd-todo-actions">
+                        <button type="button" className="btn btn-primary btn-sm" onClick={() => openCertificate(lastHarvest)}>
+                          <SproutyIcon name="trophy" size={15} /> Xem chứng nhận
+                        </button>
+                        {plant.seedsReady && (plant.seedsNeedVip ? (
+                          <Link to="/vip" className="btn btn-ghost btn-sm">Gieo vụ tiếp với VIP</Link>
+                        ) : (
+                          <button type="button" className="btn btn-ghost btn-sm" onClick={sowSeeds} disabled={sowing}>
+                            <SproutyIcon name="seed" size={15} /> {sowing ? 'Đang gieo…' : 'Gieo vụ mới'}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -934,11 +1012,6 @@ export default function PlantDetail() {
                   </button>
                 )}
               </div>
-
-              {plant.cultivation && <details className="pd-botanical"><summary>Hồ sơ giống · {plant.speciesLabel}</summary>
-                <em>{plant.cultivation.name}</em><p>{plant.cultivation.sow}</p><p>{plant.cultivation.support}</p>
-                <p>{plant.cultivation.mature}</p><small>Mô phỏng giáo dục: thời gian và thang độ ẩm được giản lược. Cây thật còn phụ thuộc giống, đất và khí hậu.</small>
-              </details>}
             </div>
           </div>
 
@@ -981,19 +1054,67 @@ export default function PlantDetail() {
             </div>
           </div>
 
-          {/* ── Who the plant is: origin, story, what to look for ────── */}
-          {plant.speciesProfile && (
+          {/* ── What it has given: every picking's certificate, and a dish ── */}
+          {plant.harvests.length > 0 && (
+            <div className={`pd-panel pd-log pd-garden pd-harvests${harvestsOpen ? ' open' : ''}`}>
+              <button className="pd-log-toggle" aria-expanded={harvestsOpen} onClick={() => setHarvestsOpen((v) => !v)}>
+                <SproutyIcon name="trophy" size={20} />
+                <span>
+                  <strong>Thành quả · {plant.harvests.length} lần thu hoạch</strong>
+                  <em>Giấy chứng nhận và món ngon từ cây</em>
+                </span>
+                <SproutyIcon name="arrow-down" size={18} className="pd-log-chevron" />
+              </button>
+              <div className="pd-log-body" hidden={!harvestsOpen}>
+                <ul className="pd-harvest-list">
+                  {plant.harvests.map((h) => (
+                    <li key={h.id}>
+                      <span>
+                        <b>{h.of > 1 ? `Đợt ${h.number}/${h.of}` : 'Thu hoạch'}</b>
+                        <em>{new Date(h.createdAt).toLocaleDateString('vi-VN')}</em>
+                      </span>
+                      <Stars value={h.stars} size={18} />
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => openCertificate(h)}>Chứng nhận</button>
+                    </li>
+                  ))}
+                </ul>
+                {plant.recipe && (
+                  <div className="pd-recipe">
+                    <h3><SproutyIcon name="heart" size={17} /> {plant.recipe.title}</h3>
+                    <ol>{plant.recipe.steps.map((step) => <li key={step}>{step}</li>)}</ol>
+                    <p>{plant.recipe.note}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Who the plant is: origin, story, what to look for, and how it
+              is grown for real. One place for all of it: the growing notes
+              used to be a second "Hồ sơ giống" box beside the plant. */}
+          {(plant.speciesProfile || plant.cultivation) && (
             <div className={`pd-panel pd-log pd-garden pd-species${speciesOpen ? ' open' : ''}`}>
               <button className="pd-log-toggle" aria-expanded={speciesOpen} onClick={() => setSpeciesOpen((v) => !v)}>
                 <SproutyIcon name="book" size={20} />
                 <span>
                   <strong>Hồ sơ giống · {plant.speciesLabel}</strong>
-                  <em>Xuất xứ, câu chuyện và những điều bé có biết</em>
+                  <em>Xuất xứ, câu chuyện, cách trồng ngoài đời thật</em>
                 </span>
                 <SproutyIcon name="arrow-down" size={18} className="pd-log-chevron" />
               </button>
               <div className="pd-log-body" hidden={!speciesOpen}>
-                <SpeciesProfile label={plant.speciesLabel} profile={plant.speciesProfile} bare />
+                {plant.speciesProfile && <SpeciesProfile label={plant.speciesLabel} profile={plant.speciesProfile} bare />}
+                {plant.cultivation && (
+                  <div className="pd-realgrow">
+                    <h3>Trồng ngoài đời thật · <em>{plant.cultivation.name}</em></h3>
+                    <ol>
+                      <li><SproutyIcon name="seed" size={18} /><span><strong>Gieo</strong>{plant.cultivation.sow}</span></li>
+                      <li><SproutyIcon name="sprout" size={18} /><span><strong>Chăm</strong>{plant.cultivation.support}</span></li>
+                      <li><SproutyIcon name="harvest" size={18} /><span><strong>Thu hoạch</strong>{plant.cultivation.mature}</span></li>
+                    </ol>
+                    <small>Mô phỏng giáo dục: thời gian và thang độ ẩm được giản lược. Cây thật còn phụ thuộc giống, đất và khí hậu.</small>
+                  </div>
+                )}
               </div>
             </div>
           )}

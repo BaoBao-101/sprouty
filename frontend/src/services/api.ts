@@ -468,6 +468,12 @@ export const API = {
     replant(id: string) {
       return _fetch(`/me/plants/${id}/replant`, { method: 'POST' });
     },
+    /** Sows a finished plant's saved seeds as a new season: a new plant of the same kit. */
+    sowSeeds(id: string) {
+      return _fetch(`/me/plants/${id}/sow-seeds`, { method: 'POST' });
+    },
+    /** The species harvested so far, out of those the shop sells. */
+    collection() { return _fetch('/me/plants/collection'); },
     setDevice(id: string, type: string, autoMode: boolean) {
       return _fetch(`/me/plants/${id}/devices`, {
         method: 'PATCH',

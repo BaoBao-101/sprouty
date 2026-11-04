@@ -708,3 +708,48 @@
 .album-switch { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 3px; border-radius: 99px; background: rgba(255, 255, 255, .7); border: 1px solid #E2EBD7 }
 .album-switch a { min-height: 34px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 99px; font-size: .82rem; font-weight: 700; color: var(--ink-3); text-decoration: none }
 .album-switch a.is-on { background: var(--primary-600); color: #fff }
+
+/* After the harvest: the real plant's photo, each picking's stars and
+   certificate, and the dish made from it — above the album's tree. */
+.album-harvest {
+  display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 22px; align-items: center;
+  margin: 0 0 28px; padding: 18px; border-radius: 24px; background: #fff7e8; border: 1px solid #f1e1bf;
+  scroll-margin-top: 88px;
+}
+.album-harvest-photo {
+  position: relative; width: 100%; aspect-ratio: 1; border-radius: 18px; overflow: hidden; border: 0; padding: 0;
+  background: #fff; cursor: pointer; display: grid; place-items: center;
+}
+.album-harvest-photo img { width: 100%; height: 100%; object-fit: cover; display: block }
+.album-harvest-photo > span {
+  position: absolute; left: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 9px; border-radius: 99px; background: rgba(255, 255, 255, .92); color: #236b3a; font-size: .74rem; font-weight: 700;
+}
+.album-harvest-photo.is-empty {
+  align-content: center; gap: 6px; padding: 14px; text-align: center; color: #2f6f78;
+  border: 2px dashed #d9c79f; background: #fffdf8;
+}
+.album-harvest-photo.is-empty strong { font-size: .95rem; color: #203424 }
+.album-harvest-photo.is-empty em { font-style: normal; font-size: .78rem; color: #76816c }
+.album-harvest-photo:disabled { cursor: not-allowed; opacity: .6 }
+.album-harvest-photo:focus-visible { outline: 3px solid var(--primary-600); outline-offset: 2px }
+.album-harvest-body h2 { margin: 6px 0 10px; font-family: var(--font-display); font-size: clamp(1.25rem, 2.4vw, 1.6rem); line-height: 1.25; color: #294f36 }
+.album-harvest-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px }
+.album-harvest-list li {
+  display: flex; align-items: center; gap: 12px; padding: 4px 6px 4px 12px; border-radius: 14px; background: #fff;
+}
+.album-harvest-list li > span:first-child { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap }
+.album-harvest-list b { color: #203424; font-size: .92rem }
+.album-harvest-list em { font-style: normal; font-size: .8rem; color: #76816c }
+.album-harvest-list a {
+  min-height: 40px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 12px;
+  font-size: .84rem; font-weight: 700; color: #236b3a; text-decoration: none;
+}
+.album-harvest-list a:hover { background: #ecf9e8 }
+.album-harvest-recipe { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 10px 0 0; font-size: .86rem; color: #9a5f0e }
+@media (max-width: 640px) {
+  .album-harvest { grid-template-columns: 1fr; gap: 14px; padding: 12px; border-radius: 20px }
+  .album-harvest-photo { aspect-ratio: 16 / 10 }
+  .album-harvest-photo.is-empty { aspect-ratio: auto; min-height: 112px }
+  .album-harvest-list li { gap: 8px; padding-left: 10px }
+}

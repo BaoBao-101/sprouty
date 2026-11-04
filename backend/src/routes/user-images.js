@@ -4,7 +4,8 @@ import { requireCustomer, requireCsrf } from '../middleware/rbac.js';
 import { AppError } from '../utils/errors.js';
 import { intParam, multipartFields, noHtml, parseOrThrow } from '../utils/validation.js';
 import { canAccessProductFeature, isVipUser } from '../services/access.js';
-import { STAGES, speciesFor, stageLabel } from '../services/plant-sim.js';
+import { STAGES, harvestsFor, speciesFor, stageLabel } from '../services/plant-sim.js';
+import { speciesRecipe } from '../services/species-recipes.js';
 import { createAsset, maxLeafVideoBytes } from '../services/storage/index.js';
 import { albumFormat } from '../services/storage/album-formats.js';
 
@@ -65,7 +66,31 @@ export function imageDto(row, product = null) {
   };
 }
 
-const plantSelect = { id: true, nickname: true, stage: true, stageProgress: true, health: true };
+const plantSelect = {
+  id: true, nickname: true, stage: true, stageProgress: true, health: true, harvestedAt: true, season: true,
+  harvests: { select: { id: true, number: true, stars: true, createdAt: true }, orderBy: { number: 'asc' } },
+};
+
+/**
+ * What the plant gave, for the album: each picking with its stars, the photo
+ * of the real harvest (the newest saved since the first picking), and the
+ * dish to make. Null before the first picking.
+ */
+function albumHarvest(plant, product, images) {
+  const pickings = plant?.harvests || [];
+  if (!pickings.length) return null;
+  const since = pickings[0].createdAt;
+  const photo = images.find((row) => row.status === 'active' && row.createdAt >= since
+    && !String(row.asset?.mimeType || '').startsWith('video/'));
+  return {
+    pickings: pickings.map((h) => ({ id: h.id, number: h.number, stars: h.stars, createdAt: h.createdAt })),
+    of: harvestsFor(product),
+    finished: Boolean(plant.harvestedAt),
+    season: plant.season || 1,
+    photo: photo ? imageDto(photo, product) : null,
+    recipe: speciesRecipe(speciesFor(product).key),
+  };
+}
 
 /**
  * The plant whose album this is.
@@ -128,7 +153,11 @@ export default async function userImageRoutes(fastify) {
       // Everything the album needs to render itself as this plant's journey,
       // rather than as a generic grid of pictures.
       product: product ? { id: product.id, name: product.name } : null,
-      plant,
+      plant: plant && {
+        id: plant.id, nickname: plant.nickname, stage: plant.stage, stageProgress: plant.stageProgress,
+        health: plant.health, harvestedAt: plant.harvestedAt,
+      },
+      harvest: albumHarvest(plant, product, images),
       plants: siblings,
       species: {
         key: species.key,

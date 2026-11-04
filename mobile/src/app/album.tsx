@@ -7,6 +7,7 @@ import { VideoModal } from '@/components/media';
 import { PlantThumb } from '@/components/PlantThumb';
 import { MemoryTreeArt } from '@/components/MemoryTreeArt';
 import { AlbumStageTree } from '@/components/AlbumStageTree';
+import { HarvestStars } from '@/components/HarvestSheet';
 import { useToast } from '@/components/Toast';
 import { ActionBar, Button, Card, Chip, cheer, Empty, ErrorNote, Field, H, Loading, Screen, Sheet, T } from '@/components/ui';
 import { API, imageSource } from '@/lib/api';
@@ -274,12 +275,14 @@ function LeafSheet({ leaf, onClose, onChanged, onPlay }: { leaf: Leaf | null; on
  * newest stage first — the plant's journey rather than a pile of pictures.
  */
 export default function AlbumScreen() {
-  const params = useLocalSearchParams<{ productId?: string; plantId?: string }>();
+  const params = useLocalSearchParams<{ productId?: string; plantId?: string; harvest?: string }>();
   if (!params.productId) return <PlantPicker />;
-  return <PlantAlbum key={`${params.productId}:${params.plantId || ''}`} productId={String(params.productId)} plantId={String(params.plantId || '')} />;
+  return <PlantAlbum key={`${params.productId}:${params.plantId || ''}`} productId={String(params.productId)} plantId={String(params.plantId || '')}
+    startHarvest={params.harvest === '1'} />;
 }
 
-function PlantAlbum({ productId, plantId }: { productId: string; plantId: string }) {
+/** `startHarvest`: sent from the harvest to photograph the real one, so the camera choice is open on arrival. */
+function PlantAlbum({ productId, plantId, startHarvest }: { productId: string; plantId: string; startHarvest: boolean }) {
   const toast = useToast();
   const { width } = useWindowDimensions();
   const [filter, setFilter] = useState('all');
@@ -310,6 +313,18 @@ function PlantAlbum({ productId, plantId }: { productId: string; plantId: string
 
   const target = filter !== 'all' && filter !== 'unknown' ? filter : data?.plant?.stage || '';
   const selectedFull = filter !== 'all' && filter !== 'unknown' && perStage !== null && (counts.get(filter) || 0) >= perStage;
+
+  const harvest = data?.harvest ?? null;
+  /** The real harvest's photo goes on the "Thu hoạch" branch: open it, with the camera choice ready. */
+  function addHarvestPhoto() {
+    chooseStage('mature');
+    setAddOpen(true);
+  }
+  const [startedHarvest, setStartedHarvest] = useState(false);
+  if (startHarvest && harvest && !harvest.photo && !startedHarvest) {
+    setStartedHarvest(true);
+    addHarvestPhoto();
+  }
 
   async function add(from: 'library' | 'camera') {
     try {
@@ -353,7 +368,7 @@ function PlantAlbum({ productId, plantId }: { productId: string; plantId: string
           <>
             <View style={[s.albumCover, treeOpen && { minHeight: 0, padding: 14 }]}>
               <View style={{ flex: 1, minWidth: 0, gap: 8 }}>
-                {!treeOpen && <Text style={s.coverEyebrow}>NHẬT KÝ LỚN LÊN</Text>}
+                {!treeOpen && <Text style={s.coverEyebrow}>{harvest?.finished ? 'HÀNH TRÌNH HOÀN THÀNH' : 'NHẬT KÝ LỚN LÊN'}</Text>}
                 <H size={treeOpen ? 21 : 26} style={{ color: '#F8F7ED' }}>{plant?.nickname || data.product?.name || 'Cây của bé'}</H>
                 <Text style={s.coverSummary}>{leaves.length} kỷ niệm · {data.stages.filter((st) => counts.has(st.id)).length}/{data.stages.length} chặng</Text>
               </View>
@@ -363,6 +378,40 @@ function PlantAlbum({ productId, plantId }: { productId: string; plantId: string
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                 {data.plants!.map((p) => <Chip key={p.id} icon="sprout" label={p.nickname} on={p.id === (plant?.id || plantId)} onPress={() => router.setParams({ plantId: p.id })} />)}
               </ScrollView>
+            )}
+            {/* What came of it: the real harvest's photo, and each picking's certificate. */}
+            {harvest && plant && (
+              <View style={s.harvest}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <Pressable onPress={() => (harvest.photo ? setViewing(harvest.photo as Leaf) : addHarvestPhoto())} accessibilityRole="button"
+                    accessibilityLabel={harvest.photo ? 'Xem ảnh thu hoạch thật' : 'Chụp thành quả thật'} style={[s.harvestPhoto, !harvest.photo && s.harvestPhotoEmpty]}>
+                    {harvest.photo?.url
+                      ? <Image source={imageSource(harvest.photo.url)} style={StyleSheet.absoluteFill} contentFit="cover" />
+                      : <Icon name="camera" size={26} color="#2F6F78" />}
+                  </Pressable>
+                  <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                    <Text style={s.harvestKicker}>THÀNH QUẢ{harvest.season > 1 ? ` · VỤ ${harvest.season}` : ''}</Text>
+                    <Text style={s.harvestTitle}>{harvest.finished ? 'Đã thu hoạch!' : `Đã hái ${harvest.pickings.length}/${harvest.of} đợt`}</Text>
+                    <Text style={s.gallerySubtitle}>{harvest.photo ? 'Đã lưu ảnh cây thật' : 'Chụp thành quả thật vào chặng Thu hoạch'}</Text>
+                  </View>
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {!harvest.photo && (
+                    <Pressable onPress={addHarvestPhoto} accessibilityRole="button" style={[s.picking, s.pickingAdd]}>
+                      <Icon name="camera" size={15} color={colors.white} />
+                      <Text style={[s.pickingText, { color: colors.white }]}>Thêm ảnh</Text>
+                    </Pressable>
+                  )}
+                  {harvest.pickings.map((h) => (
+                    <Pressable key={h.id} onPress={() => router.push(`/plant/${plant.id}?certificate=${h.id}`)} accessibilityRole="button"
+                      accessibilityLabel={`Chứng nhận${harvest.of > 1 ? ` đợt ${h.number}` : ''}, ${h.stars} sao`} style={s.picking}>
+                      <Icon name="trophy" size={14} color={colors.gold} />
+                      <Text style={s.pickingText}>{harvest.of > 1 ? `Đợt ${h.number}` : 'Chứng nhận'}</Text>
+                      <HarvestStars value={h.stars} size={11} />
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
             )}
             <View style={s.albumTabs}>
               <Pressable style={[s.albumTab, treeOpen && s.albumTabOn]} onPress={() => setTreeOpen(true)} accessibilityRole="tab" accessibilityState={{ selected: treeOpen }}><Icon name="sprout" size={18} color={treeOpen ? colors.greenDark : colors.ink3} /><Text style={[s.albumTabText, treeOpen && { color: colors.greenDark }]}>Hành trình</Text></Pressable>
@@ -476,6 +525,14 @@ const s = StyleSheet.create({
   coverEyebrow: { fontFamily: fonts.semi, fontSize: 10, letterSpacing: 1.6, color: '#CCD8C7' },
   coverSummary: { fontFamily: fonts.medium, fontSize: 12, color: '#D8E3D2', lineHeight: 19 },
   coverArt: { width: '30%', maxWidth: 130, aspectRatio: 800 / 760, backgroundColor: '#E8EDDC', borderRadius: 60 },
+  harvest: { gap: 12, padding: 12, borderRadius: radius.lg, backgroundColor: colors.goldSoft },
+  harvestPhoto: { width: 72, height: 72, borderRadius: 16, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card },
+  harvestPhotoEmpty: { backgroundColor: '#DCEFF1' },
+  harvestKicker: { fontFamily: fonts.bold, fontSize: 10.5, letterSpacing: 0.8, color: colors.gold },
+  harvestTitle: { fontFamily: fonts.display, fontSize: 19, lineHeight: 24, color: colors.ink },
+  picking: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.card },
+  pickingAdd: { backgroundColor: '#304D3D' },
+  pickingText: { fontFamily: fonts.bold, fontSize: 13, color: colors.ink2 },
   albumTabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.line },
   albumTab: { flex: 1, minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   albumTabOn: { borderBottomColor: colors.greenDark },

@@ -210,6 +210,10 @@ export const API = {
     activate: (code: string, nickname?: string) => request('/me/plants/activate', 'POST', { code, nickname }),
     care: (id: string, action: string) => request(`/me/plants/${id}/care`, 'POST', { action }),
     replant: (id: string) => request(`/me/plants/${id}/replant`, 'POST'),
+    /** A finished plant's saved seeds, sown as a new season: a new plant of the same kit. */
+    sowSeeds: (id: string) => request(`/me/plants/${id}/sow-seeds`, 'POST'),
+    /** The species harvested so far, out of those the shop sells. */
+    collection: () => request('/me/plants/collection'),
     setDevice: (id: string, type: string, autoMode: boolean) => request(`/me/plants/${id}/devices`, 'PATCH', { type, autoMode }),
     rename: (id: string, nickname: string) => request(`/me/plants/${id}`, 'PATCH', { nickname }),
     coach: (id: string, question?: string) => request(`/me/plants/${id}/coach`, 'POST', { question }),

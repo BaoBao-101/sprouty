@@ -212,7 +212,7 @@ export function stageIndex(stageId) {
 export const SPECIES = {
   bean: {
     key: 'bean', label: 'Cây đậu', icon: 'seed',
-    harvest: 'quả đậu', pollinate: true,
+    harvest: 'quả đậu', pollinate: true, harvests: 3,
     form: 'vine', fruitShape: 'pod',
     fruitColor: '#7BC96F', flowerColor: '#F7E7B0',
     labels: { fruiting: 'Ra quả' },
@@ -220,7 +220,7 @@ export const SPECIES = {
   },
   carrot: {
     key: 'carrot', label: 'Cà rốt', icon: 'soil',
-    harvest: 'củ cà rốt', pollinate: false,
+    harvest: 'củ cà rốt', pollinate: false, harvests: 1,
     form: 'root', fruitShape: 'root',
     fruitColor: '#F08A3C', flowerColor: '#F4F0DC',
     labels: { budding: 'Phình củ', flowering: 'Củ lớn', fruiting: 'Củ chín' },
@@ -228,7 +228,7 @@ export const SPECIES = {
   },
   corn: {
     key: 'corn', label: 'Bắp ngô', icon: 'leaf',
-    harvest: 'bắp ngô', pollinate: true,
+    harvest: 'bắp ngô', pollinate: true, harvests: 1,
     form: 'stalk', fruitShape: 'cob',
     fruitColor: '#F5CC4D', flowerColor: '#E8DFA8',
     labels: { fruiting: 'Ra bắp' },
@@ -236,7 +236,7 @@ export const SPECIES = {
   },
   pepper: {
     key: 'pepper', label: 'Ớt', icon: 'fruit',
-    harvest: 'trái ớt', pollinate: true,
+    harvest: 'trái ớt', pollinate: true, harvests: 3,
     form: 'bush', fruitShape: 'cone',
     fruitColor: '#E03A2F', flowerColor: '#F4F0DC',
     labels: { fruiting: 'Ra trái' },
@@ -244,7 +244,7 @@ export const SPECIES = {
   },
   sunflower: {
     key: 'sunflower', label: 'Hướng dương', icon: 'flower',
-    harvest: 'hạt hướng dương', pollinate: true,
+    harvest: 'hạt hướng dương', pollinate: true, harvests: 1,
     form: 'head', fruitShape: 'head',
     fruitColor: '#8A6A3A', flowerColor: '#FFC83D',
     labels: { flowering: 'Nở hoa', fruiting: 'Kết hạt' },
@@ -252,7 +252,7 @@ export const SPECIES = {
   },
   tomato: {
     key: 'tomato', label: 'Cà chua', icon: 'fruit',
-    harvest: 'quả cà chua', pollinate: true,
+    harvest: 'quả cà chua', pollinate: true, harvests: 3,
     form: 'bush', fruitShape: 'round',
     fruitColor: '#E8503A', flowerColor: '#FFD96B',
     labels: { fruiting: 'Ra trái' },
@@ -260,7 +260,7 @@ export const SPECIES = {
   },
   herb: {
     key: 'herb', label: 'Rau thơm', icon: 'leaf',
-    harvest: 'lá thơm', pollinate: false,
+    harvest: 'lá thơm', pollinate: false, harvests: 3,
     form: 'leafy', fruitShape: 'none',
     fruitColor: '#5FA85C', flowerColor: '#E6F0C8',
     labels: { budding: 'Ra nhánh', flowering: 'Lá dày', fruiting: 'Sẵn hái' },
@@ -270,7 +270,7 @@ export const SPECIES = {
 
 const DEFAULT_SPECIES = {
   key: 'generic', label: 'Cây thường', icon: 'sprout',
-  harvest: 'trái', pollinate: true,
+  harvest: 'trái', pollinate: true, harvests: 1,
   form: 'bush', fruitShape: 'round',
   fruitColor: '#E8503A', flowerColor: '#FFC83D',
   labels: {},
@@ -335,6 +335,32 @@ export function speciesFor(product) {
   }
   if (isSpeciesKey(product.speciesKey)) return SPECIES[product.speciesKey];
   return SPECIES[LEGACY_NAME_TO_KEY[product.name]] || DEFAULT_SPECIES;
+}
+
+/**
+ * How many times a plant of this species is picked. A pepper, tomato, bean or
+ * basil plant keeps cropping, as it does on a windowsill, so after a picking
+ * it goes back to fruiting (REGROW_STAGE) for the next one; a carrot, an ear
+ * of corn or a sunflower head is harvested once and the plant is done.
+ */
+export function harvestsFor(product) {
+  return speciesFor(product).harvests || 1;
+}
+
+/** Where a plant that crops again starts over after a picking. */
+export const REGROW_STAGE = 'fruiting';
+
+/**
+ * The stars a picking earns, one to three, and why: how healthy the plant was
+ * kept on average, a streak of days the child came back (up to a week counts),
+ * and whether it got there without dying and being replanted. Explainable on
+ * purpose: the certificate tells the child what each star was for.
+ */
+export function harvestRating({ avgHealth, streak, attempt }) {
+  const health = Math.max(0, Math.min(100, avgHealth));
+  const score = health * 0.85 + (Math.min(Math.max(0, streak), 7) / 7) * 15 - (attempt > 1 ? 20 : 0);
+  const stars = score >= 80 ? 3 : score >= 60 ? 2 : 1;
+  return { stars, score: Math.round(score) };
 }
 
 /** The stage label this species uses, e.g. "Phình củ" instead of "Ra nụ". */

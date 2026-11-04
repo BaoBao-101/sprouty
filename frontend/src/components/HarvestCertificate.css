@@ -1,0 +1,27 @@
+/* "Chứng nhận Nhà nông nhí": one picking's certificate (HarvestCertificate.tsx). */
+.hc-card {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 22px 18px 18px; text-align: center;
+  border-radius: 22px; background: #fff;
+  border: 3px solid #2e8447; box-shadow: inset 0 0 0 5px #fff, inset 0 0 0 7px #dff1d7;
+}
+.hc-kicker {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #2e8447;
+}
+.hc-name { margin: 2px 0 0; font-family: var(--font-display); font-size: 1.7rem; line-height: 1.2; color: #203424; overflow-wrap: anywhere }
+.hc-sub { margin: 0; font-size: .9rem; color: #5e7662 }
+.hc-stars { display: inline-flex; gap: 4px; line-height: 1 }
+.hc-stars span { color: #e6e1d3 }
+.hc-stars span.on { color: #e9a21b }
+.hc-stats { list-style: none; margin: 8px 0 2px; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; width: 100% }
+.hc-stats li { display: flex; flex-direction: column; padding: 10px 4px; border-radius: 14px; background: #ecf9e8 }
+.hc-stats b { font-family: var(--font-display); font-size: 1.35rem; line-height: 1.2; color: #236b3a }
+.hc-stats span { font-size: .74rem; color: #5e7662 }
+.hc-why { margin: 4px 0 0; font-size: .84rem; color: #34513a }
+.hc-date { margin: 0; font-size: .78rem; color: #8ca591 }
+
+@media (max-width: 420px) {
+  .hc-stats { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  .hc-name { font-size: 1.45rem }
+}

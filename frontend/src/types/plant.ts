@@ -51,6 +51,50 @@ export interface PlantCard {
   diedAt: string | null;
   /** Which planting this is: 2 after the first one died. */
   attempt: number;
+  /** Pickings so far, out of the species' number (3 for a plant that crops again). */
+  harvestCount: number;
+  harvestsMax: number;
+  /** 1 for the kit's own planting, 2 for one sown from its saved seeds. */
+  season: number;
+  /** Finished and its seeds not yet sown into a new season. */
+  seedsReady: boolean;
+  /** The best stars any of its pickings earned, 0 before the first. */
+  bestStars: number;
+}
+
+/** One picking, as its certificate shows it. */
+export interface HarvestRecord {
+  id: string;
+  number: number;
+  of: number;
+  stars: number;
+  avgHealth: number;
+  careCount: number;
+  streak: number;
+  days: number;
+  createdAt: string;
+  plantName: string;
+  speciesKey: string;
+  speciesLabel: string;
+  harvestLabel: string;
+  season: number;
+  attempt: number;
+}
+
+/** A simple dish to make with the harvest. */
+export interface HarvestRecipe {
+  title: string;
+  steps: string[];
+  note: string;
+}
+
+/** The species harvested, out of those the shop sells; each full set is a free workshop seat. */
+export interface HarvestCollection {
+  species: Array<{ key: string; label: string; icon: string; harvests: number; bestStars: number }>;
+  collected: number;
+  total: number;
+  sets: number;
+  totalStars: number;
 }
 
 export interface PlantEnvironment {
@@ -184,6 +228,14 @@ export interface PlantDetail extends PlantCard {
   wilt: { critical: boolean; hoursLeft: number | null };
   /** VIP's care kit: whether the account may use it, and whether it is switched on. */
   keeper: { vip: boolean; on: boolean; until: string | null };
+  /** Every picking's certificate, oldest first. */
+  harvests: HarvestRecord[];
+  /** The dish to make with the harvest, once there is one. */
+  recipe: HarvestRecipe | null;
+  /** A photo was saved to its album since the first picking: the real harvest. */
+  realHarvestPhoto: boolean;
+  /** Sowing its seeds would be a season past the free ones. */
+  seedsNeedVip: boolean;
 }
 
 export interface PlantEvent {
@@ -203,7 +255,7 @@ export interface RewardSummary {
   newlyEarned: number;
   rewards: Array<{
     id: string;
-    type: 'free_workshop';
+    type: 'free_workshop' | 'species_collection';
     status: 'available' | 'claimed';
     milestone: number;
     claimedRegistrationId: string | null;

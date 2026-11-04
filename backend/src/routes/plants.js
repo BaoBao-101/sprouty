@@ -16,6 +16,8 @@ import {
   advance,
   clearCoachHistory,
   coachHistory,
+  harvestCollection,
+  harvestsInclude,
   performCare,
   saveCoachExchange,
   plantCardDto,
@@ -24,6 +26,7 @@ import {
   renamePlant,
   replantPlant,
   setDeviceAuto,
+  sowSavedSeeds,
 } from '../services/plants.js';
 import { redeemCode } from '../services/redeem.js';
 import { syncWorkshopRewards } from '../services/rewards.js';
@@ -107,6 +110,7 @@ export default async function plantRoutes(fastify) {
       include: {
         devices: true,
         product: { select: { id: true, name: true, emoji: true, bgColor: true, images: true, speciesKey: true } },
+        harvests: harvestsInclude,
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -135,6 +139,7 @@ export default async function plantRoutes(fastify) {
       include: {
         devices: true,
         product: { select: { id: true, name: true, emoji: true, bgColor: true, images: true, speciesKey: true } },
+        harvests: harvestsInclude,
       },
     });
     if (!row) throw new AppError('Không tìm thấy cây này.', 404);
@@ -164,8 +169,29 @@ export default async function plantRoutes(fastify) {
       stagesCrossed: outcome.stagesCrossed,
       newlyUnlocked: outcome.newlyUnlocked,
       harvested: Boolean(outcome.harvested),
+      // A picking: its certificate, the collection it counts towards, and any free seat it won.
+      harvest: outcome.harvest || null,
+      collection: outcome.collection || null,
+      seatsWon: outcome.seatsWon || 0,
       streak: outcome.streak ?? detail.careStreak,
     };
+  });
+
+  // POST /api/v1/me/plants/:plantId/sow-seeds — a finished plant's kept seeds,
+  // sown as the next season: a new plant of the same kit.
+  fastify.post('/me/plants/:plantId/sow-seeds', {
+    preHandler: [requireCustomer, requireCsrf],
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (req) => {
+    const now = new Date();
+    const plant = await sowSavedSeeds(fastify.prisma, req.user.id, req.params.plantId);
+    const detail = await plantDetailDto(fastify.prisma, plant, { now });
+    return { message: `Đã gieo hạt giữ lại — ${detail.nickname} bắt đầu vụ mới!`, plant: detail };
+  });
+
+  // GET /api/v1/me/plants/collection — the species harvested, out of those sold.
+  fastify.get('/me/plants/collection', { preHandler: [requireCustomer] }, async (req) => {
+    return harvestCollection(fastify.prisma, req.user.id);
   });
 
   // POST /api/v1/me/plants/:plantId/replant — a plant that died, sown again
@@ -227,6 +253,7 @@ export default async function plantRoutes(fastify) {
       include: {
         devices: true,
         product: { select: { id: true, name: true, emoji: true, bgColor: true, images: true, speciesKey: true } },
+        harvests: harvestsInclude,
       },
     });
     if (!row) throw new AppError('Không tìm thấy cây này.', 404);

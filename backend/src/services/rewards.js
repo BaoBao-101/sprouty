@@ -14,6 +14,31 @@
 
 import { AppError } from '../utils/errors.js';
 
+/**
+ * Every kind of reward that is a free workshop seat: the one bought (three
+ * kits) and the one grown (harvesting every species, plants.js). Both are
+ * spent on a booking the same way.
+ */
+export const SEAT_TYPES = ['free_workshop', 'species_collection'];
+
+/**
+ * Inserts the rows for milestones 1..earned of one kind that are missing, and
+ * returns how many were new. Idempotent, like the purchase rewards: called
+ * again with the same count it adds nothing.
+ */
+export async function mintMilestones(prisma, userId, type, earned) {
+  if (earned < 1) return 0;
+  const existing = await prisma.reward.findMany({ where: { userId, type }, select: { milestone: true } });
+  const have = new Set(existing.map((r) => r.milestone));
+  const missing = [];
+  for (let milestone = 1; milestone <= earned; milestone += 1) {
+    if (!have.has(milestone)) missing.push({ userId, type, milestone });
+  }
+  if (!missing.length) return 0;
+  const { count } = await prisma.reward.createMany({ data: missing, skipDuplicates: true });
+  return count;
+}
+
 /** Qualifying purchases per free workshop. */
 export function rewardThreshold() {
   const raw = Number(process.env.WORKSHOP_REWARD_THRESHOLD || 3);
@@ -64,12 +89,11 @@ export async function syncWorkshopRewards(prisma, userId) {
     await prisma.reward.createMany({ data: missing, skipDuplicates: true });
   }
 
-  const rewards = missing.length
-    ? await prisma.reward.findMany({
-        where: { userId, type: 'free_workshop' },
-        orderBy: { milestone: 'asc' },
-      })
-    : existing;
+  // The seats from the species collection count too: they are spent the same way.
+  const rewards = await prisma.reward.findMany({
+    where: { userId, type: { in: SEAT_TYPES } },
+    orderBy: [{ createdAt: 'asc' }, { milestone: 'asc' }],
+  });
 
   const available = rewards.filter((r) => r.status === 'available');
   return {
@@ -123,8 +147,8 @@ export async function claimRewardsTx(tx, userId, registrationId, count) {
   if (count < 1) return [];
 
   const candidates = await tx.reward.findMany({
-    where: { userId, type: 'free_workshop', status: 'available' },
-    orderBy: { milestone: 'asc' },
+    where: { userId, type: { in: SEAT_TYPES }, status: 'available' },
+    orderBy: [{ createdAt: 'asc' }, { milestone: 'asc' }],
     take: count,
     select: { id: true },
   });
@@ -163,7 +187,7 @@ export async function releaseRewardForRegistration(prisma, registrationId) {
 /** Throws unless the customer has a free seat to spend. */
 export async function assertRewardAvailable(prisma, userId, wanted = 1) {
   const count = await prisma.reward.count({
-    where: { userId, type: 'free_workshop', status: 'available' },
+    where: { userId, type: { in: SEAT_TYPES }, status: 'available' },
   });
   if (count < 1) {
     throw new AppError(

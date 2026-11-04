@@ -11,12 +11,13 @@ import { GardenStyle, sceneLook, type GardenBenefits } from '@/components/Garden
 import { SpeciesProfile } from '@/components/SpeciesProfile';
 import { IotWorkbench, SensorChart, useIotBoard } from '@/components/IotStation';
 import { Plant3D } from '@/components/Plant3D';
+import { HarvestSheet, HarvestStars, type Celebration } from '@/components/HarvestSheet';
 import { useToast } from '@/components/Toast';
-import { Button, Card, Field, H, IconButton, IconTile, Loading, Meter, Press, Ring, Screen, Segmented, Sheet, T, tap } from '@/components/ui';
+import { Button, Card, Field, H, IconButton, IconTile, Loading, Meter, Press, Ring, Screen, Segmented, Sheet, T, cheer, tap } from '@/components/ui';
 import { API, imageSource } from '@/lib/api';
 import { plantClock } from '@/lib/plant-clock';
 import { formatCountdown, formatDateTime, plainAiText } from '@/lib/format';
-import type { CareSlot, CoachMessage, PlantDetail, PlantDevice, PlantEvent } from '@/lib/types';
+import type { CareSlot, CoachMessage, HarvestCollection, HarvestRecord, PlantDetail, PlantDevice, PlantEvent } from '@/lib/types';
 import { colors, fonts, gutter, maxWidth, radius, surface } from '@/theme';
 
 const aiMark = imageSource('/assets/images/sprouty-mark.png') as number;
@@ -136,7 +137,7 @@ function Fold({ icon, title, sub, open, onToggle, dot, children }: {
  * belt, so doing what the coach said is one drag.
  */
 export default function PlantScreen() {
-  const { id = '' } = useLocalSearchParams<{ id: string }>();
+  const { id = '', certificate } = useLocalSearchParams<{ id: string; certificate?: string }>();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const now = useNow();
@@ -170,7 +171,11 @@ export default function PlantScreen() {
   // The scene and pot the plant wears: the saved look, or one being tried on (GardenStyle loads it).
   const [garden, setGarden] = useState<GardenBenefits | null>(null);
   const [gardenOpen, setGardenOpen] = useState(false);
-  const board = useIotBoard(id, plant?.devices || [], (type, next) => toggleDevice(type, next));
+  // After the harvest: a picking's certificate, open; the seeds being sown.
+  const [celebration, setCelebration] = useState<Celebration | null>(null);
+  const [sowing, setSowing] = useState(false);
+  const [harvestsOpen, setHarvestsOpen] = useState(false);
+  const board =useIotBoard(id, plant?.devices || [], (type, next) => toggleDevice(type, next));
 
   const apply = useCallback((detail: PlantDetail, events: PlantEvent[] = []) => {
     setPlant(detail);
@@ -205,7 +210,11 @@ export default function PlantScreen() {
       // The game shows the points over the plant; a warning still needs saying.
       const warning = (data.messages || []).find((m: PlantEvent) => m.level === 'warn');
       if (warning) toast(warning.text, 'error');
-      if (data.harvested) setTimeout(() => toast('Hành trình hoàn thành! Chúc mừng bé.', 'success'), 3200);
+      // A picking opens its celebration once the game has shown it landing in the basket.
+      if (data.harvest) {
+        const next: Celebration = { harvest: data.harvest, collection: data.collection ?? null, seatsWon: data.seatsWon || 0, fresh: true };
+        setTimeout(() => { cheer(); setCelebration(next); }, 3000);
+      }
       for (const type of data.newlyUnlocked || []) {
         const unlocked = data.plant.devices.find((d: PlantDevice) => d.type === type);
         if (unlocked) setTimeout(() => toast(`Thiết bị mới: ${unlocked.label}`, 'success'), 3200);
@@ -230,6 +239,38 @@ export default function PlantScreen() {
       toast(err?.message || 'Chưa gieo lại được, thử lại nhé.', 'error');
     } finally {
       setReplanting(false);
+    }
+  }
+
+  /** Looks back at one picking's certificate; the collection is fetched on the way. */
+  function openCertificate(harvest: HarvestRecord) {
+    setCelebration({ harvest, collection: null, seatsWon: 0, fresh: false });
+    API.plants.collection()
+      .then((collection: HarvestCollection) => setCelebration((cur) => (cur && cur.harvest.id === harvest.id ? { ...cur, collection } : cur)))
+      .catch(() => undefined);
+  }
+
+  // /plant/<id>?certificate=<picking>, from the album: that picking's certificate opens once the plant is in.
+  useEffect(() => {
+    if (!certificate || !plant) return;
+    const picking = plant.harvests.find((h) => h.id === certificate);
+    if (picking) openCertificate(picking);
+    router.setParams({ certificate: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [certificate, plant]);
+
+  /** Sows the seeds this finished plant kept: the next season, a plant of its own. */
+  async function sowSeeds() {
+    setSowing(true);
+    try {
+      const data = await API.plants.sowSeeds(id);
+      toast(data.message || 'Đã gieo vụ mới.', 'success');
+      setCelebration(null);
+      router.replace(`/plant/${data.plant.id}`);
+    } catch (err: any) {
+      toast(err?.message || 'Chưa gieo được hạt, thử lại nhé.', 'error');
+    } finally {
+      setSowing(false);
     }
   }
 
@@ -292,6 +333,7 @@ export default function PlantScreen() {
   }
 
   const harvested = Boolean(plant.harvestedAt);
+  const lastHarvest = plant.harvests[plant.harvests.length - 1] ?? null;
   const dead = Boolean(plant.diedAt);
   const critical = !dead && plant.wilt.critical;
   const hoursLeft = plant.wilt.hoursLeft === null ? '' : plant.wilt.hoursLeft >= 48 ? `${Math.round(plant.wilt.hoursLeft / 24)} ngày` : `${plant.wilt.hoursLeft} giờ`;
@@ -393,12 +435,26 @@ export default function PlantScreen() {
                 tint={critical ? '#F9D9DE' : colors.white} color={critical ? colors.bad : colors.greenDark} />
               <View style={{ flex: 1, gap: 1 }}>
                 <Text style={[s.kicker, critical && { color: colors.bad }]}>{harvested ? 'ĐÃ HOÀN THÀNH' : critical ? `CỨU CÂY · CÒN ${hoursLeft.toUpperCase()}` : 'VIỆC NÊN LÀM'}</Text>
-                <Text style={s.todoTitle}>{harvested ? `Bé đã thu hoạch ${plant.harvestLabel}!` : plant.nextStep.label || 'Chờ dụng cụ hồi lại'}</Text>
-                <Text numberOfLines={2} style={s.todoWhy}>{harvested ? 'Mở một bộ kit mới để trồng cây khác nhé.' : why}</Text>
+                <Text style={s.todoTitle}>
+                  {harvested ? `Bé đã thu hoạch ${plant.harvestLabel}${plant.harvestCount > 1 ? ` · ${plant.harvestCount} đợt` : ''}!` : plant.nextStep.label || 'Chờ dụng cụ hồi lại'}
+                </Text>
+                <Text numberOfLines={2} style={s.todoWhy}>
+                  {harvested ? (plant.seedsReady ? 'Gieo hạt đã giữ thành vụ mới, hoặc chọn kit khác.' : 'Hạt của cây đã gieo thành vụ mới.') : why}
+                </Text>
               </View>
+              {harvested && lastHarvest && <HarvestStars value={lastHarvest.stars} size={15} />}
             </View>
             {critical && plant.keeper && !plant.keeper.vip && (
               <Button small variant="ghost" icon="star" title="VIP giữ cây không bao giờ héo" onPress={() => router.push('/vip')} />
+            )}
+            {/* Finished: its certificate, and its seeds for a new season. */}
+            {harvested && lastHarvest && (
+              <View style={s.todoActions}>
+                <Button small grow icon="trophy" title="Chứng nhận" onPress={() => openCertificate(lastHarvest)} />
+                {plant.seedsReady && (plant.seedsNeedVip
+                  ? <Button small grow variant="light" icon="star" title="Gieo tiếp (VIP)" onPress={() => router.push('/vip')} />
+                  : <Button small grow variant="light" icon="seed" title={sowing ? 'Đang gieo…' : 'Gieo vụ mới'} busy={sowing} onPress={sowSeeds} />)}
+              </View>
             )}
           </View>
         )}
@@ -421,6 +477,13 @@ export default function PlantScreen() {
               {plant.careStreak > 0 && <View style={[s.badge, { backgroundColor: '#FFEBD0' }]}><Icon name="bolt" size={12} color={colors.price} /><Text style={[s.badgeText, { color: colors.warn }]}>{plant.careStreak} ngày</Text></View>}
               {plant.keeper?.on && !dead && <View style={[s.badge, { backgroundColor: colors.infoSoft }]}><Icon name="shield" size={12} color={colors.info} /><Text style={[s.badgeText, { color: colors.info }]}>Tự chăm</Text></View>}
               {plant.attempt > 1 && <View style={[s.badge, { backgroundColor: colors.earthSoft }]}><Icon name="seed" size={12} color={colors.earth} /><Text style={[s.badgeText, { color: colors.earth }]}>Lần {plant.attempt}</Text></View>}
+              {plant.season > 1 && <View style={[s.badge, { backgroundColor: colors.earthSoft }]}><Icon name="sprout" size={12} color={colors.earth} /><Text style={[s.badgeText, { color: colors.earth }]}>Vụ {plant.season}</Text></View>}
+              {plant.harvestCount > 0 && (
+                <View style={[s.badge, { backgroundColor: colors.goldSoft }]}>
+                  <Icon name="harvest" size={12} color={colors.gold} />
+                  <Text style={[s.badgeText, { color: colors.gold }]}>{harvested ? `Hái ${plant.harvestCount} đợt` : `Hái ${plant.harvestCount}/${plant.harvestsMax}`}</Text>
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -434,7 +497,38 @@ export default function PlantScreen() {
 
         {tab === 'care' && (
           <>
-            {plant.tasks.length > 0 && !dead && (
+            {/* What came of it: each picking's stars and certificate, and the dish to make. */}
+            {plant.harvests.length > 0 && (
+              <Fold icon="trophy" title={`Thành quả · ${plant.harvests.length} lần hái`} sub="Chứng nhận và món ngon từ cây"
+                open={harvestsOpen} onToggle={() => setHarvestsOpen((v) => !v)}>
+                <View style={{ marginHorizontal: -16 }}>
+                  {plant.harvests.map((h, i, all) => (
+                    <Pressable key={h.id} onPress={() => { tap(); openCertificate(h); }} accessibilityRole="button"
+                      accessibilityLabel={`Xem chứng nhận ${h.of > 1 ? `đợt ${h.number}` : ''}`} style={[s.history, i < all.length - 1 && s.divider]}>
+                      <View style={[s.historyIcon, { backgroundColor: colors.goldSoft }]}><Icon name="harvest" size={15} color={colors.gold} /></View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.historyTitle}>{h.of > 1 ? `Đợt ${h.number}/${h.of}` : 'Thu hoạch'}</Text>
+                        <Text style={s.deviceAbout}>{new Date(h.createdAt).toLocaleDateString('vi-VN')}</Text>
+                      </View>
+                      <HarvestStars value={h.stars} size={14} />
+                      <Icon name="arrow-right" size={15} color={colors.ink5} />
+                    </Pressable>
+                  ))}
+                </View>
+                {plant.recipe && (
+                  <View style={s.recipe}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Icon name="heart" size={16} color={colors.gold} />
+                      <Text style={[s.panelTitle, { flex: 1 }]}>{plant.recipe.title}</Text>
+                    </View>
+                    {plant.recipe.steps.map((step, i) => <Text key={step} style={s.panelText}>{i + 1}. {step}</Text>)}
+                    <Text style={[s.deviceAbout, { color: colors.gold }]}>{plant.recipe.note}</Text>
+                  </View>
+                )}
+              </Fold>
+            )}
+
+            {plant.tasks.length > 0 && !dead && !harvested && (
               <View style={s.panel}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Text style={[s.panelTitle, { flex: 1 }, plant.tasksDone && { color: colors.greenDark }]}>
@@ -649,6 +743,8 @@ export default function PlantScreen() {
         ) : null}
       </Sheet>
 
+      <HarvestSheet celebration={celebration} plant={plant} sowing={sowing} onSow={sowSeeds} onClose={() => setCelebration(null)} />
+
       <Sheet open={renaming} title="Đổi tên cây" onClose={() => setRenaming(false)} footer={<Button title="Lưu tên" onPress={saveName} />}>
         <Field label="Tên mới" value={nameDraft} onChangeText={setNameDraft} maxLength={40} autoFocus onSubmitEditing={saveName} />
       </Sheet>
@@ -697,6 +793,8 @@ const s = StyleSheet.create({
   kicker: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.8, color: colors.green },
   todoTitle: { fontFamily: fonts.bold, fontSize: 16.5, lineHeight: 22, color: colors.ink },
   todoWhy: { fontFamily: fonts.body, fontSize: 13.5, lineHeight: 19, color: colors.ink2 },
+  todoActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  recipe: { gap: 6, padding: 12, borderRadius: radius.md, backgroundColor: '#FFF7E8' },
 
   help: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 34, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: colors.mint },
   helpText: { fontFamily: fonts.bold, fontSize: 12.5, color: colors.greenDark },

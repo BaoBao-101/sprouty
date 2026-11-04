@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Icon } from '@/components/Icon';
+import { HarvestStars } from '@/components/HarvestSheet';
+import { Icon, type IconName } from '@/components/Icon';
 import { PlantArt } from '@/components/PlantArt';
 import { PlantThumb } from '@/components/PlantThumb';
 import { useToast } from '@/components/Toast';
@@ -9,7 +10,7 @@ import { Button, Chip, ChipRow, cheer, Empty, ErrorNote, Field, IconButton, Load
 import { API } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { alertBrief } from '@/lib/format';
-import type { PlantAlert, PlantCard } from '@/lib/types';
+import type { HarvestCollection, PlantAlert, PlantCard } from '@/lib/types';
 import { useLoad } from '@/lib/use-load';
 import { colors, fonts, gutter, maxWidth, radius, shadow, surface } from '@/theme';
 
@@ -121,9 +122,15 @@ function PlantTile({ plant, alerts, width }: { plant: PlantCard; alerts: PlantAl
             <Meter value={plant.nutrient} color={colors.greenLight} height={5} style={{ flex: 1 }} />
           </View>
         ) : (
-          <View style={[s.need, { backgroundColor: colors.goldSoft }]}>
-            <Icon name="harvest" size={13} color={colors.gold} />
-            <Text style={[s.needText, { color: colors.gold }]}>Hoàn thành</Text>
+          // A finished plant: what it gave, not how thirsty it is.
+          <View style={s.done}>
+            <HarvestStars value={plant.bestStars} size={13} />
+            {plant.seedsReady && (
+              <View style={[s.need, { marginTop: 0, backgroundColor: colors.earthSoft }]}>
+                <Icon name="seed" size={12} color={colors.earth} />
+                <Text numberOfLines={1} style={[s.needText, { color: colors.earth }]}>Còn hạt</Text>
+              </View>
+            )}
           </View>
         )}
       </View>
@@ -148,8 +155,13 @@ export default function Garden() {
 
   const data = useLoad(async () => {
     if (!user) return null;
-    const [list, look] = await Promise.all([API.plants.list(), API.garden.benefits().catch(() => null)]);
-    return { plants: (list.plants || []) as PlantCard[], alerts: (list.alerts || []) as PlantAlert[], decoration: look?.decoration as string | undefined };
+    const [list, look, collection] = await Promise.all([
+      API.plants.list(), API.garden.benefits().catch(() => null), API.plants.collection().catch(() => null),
+    ]);
+    return {
+      plants: (list.plants || []) as PlantCard[], alerts: (list.alerts || []) as PlantAlert[],
+      decoration: look?.decoration as string | undefined, collection: collection as HarvestCollection | null,
+    };
   }, [user?.id]);
 
   // /garden?activate=1 opens the form; /garden?activate=CODE opens it filled in.
@@ -162,6 +174,7 @@ export default function Garden() {
 
   const plants = data.data?.plants || [];
   const alerts = data.data?.alerts || [];
+  const collection = data.data?.collection;
   const alertsOf = useMemo(() => {
     const map = new Map<string, PlantAlert[]>();
     for (const a of alerts) map.set(a.plantId, [...(map.get(a.plantId) || []), a]);
@@ -205,6 +218,7 @@ export default function Garden() {
   const inner = Math.min(width, maxWidth) - gutter * 2;
   const columns = inner >= 640 ? 4 : inner >= 480 ? 3 : 2;
   const tileW = Math.floor((inner - 12 * (columns - 1)) / columns);
+  const speciesW = Math.floor((inner - 28) / Math.min(6, Math.max(1, collection?.species.length ?? 1)));
 
   return (
     <Screen title="Khu vườn" large onRefresh={data.reload}
@@ -222,6 +236,32 @@ export default function Garden() {
           <Stat icon="sprout" value={counts.growing} label="đang lớn" style={{ flex: 1 }} />
           <Stat icon="harvest" value={counts.done} label="thu hoạch" color={colors.gold} tint={colors.goldSoft} style={{ flex: 1 }} />
           <Stat icon="bolt" value={streak} label="ngày liền" color={colors.price} tint="#FFEBD0" style={{ flex: 1 }} />
+        </View>
+      )}
+
+      {/* The species harvested so far, out of those sold: a full set is a free workshop seat. */}
+      {collection && collection.total > 0 && plants.length > 0 && (
+        <View style={s.collection}>
+          <View style={s.collectionHead}>
+            <Icon name="trophy" size={18} color={colors.gold} />
+            <Text style={s.collectionTitle}>Bộ sưu tập loài</Text>
+            <Text style={s.collectionCount}>{collection.collected}/{collection.total}</Text>
+          </View>
+          {/* Every species in view at once, six to a row: the empty places are the point. */}
+          <View style={s.speciesGrid}>
+            {collection.species.map((sp) => (
+              <View key={sp.key} style={[s.species, { width: speciesW }]} accessibilityLabel={`${sp.label}: ${sp.harvests ? `đã thu hoạch ${sp.harvests} lần` : 'chưa thu hoạch'}`}>
+                <View style={[s.speciesIcon, sp.harvests > 0 && { backgroundColor: colors.mint }]}>
+                  <Icon name={sp.icon as IconName} size={19} color={sp.harvests > 0 ? colors.greenDark : colors.ink5} />
+                </View>
+                <Text numberOfLines={2} style={[s.speciesLabel, sp.harvests > 0 && { color: colors.ink2 }]}>{sp.label}</Text>
+                {sp.bestStars > 0 && <HarvestStars value={sp.bestStars} size={9} />}
+              </View>
+            ))}
+          </View>
+          <Text style={s.collectionHint}>
+            {collection.collected < collection.total ? `Đủ ${collection.total} loài: tặng 1 suất workshop` : 'Đủ bộ! Mỗi vòng đủ loài thêm 1 suất workshop'}
+          </Text>
         </View>
       )}
 
@@ -287,6 +327,16 @@ const s = StyleSheet.create({
   stage: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.sand },
   need: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', maxWidth: '100%', marginTop: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, backgroundColor: colors.warnSoft },
   needText: { flexShrink: 1, fontFamily: fonts.bold, fontSize: 11.5, color: colors.warn },
+  done: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 4, minHeight: 20 },
+  collection: { ...surface, gap: 10, paddingVertical: 12, paddingHorizontal: 14 },
+  collectionHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  collectionTitle: { flex: 1, fontFamily: fonts.bold, fontSize: 15, color: colors.ink },
+  collectionCount: { fontFamily: fonts.display, fontSize: 17, lineHeight: 22, color: colors.gold },
+  collectionHint: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink3 },
+  speciesGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 8 },
+  species: { alignItems: 'center', gap: 3, paddingHorizontal: 2 },
+  speciesIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.sand, alignItems: 'center', justifyContent: 'center' },
+  speciesLabel: { fontFamily: fonts.semi, fontSize: 11, lineHeight: 14, color: colors.ink4, textAlign: 'center' },
   meters: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6, minHeight: 18 },
   sow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: radius.lg, backgroundColor: colors.card },
   sowArt: { width: 64, height: 64, borderRadius: 18, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },

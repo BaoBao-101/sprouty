@@ -15,11 +15,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
-import { SproutyIcon } from '@/components/icons/SproutyIcon';
+import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
 import { PlantArt } from '@/components/PlantArt';
 import { PromoBanner, refreshRewards } from '@/components/PromoBanner';
 import { Pager } from '@/components/Pager';
-import type { PlantCard, PlantEvent } from '@/types/plant';
+import { Stars } from '@/components/HarvestCertificate';
+import type { HarvestCollection, PlantCard, PlantEvent } from '@/types/plant';
 import type { PotKey, SceneKey } from '@/components/garden-looks';
 import './MyPlants.css';
 const PlantThumbnail3D = lazy(() => import('@/components/PlantThumbnail3D'));
@@ -203,10 +204,12 @@ function PlantGridCard({ plant, urgent, look }: { plant: PlantCard; urgent?: Ale
           scene={look?.scene}
           decoration={look?.decoration}
         /></Suspense>
-        <span className={`pc-health pc-health-${plant.healthState.id}`}>
-          <SproutyIcon name="heart" size={15} />
-          {plant.healthState.label}
-        </span>
+        {!done && (
+          <span className={`pc-health pc-health-${plant.healthState.id}`}>
+            <SproutyIcon name="heart" size={15} />
+            {plant.healthState.label}
+          </span>
+        )}
         {done && (
           <span className="pc-done-flag">
             <SproutyIcon name="trophy" size={15} /> Đã thu hoạch
@@ -220,6 +223,16 @@ function PlantGridCard({ plant, urgent, look }: { plant: PlantCard; urgent?: Ale
           <span className="pc-species">{plant.speciesLabel}</span>
         </div>
 
+        {done ? (
+          // A finished plant: what it gave, not how thirsty it is.
+          <div className="pc-harvest">
+            <Stars value={plant.bestStars} size={20} />
+            <span>Đã hái {plant.harvestCount} đợt</span>
+            <em className={plant.seedsReady ? 'is-ready' : ''}>
+              <SproutyIcon name="seed" size={14} /> {plant.seedsReady ? 'Còn hạt để gieo vụ mới' : 'Hạt đã gieo vụ mới'}
+            </em>
+          </div>
+        ) : (<>
         <div className="pc-stage-row">
           <span className="pc-stage-pill">
             <SproutyIcon name="sprout" size={15} />
@@ -264,6 +277,7 @@ function PlantGridCard({ plant, urgent, look }: { plant: PlantCard; urgent?: Ale
             </span>
           )}
         </div>
+        </>)}
 
         {urgent && urgent.length > 0 && (
           <div className="pc-alert">
@@ -273,7 +287,7 @@ function PlantGridCard({ plant, urgent, look }: { plant: PlantCard; urgent?: Ale
         )}
 
         <span className="pc-open">
-          {plant.diedAt ? 'Gieo lại cây' : 'Vào chăm cây'}
+          {plant.diedAt ? 'Gieo lại cây' : done ? 'Xem chứng nhận' : 'Vào chăm cây'}
           <SproutyIcon name="arrow-right" size={17} />
         </span>
       </div>
@@ -295,6 +309,7 @@ export default function MyPlants() {
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
   const [look, setLook] = useState<GardenLook | undefined>();
+  const [collection, setCollection] = useState<HarvestCollection | null>(null);
 
   // A VIP garden's scene and pot show on every card, not only inside a plant.
   useEffect(() => {
@@ -310,9 +325,10 @@ export default function MyPlants() {
 
   const load = useCallback(async () => {
     try {
-      const data = await API.plants.list();
+      const [data, species] = await Promise.all([API.plants.list(), API.plants.collection().catch(() => null)]);
       setPlants(data.plants || []);
       setAlerts(data.alerts || []);
+      setCollection(species);
     } catch (err: any) {
       showToast(err?.message || 'Không tải được danh sách cây.', 'error');
     } finally {
@@ -449,6 +465,30 @@ export default function MyPlants() {
                 onChange={setGrowPage}
               />
             </>
+          )}
+
+          {/* The species harvested so far, out of those sold: a full set is a free workshop seat. */}
+          {collection && collection.total > 0 && plants.length > 0 && (
+            <div className="plants-collection">
+              <div className="pcol-head">
+                <SproutyIcon name="trophy" size={20} />
+                <strong>Bộ sưu tập loài cây</strong>
+                <span>{collection.collected}/{collection.total} loài · {collection.totalStars} sao</span>
+              </div>
+              <div className="pcol-chips">
+                {collection.species.map((s) => (
+                  <span key={s.key} className={`pcol-chip${s.harvests ? ' is-on' : ''}`} title={s.harvests ? `Đã thu hoạch ${s.harvests} lần` : 'Chưa thu hoạch'}>
+                    <SproutyIcon name={s.icon as IconName} size={15} /> {s.label}
+                    {s.bestStars > 0 && <b>{'★'.repeat(s.bestStars)}</b>}
+                  </span>
+                ))}
+              </div>
+              <p>
+                {collection.collected < collection.total
+                  ? `Thu hoạch đủ ${collection.total} loài để nhận 1 suất workshop miễn phí.`
+                  : 'Đã đủ bộ! Mỗi vòng đủ loài nữa lại thêm 1 suất workshop miễn phí.'}
+              </p>
+            </div>
           )}
 
           {harvested.length > 0 && (

@@ -1,0 +1,86 @@
+/* After a harvest (HarvestCelebration.tsx): the moment, the certificate,
+   the real plant, a dish, the collection, and what comes next. */
+.hv-overlay {
+  position: fixed; inset: 0; z-index: 1300;
+  display: grid; place-items: center; padding: 16px;
+  background: rgba(32, 52, 36, .55); backdrop-filter: blur(4px);
+  animation: hv-fade .2s var(--ease);
+  overflow-y: auto;
+}
+@keyframes hv-fade { from { opacity: 0 } to { opacity: 1 } }
+
+.hv-card {
+  position: relative; width: 100%; max-width: 520px; max-height: calc(100dvh - 32px); overflow-y: auto;
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 26px 22px 22px; border-radius: var(--r-2xl); background: #f5f2ea;
+  box-shadow: var(--sh-xl); animation: hv-pop .28s var(--ease);
+}
+@keyframes hv-pop { from { opacity: 0; transform: translateY(14px) scale(.97) } to { opacity: 1; transform: none } }
+.hv-close {
+  position: absolute; top: 12px; right: 12px; width: 40px; height: 40px; border-radius: 50%;
+  display: grid; place-items: center; background: #fff; color: var(--ink-2); box-shadow: 0 2px 8px rgba(43, 58, 46, .1);
+}
+.hv-card h2 { margin: 0; text-align: center; font-family: var(--font-display); font-size: 1.6rem; line-height: 1.25; color: #203424 }
+.hv-lead { margin: -6px 0 0; text-align: center; color: #5e7662; font-size: .95rem }
+
+/* A basket, and the harvest dropping into it once. */
+.hv-hero { position: relative; height: 104px; display: grid; place-items: end center }
+.hv-basket {
+  width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center;
+  background: #dff1d7; color: #236b3a; border: 5px solid #fff; box-shadow: 0 4px 14px rgba(43, 58, 46, .12);
+}
+.hv-hero.is-fresh .hv-basket { animation: hv-bounce .5s .9s var(--ease) both }
+@keyframes hv-bounce { 0% { transform: scale(1) } 40% { transform: scale(1.1) } 100% { transform: scale(1) } }
+.hv-drop {
+  position: absolute; top: 0; left: calc(50% - 7px + (var(--i) - 2) * 16px);
+  width: 14px; height: 14px; border-radius: 50%; background: var(--c);
+  opacity: 0; animation: hv-drop .7s calc(var(--i) * .12s) ease-in both;
+}
+@keyframes hv-drop { 0% { opacity: 0; transform: translateY(-10px) } 20% { opacity: 1 } 100% { opacity: 0; transform: translateY(62px) scale(.8) } }
+
+.hv-reward {
+  display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px;
+  background: #fff4df; color: #9a5f0e; text-decoration: none; font-size: .9rem;
+}
+.hv-reward span { flex: 1 }
+.hv-save { align-self: center; display: inline-flex; align-items: center; gap: 8px }
+
+.hv-real {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px;
+  background: #fff; color: inherit; text-decoration: none; box-shadow: 0 2px 10px rgba(43, 58, 46, .07);
+}
+.hv-real > span:nth-child(2) { flex: 1; display: flex; flex-direction: column }
+.hv-real b { color: #203424 }
+.hv-real em { font-style: normal; font-size: .84rem; color: #5e7662 }
+.hv-real-icon { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; background: #dceff1; color: #2f6f78 }
+.hv-real.is-done .hv-real-icon { background: #dff1d7; color: #236b3a }
+
+.hv-recipe { padding: 14px 16px; border-radius: 16px; background: #fff }
+.hv-recipe h3 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; font-size: 1.02rem; color: #203424 }
+.hv-recipe ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: .9rem; color: #34513a }
+.hv-recipe p { margin: 8px 0 0; font-size: .82rem; color: #9a5f0e }
+
+.hv-collection { padding: 14px 16px; border-radius: 16px; background: #fff }
+.hv-collection-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px }
+.hv-collection-head b { color: #203424 }
+.hv-collection-head span { font-weight: 700; color: #236b3a; font-size: .9rem }
+.hv-chips { display: flex; flex-wrap: wrap; gap: 6px }
+.hv-chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 999px;
+  font-size: .8rem; font-weight: 600; background: #ede8dc; color: #8ca591;
+}
+.hv-chip.is-on { background: #dff1d7; color: #236b3a }
+.hv-collection p { margin: 8px 0 0; font-size: .82rem; color: #5e7662 }
+
+.hv-next { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center }
+.hv-next .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px }
+
+@media (max-width: 480px) {
+  .hv-card { padding: 22px 14px 16px }
+  .hv-card h2 { font-size: 1.35rem }
+  .hv-next .btn { flex: 1 1 100%; justify-content: center }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hv-drop { display: none }
+  .hv-hero.is-fresh .hv-basket, .hv-card, .hv-overlay { animation: none }
+}

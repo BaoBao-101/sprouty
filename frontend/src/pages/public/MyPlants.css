@@ -711,3 +711,21 @@
 @media (max-width: 980px) { .plants-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 580px) { .plants-grid { grid-template-columns: minmax(0, 1fr); gap: 18px; } .pc-body { padding: 18px; } }
 @media (prefers-reduced-motion: reduce) { .plant-card, .pc-bar-fill { transition: none; } .plant-card:hover { transform: none; } }
+
+/* A finished plant's card: what it gave (MyPlants PlantGridCard). */
+.pc-harvest { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px }
+.pc-harvest > span { font-weight: 700; color: #203424 }
+.pc-harvest em { display: inline-flex; align-items: center; gap: 5px; align-self: flex-start; padding: 4px 10px; border-radius: 999px; font-style: normal; font-size: .82rem; background: #ede8dc; color: #6a7462 }
+.pc-harvest em.is-ready { background: #dff1d7; color: #236b3a }
+
+/* The species collection, above the harvest. */
+.plants-collection { margin: 0 0 22px; padding: 16px 18px; border-radius: 20px; background: #fff; box-shadow: 0 3px 12px rgba(43, 58, 46, .07) }
+.pcol-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: #9a5f0e }
+.pcol-head strong { color: #203424; font-size: 1.05rem }
+.pcol-head span { margin-left: auto; font-weight: 700; color: #236b3a }
+.pcol-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px }
+.pcol-chip { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 999px; font-size: .85rem; font-weight: 600; background: #ede8dc; color: #8ca591 }
+.pcol-chip.is-on { background: #dff1d7; color: #236b3a }
+.pcol-chip b { color: #e9a21b; font-size: .78rem }
+.plants-collection p { margin: 10px 0 0; font-size: .86rem; color: #5e7662 }
+@media (max-width: 480px) { .pcol-head span { margin-left: 0; flex-basis: 100% } }

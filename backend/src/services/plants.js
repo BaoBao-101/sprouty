@@ -1,5 +1,7 @@
 import { SPECIES_CARE } from './species-care.js';
 import { speciesProfile } from './species-profile.js';
+import { speciesRecipe } from './species-recipes.js';
+import { mintMilestones } from './rewards.js';
 /**
  * Everything the virtual plant needs from the database.
  *
@@ -26,8 +28,11 @@ import {
   cooldownMs,
   devicesUnlockedAt,
   environmentAt,
+  harvestRating,
+  harvestsFor,
   healthLabel,
   nextStepFor,
+  REGROW_STAGE,
   speciesFor,
   stageIndex,
   stageLabel,
@@ -53,12 +58,25 @@ const COACH_KEEP_MESSAGES = 60;
 const READING_MIN_GAP_MS = 20 * 60 * 1000;
 const READING_KEEP_DAYS = 10;
 
+/** A plant's pickings, oldest first: its certificates. */
+export const harvestsInclude = { orderBy: { number: 'asc' } };
+
 const plantInclude = {
   devices: true,
   // The owner's VIP end date: until then the gardener looks after the plant.
   user: { select: { vipUntil: true } },
   product: { select: { id: true, name: true, emoji: true, bgColor: true, images: true, speciesKey: true } },
+  harvests: harvestsInclude,
 };
+
+/**
+ * Seasons a family can grow from one kit without VIP: the kit's own planting
+ * and one more from the seeds it kept. VIP Garden lets the seeds go on.
+ */
+const FREE_SEASONS = 2;
+
+/** How a finished plant is kept on the shelf: watered, fed and well. */
+const RESTING = { moisture: 60, nutrient: 60, health: 90, pestRisk: 5, wiltHours: 0 };
 
 /** Devices keyed by type, in the shape plant-sim expects. */
 function deviceMap(plant) {
@@ -118,7 +136,7 @@ function localDayKey(at) {
  * is one a child double-taps, and the second tap should land them on their
  * plant rather than on an error.
  */
-export async function createPlantForProduct(prisma, userId, productId, { nickname, redemptionId = null } = {}) {
+export async function createPlantForProduct(prisma, userId, productId, { nickname, redemptionId = null, parentId = null, season = 1 } = {}) {
   if (redemptionId) {
     const existing = await prisma.virtualPlant.findUnique({ where: { redemptionId }, include: plantInclude });
     if (existing) return { plant: existing, created: false };
@@ -145,6 +163,8 @@ export async function createPlantForProduct(prisma, userId, productId, { nicknam
         userId,
         productId,
         redemptionId,
+        parentId,
+        season,
         nickname: (nickname || product.name).slice(0, 40),
         devices: {
           create: DEVICES.map((device) => ({
@@ -208,8 +228,10 @@ async function ensureDevices(prisma, plant) {
  * without a query each.
  */
 export async function advance(prisma, plant, now = new Date()) {
-  // A dead plant waits, unchanged, to be replanted.
-  if (plant.diedAt) return { plant, events: [], newlyUnlocked: [], hoursElapsed: 0 };
+  // A dead plant waits, unchanged, to be replanted; a finished one rests as it
+  // was harvested. Ticking it on dried its soil until a finished plant read as
+  // "héo nặng" on the shelf.
+  if (plant.diedAt || plant.harvestedAt) return { plant, events: [], newlyUnlocked: [], hoursElapsed: 0 };
 
   await ensureDevices(prisma, plant);
   const devices = deviceMap(plant);
@@ -392,32 +414,10 @@ export async function performCare(prisma, userId, plantId, actionId, { now = new
   const env = environmentAt(plant.id, now, devices);
   const product = plant.product || null;
 
-  // Harvest ends the journey instead of changing a metric.
+  // A harvest is a picking with its certificate, not a change to a metric.
   if (actionId === 'harvest') {
-    const [harvested] = await prisma.$transaction([
-      prisma.virtualPlant.update({
-        where: { id: plant.id },
-        data: { harvestedAt: now },
-        include: plantInclude,
-      }),
-      prisma.plantCareLog.create({
-        data: { plantId: plant.id, action: 'harvest', stage: plant.stage, growth: 0 },
-      }),
-    ]);
-    return {
-      plant: harvested,
-      growth: 0,
-      messages: [
-        {
-          level: 'good',
-          text: `Chúc mừng! Bạn đã thu hoạch ${speciesFor(product).harvest} từ ${harvested.nickname}.`,
-        },
-      ],
-      stagesCrossed: [],
-      events,
-      newlyUnlocked,
-      harvested: true,
-    };
+    const outcome = await harvestPlant(prisma, plant, now);
+    return { ...outcome, growth: 0, stagesCrossed: [], events, newlyUnlocked };
   }
 
   // This action counts towards the stage's tasks; with it, are they all done?
@@ -514,6 +514,163 @@ export async function performCare(prisma, userId, plantId, actionId, { now = new
       ...(plant.devices || []).filter((d) => unlockNow.includes(d.id)).map((d) => d.type),
     ],
     streak,
+  };
+}
+
+/**
+ * Picks a ripe plant. Each picking gets its stars (plant-sim harvestRating) and
+ * a row the certificate reads. A species that crops again goes back to
+ * fruiting for the next picking — its stage tasks counted afresh, the soil a
+ * little hungrier for what was taken — and only its last picking finishes the
+ * plant. A finished plant keeps its seeds for one new season (sowSavedSeeds).
+ */
+async function harvestPlant(prisma, plant, now) {
+  const product = plant.product || null;
+  const species = speciesFor(product);
+  const of = harvestsFor(product);
+  const number = (plant.harvestCount || 0) + 1;
+  const last = number >= of;
+  const since = plant.plantedAt || plant.activatedAt;
+
+  const [readings, careCount] = await Promise.all([
+    prisma.plantSensorReading.aggregate({ where: { plantId: plant.id, recordedAt: { gte: since } }, _avg: { health: true } }),
+    prisma.plantCareLog.count({ where: { plantId: plant.id, auto: false } }),
+  ]);
+  const avgHealth = Math.round(readings._avg.health ?? plant.health);
+  const { stars } = harvestRating({ avgHealth, streak: plant.careStreak, attempt: plant.attempt || 1 });
+  const days = Math.max(1, Math.ceil((now.getTime() - plant.activatedAt.getTime()) / 86_400_000));
+
+  const [updated] = await prisma.$transaction([
+    prisma.virtualPlant.update({
+      where: { id: plant.id },
+      data: last
+        // Finished: it rests as harvested, watered and well, and is not simulated any more (advance).
+        ? { ...RESTING, health: Math.max(plant.health, RESTING.health), harvestedAt: now, harvestCount: number, lastTickAt: now }
+        : {
+          harvestCount: number,
+          stage: REGROW_STAGE,
+          stageProgress: 0,
+          plantedAt: now,
+          nutrient: Math.max(0, plant.nutrient - 15),
+          lastTickAt: now,
+        },
+      include: plantInclude,
+    }),
+    prisma.plantHarvest.create({
+      data: {
+        plantId: plant.id, userId: plant.userId, number, stars, avgHealth, careCount,
+        streak: plant.careStreak, days, speciesKey: species.key,
+      },
+    }),
+    prisma.plantCareLog.create({
+      data: { plantId: plant.id, action: 'harvest', stage: plant.stage, growth: 0 },
+    }),
+  ]);
+  // Re-read with the new picking in it, for the certificate.
+  const fresh = (await prisma.virtualPlant.findUnique({ where: { id: plant.id }, include: plantInclude })) || updated;
+
+  const collection = await harvestCollection(prisma, plant.userId);
+  const seatsWon = await mintMilestones(prisma, plant.userId, 'species_collection', collection.sets);
+
+  const messages = [{
+    level: 'good',
+    text: last
+      ? `Chúc mừng! Bé đã thu hoạch ${species.harvest} từ ${updated.nickname}.`
+      : `Thu hoạch đợt ${number}/${of}! ${updated.nickname} sẽ ra ${species.harvest} tiếp — chăm thêm để hái đợt sau.`,
+  }];
+  if (seatsWon) {
+    messages.push({ level: 'good', text: `Bé đã thu hoạch đủ ${collection.total} loài cây — tặng 1 suất workshop miễn phí!` });
+  }
+
+  return {
+    plant: fresh,
+    messages,
+    harvested: true,
+    harvest: harvestDto((fresh.harvests || []).find((h) => h.number === number), fresh),
+    collection,
+    seatsWon,
+  };
+}
+
+/**
+ * Sows the seeds a finished plant kept: a new plant of the same kit, one
+ * season on, named after its parent. The parent keeps its certificate and
+ * stays on the shelf. The kit's own planting and one season from its seeds
+ * are free (FREE_SEASONS); seeds from there on are VIP Garden's.
+ */
+export async function sowSavedSeeds(prisma, userId, plantId) {
+  const plant = await prisma.virtualPlant.findFirst({
+    where: { id: plantId, userId },
+    include: { user: { select: { vipUntil: true } } },
+  });
+  if (!plant) throw new AppError('Không tìm thấy cây này.', 404);
+  if (!plant.harvestedAt) throw new AppError('Thu hoạch xong đợt cuối mới có hạt để gieo vụ mới nhé.', 409);
+  if (plant.seedsSownAt) throw new AppError('Hạt của cây này đã được gieo thành vụ mới rồi.', 409);
+  const season = (plant.season || 1) + 1;
+  if (season > FREE_SEASONS && !tierOf({ vipUntil: plant.user?.vipUntil }).isVip) {
+    throw new AppError(`Vụ thứ ${season} trở đi dành cho VIP Garden — hoặc mở một bộ kit mới để trồng tiếp nhé.`, 403);
+  }
+  // Claimed first, guarded, so a double tap cannot sow the same seeds twice.
+  const claimed = await prisma.virtualPlant.updateMany({ where: { id: plant.id, seedsSownAt: null }, data: { seedsSownAt: new Date() } });
+  if (claimed.count !== 1) throw new AppError('Hạt của cây này đã được gieo thành vụ mới rồi.', 409);
+  const name = `${plant.nickname.replace(/ · vụ \d+$/, '')} · vụ ${season}`;
+  const { plant: child } = await createPlantForProduct(prisma, userId, plant.productId, { nickname: name, parentId: plant.id, season });
+  return child;
+}
+
+/**
+ * The species the family has harvested, out of those the shop sells, and how
+ * many full sets that makes — each set is a free workshop seat (rewards.js).
+ * Species with no kit on sale do not count: a collection must be completable.
+ */
+export async function harvestCollection(prisma, userId) {
+  const [kits, rows] = await Promise.all([
+    prisma.product.findMany({ where: { category: 'kit', status: 'published' }, select: { name: true, speciesKey: true } }),
+    prisma.plantHarvest.groupBy({
+      by: ['speciesKey'],
+      where: { userId },
+      _count: { _all: true },
+      _max: { stars: true },
+      _sum: { stars: true },
+    }),
+  ]);
+  const keys = [...new Set(kits.map((kit) => speciesFor(kit).key))].filter((key) => key !== 'generic');
+  const byKey = new Map(rows.map((row) => [row.speciesKey, row]));
+  const species = keys.map((key) => {
+    const s = speciesFor({ speciesKey: key }), row = byKey.get(key);
+    return { key, label: s.label, icon: s.icon, harvests: row?._count._all || 0, bestStars: row?._max.stars || 0 };
+  });
+  return {
+    species,
+    collected: species.filter((s) => s.harvests > 0).length,
+    total: species.length,
+    // Full sets: every species picked once is one, twice is two.
+    sets: species.length ? Math.min(...species.map((s) => s.harvests)) : 0,
+    totalStars: rows.reduce((n, row) => n + (row._sum.stars || 0), 0),
+  };
+}
+
+/** One picking, as the certificate shows it. */
+export function harvestDto(harvest, plant) {
+  if (!harvest) return null;
+  const product = plant.product || null;
+  const species = speciesFor(product);
+  return {
+    id: harvest.id,
+    number: harvest.number,
+    of: harvestsFor(product),
+    stars: harvest.stars,
+    avgHealth: Math.round(harvest.avgHealth),
+    careCount: harvest.careCount,
+    streak: harvest.streak,
+    days: harvest.days,
+    createdAt: harvest.createdAt,
+    plantName: plant.nickname,
+    speciesKey: species.key,
+    speciesLabel: species.label,
+    harvestLabel: species.harvest,
+    season: plant.season || 1,
+    attempt: plant.attempt || 1,
   };
 }
 
@@ -689,6 +846,14 @@ export function plantCardDto(plant) {
     careStreak: plant.careStreak,
     harvestedAt: plant.harvestedAt,
     activatedAt: plant.activatedAt,
+    // After the harvest: pickings so far out of the species' number, the
+    // season it is (2 when grown from saved seeds), whether its own seeds are
+    // still there to sow, and the best stars it has earned.
+    harvestCount: plant.harvestCount || 0,
+    harvestsMax: harvestsFor(product),
+    season: plant.season || 1,
+    seedsReady: Boolean(plant.harvestedAt) && !plant.seedsSownAt,
+    bestStars: Math.max(0, ...(plant.harvests || []).map((h) => h.stars)),
   };
 }
 
@@ -722,9 +887,20 @@ export async function plantDetailDto(prisma, plant, { now = new Date() } = {}) {
   ]);
 
   const species = speciesFor(product);
+  const pickings = plant.harvests || [];
+  // A photo of the real harvest: anything saved to this plant's album since its first picking.
+  const realHarvestPhoto = pickings.length > 0 && (await prisma.userProductImage.count({
+    where: { plantId: plant.id, status: 'active', createdAt: { gte: pickings[0].createdAt } },
+  })) > 0;
 
   return {
     ...plantCardDto(plant),
+    // Every picking's certificate, the dish to make with the harvest, and
+    // whether the next season's seeds need VIP Garden.
+    harvests: pickings.map((h) => harvestDto(h, plant)),
+    recipe: pickings.length ? speciesRecipe(species.key) : null,
+    realHarvestPhoto,
+    seedsNeedVip: (plant.season || 1) + 1 > FREE_SEASONS && !keeper.isVip,
     growthPoints: plant.growthPoints,
     lastTickAt: plant.lastTickAt,
     harvestLabel: species.harvest,
@@ -756,7 +932,9 @@ export async function plantDetailDto(prisma, plant, { now = new Date() } = {}) {
     },
     nextStep: plant.diedAt
       ? { action: null, label: null, icon: 'leaf', why: 'Cây đã héo khô vì bị bỏ quên quá lâu. Trồng lại từ hạt để bắt đầu lại nhé.' }
-      : nextStepFor(
+      : plant.harvestedAt
+        ? { action: null, label: null, icon: 'trophy', why: plant.seedsSownAt ? 'Cây đã thu hoạch xong và hạt đã gieo thành vụ mới.' : 'Cây đã thu hoạch xong. Giữ hạt lại để gieo vụ mới nhé.' }
+        : nextStepFor(
         {
           moisture: plant.moisture,
           nutrient: plant.nutrient,
@@ -804,7 +982,9 @@ export async function plantDetailDto(prisma, plant, { now = new Date() } = {}) {
         secondary: meta.reads === 'temperature' ? { label: 'Ẩm không khí', value: env.humidity, unit: '%' } : null,
       };
     }),
-    care: CARE_ACTIONS.filter((action) => action.id !== 'pollinate' || species.pollinate).map((action) => availability[action.id]),
+    // A finished plant has nothing left to care for, harvest included.
+    care: CARE_ACTIONS.filter((action) => action.id !== 'pollinate' || species.pollinate)
+      .map((action) => (plant.harvestedAt ? { ...availability[action.id], allowedInStage: false, ready: false } : availability[action.id])),
     readings,
     coachMessages: coachMessages.map((m) => ({
       id: m.id,
@@ -851,6 +1031,11 @@ export function plantPromptContext(detail) {
       detail.tasks.length ? detail.tasks.map((t) => `${t.label} ${t.done}/${t.need}`).join(', ') : 'không có'
     }.`,
   ];
+  if (detail.harvestedAt) {
+    lines.push(`Cây đã thu hoạch xong (${detail.harvestCount}/${detail.harvestsMax} đợt)${detail.seedsReady ? '; còn hạt giống để gieo vụ mới' : ''}.`);
+  } else if (detail.harvestCount > 0) {
+    lines.push(`Đã thu hoạch ${detail.harvestCount}/${detail.harvestsMax} đợt; cây đang ra ${detail.harvestLabel} cho đợt tiếp theo.`);
+  }
   if (detail.diedAt) lines.push('Cây đã héo khô (chết) vì bị bỏ quên quá lâu; có thể trồng lại từ hạt miễn phí.');
   else if (detail.wilt.critical) lines.push(`Cây đang héo nặng: còn khoảng ${detail.wilt.hoursLeft} giờ nữa là chết nếu không được chăm.`);
   if (detail.keeper.on) lines.push('Bộ chăm tự động (VIP) đang bật: khi cây sắp héo nó tự tưới, bón phân, bắt sâu để cây không chết, nhưng không giúp cây lên chặng.');

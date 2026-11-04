@@ -120,6 +120,7 @@ model User {
   entitlements UserEntitlement[]
   blogPosts BlogPost[] @relation("BlogPostAuthor")
   plants VirtualPlant[]
+  plantHarvests PlantHarvest[]
   rewards Reward[]
   aiUsage AiDailyUsage[]
   gardenPreference GardenPreference?
@@ -633,6 +634,16 @@ model VirtualPlant {
   // same kit again grows a second plant rather than pointing at the first.
   // Null for a plant made some other way (the demo seed).
   redemptionId  String?   @unique
+  // After the harvest. A pepper, tomato, bean or basil crops again: each
+  // picking sends it back to fruiting until `harvestCount` reaches its
+  // species' number of harvests, and only the last one sets harvestedAt.
+  // The seeds kept from a finished plant sow one new season: a new plant with
+  // `parentId` pointing here and `season` one more, and `seedsSownAt` set on
+  // this one so the same seeds are not sown twice.
+  harvestCount  Int       @default(0)
+  season        Int       @default(1)
+  parentId      String?
+  seedsSownAt   DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -643,10 +654,38 @@ model VirtualPlant {
   readings PlantSensorReading[]
   coachMessages PlantCoachMessage[]
   images  UserProductImage[]
+  harvests PlantHarvest[]
 
   // Several plants of the same kit are allowed — one per purchase. A double
   // submit of one code is caught by redemptionId being unique instead.
   @@index([userId, productId])
+  @@index([userId])
+}
+
+/// One picking from a plant: what its certificate shows, and what the
+/// species collection counts.
+model PlantHarvest {
+  id         String   @id @default(cuid())
+  plantId    String
+  userId     String
+  // Which picking of this plant it was: 1, then 2 and 3 for a plant that crops again.
+  number     Int
+  // 1–3, from how well the plant was kept (plant-sim harvestRating).
+  stars      Int
+  // What the stars were given for, kept so the certificate can say so.
+  avgHealth  Float
+  careCount  Int
+  streak     Int
+  days       Int
+  // The species, kept here so the collection does not depend on the product
+  // staying in the catalogue.
+  speciesKey String
+  createdAt  DateTime @default(now())
+
+  plant VirtualPlant @relation(fields: [plantId], references: [id], onDelete: Cascade)
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([plantId, number])
   @@index([userId])
 }
 
@@ -744,6 +783,8 @@ model PlantSensorReading {
 
 enum RewardType {
   free_workshop
+  // A free seat for harvesting every species the shop sells (rewards.js).
+  species_collection
 }
 
 enum RewardStatus {

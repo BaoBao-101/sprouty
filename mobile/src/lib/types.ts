@@ -179,6 +179,15 @@ export interface PlantCard {
   activatedAt: string;
   diedAt: string | null;
   attempt: number;
+  /** Pickings so far, out of the species' number (3 for a plant that crops again). */
+  harvestCount: number;
+  harvestsMax: number;
+  /** 1 for the kit's own planting, 2 for one sown from its saved seeds. */
+  season: number;
+  /** Finished and its seeds not yet sown into a new season. */
+  seedsReady: boolean;
+  /** The best stars any of its pickings earned, 0 before the first. */
+  bestStars: number;
 }
 
 export interface PlantEvent {
@@ -285,6 +294,48 @@ export interface PlantDetail extends PlantCard {
   cultivation?: { name: string; sow: string; support: string; mature: string };
   /** Where the species comes from and what to look for. */
   speciesProfile?: SpeciesProfile | null;
+  /** Every picking's certificate, oldest first. */
+  harvests: HarvestRecord[];
+  /** The dish to make with the harvest, once there is one. */
+  recipe: HarvestRecipe | null;
+  /** A photo was saved to its album since the first picking: the real harvest. */
+  realHarvestPhoto: boolean;
+  /** Sowing its seeds would be a season past the free ones. */
+  seedsNeedVip: boolean;
+}
+
+/** One picking, as its certificate shows it. */
+export interface HarvestRecord {
+  id: string;
+  number: number;
+  of: number;
+  stars: number;
+  avgHealth: number;
+  careCount: number;
+  streak: number;
+  days: number;
+  createdAt: string;
+  plantName: string;
+  speciesKey: string;
+  speciesLabel: string;
+  harvestLabel: string;
+  season: number;
+  attempt: number;
+}
+
+export interface HarvestRecipe {
+  title: string;
+  steps: string[];
+  note: string;
+}
+
+/** The species harvested, out of those the shop sells; each full set is a free workshop seat. */
+export interface HarvestCollection {
+  species: Array<{ key: string; label: string; icon: string; harvests: number; bestStars: number }>;
+  collected: number;
+  total: number;
+  sets: number;
+  totalStars: number;
 }
 
 export interface RewardSummary {
@@ -338,8 +389,19 @@ export interface Album {
   vip: boolean;
   leavesPerStage: number | null;
   product: { id: number; name: string } | null;
-  plant: { id: string; nickname: string; stage: PlantStageId } | null;
+  plant: { id: string; nickname: string; stage: PlantStageId; harvestedAt: string | null } | null;
+  /** What the plant gave: its pickings, the photo of the real harvest, the dish. Null before the first. */
+  harvest: AlbumHarvest | null;
   stages: Array<{ id: PlantStageId; label: string; icon: IconName }>;
+}
+
+export interface AlbumHarvest {
+  pickings: Array<{ id: string; number: number; stars: number; createdAt: string }>;
+  of: number;
+  finished: boolean;
+  season: number;
+  photo: AlbumLeaf | null;
+  recipe: HarvestRecipe | null;
 }
 
 export interface BlogPost {

@@ -1,6 +1,6 @@
 import { confirmAction } from '@/services/dialog';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { API } from '@/services/api';
 import { showToast } from '@/services/toast';
 import { SproutyIcon, type IconName } from '@/components/icons/SproutyIcon';
@@ -8,6 +8,7 @@ import { PlantArt, type PlantStageId } from '@/components/PlantArt';
 import type { FruitShape, PlantForm } from '@/components/PlantForms';
 import './Tree.css';
 import { MemoryTreeArt } from '@/components/MemoryTreeArt';
+import { Stars } from '@/components/HarvestCertificate';
 import type { PotKey, SceneKey } from '@/components/garden-looks';
 
 const PlantThumbnail3D = lazy(() => import('@/components/PlantThumbnail3D'));
@@ -40,6 +41,16 @@ interface AlbumData {
     stage: PlantStageId;
     stageProgress: number;
     health: number;
+    harvestedAt: string | null;
+  } | null;
+  /** What the plant gave: its pickings, the photo of the real harvest, the dish. Null before the first. */
+  harvest: {
+    pickings: Array<{ id: string; number: number; stars: number; createdAt: string }>;
+    of: number;
+    finished: boolean;
+    season: number;
+    photo: Leaf | null;
+    recipe: { title: string; steps: string[]; note: string } | null;
   } | null;
   species: {
     key: string;
@@ -564,6 +575,15 @@ export default function Tree() {
       ? plant.stage
       : album?.stages.find((s) => !fullStages.has(s.id))?.id || '';
   const allFull = !!album?.stages.length && fullStages.size === album.stages.length;
+  const harvest = album?.harvest ?? null;
+  // The photo of the real harvest goes on the "Thu hoạch" branch, while it has room.
+  const harvestTarget = fullStages.has('mature') ? addTarget : 'mature';
+  // Sent here from the harvest (#thanh-qua): straight to what it gave.
+  const { hash } = useLocation();
+  const hasHarvest = Boolean(harvest);
+  useEffect(() => {
+    if (hash === '#thanh-qua' && hasHarvest) document.getElementById('thanh-qua')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [hash, hasHarvest]);
 
   /**
    * Photos grouped by the stage they were taken at, newest stage first, so the
@@ -657,12 +677,14 @@ export default function Tree() {
             )}
 
             <div className="album-hero-copy">
-              <span className="album-eyebrow">GÓC NHỎ LƯU GIỮ ĐIỀU XANH</span>
+              <span className="album-eyebrow">{harvest?.finished ? 'HÀNH TRÌNH ĐÃ HOÀN THÀNH' : 'GÓC NHỎ LƯU GIỮ ĐIỀU XANH'}</span>
               <h1>Album — {title}</h1>
               <p>
-                {species
-                  ? `Lưu lại từng chặng của cây ${species.label.toLowerCase()}, từ hạt giống tới ngày thu hoạch ${species.harvest}.`
-                  : 'Lưu lại ảnh và video từng chặng lớn lên của cây.'}
+                {species && harvest
+                  ? `Từ một hạt nhỏ tới ${species.harvest} trên tay — ${harvest.pickings.length} lần thu hoạch${harvest.finished ? '' : `, còn ${harvest.of - harvest.pickings.length} đợt nữa`}.`
+                  : species
+                    ? `Lưu lại từng chặng của cây ${species.label.toLowerCase()}, từ hạt giống tới ngày thu hoạch ${species.harvest}.`
+                    : 'Lưu lại ảnh và video từng chặng lớn lên của cây.'}
               </p>
               <div className="album-hero-meta">
                 <span className="album-count">
@@ -698,6 +720,50 @@ export default function Tree() {
 
       <section className="album-body">
         <div className="container">
+          {/* What came of it: the real harvest's photo, each picking's stars and
+              certificate, and the dish to make with it. */}
+          {harvest && plant && species && (
+            <section className="album-harvest" id="thanh-qua" aria-label="Thành quả">
+              {harvest.photo ? (
+                <button type="button" className="album-harvest-photo" onClick={() => setOpenLeaf(harvest.photo)} aria-label="Xem ảnh thu hoạch thật">
+                  <img src={harvest.photo.url} alt="" loading="lazy" />
+                  <span><SproutyIcon name="check" size={14} /> Ảnh cây thật</span>
+                </button>
+              ) : (
+                <button type="button" className="album-harvest-photo is-empty" onClick={() => pickFile(harvestTarget)} disabled={!harvestTarget || loading}>
+                  <SproutyIcon name="camera" size={30} />
+                  <strong>Chụp thành quả thật</strong>
+                  <em>Lưu vào chặng Thu hoạch</em>
+                </button>
+              )}
+              <div className="album-harvest-body">
+                <span className="album-eyebrow">THÀNH QUẢ{harvest.season > 1 ? ` · VỤ ${harvest.season}` : ''}</span>
+                <h2>
+                  {harvest.finished
+                    ? `Bé đã thu hoạch ${species.harvest}!`
+                    : `Đã hái ${harvest.pickings.length}/${harvest.of} đợt ${species.harvest}`}
+                </h2>
+                <ul className="album-harvest-list">
+                  {harvest.pickings.map((h) => (
+                    <li key={h.id}>
+                      <span>
+                        <b>{harvest.of > 1 ? `Đợt ${h.number}` : 'Thu hoạch'}</b>
+                        <em>{new Date(h.createdAt).toLocaleDateString('vi-VN')}</em>
+                      </span>
+                      <Stars value={h.stars} size={16} />
+                      <Link to={`/plant/${plant.id}?certificate=${h.id}`}>Chứng nhận</Link>
+                    </li>
+                  ))}
+                </ul>
+                {harvest.recipe && (
+                  <p className="album-harvest-recipe">
+                    <SproutyIcon name="heart" size={15} /> Món ngon từ cây: <strong>{harvest.recipe.title}</strong>
+                  </p>
+                )}
+              </div>
+            </section>
+          )}
+
           <div className="album-section-intro"><div><span className="album-eyebrow">NHẬT KÝ CỦA CHÚNG MÌNH</span><h2>Gom từng chút xanh <span>♡</span></h2><p>Mỗi tấm ảnh là một dấu mốc trên hành trình lớn lên.</p></div><span className="album-total">{leaves.length} kỷ niệm đã lưu</span></div>
           {!!album?.stages.length && <div className="memory-tree-layout">
             <div className="memory-tree" aria-label="Cây kỷ niệm — chọn một nhánh để xem ảnh">
@@ -709,7 +775,7 @@ export default function Tree() {
                   const cover = photos.find((leaf) => leaf.status !== 'hidden' && !isVideo(leaf));
                   return <button key={stage.id} style={{ left: [23, 43, 66, 15, 38, 61, 82, 72][index] + '%', top: [26, 18, 27, 47, 43, 48, 49, 67][index] + '%' }} className={'memory-branch' + (selectedStage === stage.id ? ' is-selected' : '')} aria-pressed={selectedStage === stage.id} onClick={() => setSelectedStage(stage.id)}>
                     <span className="memory-branch-photo">{cover ? <img src={cover.url} alt="" loading="lazy" /> : <SproutyIcon name={stage.icon as IconName} size={28} />}</span>
-                    <span className="memory-branch-copy"><small>CHẶNG {String(index + 1).padStart(2, '0')}{plant?.stage === stage.id ? ' · HIỆN TẠI' : ''}</small><strong>{stage.label}</strong><span>{photos.length ? `${countLabel(stage.id)} lá${fullStages.has(stage.id) ? ' · đã đủ' : ''}` : 'Thêm chiếc lá đầu tiên'}</span></span>
+                    <span className="memory-branch-copy"><small>CHẶNG {String(index + 1).padStart(2, '0')}{plant?.harvestedAt && stage.id === 'mature' ? ' · ĐÃ HÁI' : plant?.stage === stage.id ? ' · HIỆN TẠI' : ''}</small><strong>{stage.label}</strong><span>{photos.length ? `${countLabel(stage.id)} lá${fullStages.has(stage.id) ? ' · đã đủ' : ''}` : 'Thêm chiếc lá đầu tiên'}</span></span>
                   </button>;
                 })}
               </div>
