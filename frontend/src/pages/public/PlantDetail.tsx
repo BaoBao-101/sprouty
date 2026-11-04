@@ -395,7 +395,9 @@ export default function PlantDetail() {
   const [logOpen, setLogOpen] = useState(false);
 
   const apply = useCallback((detail: PlantDetailType, events: PlantEvent[] = []) => {
-    setPlant(detail);
+    // The website and the API deploy separately: an API from before the
+    // harvest journey sends no pickings, and the page must still open.
+    setPlant({ ...detail, harvests: detail.harvests ?? [] });
     setFetchedAt(Date.now());
     // The server's copy is the truth; replacing wholesale also drops any
     // optimistic question whose request failed.
@@ -962,7 +964,9 @@ export default function PlantDetail() {
                       {harvested
                         ? plant.seedsReady
                           ? 'Giữ hạt lại để gieo vụ mới, hoặc chọn một bộ kit khác.'
-                          : 'Hạt của cây đã gieo thành vụ mới — xem ở Cây của tôi.'
+                          : plant.seedsReady === false
+                            ? 'Hạt của cây đã gieo thành vụ mới — xem ở Cây của tôi.'
+                            : 'Mở một bộ kit mới để trồng cây khác nhé.'
                         : critical
                           ? `Cây đang héo nặng, để lâu nữa sẽ héo khô. ${todoWhy}`
                           : todoWhy}

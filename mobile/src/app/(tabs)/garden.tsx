@@ -121,6 +121,12 @@ function PlantTile({ plant, alerts, width }: { plant: PlantCard; alerts: PlantAl
             <Icon name="nutrient" size={12} color={colors.green} />
             <Meter value={plant.nutrient} color={colors.greenLight} height={5} style={{ flex: 1 }} />
           </View>
+        ) : plant.harvestCount == null ? (
+          // An API from before the harvest journey: no stars to show.
+          <View style={[s.need, { backgroundColor: colors.goldSoft }]}>
+            <Icon name="harvest" size={13} color={colors.gold} />
+            <Text style={[s.needText, { color: colors.gold }]}>Hoàn thành</Text>
+          </View>
         ) : (
           // A finished plant: what it gave, not how thirsty it is.
           <View style={s.done}>

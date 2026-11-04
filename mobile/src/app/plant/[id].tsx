@@ -178,7 +178,8 @@ export default function PlantScreen() {
   const board =useIotBoard(id, plant?.devices || [], (type, next) => toggleDevice(type, next));
 
   const apply = useCallback((detail: PlantDetail, events: PlantEvent[] = []) => {
-    setPlant(detail);
+    // An API from before the harvest journey sends no pickings; the screen must still open.
+    setPlant({ ...detail, harvests: detail.harvests ?? [] });
     setFetchedAt(Date.now());
     if (detail.coachMessages) setMessages(detail.coachMessages);
     if (events.length) setFeed((prev) => [...events, ...prev].slice(0, 12));
@@ -214,6 +215,9 @@ export default function PlantScreen() {
       if (data.harvest) {
         const next: Celebration = { harvest: data.harvest, collection: data.collection ?? null, seatsWon: data.seatsWon || 0, fresh: true };
         setTimeout(() => { cheer(); setCelebration(next); }, 3000);
+      } else if (data.harvested) {
+        // An API from before the harvest journey: no certificate to open, so say it.
+        setTimeout(() => toast('Hành trình hoàn thành! Chúc mừng bé.', 'success'), 3200);
       }
       for (const type of data.newlyUnlocked || []) {
         const unlocked = data.plant.devices.find((d: PlantDevice) => d.type === type);
@@ -439,7 +443,11 @@ export default function PlantScreen() {
                   {harvested ? `Bé đã thu hoạch ${plant.harvestLabel}${plant.harvestCount > 1 ? ` · ${plant.harvestCount} đợt` : ''}!` : plant.nextStep.label || 'Chờ dụng cụ hồi lại'}
                 </Text>
                 <Text numberOfLines={2} style={s.todoWhy}>
-                  {harvested ? (plant.seedsReady ? 'Gieo hạt đã giữ thành vụ mới, hoặc chọn kit khác.' : 'Hạt của cây đã gieo thành vụ mới.') : why}
+                  {harvested
+                    ? plant.seedsReady ? 'Gieo hạt đã giữ thành vụ mới, hoặc chọn kit khác.'
+                      : plant.seedsReady === false ? 'Hạt của cây đã gieo thành vụ mới.'
+                      : 'Mở một bộ kit mới để trồng cây khác nhé.'
+                    : why}
                 </Text>
               </View>
               {harvested && lastHarvest && <HarvestStars value={lastHarvest.stars} size={15} />}

@@ -223,7 +223,8 @@ function PlantGridCard({ plant, urgent, look }: { plant: PlantCard; urgent?: Ale
           <span className="pc-species">{plant.speciesLabel}</span>
         </div>
 
-        {done ? (
+        {/* An API from before the harvest journey sends no pickings: the card stays as it was. */}
+        {done && plant.harvestCount != null ? (
           // A finished plant: what it gave, not how thirsty it is.
           <div className="pc-harvest">
             <Stars value={plant.bestStars} size={20} />
